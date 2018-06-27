@@ -4,12 +4,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module RON.Text (parseFrames, serialize) where
+module RON.Text
+    ( parseFrames
+    , parseUuid
+    , serialize
+    ) where
 
 import           Internal.Prelude
 
 import           Attoparsec.Extra (Parser, endOfInput, label, option, parseOnly,
-                                   satisfy)
+                                   parseWhole, satisfy)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, skipSpace,
                                                    takeWhile1)
 import           Data.Bits (shiftL, (.|.))
@@ -28,6 +32,9 @@ import qualified RON.UUID as UUID
 parseFrames :: ByteStringL -> Either String [Frame]
 parseFrames =
     parseOnly ((skipSpace <* endOfInput $> []) <|> some pFrame) . BSL.toStrict
+
+parseUuid :: ByteStringL -> Either String UUID
+parseUuid = parseWhole pUuid
 
 pFrame :: Parser Frame
 pFrame = label "Frame" $ ("." $> []) <|> (some pOp <* optional ".")

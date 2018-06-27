@@ -29,6 +29,7 @@ tests:
       - hedgehog
       - tasty
       - tasty-hedgehog
+      - tasty-hunit
       - tasty-th
       - typed-process
       # package

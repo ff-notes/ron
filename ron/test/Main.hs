@@ -16,11 +16,13 @@ import           System.Directory (getCurrentDirectory)
 import           System.Environment (getEnv, lookupEnv, setEnv)
 import           System.Info (os)
 import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 import           Test.Tasty.TH (defaultMainGenerator)
 
 import qualified RON.Base64 as Base64
 import qualified RON.Binary as Binary
 import qualified RON.Text as Text
+import           RON.Types (UUID (..))
 
 import qualified Gen
 
@@ -75,15 +77,10 @@ prop_base64x60_roundtrip = property $ do
     w <- forAll Gen.word60
     Base64.decode60 (Base64.encode60 w) === Just w
 
--- Helpers ---------------------------------------------------------------------
-
-data Ann a = Ann String a
-
-instance Eq a => Eq (Ann a) where
-    Ann _ x == Ann _ y = x == y
-
-instance Show a => Show (Ann a) where
-    show (Ann name a) = name ++ " = " ++ show a
+case_alien_uuid :: Assertion
+case_alien_uuid =
+    Text.parseUuid "A0123456789 8abcdefghij" @?=
+    Right (UUID 0xa001083105187209 0x89669e8a6aaecb6e)
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
