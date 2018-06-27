@@ -15,6 +15,7 @@ import qualified Hedgehog.Range as Range
 import           System.Directory (getCurrentDirectory)
 import           System.Environment (getEnv, lookupEnv, setEnv)
 import           System.Info (os)
+import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.HUnit (Assertion, testCase, (@?=))
 import           Test.Tasty.TH (defaultMainGenerator)
@@ -77,10 +78,31 @@ prop_base64x60_roundtrip = property $ do
     w <- forAll Gen.word60
     Base64.decode60 (Base64.encode60 w) === Just w
 
-case_alien_uuid :: Assertion
-case_alien_uuid =
+case_long_uuid :: Assertion
+case_long_uuid =
     Text.parseUuid "A0123456789 8abcdefghij" @?=
     Right (UUID 0xa001083105187209 0x89669e8a6aaecb6e)
+
+test_uuid_abbreviations :: [TestTree]
+test_uuid_abbreviations =
+    [ testGroup "parse"
+        [ testCase e $ Text.parseUuid (BS.pack e) @?= Right aLed
+        | e <- encodings
+        ]
+    , testCase "serialize" $ Text.serializeUuid aLed @?= "A/LED"
+    ]
+  where
+    encodings =
+        [ "ALED0000000 00000000000"
+        , "ALED000000000000000000"
+        , "ALED0000000 0000000000"
+        , "ALED0000000$0000000000"
+        , "ALED0000000"
+        , "A/LED000 0"
+        , "A/LED$0"
+        , "A/LED"
+        ]
+    aLed = either error id $ Text.parseUuid "A/LED"
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case

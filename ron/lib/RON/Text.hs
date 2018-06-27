@@ -8,6 +8,7 @@ module RON.Text
     ( parseFrames
     , parseUuid
     , serialize
+    , serializeUuid
     ) where
 
 import           Internal.Prelude
@@ -47,45 +48,50 @@ pOp = label "Op" $ do
     location <- label "location" $ skipSpace *> ":" *> pUuid
     pure Op{..}
 
-data Base64Format = Ronic | Alien
+data Base64Format = Ronic | Long
     deriving (Eq, Show)
 
 pUuid :: Parser UUID
-pUuid = label "UUID" $ do
-    (xFormat, x) <- do
-        mvariety <- optional $ satisfy isUpperHexDigit <* "/"
-        (format, word0) <- pBase64word
-        word <- case (format, mvariety) of
-            (Ronic, Nothing) -> pure $ '0' `BSC.cons` word0
-            (Ronic, Just v ) -> pure $  v   `BS.cons` word0
-            (Alien, Nothing) -> pure word0
-            (Alien, Just _ ) -> "mixing RON variety with alien UUID"
-        case Base64.decode64 word of
-            Nothing -> fail "Base64 decoding error"
-            Just w  -> pure (format, w)
-    (yFormat, y) <- option (Ronic, 0) $ do
-        skipSpace
-        mscheme <- optional pScheme
-        (format, word) <- pBase64word
-        mw <- case (format, mscheme) of
-            (Ronic, Nothing) -> pure $ Base64.decode60 word
-            (Ronic, Just scheme) -> pure $
-                ((fromIntegral scheme `shiftL` 60) .|.) <$> Base64.decode60 word
-            (Alien, Nothing) -> pure $ Base64.decode64 word
-            (Alien, Just _) -> fail "mixing RON scheme with alien UUID"
-        case mw of
-            Nothing -> fail "Base64 decoding error"
-            Just w  -> pure (format, w)
-    if xFormat == yFormat then
+pUuid = label "UUID" $ pLong <|> pRonic
+  where
+    pLong = label "long" $ do
+        xy <- takeWhile1 Base64.isLetter
+        guard $ BS.length xy == 22
+        maybe (fail "Base64 decoding error") pure $
+            UUID
+                <$> Base64.decode64 (BS.take 11 xy)
+                <*> Base64.decode64 (BS.drop 11 xy)
+    pRonic = label "ronic" $ do
+        x <- do
+            mvariety <- optional $ satisfy isUpperHexDigit <* "/"
+            (format, word0) <- pBase64word
+            word <- case (format, mvariety) of
+                (Ronic, Nothing) -> pure $ '0' `BSC.cons` word0
+                (Ronic, Just v ) -> pure $  v   `BS.cons` word0
+                (Long,  Nothing) -> pure word0
+                (Long,  Just _ ) -> "mixing RON variety with long UUID"
+            case Base64.decode64 word of
+                Nothing -> fail "Base64 decoding error"
+                Just w  -> pure w
+        y <- option 0 $ do
+            mscheme <- (Just <$> pScheme) <|> (skipSpace $> Nothing)
+            (format, word) <- pBase64word
+            mw <- case (format, mscheme) of
+                (Ronic, Nothing    ) -> pure $ Base64.decode60 word
+                (Ronic, Just scheme) -> pure $
+                    ((fromIntegral scheme `shiftL` 60) .|.) <$> Base64.decode60 word
+                (Long, Nothing) -> pure $ Base64.decode64 word
+                (Long, Just _ ) -> fail "mixing RON scheme with long UUID"
+            case mw of
+                Nothing -> fail "Base64 decoding error"
+                Just w  -> pure w
         pure $ UUID x y
-    else
-        fail $ "mixing UUID formats " ++ show (xFormat, yFormat)
 
 pBase64word :: Parser (Base64Format, ByteString)
 pBase64word = label "Base64 word" $ do
     word <- takeWhile1 Base64.isLetter
     case BS.length word of
-        11         -> pure (Alien, word)
+        11         -> pure (Long, word)
         n | n < 11 -> pure (Ronic, word)
         _          -> fail "too long Base64 word"
 
@@ -117,12 +123,8 @@ serializeOp Op{typ, object, event, location} =
 serializeUuid :: UUID -> ByteStringL
 serializeUuid uuid@(UUID x y) = BSL.fromStrict $
     case variant of
-        0b00 ->
-            varietyPrefix               <>
-            Base64.encode60 value       <>
-            BSC.singleton schemeSymbol  <>
-            Base64.encode60 origin
-        _ -> Base64.encode64 x <> BSC.singleton ' ' <> Base64.encode64 y
+        0b00 -> xSzd <> ySzd
+        _    -> Base64.encode64 x <> Base64.encode64 y
   where
     UuidFields{variety, value, variant, scheme, origin} = UUID.split uuid
     schemeSymbol = case scheme of
@@ -133,3 +135,7 @@ serializeUuid uuid@(UUID x y) = BSL.fromStrict $
     varietyPrefix = case variety of
         0 -> ""
         _ -> BS.singleton (Base64.encodeLetter variety) <> "/"
+    xSzd = varietyPrefix <> Base64.encode60short value
+    ySzd = case y of
+        0 -> ""
+        _ -> BSC.singleton schemeSymbol <> Base64.encode60short origin

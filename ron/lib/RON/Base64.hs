@@ -9,6 +9,7 @@ module RON.Base64
     , decodeLetter
     , encode
     , encode60
+    , encode60short
     , encode64
     , encodeLetter
     , isLetter
@@ -16,7 +17,7 @@ module RON.Base64
 
 import           Internal.Prelude
 
-import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
+import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (isAlphaNum, ord)
@@ -129,8 +130,18 @@ encodeLetter :: Word6 -> Word8
 encodeLetter i = alphabet `BS.index` fromIntegral i
 
 encode60 :: Word60 -> ByteString
-encode60 w = BS.pack $ map encodeLetter
-    [fromIntegral $ (w `shiftR` (6 * i)) .&. 0b111111 | i <- [9, 8 .. 0]]
+encode60 w = BS.pack $
+    map (encodeLetter . fromIntegral)
+        [(w `shiftR` (6 * i)) .&. 0b111111 | i <- [9, 8 .. 0]]
+
+-- | Drop trailing zeroes
+encode60short :: Word60 -> ByteString
+encode60short = BS.pack . map (encodeLetter . fromIntegral) . go 9
+  where
+    go _ 0 = []
+    go i w =
+        (w `shiftR` (6 * i)) .&. 0b111111 :
+        go (i - 1) (w .&. complement (0b111111 `shiftL` (6 * i)))
 
 encode64 :: Word64 -> ByteString
 encode64 w = encodeLetter (fromIntegral $ w `shiftR` 60) `BS.cons` encode60 w
