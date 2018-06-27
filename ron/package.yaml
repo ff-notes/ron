@@ -1,0 +1,38 @@
+name: ron
+version: '0.1'
+copyright: 2018 Yuriy Syrovetskiy
+license: BSD3
+
+library:
+  dependencies:
+    - attoparsec
+    - binary
+  exposed-modules:
+    - RON.Base64
+    - RON.Binary
+    - RON.Text
+    - RON.Types
+    - RON.UUID
+  other-modules:
+    - Attoparsec.Extra
+    - Internal.Prelude
+  source-dirs: lib
+
+dependencies:
+  - base
+  - bytestring
+
+tests:
+  test:
+    dependencies:
+      - directory
+      - hedgehog
+      - tasty
+      - tasty-hedgehog
+      - tasty-th
+      - typed-process
+      # package
+      - ron
+    ghc-options: -threaded -rtsopts -with-rtsopts=-N
+    main: Main
+    source-dirs: test

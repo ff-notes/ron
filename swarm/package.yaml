@@ -1,0 +1,14 @@
+name: swarm
+version: '0.1'
+copyright: 2018 Yuriy Syrovetskiy
+license: BSD3
+
+tests:
+  integration:
+    main: Main
+    source-dirs: integration
+
+dependencies:
+  - async
+  - base
+  - tasty-hunit

@@ -1,0 +1,43 @@
+# Use new container infrastructure to enable caching
+dist: trusty
+sudo: false
+
+# Do not choose a language; we provide our own build tools.
+language: generic
+
+cache:
+  directories:
+    - $HOME/.local/bin
+    - $HOME/.stack
+
+matrix:
+  include:
+
+    - compiler: C++
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      script:
+        - export CC=gcc-7 CXX=g++-7
+        - make cpp-all
+
+    - compiler: Haskell
+      before_install:
+        # Download and unpack the stack executable
+        - mkdir -p ~/.local/bin
+        - export PATH=$HOME/.local/bin:$PATH
+        - >
+          [ -x ~/.local/bin/stack ]
+          || (travis_retry curl -L https://www.stackage.org/stack/linux-x86_64
+          | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack')
+        - export STACK="stack --no-terminal --install-ghc"
+      script: make haskell-all
+
+    - compiler: Go
+      script: make go-all
+
+  allow_failures:
+    - compiler: Go
