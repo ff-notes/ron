@@ -11,9 +11,8 @@ module RON.Binary (parse, serialize) where
 
 import           Internal.Prelude
 
-import           Attoparsec.Extra (Parser, anyWord8, endOfInput, label,
-                                   manyTill, parseWhole, string, takeL,
-                                   withInputSize)
+import           Attoparsec.Extra (Parser, anyWord8, label, parseWhole, string,
+                                   takeL, withInputSize)
 import           Data.Binary (Binary, decode, encode)
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import           Data.ByteString.Lazy (cons)
@@ -140,7 +139,7 @@ parseFrame = label "Frame" $ do
             let major = version `shiftR` 2
                 minor = version .&. 0b11
             fail $ "unsupported version " ++ show major ++ "." ++ show minor
-    (consumed, ops) <- withInputSize $ manyTill parseOp endOfInput
+    (consumed, ops) <- withInputSize $ many parseOp
     when (consumed /= fromIntegral size) $ fail "size mismatch"
     pure ops
 

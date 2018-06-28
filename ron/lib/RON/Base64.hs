@@ -134,9 +134,11 @@ encode60 w = BS.pack $
     map (encodeLetter . fromIntegral)
         [(w `shiftR` (6 * i)) .&. 0b111111 | i <- [9, 8 .. 0]]
 
--- | Drop trailing zeroes
+-- | Encode Word60, dropping trailing zeroes
 encode60short :: Word60 -> ByteString
-encode60short = BS.pack . map (encodeLetter . fromIntegral) . go 9
+encode60short = \case
+    0 -> "0"
+    x -> BS.pack . map (encodeLetter . fromIntegral) $ go 9 x
   where
     go _ 0 = []
     go i w =

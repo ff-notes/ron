@@ -7,16 +7,21 @@ library:
   dependencies:
     - attoparsec
     - binary
+    - deepseq  # TODO???
   exposed-modules:
     - RON.Base64
     - RON.Binary
     - RON.Text
+    - RON.Text.Parse
+    - RON.Text.Serialize
     - RON.Types
     - RON.UUID
   other-modules:
     - Attoparsec.Extra
     - Internal.Prelude
-  source-dirs: lib
+  source-dirs:
+    - lib
+    - prelude
 
 dependencies:
   - base
@@ -25,15 +30,33 @@ dependencies:
 tests:
   test:
     dependencies:
-      - directory
-      - hedgehog
-      - tasty
-      - tasty-hedgehog
-      - tasty-hunit
-      - tasty-th
-      - typed-process
+      # global
+        - deepseq
+        - directory
+        - hedgehog
+        - tasty-hedgehog
+        - tasty-th
+        - typed-process
       # package
-      - ron
+        - ron
     ghc-options: -threaded -rtsopts -with-rtsopts=-N
     main: Main
-    source-dirs: test
+    other-modules:
+      - Gen
+      - Internal.Prelude
+    source-dirs:
+      - prelude
+      - test
+
+benchmarks:
+  bench:
+    dependencies:
+      # global
+        - criterion
+        - deepseq
+      # package
+        - ron
+    main: Main
+    source-dirs:
+      - bench
+      - prelude

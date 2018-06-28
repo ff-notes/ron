@@ -1,8 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Attoparsec.Extra
     ( module Attoparsec
     , label
+    , manyTillEnd
     , parseWhole
+    , someTillEnd
+    , takeAtMost
     , takeL
+    , whole
     , withInputSize
     ) where
 
@@ -10,10 +16,11 @@ import           Internal.Prelude
 
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
+import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 
 parseWhole :: Parser a -> ByteStringL -> Either String a
-parseWhole p = parseOnly (p <* endOfInput) . toStrict
+parseWhole p = parseOnly (whole p) . toStrict
 
 -- | 'Attoparsec.take' adapter to 'ByteStringL'
 takeL :: Int -> Parser ByteStringL
@@ -32,3 +39,38 @@ withInputSize p = do
 
 label :: String -> Parser a -> Parser a
 label = flip (<?>)
+
+manyTillEnd :: Parser a -> Parser [a]
+manyTillEnd p = liftA2 (:) p (someTillEnd p)
+
+someTillEnd :: Parser a -> Parser [a]
+someTillEnd p = do
+    r <- p
+    weAreAtEnd <- atEnd
+    if weAreAtEnd then
+        pure [r]
+    else
+        someTillEnd p
+
+whole :: Parser a -> Parser a
+whole p = do
+    r <- p
+    weAreAtEnd <- atEnd
+    if weAreAtEnd then
+        pure r
+    else do
+        pos <- getPos
+        rest <- takeAtMost 11
+        let cite
+                | BS.length rest < 11 = rest
+                | otherwise           = BS.take 10 rest <> "..."
+        fail $ show pos <> ": extra input: " <> show cite
+
+takeAtMost :: Int -> Parser ByteString
+takeAtMost limit = do
+    pos0 <- getPos
+    BS.pack <$> manyTill anyWord8 (checkLimit $ pos0 + limit)
+  where
+    checkLimit maxPos = do
+        pos <- getPos
+        guard (pos >= maxPos) <|> endOfInput

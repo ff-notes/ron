@@ -20,5 +20,9 @@ uuid = UUID <$> word64' <*> word64'
 op :: MonadGen gen => gen Op
 op = Op <$> uuid <*> uuid <*> uuid <*> uuid
 
-frame :: MonadGen gen => gen Frame
-frame = list (Range.exponential 0 100) op
+frame :: MonadGen gen => Int -> gen Frame
+frame size = list (Range.exponential 0 size) op
+
+frames :: MonadGen gen => Int -> Int -> gen [Frame]
+frames frameCount opCount =
+    list (Range.exponential 0 frameCount) (frame opCount)

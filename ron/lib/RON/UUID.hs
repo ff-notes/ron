@@ -1,6 +1,6 @@
-{-# OPTIONS_GHC -ddump-deriv #-}
-
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module RON.UUID
@@ -15,7 +15,9 @@ module RON.UUID
 
 import           Internal.Prelude
 
+import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftR, (.&.))
+import           GHC.Generics (Generic)
 import           Numeric (showHex)
 
 import qualified RON.Base64 as Base64
@@ -24,7 +26,7 @@ import qualified RON.Base64 as Base64
 data UUID = UUID
     {-# UNPACK #-} !Word64
     {-# UNPACK #-} !Word64
-    deriving (Eq)
+    deriving (Eq, Generic, NFData)
 
 instance Show UUID where
     showsPrec a (UUID x y) =

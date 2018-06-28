@@ -1,8 +1,14 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 module RON.Types
     ( Frame
     , Op (..)
     , UUID (..)
     ) where
+
+import           Control.DeepSeq (NFData)
+import           GHC.Generics (Generic)
 
 import           RON.UUID (UUID (..))
 
@@ -16,7 +22,7 @@ data Op = Op
     , location :: {-# UNPACK #-} !UUID
     -- , payload :: ![Atom]
     }
-    deriving (Eq, Show)
+    deriving (Eq, Generic, NFData, Show)
 
 -- | Frame, uncompressed
 type Frame = [Op]
