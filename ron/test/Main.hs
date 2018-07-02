@@ -28,7 +28,8 @@ import qualified RON.Binary as Binary
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
-import           RON.Types (UUID (..))
+import           RON.Types (Op (..), UUID (..))
+import qualified RON.UUID as UUID
 
 import qualified Gen
 
@@ -123,27 +124,33 @@ prop_uuid_abbreviations = property $ do
         ]
     aLed = either error id $ Text.parseUuid "A/LED"
 
--- evalMaybeS :: (MonadTest m, HasCallStack) => String -> Maybe a -> m a
--- evalMaybeS msg = \case
---     Nothing -> withFrozenCallStack $ failWith Nothing msg
---     Just a  -> pure a
-
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
     Right a -> pure a
 
--- prop_ron_json_example = property $ Right output === Text.parseFrames input
---   where
---     input =
---         "*lww #1TUAQ+gritzko @`   :bar\n\
---         \     #(R            @`   :foo"
+prop_ron_json_example = property $ Right output === Text.parseFrame input
+  where
+    input =
+        "*lww #1TUAQ+gritzko @`   :bar!"
+        -- "*lww #1TUAQ+gritzko @`   :bar !\n\
+        -- \     #(R            @`   :foo !"
 --         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
 --         -- \     #(R            @`   :foo > (Q"
---     output = [] -- [Op{typ = lww}, Op{typ = lww}]
---     -- lww =
--- {
---     "foo": {
---         "bar": 1
---     }
--- }
+    output =
+        [ Op{ typ      = lww
+            , object   = barEvent
+            , event    = barEvent
+            , location = bar
+            }
+        ]
+    bar = UUID.mkNameUnsafe "bar"
+    lww = UUID.mkNameUnsafe "lww"
+    barEvent = UUID 0x5d78a680000000 0x2af6b78fafcc0000
+    -- barEvent = UUID.mkCalendarEvent 0x5d78a680000000 0x2af6b78fafcc0000
+    -- TODO: serializeTyped =
+    -- {
+    --     "foo": {
+    --         "bar": 1
+    --     }
+    -- }
