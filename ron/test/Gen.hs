@@ -32,17 +32,15 @@ frames :: MonadGen gen => Int -> Int -> gen [Frame]
 frames frameCount opCount =
     list (Range.exponential 0 frameCount) (frame opCount)
 
+-- | Event time with year 2010—2350
 eventTime :: MonadGen gen => gen UTCTime
 eventTime = do
-    y <- integral $ Range.constant 2010 2351
-    m <- integral $ Range.constant 1 12
-    d <- integral $ Range.constant 1 31
+    y  <- integral $ Range.constant 2010 2350
+    m  <- integral $ Range.constant 1 12
+    d  <- integral $ Range.constant 1 31
     hh <- integral $ Range.constant 0 23
     mm <- integral $ Range.constant 0 59
-    ss <-
-        fmap (MkFixed . (*100000)) $
-        integral $
-        Range.constant 0 599999999
+    ss <- fmap (MkFixed . (*100000)) $ integral $ Range.constant 0 599999999
     pure UTCTime
         { utctDay     = fromGregorian y m d
         , utctDayTime = timeOfDayToTime $ TimeOfDay hh mm ss
