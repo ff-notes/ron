@@ -124,6 +124,11 @@ prop_uuid_abbreviations = property $ do
         ]
     aLed = either error id $ Text.parseUuid "A/LED"
 
+evalMaybeS :: (MonadTest m, HasCallStack) => Maybe a -> m a
+evalMaybeS = \case
+    Nothing -> withFrozenCallStack $ failWith Nothing ""
+    Just a  -> pure a
+
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
@@ -154,3 +159,10 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
     --         "bar": 1
     --     }
     -- }
+
+prop_calendarEvent_roundtrip = property $ do
+    t  <- forAll Gen.eventTime
+    w  <- evalMaybeS $ UUID.mkCalendarEvent t
+    annotateShow (w, Base64.encode60short w)
+    t' <- evalMaybeS $ UUID.getCalendarEvent w
+    t === t'

@@ -37,6 +37,7 @@ tests:
         - hedgehog
         - tasty-hedgehog
         - tasty-th
+        - time
         - typed-process
       # package
         - ron
