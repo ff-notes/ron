@@ -1,11 +1,15 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module RON.UUID
     ( UUID (..)
     , UuidFields (..)
+    , getCalendarEvent
     , mkName
     , mkNameUnsafe
     , mkScopedName
@@ -17,6 +21,9 @@ import           Internal.Prelude
 
 import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftR, (.&.))
+import           Data.Fixed (Fixed (MkFixed), Pico)
+import           Data.Time (UTCTime (..), fromGregorianValid,
+                            makeTimeOfDayValid, timeOfDayToTime)
 import           GHC.Generics (Generic)
 import           Numeric (showHex)
 
@@ -79,3 +86,35 @@ mkScopedNameUnsafe
     -> ByteString  -- ^ local name, max 10 Base64 letters
     -> UUID
 mkScopedNameUnsafe scope nam = fromJust $ mkScopedName scope nam
+
+-- TODO
+-- mkCalendarEvent :: UTCTime -> Word60
+-- mkCalendarEvent = _
+
+-- TODO
+-- mkCalendarEventUuid :: UTCTime -> Maybe Word60 -> UUID
+-- mkCalendarEventUuid = _
+
+getCalendarEvent :: Word60 -> Maybe UTCTime
+getCalendarEvent v = do
+    utctDay <- fromGregorianValid (year + 2010) (month + 1) (days + 1)
+    timeOfDay <- makeTimeOfDayValid
+        hours mins (secs + (MkFixed $ ns100 * 100 * 1000 :: Pico))
+    let utctDayTime = timeOfDayToTime timeOfDay
+    pure UTCTime{..}
+  where
+    ns100  = fromIntegral $  v              .&. 0xFFFFFF
+    secs   = fromIntegral $ (v `shiftR` 24) .&. 0x3F
+    mins   = fromIntegral $ (v `shiftR` 30) .&. 0x3F
+    hours  = fromIntegral $ (v `shiftR` 36) .&. 0x3F
+    days   = fromIntegral $ (v `shiftR` 42) .&. 0x3F
+    months =                (v `shiftR` 48) .&. 0xFFF
+    (fromIntegral -> year, fromIntegral -> month) = months `divMod` 12
+
+-- TODO
+-- decodeCalendarEvent :: ByteString -> UTCTime
+-- decodeCalendarEvent = _
+
+-- TODO
+-- encodeCalendarEvent :: UTCTime -> ByteString
+-- encodeCalendarEvent = _

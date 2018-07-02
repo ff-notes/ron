@@ -135,8 +135,8 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
         "*lww #1TUAQ+gritzko @`   :bar!"
         -- "*lww #1TUAQ+gritzko @`   :bar !\n\
         -- \     #(R            @`   :foo !"
---         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
---         -- \     #(R            @`   :foo > (Q"
+        -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
+        -- \     #(R            @`   :foo > (Q"
     output =
         [ Op{ typ      = lww
             , object   = barEvent
