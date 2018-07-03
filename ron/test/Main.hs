@@ -153,9 +153,8 @@ prop_calendarEventUuid_roundtrip = property $ do
 prop_ron_json_example = property $ Right output === Text.parseFrame input
   where
     input =
-        "*lww #1TUAQ+gritzko @`   :bar !\n"
-        -- "*lww #1TUAQ+gritzko @`   :bar !\n\
-        -- \     #(R            @`   :foo !"
+        "*lww #1TUAQ+gritzko @`   :bar !\n\
+        \*lww #1TUAR+gritzko @`   :foo !"
         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
         -- \     #(R            @`   :foo > (Q"
     output =
@@ -164,10 +163,18 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
             , opEvent    = barEvent
             , opLocation = bar
             }
+        , Op{ opType     = lww
+            , opObject   = fooEvent
+            , opEvent    = fooEvent
+            , opLocation = foo
+            }
         ]
     bar      = fromJust $ UUID.mkName "bar"
     barEvent = fromJust $
         UUID.mkCalendarEvent (read "2017-10-31 10:26:00") (0, gritzko)
+    foo      = fromJust $ UUID.mkName "foo"
+    fooEvent = fromJust $
+        UUID.mkCalendarEvent (read "2017-10-31 10:27:00") (0, gritzko)
     gritzko  = fromJust $ Base64.decode60 "gritzko"
     lww      = fromJust $ UUID.mkName "lww"
     -- TODO: serializeTyped =
