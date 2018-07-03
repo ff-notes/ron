@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module RON.UUID
     ( UUID (..)
@@ -11,9 +11,7 @@ module RON.UUID
     , getCalendarEvent
     , mkCalendarEvent
     , mkName
-    , mkNameUnsafe
     , mkScopedName
-    , mkScopedNameUnsafe
     , split
     ) where
 
@@ -21,14 +19,12 @@ import           Internal.Prelude
 
 import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
-import           Data.Fixed (Fixed (MkFixed), Pico, resolution)
-import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorianValid,
-                            makeTimeOfDayValid, timeOfDayToTime,
-                            timeToTimeOfDay, toGregorian)
+import           Data.Time (UTCTime (..))
 import           GHC.Generics (Generic)
 import           Numeric (showHex)
 
 import qualified RON.Base64 as Base64
+import qualified RON.Event as Event
 
 -- | Universally unique identifier of anything
 data UUID = UUID
@@ -42,34 +38,37 @@ instance Show UUID where
         showString "UUID 0x" . showHex x . showString " 0x" . showHex y
 
 data UuidFields = UuidFields
-    { variety :: Word4
-    , value   :: Word60
-    , variant :: Word2
-    , scheme  :: Word2
-    , origin  :: Word60
+    { uuidVariety :: Word4
+    , uuidValue   :: Word60
+    , uuidVariant :: Word2
+    , uuidScheme  :: Word2
+    , uuidOrigin  :: Word60
     }
     deriving Show
 
 split :: UUID -> UuidFields
 split (UUID x y) = UuidFields
-    { variety = fromIntegral $     x `shiftR` 60
-    , value   = leastSignificant60 x
-    , variant = fromIntegral $     y `shiftR` 62
-    , scheme  = fromIntegral $    (y `shiftR` 60) .&. 0b11
-    , origin  = leastSignificant60 y
+    { uuidVariety = fromIntegral $     x `shiftR` 60
+    , uuidValue   = leastSignificant60 x
+    , uuidVariant = fromIntegral $     y `shiftR` 62
+    , uuidScheme  = fromIntegral $    (y `shiftR` 60) .&. 0b11
+    , uuidOrigin  = leastSignificant60 y
     }
+
+build :: UuidFields -> UUID
+build UuidFields{..} = UUID x y
+  where
+    x = (fromIntegral (uuidVariety .&. 0b1111) `shiftL` 60) .|.
+        leastSignificant60 uuidValue
+    y = (fromIntegral (uuidVariant .&.   0b11) `shiftL` 62) .|.
+        (fromIntegral (uuidScheme  .&.   0b11) `shiftL` 60) .|.
+        leastSignificant60 uuidOrigin
 
 -- | Make an unscoped (unqualified) name
 mkName
     :: ByteString  -- ^ name, max 10 Base64 letters
     -> Maybe UUID
 mkName nam = mkScopedName nam ""
-
--- | Partial version of 'mkName'.
-mkNameUnsafe
-    :: ByteString  -- ^ name, max 10 Base64 letters
-    -> UUID
-mkNameUnsafe = fromJust . mkName
 
 -- | Make a scoped (qualified) name
 mkScopedName
@@ -81,58 +80,16 @@ mkScopedName scope nam = do
     nam'   <- Base64.decode60 nam
     pure $ UUID scope' nam'
 
--- | Partial version of 'mkScopedName'.
-mkScopedNameUnsafe
-    :: ByteString  -- ^ scope, max 10 Base64 letters
-    -> ByteString  -- ^ local name, max 10 Base64 letters
-    -> UUID
-mkScopedNameUnsafe scope nam = fromJust $ mkScopedName scope nam
+mkCalendarEvent :: UTCTime -> (Word2, Word60) -> Maybe UUID
+mkCalendarEvent time (replicaAssignmentRule, uuidOrigin) = do
+    uuidValue <- Event.mkCalendarEvent time
+    pure $ build UuidFields
+        { uuidVariety = 0b0000 .|. (replicaAssignmentRule .&. 0b11)
+        , uuidValue
+        , uuidVariant = 0b00
+        , uuidScheme  = 0b10
+        , uuidOrigin
+        }
 
--- | Year must be >= 2010.
-mkCalendarEvent :: UTCTime -> Maybe Word60
-mkCalendarEvent UTCTime{utctDay, utctDayTime} = do
-    guard $ year >= 2010
-    guard $ secs < 60
-    pure $
-        (months     `shiftL` 48) .|.
-        ((days - 1) `shiftL` 42) .|.
-        (hours      `shiftL` 36) .|.
-        (mins       `shiftL` 30) .|.
-        (secs       `shiftL` 24) .|.
-        ns100
-  where
-    ns100 = ps `div` (100 * 1000)
-    (fromIntegral -> secs, fromIntegral -> ps) = s `divMod` resolution fs
-    MkFixed s = fs :: Pico
-    TimeOfDay (fromIntegral -> hours) (fromIntegral -> mins) fs =
-        timeToTimeOfDay utctDayTime
-    months = (fromIntegral year - 2010) * 12 + (month - 1)
-    (year, fromIntegral -> month, fromIntegral -> days) =
-        toGregorian utctDay
-
--- TODO
--- mkCalendarEventUuid :: UTCTime -> Maybe Word60 -> UUID
--- mkCalendarEventUuid = _
-
-getCalendarEvent :: Word60 -> Maybe UTCTime
-getCalendarEvent v = do
-    utctDay <- fromGregorianValid (year + 2010) (month + 1) (days + 1)
-    timeOfDay <- makeTimeOfDayValid
-        hours mins (secs + (MkFixed $ ns100 * 100 * 1000 :: Pico))
-    pure UTCTime{utctDay, utctDayTime = timeOfDayToTime timeOfDay}
-  where
-    ns100  = fromIntegral $  v              .&. 0xFFFFFF
-    secs   = fromIntegral $ (v `shiftR` 24) .&. 0x3F
-    mins   = fromIntegral $ (v `shiftR` 30) .&. 0x3F
-    hours  = fromIntegral $ (v `shiftR` 36) .&. 0x3F
-    days   = fromIntegral $ (v `shiftR` 42) .&. 0x3F
-    months =                (v `shiftR` 48) .&. 0xFFF
-    (fromIntegral -> year, fromIntegral -> month) = months `divMod` 12
-
--- TODO
--- decodeCalendarEvent :: ByteString -> UTCTime
--- decodeCalendarEvent = _
-
--- TODO
--- encodeCalendarEvent :: UTCTime -> ByteString
--- encodeCalendarEvent = _
+getCalendarEvent :: UUID -> Maybe UTCTime
+getCalendarEvent = Event.getCalendarEvent . uuidValue . split

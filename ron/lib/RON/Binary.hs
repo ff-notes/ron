@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -27,12 +28,12 @@ serialize f =
     "RON" <> withDescriptor (DFrame Version_2_0) (foldMap serializeOp f)
 
 serializeOp :: Op -> ByteStringL
-serializeOp Op{typ, object, event, location} =
+serializeOp Op{..} =
     withDescriptor (DOp Raw) $ mconcat
-        [ serializeUuid Type          typ
-        , serializeUuid Object        object
-        , serializeUuid Event         event
-        , serializeUuid RefOrLocation location
+        [ serializeUuid Type          opType
+        , serializeUuid Object        opObject
+        , serializeUuid Event         opEvent
+        , serializeUuid RefOrLocation opLocation
         ]
 
 serializeUuid :: UuidSubtype -> UUID -> ByteStringL
@@ -156,11 +157,11 @@ parseOp = label "Op" $ do
 parseOpContent :: OpSubtype -> Parser Op
 parseOpContent = \case
     Raw -> do
-        typ    <- parseUuid Type
-        object <- parseUuid Object
-        event  <- parseUuid Event
-        location    <- parseUuid RefOrLocation
-        pure Op{typ, object, event, location}
+        opType     <- parseUuid Type
+        opObject   <- parseUuid Object
+        opEvent    <- parseUuid Event
+        opLocation <- parseUuid RefOrLocation
+        pure Op{..}
     Reduced     -> fail "decoding Reduced Op not implemented"
     Header      -> fail "decoding Header Op not implemented"
     QueryHeader -> fail "decoding Query Header Op not implemented"

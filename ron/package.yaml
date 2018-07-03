@@ -12,6 +12,7 @@ library:
   exposed-modules:
     - RON.Base64
     - RON.Binary
+    - RON.Event
     - RON.Text
     - RON.Text.Parse
     - RON.Text.Serialize

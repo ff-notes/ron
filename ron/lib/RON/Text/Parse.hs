@@ -56,10 +56,10 @@ frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
 op :: Parser Op
 op = label "Op" $ do
-    typ      <- label "type"     $ skipSpace *> "*" *> uuidTerm Nothing
-    object   <- label "object"   $ skipSpace *> "#" *> uuidTerm (Just typ)
-    event    <- label "event"    $ skipSpace *> "@" *> uuidTerm (Just object)
-    location <- label "location" $ skipSpace *> ":" *> uuidTerm (Just event)
+    opType     <- label "type"     $ skipSpace *> "*" *> uuidTerm Nothing
+    opObject   <- label "object"   $ skipSpace *> "#" *> uuidTerm (Just opType)
+    opEvent    <- label "event"    $ skipSpace *> "@" *> uuidTerm (Just opObject)
+    opLocation <- label "location" $ skipSpace *> ":" *> uuidTerm (Just opEvent)
     -- TODO: location is available as the previous-same-op UUID in payload
     payload
     pure Op{..}

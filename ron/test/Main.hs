@@ -1,4 +1,4 @@
-{-# OPTIONS -Wno-missing-signatures #-}
+{-# OPTIONS -Wno-missing-signatures -Wno-unused-imports #-}
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -11,6 +11,7 @@ import           Internal.Prelude
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Data.Foldable (for_)
+import           Data.Time (UTCTime (..), fromGregorian)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
                            forAll, property, (===))
@@ -25,6 +26,7 @@ import           Test.Tasty.TH (defaultMainGenerator)
 
 import qualified RON.Base64 as Base64
 import qualified RON.Binary as Binary
+import qualified RON.Event as Event
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
@@ -134,6 +136,21 @@ evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
     Right a -> pure a
 
+prop_calendarEvent_roundtrip = property $ do
+    time <- forAll Gen.eventTime
+    event <- evalMaybeS $ Event.mkCalendarEvent time
+    annotateShow (event, Base64.encode60short event)
+    time' <- evalMaybeS $ Event.getCalendarEvent event
+    time === time'
+
+prop_calendarEventUuid_roundtrip = property $ do
+    time <- forAll Gen.eventTime
+    origin <- forAll Gen.word60
+    event <- evalMaybeS $ UUID.mkCalendarEvent time (0, origin)
+    annotateShow (event, Text.serializeUuid event)
+    time' <- evalMaybeS $ UUID.getCalendarEvent event
+    time === time'
+
 prop_ron_json_example = property $ Right output === Text.parseFrame input
   where
     input =
@@ -143,26 +160,22 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
         -- \     #(R            @`   :foo > (Q"
     output =
-        [ Op{ typ      = lww
-            , object   = barEvent
-            , event    = barEvent
-            , location = bar
+        [ Op{ opType     = lww
+            , opObject   = barEvent
+            , opEvent    = barEvent
+            , opLocation = bar
             }
         ]
-    bar = UUID.mkNameUnsafe "bar"
-    lww = UUID.mkNameUnsafe "lww"
-    barEvent = UUID 0x5d78a680000000 0x2af6b78fafcc0000
-    -- barEvent = UUID.mkCalendarEvent 0x5d78a680000000 0x2af6b78fafcc0000
+    bar      = fromJust $ UUID.mkName "bar"
+    barEvent = fromJust $
+        UUID.mkCalendarEvent
+            (UTCTime (fromGregorian 2017 10 31) 37560)
+            (0, gritzko)
+    gritzko  = fromJust $ Base64.decode60 "gritzko"
+    lww      = fromJust $ UUID.mkName "lww"
     -- TODO: serializeTyped =
     -- {
     --     "foo": {
     --         "bar": 1
     --     }
     -- }
-
-prop_calendarEvent_roundtrip = property $ do
-    t  <- forAll Gen.eventTime
-    w  <- evalMaybeS $ UUID.mkCalendarEvent t
-    annotateShow (w, Base64.encode60short w)
-    t' <- evalMaybeS $ UUID.getCalendarEvent w
-    t === t'

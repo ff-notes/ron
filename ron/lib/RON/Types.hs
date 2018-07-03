@@ -16,11 +16,11 @@ import           RON.UUID (UUID (..))
 --     deriving (Eq, Show)
 
 data Op = Op
-    { typ      :: {-# UNPACK #-} !UUID
-    , object   :: {-# UNPACK #-} !UUID
-    , event    :: {-# UNPACK #-} !UUID
-    , location :: {-# UNPACK #-} !UUID
-    -- , payload :: ![Atom]
+    { opType     :: {-# UNPACK #-} !UUID
+    , opObject   :: {-# UNPACK #-} !UUID
+    , opEvent    :: {-# UNPACK #-} !UUID
+    , opLocation :: {-# UNPACK #-} !UUID
+    -- , opPayload :: ![Atom]
     }
     deriving (Eq, Generic, NFData, Show)
 
