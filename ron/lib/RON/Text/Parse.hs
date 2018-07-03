@@ -46,7 +46,7 @@ parseUuid :: ByteStringL -> Either String UUID
 parseUuid = parseWhole uuid
 
 endOfFrame :: Parser ()
-endOfFrame = label "end of frame" $ skipSpace *> char '.' $> ()
+endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 frameBody :: Parser Frame
 frameBody = label "Frame body" $ many op
@@ -136,4 +136,4 @@ scheme = label "scheme" $
         _   -> fail "not a scheme"
 
 payload :: Parser ()
-payload = label "payload" $ void $ char '!'
+payload = label "payload" $ void $ skipSpace *> char '!'
