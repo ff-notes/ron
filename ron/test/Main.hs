@@ -1,4 +1,4 @@
-{-# OPTIONS -Wno-missing-signatures -Wno-unused-imports #-}
+{-# OPTIONS -Wno-missing-signatures #-}
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -11,7 +11,6 @@ import           Internal.Prelude
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Data.Foldable (for_)
-import           Data.Time (UTCTime (..), fromGregorian)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
                            forAll, property, (===))
@@ -168,9 +167,7 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
         ]
     bar      = fromJust $ UUID.mkName "bar"
     barEvent = fromJust $
-        UUID.mkCalendarEvent
-            (UTCTime (fromGregorian 2017 10 31) 37560)
-            (0, gritzko)
+        UUID.mkCalendarEvent (read "2017-10-31 10:26:00") (0, gritzko)
     gritzko  = fromJust $ Base64.decode60 "gritzko"
     lww      = fromJust $ UUID.mkName "lww"
     -- TODO: serializeTyped =
