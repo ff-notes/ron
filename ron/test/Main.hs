@@ -153,7 +153,7 @@ prop_calendarEventUuid_roundtrip = property $ do
 prop_ron_json_example = property $ Right output === Text.parseFrame input
   where
     input =
-        "*lww #1TUAQ+gritzko @`   :bar!"
+        "*lww #1TUAQ+gritzko @`   :bar!\n"
         -- "*lww #1TUAQ+gritzko @`   :bar !\n\
         -- \     #(R            @`   :foo !"
         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\

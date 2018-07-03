@@ -28,7 +28,7 @@ import           RON.Types (Frame, Op (..))
 import           RON.UUID (UUID (..))
 
 parseFrame :: ByteStringL -> Either String Frame
-parseFrame = parseWhole $ frameBody <* optional endOfFrame
+parseFrame = parseWhole $ frameBody <* optional endOfFrame <* skipSpace
 
 parseFrames :: ByteStringL -> Either String [Frame]
 parseFrames = parseWhole $ many frame
