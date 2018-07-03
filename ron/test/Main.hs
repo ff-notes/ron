@@ -154,7 +154,7 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
   where
     input =
         "*lww #1TUAQ+gritzko @`   :bar !\n\
-        \*lww #1TUAR+gritzko @`   :foo !"
+        \     #1TUAR+gritzko @`   :foo !"
         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
         -- \     #(R            @`   :foo > (Q"
     output =

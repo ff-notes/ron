@@ -1,7 +1,7 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TupleSections #-}
 
 module RON.Text.Parse
     ( frameBody
@@ -40,7 +40,7 @@ parseFrames = parseWhole $ many frame
         pure ops
 
 parseOp :: ByteStringL -> Either String Op
-parseOp = parseWhole $ op <* skipSpace
+parseOp = parseWhole $ fst <$> op Nothing <* skipSpace
 
 parseUuid :: ByteStringL -> Either String UUID
 parseUuid = parseWhole uuid
@@ -49,23 +49,39 @@ endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 frameBody :: Parser Frame
-frameBody = label "Frame body" $ many op
+frameBody = label "Frame body" $ go Nothing <|> pure []
+  where
+    go mPrev = do
+        (x, u) <- op mPrev
+        xs <- go (Just (x, u)) <|> pure []
+        pure $ x : xs
 
 frameInStream :: Parser Frame
 frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
-op :: Parser Op
-op = label "Op" $ do
-    opType     <- header "type"     "*" Nothing
-    opObject   <- header "object"   "#" (Just opType)
-    opEvent    <- header "event"    "@" (Just opObject)
-    opLocation <- header "location" ":" (Just opEvent)
+op :: Maybe (Op, UUID) -> Parser (Op, UUID)
+op mPrevOpUuid = label "Op" $ do
+    (hasTyp, typ) <- header "type"     "*" opType     (snd <$> mPrevOpUuid)
+    (hasObj, obj) <- header "object"   "#" opObject   (Just typ)
+    (hasEvt, evt) <- header "event"    "@" opEvent    (Just obj)
+    (hasLoc, loc) <- header "location" ":" opLocation (Just evt)
+    guard $ hasTyp || hasObj || hasEvt || hasLoc
     -- TODO: location is available as the previous-same-op UUID in payload
     payload
-    pure Op{..}
+    pure
+        ( Op{opType = typ, opObject = obj, opEvent = evt, opLocation = loc}
+        , loc
+        )
   where
-    header name signal mPrevSameOp =
-        label name $ skipSpace *> signal *> uuidTerm mPrevSameOp
+    header name signal f mPrevUuid = case mPrevOpUuid of
+        Nothing          -> (True,) <$> go
+        Just (prevOp, _) -> do
+            mu <- optional go
+            pure $ case mu of
+                Nothing -> (False, f prevOp)
+                Just u  -> (True, u)
+      where
+        go = label name $ skipSpace *> label "signal character" signal *> uuidTerm mPrevUuid
 
 uuidTerm
     :: Maybe UUID
@@ -73,8 +89,17 @@ uuidTerm
         -- (e.g. event id against same op's object id)
     -> Parser UUID
 uuidTerm = \case
-    Nothing         -> uuid
-    Just prevSameOp -> ("`" $> prevSameOp) <|> uuid
+    Nothing -> uuid
+    Just u  -> uuidCompressed u <|> uuid
+
+uuidCompressed
+    :: UUID
+        -- ^ previous UUID of the same op
+        -- (e.g. event id against same op's object id)
+    -> Parser UUID
+uuidCompressed u = anyChar >>= \case
+    '`' -> pure u
+    c   -> fail $ "unsupported compression " ++ show c
 
 data Base64Format = Ronic | Long
     deriving (Eq, Show)
