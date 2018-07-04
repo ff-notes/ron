@@ -2,7 +2,10 @@
 
 module Attoparsec.Extra
     ( module Attoparsec
+    , failWith
+    , getPos
     , label
+    , label'
     , manyTillEnd
     , parseWhole
     , someTillEnd
@@ -40,6 +43,11 @@ withInputSize p = do
 label :: String -> Parser a -> Parser a
 label = flip (<?>)
 
+label' :: String -> Parser a -> Parser a
+label' name p = do
+    pos <- getPos
+    label (name ++ ':' : show pos) p
+
 manyTillEnd :: Parser a -> Parser [a]
 manyTillEnd p = liftA2 (:) p (someTillEnd p)
 
@@ -74,3 +82,6 @@ takeAtMost limit = do
     checkLimit maxPos = do
         pos <- getPos
         guard (pos >= maxPos) <|> endOfInput
+
+failWith :: String -> Maybe a -> Parser a
+failWith msg = maybe (fail msg) pure
