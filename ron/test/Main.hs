@@ -157,8 +157,7 @@ prop_ron_json_example = property $ do
   where
     input =
         "*lww #1TUAQ+gritzko @`   :bar = 1\n\
-        \     #1TUAR+gritzko @`   :foo "
-        -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
+        \     #1TUAR+gritzko @`   :foo > 1TUAQ+gritzko"
         -- \     #(R            @`   :foo > (Q"
     output =
         [ Op{ opType     = lww
@@ -171,7 +170,7 @@ prop_ron_json_example = property $ do
             , opObject   = fooEvent
             , opEvent    = fooEvent
             , opLocation = foo
-            , opPayload  = []
+            , opPayload  = [AUuid barEvent]
             }
         ]
     bar      = fromJust $ UUID.mkName "bar"

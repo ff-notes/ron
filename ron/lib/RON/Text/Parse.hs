@@ -130,7 +130,7 @@ uuidRon = label "UUID-RON" $ do
             (Long,  Just _ ) -> "mixing RON variety with long UUID"
         failWith "Base64 decoding error" $ Base64.decode64 word
     y <- option 0 $ do
-        mscheme <- (Just <$> scheme) <|> (skipSpace $> Nothing)
+        mscheme <- Just <$> scheme <|> skipSpace $> Nothing
         (format, word) <- base64word
         mw <- case (format, mscheme) of
             (Ronic, Nothing   ) -> pure $ Base64.decode60 word
@@ -176,6 +176,9 @@ payload :: Parser [Atom]
 payload = label "payload" $ many atom
 
 atom :: Parser Atom
-atom = skipSpace *> (AInteger <$> ("=" *> skipSpace *> integer))
+atom = skipSpace *> atom'
   where
+    atom' =
+        "=" *> skipSpace *> (AInteger <$> integer) <|>
+        ">" *> skipSpace *> (AUuid    <$> uuid   )
     integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)

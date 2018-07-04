@@ -15,7 +15,7 @@ import           GHC.Generics (Generic)
 
 import           RON.UUID (UUID (..))
 
-newtype Atom = AInteger Int64
+data Atom = AUuid UUID | AInteger Int64
     deriving (Eq, Generic, NFData, Show)
 
 data Op = Op
