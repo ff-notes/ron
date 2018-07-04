@@ -8,6 +8,7 @@ library:
     - attoparsec
     - binary
     - deepseq  # TODO remove???
+    - flat
     - time
   exposed-modules:
     - RON.Base64
@@ -46,6 +47,7 @@ tests:
     main: Main
     other-modules:
       - Gen
+      - HexDump
       - Internal.Prelude
     source-dirs:
       - prelude

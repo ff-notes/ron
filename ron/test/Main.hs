@@ -29,10 +29,11 @@ import qualified RON.Event as Event
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
-import           RON.Types (Op (..), UUID (..))
+import           RON.Types (Atom (..), Op (..), UUID (..))
 import qualified RON.UUID as UUID
 
 import qualified Gen
+import           HexDump (hexdump)
 
 main :: IO ()
 main = do
@@ -62,7 +63,7 @@ prepareEnv = do
 prop_binary_roundtrip = property $ do
     frame <- forAll $ Gen.frame 1000
     let bytes = Binary.serialize frame
-    annotateShow bytes
+    annotate $ hexdump bytes
     Right frame === Binary.parse bytes
 
 textRoundtrip
@@ -150,11 +151,13 @@ prop_calendarEventUuid_roundtrip = property $ do
     time' <- evalMaybeS $ UUID.getCalendarEvent event
     time === time'
 
-prop_ron_json_example = property $ Right output === Text.parseFrame input
+prop_ron_json_example = property $ do
+    parsed <- evalEitherS $ Text.parseFrame input
+    output === parsed
   where
     input =
-        "*lww #1TUAQ+gritzko @`   :bar !\n\
-        \     #1TUAR+gritzko @`   :foo !"
+        "*lww #1TUAQ+gritzko @`   :bar = 1\n\
+        \     #1TUAR+gritzko @`   :foo "
         -- "*lww #1TUAQ+gritzko @`   :bar = 1\n\
         -- \     #(R            @`   :foo > (Q"
     output =
@@ -162,11 +165,13 @@ prop_ron_json_example = property $ Right output === Text.parseFrame input
             , opObject   = barEvent
             , opEvent    = barEvent
             , opLocation = bar
+            , opPayload  = [AInteger 1]
             }
         , Op{ opType     = lww
             , opObject   = fooEvent
             , opEvent    = fooEvent
             , opLocation = foo
+            , opPayload  = []
             }
         ]
     bar      = fromJust $ UUID.mkName "bar"

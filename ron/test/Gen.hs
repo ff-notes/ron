@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumDecimals #-}
 
 module Gen where
 
@@ -11,7 +12,7 @@ import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (integral, list, word64)
 import qualified Hedgehog.Range as Range
 
-import           RON.Types (Frame, Op (..), UUID (..))
+import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
@@ -23,7 +24,7 @@ uuid :: MonadGen gen => gen UUID
 uuid = UUID <$> word64' <*> word64'
 
 op :: MonadGen gen => gen Op
-op = Op <$> uuid <*> uuid <*> uuid <*> uuid
+op = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload
 
 frame :: MonadGen gen => Int -> gen Frame
 frame size = list (Range.exponential 0 size) op
@@ -45,3 +46,9 @@ eventTime = do
         { utctDay     = fromGregorian y m d
         , utctDayTime = timeOfDayToTime $ TimeOfDay hh mm ss
         }
+
+payload :: MonadGen gen => gen [Atom]
+payload = list (Range.exponential 0 10) atom
+
+atom :: MonadGen gen => gen Atom
+atom = AInteger <$> integral (Range.exponentialFrom 0 (- 10e10) 10e10)

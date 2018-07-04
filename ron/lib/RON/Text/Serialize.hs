@@ -1,4 +1,5 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -18,7 +19,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 import qualified RON.Base64 as Base64
-import           RON.Types (Frame, Op (..))
+import           RON.Types (Atom (..), Frame, Op (..))
 import           RON.UUID (UUID (..), UuidFields (..))
 import qualified RON.UUID as UUID
 
@@ -30,12 +31,14 @@ serializeFrames = foldMap serializeFrame
 
 serializeOp :: Op -> ByteStringL
 serializeOp Op{..} =
-    let typ      = serializeUuid opType
-        object   = serializeUuid opObject
-        event    = serializeUuid opEvent
-        location = serializeUuid opLocation
-    in  "*" <> typ <> " #" <> object <> " @" <> event <> " :" <> location <>
-        "!\n"
+    let typ      =     serializeUuid opType
+        object   =     serializeUuid opObject
+        event    =     serializeUuid opEvent
+        location =     serializeUuid opLocation
+        payload  = map serializeAtom opPayload
+    in  BSLC.unwords $
+            "*" <> typ : "#" <> object : "@" <> event : ":" <> location :
+            payload
 
 serializeUuid :: UUID -> ByteStringL
 serializeUuid u@(UUID x y) = BSL.fromStrict $
@@ -56,3 +59,7 @@ serializeUuid u@(UUID x y) = BSL.fromStrict $
     y' = case y of
         0 -> ""
         _ -> BSC.singleton schemeSymbol <> Base64.encode60short uuidOrigin
+
+serializeAtom :: Atom -> ByteStringL
+serializeAtom = \case
+    AInteger int -> "=" <> BSLC.pack (show int)

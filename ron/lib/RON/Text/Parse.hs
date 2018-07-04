@@ -1,7 +1,9 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Parse
     ( frameBody
@@ -16,8 +18,8 @@ import           Internal.Prelude
 
 import           Attoparsec.Extra (Parser, failWith, label, option, parseWhole,
                                    satisfy)
-import           Data.Attoparsec.ByteString.Char8 (anyChar, char, skipSpace,
-                                                   takeWhile1)
+import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
+                                                   skipSpace, takeWhile1)
 import           Data.Bits (shiftL, (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -25,8 +27,7 @@ import           Data.Char (ord)
 import           Data.Functor (($>))
 
 import qualified RON.Base64 as Base64
-import           RON.Types (Frame, Op (..))
-import           RON.UUID (UUID (..))
+import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
 
 parseFrame :: ByteStringL -> Either String Frame
 parseFrame = parseWhole $ frameBody <* optional endOfFrame <* skipSpace
@@ -66,16 +67,12 @@ frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
 opStart :: Parser (Op, UUID)
 opStart = label "Op-start" $ do
-    typ <- headerStart "type"     "*"
-    obj <- header      "object"   "#" typ
-    evt <- header      "event"    "@" obj
-    loc <- header      "location" ":" evt
-    -- TODO: location is available as the previous UUID in payload
-    payload
-    pure
-        ( Op{opType = typ, opObject = obj, opEvent = evt, opLocation = loc}
-        , loc
-        )
+    opType     <- headerStart "type"     "*"
+    opObject   <- header      "object"   "#" opType
+    opEvent    <- header      "event"    "@" opObject
+    opLocation <- header      "location" ":" opEvent
+    opPayload  <- payload
+    pure (Op{..}, opLocation)
   where
     headerStart name signal =
         label name $ skipSpace *> label "signal character" signal *> uuid
@@ -86,17 +83,13 @@ opStart = label "Op-start" $ do
 
 op :: (Op, UUID) -> Parser (Op, UUID)
 op (prevOp, prevUuid) = label "Op" $ do
-    (hasTyp, typ) <- header "type"     "*" opType     prevUuid
-    (hasObj, obj) <- header "object"   "#" opObject   typ
-    (hasEvt, evt) <- header "event"    "@" opEvent    obj
-    (hasLoc, loc) <- header "location" ":" opLocation evt
+    (hasTyp, opType)     <- header "type"     "*" opType     prevUuid
+    (hasObj, opObject)   <- header "object"   "#" opObject   opType
+    (hasEvt, opEvent)    <- header "event"    "@" opEvent    opObject
+    (hasLoc, opLocation) <- header "location" ":" opLocation opEvent
     guard $ hasTyp || hasObj || hasEvt || hasLoc
-    -- TODO: location is available as the previous UUID in payload
-    payload
-    pure
-        ( Op{opType = typ, opObject = obj, opEvent = evt, opLocation = loc}
-        , loc
-        )
+    opPayload <- payload
+    pure (Op{..}, opLocation)
   where
     header name signal f prev = do
         mu <- optional go
@@ -179,5 +172,10 @@ scheme = label "scheme" $
         '-' -> pure 0b11
         _   -> fail "not a scheme"
 
-payload :: Parser ()
-payload = label "payload" $ void $ skipSpace *> char '!'
+payload :: Parser [Atom]
+payload = label "payload" $ many atom
+
+atom :: Parser Atom
+atom = skipSpace *> (AInteger <$> ("=" *> skipSpace *> integer))
+  where
+    integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)
