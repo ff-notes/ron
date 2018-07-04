@@ -23,7 +23,7 @@ data Op = Op
     , opObject   :: {-# UNPACK #-} !UUID
     , opEvent    :: {-# UNPACK #-} !UUID
     , opLocation :: {-# UNPACK #-} !UUID
-    , opPayload  :: {-# UNPACK #-} ![Atom]
+    , opPayload  ::                ![Atom]
     }
     deriving (Eq, Generic, NFData, Show)
 
