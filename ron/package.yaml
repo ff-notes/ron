@@ -3,6 +3,13 @@ version: '0.1'
 copyright: 2018 Yuriy Syrovetskiy
 license: BSD3
 
+dependencies:
+  - base
+  - bytestring
+
+default-extensions:
+  - StrictData
+
 library:
   dependencies:
     - attoparsec
@@ -25,10 +32,6 @@ library:
   source-dirs:
     - lib
     - prelude
-
-dependencies:
-  - base
-  - bytestring
 
 tests:
   test:
