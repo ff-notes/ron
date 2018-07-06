@@ -3,23 +3,26 @@ version: '0.1'
 copyright: 2018 Yuriy Syrovetskiy
 license: BSD3
 
+default-extensions:
+  - StrictData
+
 dependencies:
   - base
   - bytestring
-
-default-extensions:
-  - StrictData
 
 library:
   dependencies:
     - attoparsec
     - binary
-    - deepseq  # TODO remove???
+    - deepseq
     - flat
     - time
   exposed-modules:
     - RON.Base64
     - RON.Binary
+    - RON.Binary.Parse
+    - RON.Binary.Serialize
+    - RON.Binary.Types
     - RON.Event
     - RON.Text
     - RON.Text.Parse
