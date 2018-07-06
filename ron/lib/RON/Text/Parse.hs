@@ -16,8 +16,8 @@ module RON.Text.Parse
 
 import           Internal.Prelude
 
-import           Attoparsec.Extra (Parser, failWith, label, option, parseWhole,
-                                   satisfy)
+import           Attoparsec.Extra (Parser, endOfInputEx, failWith, label,
+                                   option, parseOnlyL, satisfy)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
                                                    skipSpace, takeWhile1)
 import           Data.Bits (shiftL, (.|.))
@@ -30,10 +30,11 @@ import qualified RON.Base64 as Base64
 import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
 
 parseFrame :: ByteStringL -> Either String Frame
-parseFrame = parseWhole $ frameBody <* optional endOfFrame <* skipSpace
+parseFrame = parseOnlyL $
+    frameBody <* optional endOfFrame <* skipSpace <* endOfInputEx
 
 parseFrames :: ByteStringL -> Either String [Frame]
-parseFrames = parseWhole $ many frame
+parseFrames = parseOnlyL $ many frame <* endOfInputEx
   where
     frame = do
         ops <- frameBody
@@ -42,10 +43,10 @@ parseFrames = parseWhole $ many frame
         pure ops
 
 parseOp :: ByteStringL -> Either String Op
-parseOp = parseWhole $ fst <$> opStart <* skipSpace
+parseOp = parseOnlyL $ fst <$> opStart <* skipSpace <* endOfInputEx
 
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseWhole uuid
+parseUuid = parseOnlyL $ uuid <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'

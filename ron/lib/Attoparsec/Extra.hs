@@ -2,16 +2,16 @@
 
 module Attoparsec.Extra
     ( module Attoparsec
+    , endOfInputEx
     , failWith
     , getPos
     , label
     , label'
     , manyTillEnd
-    , parseWhole
+    , parseOnlyL
     , someTillEnd
     , takeAtMost
     , takeL
-    , whole
     , withInputSize
     ) where
 
@@ -22,8 +22,8 @@ import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 
-parseWhole :: Parser a -> ByteStringL -> Either String a
-parseWhole p = parseOnly (whole p) . toStrict
+parseOnlyL :: Parser a -> ByteStringL -> Either String a
+parseOnlyL p = parseOnly p . toStrict
 
 -- | 'Attoparsec.take' adapter to 'ByteStringL'
 takeL :: Int -> Parser ByteStringL
@@ -60,13 +60,11 @@ someTillEnd p = do
     else
         someTillEnd p
 
-whole :: Parser a -> Parser a
-whole p = do
-    r <- p
+-- | Variant of 'endOfInput' with a more debuggable message.
+endOfInputEx :: Parser ()
+endOfInputEx = do
     weAreAtEnd <- atEnd
-    if weAreAtEnd then
-        pure r
-    else do
+    unless weAreAtEnd $ do
         pos <- getPos
         rest <- takeAtMost 11
         let cite

@@ -8,8 +8,8 @@ module RON.Binary.Parse where
 
 import           Internal.Prelude
 
-import           Attoparsec.Extra (Parser, anyWord8, label, parseWhole, string,
-                                   takeL, withInputSize)
+import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
+                                   parseOnlyL, string, takeL, withInputSize)
 import qualified Data.Binary as Binary
 import           Data.Bits (shiftR, (.&.))
 import           Data.ZigZag (zzDecode64)
@@ -30,10 +30,10 @@ parseDesc = label "desc" $ do
     pure (desc, size)
 
 parse :: ByteStringL -> Either String Frame
-parse = parseWhole parseDescAndFrame
+parse = parseOnlyL $ parseFrame <* endOfInputEx
 
-parseDescAndFrame :: Parser Frame
-parseDescAndFrame = label "Frame" $ do
+parseFrame :: Parser Frame
+parseFrame = label "Frame" $ do
     _ <- string "RON2" <|> do
         magic <- takeL 4
         fail $ "unsupported magic sequence " ++ show magic
