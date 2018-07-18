@@ -4,6 +4,7 @@ module Attoparsec.Extra
     ( module Attoparsec
     , failWith
     , getPos
+    , isSuccessful
     , label
     , label'
     , manyTillEnd
@@ -85,3 +86,8 @@ takeAtMost limit = do
 
 failWith :: String -> Maybe a -> Parser a
 failWith msg = maybe (fail msg) pure
+
+-- | Apply parser and check it is applied successfully.
+-- Kinda opposite to 'guard'.
+isSuccessful :: Alternative f => f a -> f Bool
+isSuccessful p = p $> True <|> pure False
