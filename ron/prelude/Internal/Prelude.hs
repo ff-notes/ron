@@ -8,6 +8,7 @@ import           Control.Monad as X
 import           Data.Bits ((.&.))
 import           Data.ByteString as X (ByteString)
 import qualified Data.ByteString.Lazy as BSL
+import           Data.Functor as X
 import           Data.Int as X (Int16, Int32, Int64, Int8)
 import           Data.Maybe as X
 import           Data.Semigroup as X ((<>))
