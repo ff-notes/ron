@@ -16,10 +16,12 @@ module RON.Text.Parse
 
 import           Internal.Prelude
 
-import           Attoparsec.Extra (Parser, endOfInput, failWith, label, option,
-                                   parseOnly, parseWhole, satisfy)
+import           Attoparsec.Extra (Parser, endOfInput, failWith, isSuccessful,
+                                   label, option, parseOnly, parseWhole,
+                                   satisfy)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
-                                                   skipSpace, takeWhile1)
+                                                   peekChar, skipSpace,
+                                                   takeWhile1)
 import qualified Data.Attoparsec.ByteString.Char8 as AttoparsecChar
 import           Data.Bits (shiftL, (.|.))
 import qualified Data.ByteString as BS
@@ -83,33 +85,33 @@ frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
 opStart :: Parser (Op, UUID)
 opStart = label "Op-start" $ do
-    opType     <- keyStart "type"     "*"
-    opObject   <- key      "object"   "#" opType
-    opEvent    <- key      "event"    "@" opObject
-    opLocation <- key      "location" ":" opEvent
+    opType     <- keyStart "type"     '*'
+    opObject   <- key      "object"   '#' opType
+    opEvent    <- key      "event"    '@' opObject
+    opLocation <- key      "location" ':' opEvent
     opPayload  <- payload
     pure (Op{..}, opLocation)
   where
     keyStart name keyChar =
-        label name $ skipSpace *> label "key character" keyChar *> uuid
+        label name $ skipSpace *> label "key character" (char keyChar) *> uuid
     key name keyChar prev = label name $
         skipSpace *>
-        label "key character" keyChar *>
+        label "key character" (char keyChar) *>
         (uuidCompressed prev <|> uuid)
 
 op :: (Op, UUID) -> Parser (Op, UUID)
 op (prevOp, prevUuid) = label "Op" $ do
-    (hasTyp, opType)     <- key "type"     "*" opType     prevUuid
-    (hasObj, opObject)   <- key "object"   "#" opObject   opType
-    (hasEvt, opEvent)    <- key "event"    "@" opEvent    opObject
-    (hasLoc, opLocation) <- key "location" ":" opLocation opEvent
+    (hasTyp, opType)     <- key "type"     '*' opType     prevUuid
+    (hasObj, opObject)   <- key "object"   '#' opObject   opType
+    (hasEvt, opEvent)    <- key "event"    '@' opEvent    opObject
+    (hasLoc, opLocation) <- key "location" ':' opLocation opEvent
     unless (hasTyp || hasObj || hasEvt || hasLoc) $ fail "no key found"
     opPayload <- payload
     pure (Op{..}, opLocation)
   where
     key name keyChar f prev = label name $ do
         skipSpace
-        isKeyPresent <- label "key character" keyChar $> True <|> pure False
+        isKeyPresent <- isSuccessful $ char keyChar
         if isKeyPresent then do
             u <- uuidCompressed prev <|> uuid
             pure (True, u)
@@ -169,9 +171,8 @@ base64word :: Parser (Base64Format, ByteString)
 base64word = label "Base64 word" $ do
     word <- AttoparsecChar.takeWhile Base64.isLetter
     let n = BS.length word
-    if  | n == 0  -> do
-            mc <- optional anyChar
-            case mc of
+    if  | n == 0  ->
+            peekChar >>= \case
                 Just c  -> fail $ "unexpected " ++ show c
                 Nothing -> fail "unexpected end of input"
         | n == 11 -> pure (Long, word)
