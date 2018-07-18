@@ -16,9 +16,8 @@ module RON.Text.Parse
 
 import           Internal.Prelude
 
-import           Attoparsec.Extra (Parser, endOfInput, failWith, isSuccessful,
-                                   label, option, parseOnly, parseWhole,
-                                   satisfy)
+import           Attoparsec.Extra (Parser, endOfInputEx, failWith, isSuccessful,
+                                   label, option, parseOnlyL, satisfy)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
                                                    peekChar, skipSpace,
                                                    takeWhile1)
@@ -26,7 +25,6 @@ import qualified Data.Attoparsec.ByteString.Char8 as AttoparsecChar
 import           Data.Bits (shiftL, (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (ord)
 import           Data.Functor (($>))
 
@@ -34,10 +32,10 @@ import qualified RON.Base64 as Base64
 import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
 
 parseFrame :: ByteStringL -> Either String Frame
-parseFrame = parseOnly frameBodyToEnd . BSL.toStrict
+parseFrame = parseOnlyL frameBodyToEnd
 
 parseFrames :: ByteStringL -> Either String [Frame]
-parseFrames = parseWhole $ many frame
+parseFrames = parseOnlyL $ many frame <* endOfInputEx
   where
     frame = do
         ops <- frameBody
@@ -46,10 +44,10 @@ parseFrames = parseWhole $ many frame
         pure ops
 
 parseOp :: ByteStringL -> Either String Op
-parseOp = parseWhole $ fst <$> opStart <* skipSpace
+parseOp = parseOnlyL $ fst <$> opStart <* skipSpace <* endOfInputEx
 
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseWhole uuid
+parseUuid = parseOnlyL $ uuid <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
@@ -78,7 +76,7 @@ frameBodyToEnd = label "Frame body to end" $ stop <|> goStart
         (x, u) <- op prev
         xs <- stop <|> go (x, u)
         pure $ x : xs
-    stop = optional endOfFrame *> skipSpace *> endOfInput $> []
+    stop = optional endOfFrame *> skipSpace *> endOfInputEx $> []
 
 frameInStream :: Parser Frame
 frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
