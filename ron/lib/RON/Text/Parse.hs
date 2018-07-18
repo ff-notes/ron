@@ -16,13 +16,15 @@ module RON.Text.Parse
 
 import           Internal.Prelude
 
-import           Attoparsec.Extra (Parser, failWith, label, option, parseWhole,
-                                   satisfy)
+import           Attoparsec.Extra (Parser, endOfInput, failWith, label, option,
+                                   parseOnly, parseWhole, satisfy)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
                                                    skipSpace, takeWhile1)
+import qualified Data.Attoparsec.ByteString.Char8 as AttoparsecChar
 import           Data.Bits (shiftL, (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (ord)
 import           Data.Functor (($>))
 
@@ -30,7 +32,7 @@ import qualified RON.Base64 as Base64
 import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
 
 parseFrame :: ByteStringL -> Either String Frame
-parseFrame = parseWhole $ frameBody <* optional endOfFrame <* skipSpace
+parseFrame = parseOnly frameBodyToEnd . BSL.toStrict
 
 parseFrames :: ByteStringL -> Either String [Frame]
 parseFrames = parseWhole $ many frame
@@ -51,56 +53,69 @@ endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 frameBody :: Parser Frame
-frameBody = label "Frame body" $ goStart <|> pure []
+frameBody = label "Frame body" $ goStart <|> stop
   where
     goStart = do
         (x, u) <- opStart
-        xs <- go (x, u) <|> pure []
+        xs <- go (x, u) <|> stop
         pure $ x : xs
     go prev = do
         (x, u) <- op prev
-        xs <- go (x, u) <|> pure []
+        xs <- go (x, u) <|> stop
         pure $ x : xs
+    stop = pure []
+
+frameBodyToEnd :: Parser Frame
+frameBodyToEnd = label "Frame body to end" $ stop <|> goStart
+  where
+    goStart = do
+        (x, u) <- opStart
+        xs <- stop <|> go (x, u)
+        pure $ x : xs
+    go prev = do
+        (x, u) <- op prev
+        xs <- stop <|> go (x, u)
+        pure $ x : xs
+    stop = optional endOfFrame *> skipSpace *> endOfInput $> []
 
 frameInStream :: Parser Frame
 frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
 opStart :: Parser (Op, UUID)
 opStart = label "Op-start" $ do
-    opType     <- headerStart "type"     "*"
-    opObject   <- header      "object"   "#" opType
-    opEvent    <- header      "event"    "@" opObject
-    opLocation <- header      "location" ":" opEvent
+    opType     <- keyStart "type"     "*"
+    opObject   <- key      "object"   "#" opType
+    opEvent    <- key      "event"    "@" opObject
+    opLocation <- key      "location" ":" opEvent
     opPayload  <- payload
     pure (Op{..}, opLocation)
   where
-    headerStart name signal =
-        label name $ skipSpace *> label "signal character" signal *> uuid
-    header name signal prev = label name $
+    keyStart name keyChar =
+        label name $ skipSpace *> label "key character" keyChar *> uuid
+    key name keyChar prev = label name $
         skipSpace *>
-        label "signal character" signal *>
+        label "key character" keyChar *>
         (uuidCompressed prev <|> uuid)
 
 op :: (Op, UUID) -> Parser (Op, UUID)
 op (prevOp, prevUuid) = label "Op" $ do
-    (hasTyp, opType)     <- header "type"     "*" opType     prevUuid
-    (hasObj, opObject)   <- header "object"   "#" opObject   opType
-    (hasEvt, opEvent)    <- header "event"    "@" opEvent    opObject
-    (hasLoc, opLocation) <- header "location" ":" opLocation opEvent
-    guard $ hasTyp || hasObj || hasEvt || hasLoc
+    (hasTyp, opType)     <- key "type"     "*" opType     prevUuid
+    (hasObj, opObject)   <- key "object"   "#" opObject   opType
+    (hasEvt, opEvent)    <- key "event"    "@" opEvent    opObject
+    (hasLoc, opLocation) <- key "location" ":" opLocation opEvent
+    unless (hasTyp || hasObj || hasEvt || hasLoc) $ fail "no key found"
     opPayload <- payload
     pure (Op{..}, opLocation)
   where
-    header name signal f prev = do
-        mu <- optional go
-        pure $ case mu of
-            Nothing -> (False, f prevOp)
-            Just u  -> (True, u)
-      where
-        go = label name $
-            skipSpace *>
-            label "signal character" signal *>
-            (uuidCompressed prev <|> uuid)
+    key name keyChar f prev = label name $ do
+        skipSpace
+        isKeyPresent <- label "key character" keyChar $> True <|> pure False
+        if isKeyPresent then do
+            u <- uuidCompressed prev <|> uuid
+            pure (True, u)
+        else
+            -- no key => use previous key
+            pure (False, f prevOp)
 
 uuidCompressed
     :: UUID
@@ -152,9 +167,14 @@ uuidAsBase64DoubleWord = label "UUID-Base64-double-word" $ do
 
 base64word :: Parser (Base64Format, ByteString)
 base64word = label "Base64 word" $ do
-    word <- takeWhile1 Base64.isLetter
+    word <- AttoparsecChar.takeWhile Base64.isLetter
     let n = BS.length word
-    if  | n == 11 -> pure (Long, word)
+    if  | n == 0  -> do
+            mc <- optional anyChar
+            case mc of
+                Just c  -> fail $ "unexpected " ++ show c
+                Nothing -> fail "unexpected end of input"
+        | n == 11 -> pure (Long, word)
         | n <  11 -> pure (Ronic, word)
         | True    -> fail "too long Base64 word"
 
