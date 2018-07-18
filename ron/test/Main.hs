@@ -161,27 +161,27 @@ prop_ron_json_example = property $ do
         -- \     #(R            @`   :foo > (Q"
     output =
         [ Op{ opType     = lww
-            , opObject   = barEvent
-            , opEvent    = barEvent
-            , opLocation = bar
+            , opObject   = bar
+            , opEvent    = bar
+            , opLocation = barName
             , opPayload  = [AInteger 1]
             }
         , Op{ opType     = lww
-            , opObject   = fooEvent
-            , opEvent    = fooEvent
-            , opLocation = foo
-            , opPayload  = [AUuid barEvent]
+            , opObject   = foo
+            , opEvent    = foo
+            , opLocation = fooName
+            , opPayload  = [AUuid bar]
             }
         ]
-    bar      = fromJust $ UUID.mkName "bar"
-    barEvent = fromJust $
+    barName = fromJust $ UUID.mkName "bar"
+    bar     = fromJust $
         UUID.mkCalendarEvent (read "2017-10-31 10:26:00") (0, gritzko)
-    foo      = fromJust $ UUID.mkName "foo"
-    fooEvent = fromJust $
+    fooName = fromJust $ UUID.mkName "foo"
+    foo     = fromJust $
         UUID.mkCalendarEvent (read "2017-10-31 10:27:00") (0, gritzko)
-    gritzko  = fromJust $ Base64.decode60 "gritzko"
-    lww      = fromJust $ UUID.mkName "lww"
-    -- TODO: serializeTyped =
+    gritzko = fromJust $ Base64.decode60 "gritzko"
+    lww     = fromJust $ UUID.mkName "lww"
+    -- TODO: parseTyped =
     -- {
     --     "foo": {
     --         "bar": 1
