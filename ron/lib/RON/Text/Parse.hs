@@ -143,7 +143,7 @@ uuidRon = label "UUID-RON" $ do
             (Ronic, Just v ) -> pure $  v   `BS.cons` word0
             (Long,  Nothing) -> pure word0
             (Long,  Just _ ) -> "mixing RON variety with long UUID"
-        failWith "Base64 decoding error" $ Base64.decode64 word
+        Base64.decode64 word & failWith "Base64 decoding error"
     y <- option 0 $ do
         mscheme <- Just <$> scheme <|> skipSpace $> Nothing
         (format, word) <- base64word
@@ -153,7 +153,7 @@ uuidRon = label "UUID-RON" $ do
                 ((fromIntegral schem `shiftL` 60) .|.) <$> Base64.decode60 word
             (Long, Nothing) -> pure $ Base64.decode64 word
             (Long, Just _ ) -> fail "mixing RON scheme with long UUID"
-        failWith "Base64 decoding error" mw
+        mw & failWith "Base64 decoding error"
     pure $ UUID x y
 
 uuidAsBase64DoubleWord :: Parser UUID
