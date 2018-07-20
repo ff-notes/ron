@@ -19,10 +19,10 @@ import           Internal.Prelude
 import           Attoparsec.Extra (Parser, endOfInputEx, isSuccessful, label,
                                    option, parseOnlyL, satisfy, (??))
 import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
-                                                   peekChar, skipSpace,
-                                                   takeWhile1)
+                                                   peekChar, peekChar',
+                                                   skipSpace, takeWhile1)
 import qualified Data.Attoparsec.ByteString.Char8 as AttoparsecChar
-import           Data.Bits (shiftL, (.|.))
+import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (ord)
@@ -44,94 +44,80 @@ parseFrames = parseOnlyL $ many frame <* endOfInputEx
         pure ops
 
 parseOp :: ByteStringL -> Either String Op
-parseOp = parseOnlyL $ fst <$> opStart <* skipSpace <* endOfInputEx
+parseOp = parseOnlyL $ op <* skipSpace <* endOfInputEx
 
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseOnlyL $ uuid <* endOfInputEx
+parseUuid = parseOnlyL $ uuidUncompressed <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 frameBody :: Parser Frame
-frameBody = label "Frame body" $ goStart <|> stop
+frameBody = label "Frame body" $ go <|> stop
   where
-    goStart = do
-        (x, u) <- opStart
-        xs <- go (x, u) <|> stop
+    go = do
+        x <- op
+        xs <- goCont x <|> stop
         pure $ x : xs
-    go prev = do
-        (x, u) <- op prev
-        xs <- go (x, u) <|> stop
+    goCont prev = do
+        x <- opCont prev
+        xs <- goCont x <|> stop
         pure $ x : xs
     stop = pure []
 
 frameBodyToEnd :: Parser Frame
-frameBodyToEnd = label "Frame body to end" $ stop <|> goStart
+frameBodyToEnd = label "Frame body to end" $ stop <|> go
   where
-    goStart = do
-        (x, u) <- opStart
-        xs <- stop <|> go (x, u)
+    go = do
+        x <- op
+        xs <- stop <|> goCont x
         pure $ x : xs
-    go prev = do
-        (x, u) <- op prev
-        xs <- stop <|> go (x, u)
+    goCont prev = do
+        x <- opCont prev
+        xs <- stop <|> goCont x
         pure $ x : xs
     stop = optional endOfFrame *> skipSpace *> endOfInputEx $> []
 
 frameInStream :: Parser Frame
 frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
-opStart :: Parser (Op, UUID)
-opStart = label "Op-start" $ do
-    opType     <- keyStart "type"     '*'
-    opObject   <- key      "object"   '#' opType
-    opEvent    <- key      "event"    '@' opObject
-    opLocation <- key      "location" ':' opEvent
-    opPayload  <- payload
-    pure (Op{..}, opLocation)
+op :: Parser Op
+op = label "Op" $ do
+    opType     <- key "type"     '*' Nothing
+    opObject   <- key "object"   '#' (Just opType)
+    opEvent    <- key "event"    '@' (Just opObject)
+    opLocation <- key "location" ':' (Just opEvent)
+    opPayload  <- payload opObject
+    pure Op{..}
   where
-    keyStart name keyChar =
-        label name $ skipSpace *> label "key character" (char keyChar) *> uuid
     key name keyChar prev = label name $
-        skipSpace *>
-        label "key character" (char keyChar) *>
-        (uuidCompressed prev <|> uuid)
+        skipSpace *> char keyChar *> uuid Nothing prev PrevOpSameKey
 
-op :: (Op, UUID) -> Parser (Op, UUID)
-op (prevOp, prevUuid) = label "Op" $ do
-    (hasTyp, opType)     <- key "type"     '*' opType     prevUuid
-    (hasObj, opObject)   <- key "object"   '#' opObject   opType
-    (hasEvt, opEvent)    <- key "event"    '@' opEvent    opObject
-    (hasLoc, opLocation) <- key "location" ':' opLocation opEvent
+opCont :: Op -> Parser Op
+opCont prev = label "Op-cont" $ do
+    (hasTyp, opType)     <- key "type"     '*' (opType     prev) Nothing
+    (hasObj, opObject)   <- key "object"   '#' (opObject   prev) (Just opType)
+    (hasEvt, opEvent)    <- key "event"    '@' (opEvent    prev) (Just opObject)
+    (hasLoc, opLocation) <- key "location" ':' (opLocation prev) (Just opEvent)
     unless (hasTyp || hasObj || hasEvt || hasLoc) $ fail "no key found"
-    opPayload <- payload
-    pure (Op{..}, opLocation)
+    opPayload <- payload opObject
+    pure Op{..}
   where
-    key name keyChar f prev = label name $ do
+    key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
         skipSpace
         isKeyPresent <- isSuccessful $ char keyChar
         if isKeyPresent then do
-            u <- uuidCompressed prev <|> uuid
+            u <- uuid (Just prevOpSameKey) sameOpPrevUuid PrevOpSameKey
             pure (True, u)
         else
             -- no key => use previous key
-            pure (False, f prevOp)
-
-uuidCompressed
-    :: UUID
-        -- ^ previous UUID of the same op
-        -- (e.g. event id against same op's object id)
-    -> Parser UUID
-uuidCompressed u = label "UUID-compressed" $
-    anyChar >>= \case
-        '`' -> pure u
-        c   -> fail $ "unsupported compression " ++ show c
+            pure (False, prevOpSameKey)
 
 data Base64Format = Ronic | Long
     deriving (Eq, Show)
 
-uuid :: Parser UUID
-uuid = label "UUID" $ uuidAsBase64DoubleWord <|> uuidRon
+uuidUncompressed :: Parser UUID
+uuidUncompressed = label "UUID" $ uuidAsBase64DoubleWord <|> uuidRon
 
 uuidRon :: Parser UUID
 uuidRon = label "UUID-RON" $ do
@@ -191,13 +177,64 @@ scheme = label "scheme" $
         '-' -> pure 0b11
         _   -> fail "not a scheme"
 
-payload :: Parser [Atom]
-payload = label "payload" $ many atom
+payload :: UUID -> Parser [Atom]
+payload = label "payload" . go
+  where
+    go prevUuid = do
+        ma <- optional $ atom prevUuid
+        case ma of
+            Nothing -> pure []
+            Just a  -> (a :) <$> go newUuid
+              where
+                newUuid = case a of
+                    AUuid u -> u
+                    _       -> prevUuid
 
-atom :: Parser Atom
-atom = skipSpace *> atom'
+atom :: UUID -> Parser Atom
+atom prevUuid = skipSpace *> atom'
   where
     atom' =
         "=" *> skipSpace *> (AInteger <$> integer) <|>
-        ">" *> skipSpace *> (AUuid    <$> uuid   )
+        ">" *> skipSpace *> (AUuid    <$> uuid'  )
+            -- TODO uuidCompressed, too
     integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)
+    uuid' = uuid Nothing (Just prevUuid) SameOpPrevUuid
+
+data UuidCompressionBase = PrevOpSameKey | SameOpPrevUuid
+
+uuid :: Maybe UUID -> Maybe UUID -> UuidCompressionBase -> Parser UUID
+uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
+  where
+    go allowEmpty position =
+        peekChar' >>= \case
+            '`' -> anyChar *> go True SameOpPrevUuid
+            '(' -> reuse 4
+            '[' -> reuse 5
+            '{' -> reuse 6
+            '}' -> reuse 7
+            ']' -> reuse 8
+            ')' -> reuse 9
+            c   | Base64.isLetter c -> uuidUncompressed
+                | allowEmpty -> case mprev of
+                    Just u  -> pure u
+                    Nothing -> fail "empty uuid"
+                | otherwise -> fail $ "unsupported compression " ++ show c
+      where
+
+        mprev = case position of
+            PrevOpSameKey   -> prevOpSameKey
+            SameOpPrevUuid -> sameOpPrevUuid
+
+        reuse :: Int -> Parser UUID
+        reuse prefixLen = label "reuse" $ do
+            void anyChar -- skip prefix compression mark
+            UUID prevX prevY <-
+                mprev ?? "can't reuse prefix whithout previous UUID"
+            word <- AttoparsecChar.takeWhile Base64.isLetter
+            when (BS.length word > 10 - prefixLen) $
+                fail "too long postfix for this prefix"
+            newPart <- Base64.decode60 word ?? "Base64.decode60"
+            let prefix = prevX .&. complement 0 `shiftL` (60 - 6 * prefixLen)
+                postfix = newPart `shiftR` (6 * prefixLen)
+                x = prefix .|. postfix
+            pure $ UUID x prevY

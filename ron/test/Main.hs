@@ -151,14 +151,10 @@ prop_calendarEventUuid_roundtrip = property $ do
     time' <- evalMaybeS $ UUID.getCalendarEvent event
     time === time'
 
-prop_ron_json_example = property $ do
-    parsed <- evalEitherS $ Text.parseFrame input
-    output === parsed
-  where
+prop_ron_json_example = let
     input =
         "*lww #1TUAQ+gritzko @`   :bar = 1\n\
-        \     #1TUAR+gritzko @`   :foo > 1TUAQ+gritzko"
-        -- \     #(R            @`   :foo > (Q"
+        \     #(R            @`   :foo > (Q"
     output =
         [ Op{ opType     = lww
             , opObject   = bar
@@ -187,3 +183,7 @@ prop_ron_json_example = property $ do
     --         "bar": 1
     --     }
     -- }
+    in
+    property $ do
+        parsed <- evalEitherS $ Text.parseFrame input
+        output === parsed
