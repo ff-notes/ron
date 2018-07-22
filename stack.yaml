@@ -1,8 +1,8 @@
-resolver: lts-11.10
+resolver: lts-12.2
 
 packages:
   - ron
   - swarm
 
 extra-deps:
-  - flat-0.3
+  - flat-0.3.2
