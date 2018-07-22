@@ -3,7 +3,6 @@
 module Attoparsec.Extra
     ( module Attoparsec
     , endOfInputEx
-    , failWith
     , getPos
     , isSuccessful
     , label
@@ -14,6 +13,7 @@ module Attoparsec.Extra
     , takeAtMost
     , takeL
     , withInputSize
+    , (??)
     ) where
 
 import           Internal.Prelude
@@ -82,8 +82,8 @@ takeAtMost limit = do
         pos <- getPos
         guard (pos >= maxPos) <|> endOfInput
 
-failWith :: String -> Maybe a -> Parser a
-failWith msg = maybe (fail msg) pure
+(??) :: Maybe a -> String -> Parser a
+(??) a msg = maybe (fail msg) pure a
 
 -- | Apply parser and check it is applied successfully.
 -- Kinda opposite to 'guard'.
