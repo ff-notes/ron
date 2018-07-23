@@ -14,7 +14,9 @@ import           RON.Internal.Prelude
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Data.Foldable (for_)
+import           Data.Int (Int64)
 import           Data.Maybe (fromJust)
+import           Data.Text (Text)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
                            forAll, property, (===))
@@ -31,12 +33,16 @@ import qualified RON.Base64 as Base64
 import qualified RON.Binary as Binary
 import qualified RON.Binary.Parse as Binary
 import qualified RON.Binary.Serialize as Binary
+import           RON.Data.LWW (LWW, lwwType)
+import           RON.Data.RGA (RgaText)
 import           RON.Event (ClockType (Base64Calendar), Event (Event),
                             Naming (TrieForked), ReplicaId (ReplicaId),
                             decodeEvent, encodeEvent)
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
+import           RON.Typed (Object (..), Replicated, objectToReducedOps,
+                            toReducedOps)
 import           RON.Types (Atom (..), Chunk (Raw), Op (..), UUID (..))
 import qualified RON.UUID as UUID
 
@@ -178,14 +184,14 @@ prop_ron_json_example = let
         \     #(R            @`   :foo > (Q ;"
     output =
         [ Raw Op
-            { opType     = lww
+            { opType     = lwwType
             , opObject   = bar
             , opEvent    = bar
             , opLocation = barName
             , opPayload  = [AInteger 1]
             }
         , Raw Op
-            { opType     = lww
+            { opType     = lwwType
             , opObject   = foo
             , opEvent    = foo
             , opLocation = fooName
@@ -200,8 +206,39 @@ prop_ron_json_example = let
             $ encodeEvent $ Event (read "2017-10-31 10:27:00") replicaGritzko
     gritzko = fromJust $ Base64.decode60 "gritzko"
     replicaGritzko = ReplicaId Base64Calendar TrieForked gritzko
-    lww     = fromJust $ UUID.mkName "lww"
     in
     property $ do
         parsed <- evalEitherS $ Text.parseFrame input
         output === parsed
+
+data TestStructView = TestStructView{tsv_int :: Int64, tsv_text :: Text}
+    deriving (Eq, Show)
+
+data TestStruct = TestStruct
+    {ts_int :: Object (LWW Int64), ts_text :: Object RgaText}
+
+instance Replicated TestStruct where
+    toReducedOps this TestStruct{ts_int, ts_text} = do
+        bodyInt  <- objectToReducedOps ts_int
+        bodyText <- objectToReducedOps ts_text
+        pure $ struct : bodyInt ++ bodyText
+      where
+        Object{objectId = int_id}  = ts_int
+        Object{objectId = text_id} = ts_text
+        struct = Op{..}
+        opObject = this
+        opEvent  = this
+        opLocation = UUID.zero
+        opPayload = [AString "int", AUuid int_id, AString "text", AUuid text_id]
+        opType = fromJust $ UUID.mkName "struct"
+
+    -- parsedT <- evalEitherS $ TypedText.parse input
+    -- let value = TestStructView parsedT
+    -- outputT === value
+    -- outputT = TestStructView{tsv_int = TestStructFooView{jefv_bar = 1}}
+
+-- TestStructView :: TestStruct -> TestStructView
+-- TestStructView TestStruct{ts_int} = TestStructView
+--     {tsv_int = TestStructFooView{jefv_bar = LWW.value jef_bar}}
+--     where
+--     TestStructFoo{jef_bar} = LWW.value ts_int

@@ -14,6 +14,7 @@ library:
     - binary
     - bytestring
     - deepseq
+    - Diff
     - flat
     - text
     - time
@@ -23,12 +24,16 @@ library:
     - RON.Binary.Parse
     - RON.Binary.Serialize
     - RON.Binary.Types
+    - RON.Data.LWW
+    - RON.Data.RGA
     - RON.Event
     - RON.Internal.Prelude
     - RON.Internal.Word
     - RON.Text
     - RON.Text.Parse
     - RON.Text.Serialize
+    - RON.Typed
+    - RON.Typed.Text
     - RON.Types
     - RON.UUID
   other-modules:

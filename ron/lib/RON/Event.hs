@@ -3,12 +3,17 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module RON.Event
-    ( ClockType (..)
+    ( Clock (..)
+    , ClockType (..)
     , Event (..)
     , Naming (..)
+    , Replica (..)
     , ReplicaId (..)
     , decodeEvent
     , encodeEvent
+    , getEvent
+    , getEventUuid
+    , getEventUuids
     ) where
 
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
@@ -17,6 +22,8 @@ import           Data.Time (TimeOfDay (TimeOfDay), UTCTime (UTCTime),
                             fromGregorianValid, makeTimeOfDayValid,
                             timeOfDayToTime, timeToTimeOfDay, toGregorian,
                             utctDay, utctDayTime)
+import           Data.Traversable (for)
+import           Numeric.Natural (Natural)
 
 import           RON.Internal.Word (Word4, Word60, Word64, b00, b10,
                                     leastSignificant4, safeCast, toWord60)
@@ -44,6 +51,40 @@ data ReplicaId = ReplicaId !ClockType !Naming !Word60
 -- | Lamport time
 data Event = Event !UTCTime !ReplicaId
     deriving (Eq, Ord, Show)
+
+class Monad m => Replica m where
+    getPid :: m ReplicaId
+
+class Replica m => Clock m where
+    -- | Get sequential timestamps.
+    --
+    -- Laws:
+    --    1.  t1 <- getEvents n
+    --        t2 <- getEvent
+    --        t2 >= t1 + n
+    --
+    --    2. getEvents 0 == getEvents 1
+    getEvents
+        :: Natural -- ^ number of needed timestamps
+        -> m [Event]
+        -- ^ Starting value of the range.
+        -- So return value @t@ means range @[t .. t + n - 1]@.
+
+    -- | Make local time not less than this
+    advance :: UTCTime -> m ()
+
+getEvent :: Clock m => m Event
+getEvent = head <$> getEvents 1
+
+getEventUuid :: Clock m => m UUID
+getEventUuid = do
+    e <- getEvent
+    maybe (fail $ "bad event: " ++ show e) pure $ encodeEvent e
+
+getEventUuids :: Clock m => Natural -> m [UUID]
+getEventUuids n = do
+    es <- getEvents n
+    for es $ \e -> maybe (fail $ "bad event: " ++ show e) pure $ encodeEvent e
 
 encodeTime :: UTCTime -> Maybe Word60
 encodeTime UTCTime{utctDay, utctDayTime} = do
