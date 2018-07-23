@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module RON.Binary.Types where
 
 import           Internal.Prelude
@@ -27,3 +29,11 @@ data Desc
     | DAtomFloat
 
     deriving (Enum, Eq, Show)
+
+descIsOp :: Desc -> Bool
+descIsOp = \case
+    DOpRaw          -> True
+    DOpReduced      -> True
+    DOpHeader       -> True
+    DOpQueryHeader  -> True
+    _               -> False

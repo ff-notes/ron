@@ -19,15 +19,29 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 import qualified RON.Base64 as Base64
-import           RON.Types (Atom (..), Frame, Op (..))
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
+                            ReducedChunk (..))
 import           RON.UUID (UUID (..), UuidFields (..))
 import qualified RON.UUID as UUID
 
 serializeFrame :: Frame -> ByteStringL
-serializeFrame = (`BSLC.snoc` '.') . foldMap serializeOp
+serializeFrame = (`BSLC.snoc` '.') . foldMap serializeChunk
 
 serializeFrames :: [Frame] -> ByteStringL
 serializeFrames = foldMap serializeFrame
+
+serializeChunk :: Chunk -> ByteStringL
+serializeChunk = \case
+    Raw op        -> serializeOp op `BSLC.snoc` ';'
+    Reduced chunk -> serializeReducedChunk chunk
+
+serializeReducedChunk :: ReducedChunk -> ByteStringL
+serializeReducedChunk ReducedChunk{chunkHeader, chunkIsQuery, chunkBody} =
+    mconcat
+        [ serializeOp chunkHeader
+        , if chunkIsQuery then "?" else "!"
+        , foldMap serializeOp chunkBody
+        ]
 
 serializeOp :: Op -> ByteStringL
 serializeOp Op{..} =

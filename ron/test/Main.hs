@@ -3,6 +3,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -29,7 +30,7 @@ import qualified RON.Event as Event
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
-import           RON.Types (Atom (..), Op (..), UUID (..))
+import           RON.Types (Atom (..), Chunk (..), Op (..), UUID (..))
 import qualified RON.UUID as UUID
 
 import qualified Gen
@@ -61,8 +62,8 @@ prepareEnv = do
         _ -> error $ os ++ " is not supported"
 
 prop_binary_roundtrip = property $ do
-    frame <- forAll $ Gen.frame 1000
-    let bytes = Binary.serialize frame
+    frame <- forAll $ Gen.frame 10
+    bytes <- evalEitherS $ Binary.serialize frame
     annotate $ hexdump bytes
     Right frame === Binary.parse bytes
 
@@ -91,7 +92,7 @@ prop_text_roundtrip_frame =
 
 prop_text_roundtrip_frames =
     -- TODO increase limits
-    textRoundtrip (Gen.frames 10 10) Text.serializeFrames Text.parseFrames
+    textRoundtrip (Gen.frames 10) Text.serializeFrames Text.parseFrames
 
 prop_base64_roundtrip = property $ do
     bytes <- forAll $ fromStrict <$> Gen.bytes (Range.exponential 0 1000)
@@ -153,9 +154,9 @@ prop_calendarEventUuid_roundtrip = property $ do
 
 prop_ron_json_example = let
     input =
-        "*lww #1TUAQ+gritzko @`   :bar = 1\n\
-        \     #(R            @`   :foo > (Q"
-    output =
+        "*lww #1TUAQ+gritzko @`   :bar = 1  ;\n\
+        \     #(R            @`   :foo > (Q ;"
+    output = map Raw
         [ Op{ opType     = lww
             , opObject   = bar
             , opEvent    = bar
@@ -177,12 +178,6 @@ prop_ron_json_example = let
         UUID.mkCalendarEvent (read "2017-10-31 10:27:00") (0, gritzko)
     gritzko = fromJust $ Base64.decode60 "gritzko"
     lww     = fromJust $ UUID.mkName "lww"
-    -- TODO: parseTyped =
-    -- {
-    --     "foo": {
-    --         "bar": 1
-    --     }
-    -- }
     in
     property $ do
         parsed <- evalEitherS $ Text.parseFrame input

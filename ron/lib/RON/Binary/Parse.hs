@@ -1,8 +1,10 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module RON.Binary.Parse where
 
@@ -11,11 +13,12 @@ import           Internal.Prelude
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, string, takeL, withInputSize)
 import qualified Data.Binary as Binary
-import           Data.Bits (shiftR, (.&.))
+import           Data.Bits (shiftR, testBit, (.&.))
 import           Data.ZigZag (zzDecode64)
 
-import           RON.Binary.Types (Desc (..), Size)
-import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
+import           RON.Binary.Types (Desc (..), Size, descIsOp)
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
+                            ReducedChunk (..), UUID (..))
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -24,9 +27,9 @@ parseDesc = label "desc" $ do
     let sizeCode = b .&. 0b1111
     let desc = toEnum $ fromIntegral typeCode
     size <- case (sizeCode, desc) of
-        (0, DOpRaw) -> pure 0
-        (0, _     ) -> pure 16
-        _           -> pure $ fromIntegral sizeCode
+        (0, d) | descIsOp d -> pure 0
+        (0, _)              -> pure 16
+        _                   -> pure $ fromIntegral sizeCode
     pure (desc, size)
 
 parse :: ByteStringL -> Either String Frame
@@ -37,41 +40,68 @@ parseFrame = label "Frame" $ do
     _ <- string "RON2" <|> do
         magic <- takeL 4
         fail $ "unsupported magic sequence " ++ show magic
-    size :: Size <- Binary.decode <$> takeL 4
-    (consumed, ops) <- withInputSize $ parseOps $ fromIntegral size
-    when (consumed /= fromIntegral size) $
-        fail $
-        "size mismatch: expected " ++ show size ++ ", got " ++ show consumed
-    pure ops
+    parseChunks
 
-parseOps :: Int -> Parser [Op]
-parseOps = label "[Op]" . \case
+parseChunks :: Parser [Chunk]
+parseChunks = do
+    size :: Size <- Binary.decode <$> takeL 4
+    if  | testBit size 31 ->
+            liftA2 (:) (parseChunk $ leastSignificant31 size) parseChunks
+        | size > 0 ->
+            (:[]) <$> parseChunk size
+        | True ->
+            pure []
+  where
+    leastSignificant31 x = x .&. 0x7FFFFFFF
+
+parseChunk :: Size -> Parser Chunk
+parseChunk size = label "Chunk" $ do
+    (consumed0, (term, op)) <- withInputSize parseDescAndOp
+    let parseReducedChunk chunkHeader chunkIsQuery = do
+            chunkBody <- parseReducedOps $ fromIntegral size - consumed0
+            pure $ Reduced ReducedChunk{..}
+    case term of
+        THeader  -> parseReducedChunk op False
+        TQuery   -> parseReducedChunk op True
+        TReduced -> fail "reduced op without a chunk"
+        TRaw     -> assertSize size consumed0 $> Raw op
+
+assertSize :: Monad f => Size -> Int -> f ()
+assertSize expected consumed =
+    when (consumed /= fromIntegral expected) $
+    fail $
+    "size mismatch: expected " ++ show expected ++ ", got " ++ show consumed
+
+parseReducedOps :: Int -> Parser [Op]
+parseReducedOps = label "[Op]" . \case
     0        -> pure []
     expected -> do
-        (consumed, op) <- withInputSize parseDescAndOp
+        (consumed, (TReduced, op)) <- withInputSize parseDescAndOp
         case compare consumed expected of
-            LT -> (op :) <$> parseOps (expected - consumed)
+            LT -> (op :) <$> parseReducedOps (expected - consumed)
             EQ -> pure [op]
             GT -> fail "impossible"
 
-parseDescAndOp :: Parser Op
+parseDescAndOp :: Parser (OpTerm, Op)
 parseDescAndOp = label "d+Op" $ do
     (desc, size) <- parseDesc
-    unless (size == 0) $ fail $ "size = " ++ show size
+    unless (size == 0) $
+        fail $ "desc = " ++ show desc ++ ", size = " ++ show size
     case desc of
-        DOpRaw -> parseOp desc
-        _      -> fail $ show desc
+        DOpRaw          -> (TRaw,)      <$> parseOp
+        DOpReduced      -> (TReduced,)  <$> parseOp
+        DOpHeader       -> (THeader,)   <$> parseOp
+        DOpQueryHeader  -> (TQuery,)    <$> parseOp
+        _               -> fail $ "unimplemented " ++ show desc
 
-parseOp :: Desc -> Parser Op
-parseOp = label "Op" . \case
-    DOpRaw -> do
-        opType     <- parseOpKey DUuidType
-        opObject   <- parseOpKey DUuidObject
-        opEvent    <- parseOpKey DUuidEvent
-        opLocation <- parseOpKey DUuidLocation
-        opPayload  <- parsePayload
-        pure Op{..}
-    desc -> fail $ show desc
+parseOp :: Parser Op
+parseOp = label "Op" $ do
+    opType     <- parseOpKey DUuidType
+    opObject   <- parseOpKey DUuidObject
+    opEvent    <- parseOpKey DUuidEvent
+    opLocation <- parseOpKey DUuidLocation
+    opPayload  <- parsePayload
+    pure Op{..}
 
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do

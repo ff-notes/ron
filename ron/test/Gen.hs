@@ -9,10 +9,11 @@ import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorian,
                             timeOfDayToTime)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (integral, list, word64)
+import           Hedgehog.Gen (bool, choice, integral, list, word64)
 import qualified Hedgehog.Range as Range
 
-import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
+                            ReducedChunk (..), UUID (..))
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
@@ -26,12 +27,18 @@ uuid = UUID <$> word64' <*> word64'
 op :: MonadGen gen => gen Op
 op = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload
 
-frame :: MonadGen gen => Int -> gen Frame
-frame size = list (Range.exponential 0 size) op
+chunk :: MonadGen gen => Int -> gen Chunk
+chunk size = choice [Raw <$> op, Reduced <$> rchunk size]
 
-frames :: MonadGen gen => Int -> Int -> gen [Frame]
-frames frameCount opCount =
-    list (Range.exponential 0 frameCount) (frame opCount)
+rchunk :: MonadGen gen => Int -> gen ReducedChunk
+rchunk size =
+    ReducedChunk <$> op <*> bool <*> list (Range.exponential 0 size) op
+
+frame :: MonadGen gen => Int -> gen Frame
+frame size = list (Range.exponential 0 size) (chunk size)
+
+frames :: MonadGen gen => Int -> gen [Frame]
+frames size = list (Range.exponential 0 size) (frame size)
 
 -- | Event time with year 2010—2350
 eventTime :: MonadGen gen => gen UTCTime

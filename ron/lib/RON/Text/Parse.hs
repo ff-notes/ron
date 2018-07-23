@@ -6,8 +6,8 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Parse
-    ( frameBody
-    , frameInStream
+    ( chunks
+    , frame
     , parseFrame
     , parseFrames
     , parseOp
@@ -29,19 +29,65 @@ import           Data.Char (ord)
 import           Data.Functor (($>))
 
 import qualified RON.Base64 as Base64
-import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
+                            ReducedChunk (..), UUID (..))
 
 parseFrame :: ByteStringL -> Either String Frame
-parseFrame = parseOnlyL frameBodyToEnd
+parseFrame = parseOnlyL frame
+
+chunks :: Parser [Chunk]
+chunks = label "[Chunk]" $ go chunk
+  where
+    go pchunk =
+        optional pchunk >>= \case
+            Just (ch, lastOp) -> (ch :) <$> go (chunkCont lastOp)
+            Nothing           -> pure []
+
+-- | Returns a chunk and the last op in it
+chunk :: Parser (Chunk, Op)
+chunk = label "Chunk" $ chunkReduced <|> chunkRaw op
+
+-- | Returns a chunk and the last op in it
+chunkCont :: Op -> Parser (Chunk, Op)
+chunkCont prev = label "Chunk-cont" $ chunkReduced <|> chunkRaw (opCont prev)
+
+chunkReduced :: Parser (Chunk, Op)
+chunkReduced = do
+    (ch, x) <- rchunk
+    pure (Reduced ch, x)
+
+chunkRaw
+    :: Parser Op  -- ^ start op parser, 'op' or 'opCont'
+    -> Parser (Chunk, Op)
+chunkRaw pop = do
+    x <- pop
+    t <- term
+    unless (t == TRaw) $ fail "raw op must end with `;`"
+    pure (Raw x, x)
+
+-- | Returns a chunk and the last op in it
+rchunk :: Parser (ReducedChunk, Op)
+rchunk = label "ReducedChunk" $ do
+    (chunkHeader, chunkIsQuery) <- header
+    chunkBody <- ops
+    let lastOp = case chunkBody of
+            [] -> chunkHeader
+            _  -> last chunkBody
+    pure (ReducedChunk{..}, lastOp)
+
+frame :: Parser Frame
+frame = label "Frame" $ chunks <* (endOfFrame <|> endOfInputEx)
 
 parseFrames :: ByteStringL -> Either String [Frame]
-parseFrames = parseOnlyL $ many frame <* endOfInputEx
+parseFrames = parseOnlyL $ many frameInStream <* endOfInputEx
+
+frameInStream :: Parser Frame
+frameInStream = label "Frame-stream" $ do
+    chs <- chunks
+    endOfFrame <|> (assertNotEmpty chs *> endOfInputEx)
+    pure chs
   where
-    frame = do
-        ops <- frameBody
-        eof <- optional endOfFrame
-        guard $ not (null ops) || isJust eof
-        pure ops
+    assertNotEmpty chs = when (null chs) $ fail "empty frame must end with `.`"
 
 parseOp :: ByteStringL -> Either String Op
 parseOp = parseOnlyL $ op <* skipSpace <* endOfInputEx
@@ -52,34 +98,17 @@ parseUuid = parseOnlyL $ uuidUncompressed <* skipSpace <* endOfInputEx
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
-frameBody :: Parser Frame
-frameBody = label "Frame body" $ go <|> stop
+ops :: Parser [Op]
+ops = label "Frame ops" $ go op <|> stop
   where
-    go = do
-        x <- op
-        xs <- goCont x <|> stop
-        pure $ x : xs
-    goCont prev = do
-        x <- opCont prev
-        xs <- goCont x <|> stop
+    go pop = do
+        x <- pop
+        t <- optional term
+        unless (t == Just TReduced || isNothing t) $
+            fail "reduced op may end with `,` only"
+        xs <- go (opCont x) <|> stop
         pure $ x : xs
     stop = pure []
-
-frameBodyToEnd :: Parser Frame
-frameBodyToEnd = label "Frame body to end" $ stop <|> go
-  where
-    go = do
-        x <- op
-        xs <- stop <|> goCont x
-        pure $ x : xs
-    goCont prev = do
-        x <- opCont prev
-        xs <- stop <|> goCont x
-        pure $ x : xs
-    stop = optional endOfFrame *> skipSpace *> endOfInputEx $> []
-
-frameInStream :: Parser Frame
-frameInStream = label "Frame in stream" $ frameBody <* endOfFrame
 
 op :: Parser Op
 op = label "Op" $ do
@@ -238,3 +267,23 @@ uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
                 postfix = newPart `shiftR` (6 * prefixLen)
                 x = prefix .|. postfix
             pure $ UUID x prevY
+
+-- | Return 'Op' and 'chunkIsQuery'
+header :: Parser (Op, Bool)
+header = do
+    x <- op
+    t <- term
+    case t of
+        THeader -> pure (x, False)
+        TQuery  -> pure (x, True)
+        _       -> fail "not a header"
+
+term :: Parser OpTerm
+term = do
+    skipSpace
+    anyChar >>= \case
+        '!' -> pure THeader
+        '?' -> pure TQuery
+        ',' -> pure TReduced
+        ';' -> pure TRaw
+        _   -> fail "not a term"

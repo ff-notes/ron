@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -7,23 +8,45 @@ module RON.Binary.Serialize where
 import           Internal.Prelude
 
 import qualified Data.Binary as Binary
-import           Data.Bits (shiftL, (.|.))
+import           Data.Bits (bit, shiftL, (.|.))
 import           Data.ByteString.Lazy (cons)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.ZigZag (zzEncode)
 
-import           RON.Binary.Types (Desc (..), Size)
-import           RON.Types (Atom (..), Frame, Op (..), UUID (..))
+import           RON.Binary.Types (Desc (..), Size, descIsOp)
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
+                            ReducedChunk (..), UUID (..))
 
-serialize :: Frame -> ByteStringL
-serialize f = "RON2" <> bodySize <> body
+serialize :: Frame -> Either String ByteStringL
+serialize frame = ("RON2" <>) <$> serializeBody
   where
-    body = foldMap serializeOp f
-    bodySize = Binary.encode (fromIntegral $ BSL.length body :: Size)
+    serializeBody = foldChunks $ map serializeChunk frame
 
-serializeOp :: Op -> ByteStringL
-serializeOp Op{..} =
-    serializeWithDesc DOpRaw $ mconcat $
+    chunkSize :: Bool -> Int64 -> Either String ByteStringL
+    chunkSize continue x
+        | x < bit 31 = Right $ Binary.encode s'
+        | otherwise  = Left $ "chunk size is too big: " ++ show x
+      where
+        s = fromIntegral x :: Size
+        s'  | continue  = s .|. bit 31
+            | otherwise = s
+
+    foldChunks :: [ByteStringL] -> Either String ByteStringL
+    foldChunks = \case
+        []   -> chunkSize False 0
+        [c]  -> (<> c) <$> chunkSize False (BSL.length c)
+        c:cs ->
+            mconcat <$>
+            sequence [chunkSize True (BSL.length c), pure c, foldChunks cs]
+
+serializeChunk :: Chunk -> ByteStringL
+serializeChunk = \case
+    Raw op         -> serializeOp DOpRaw op
+    Reduced rchunk -> serializeReducedChunk rchunk
+
+serializeOp :: Desc -> Op -> ByteStringL
+serializeOp desc Op{..} =
+    serializeWithDesc desc $ mconcat $
         [ serializeUuidType     opType
         , serializeUuidObject   opObject
         , serializeUuidEvent    opEvent
@@ -57,7 +80,7 @@ serializeWithDesc d body =
     len = BSL.length body
     descByte = encodeDesc d `shiftL` 4 .|. lengthField
     lengthField -- , lengthExtended)
-        | d == DOpRaw = 0
+        | descIsOp d  = 0
         | len < 16    = fromIntegral len
         | len == 16   = 0
         | otherwise   = error "impossible"
@@ -71,3 +94,9 @@ serializeAtom = \case
     {-# INLINE zzEncode64 #-}
     zzEncode64 :: Int64 -> Word64
     zzEncode64 = zzEncode
+
+serializeReducedChunk :: ReducedChunk -> ByteStringL
+serializeReducedChunk ReducedChunk{chunkHeader, chunkIsQuery, chunkBody}
+    =   serializeOp
+            (if chunkIsQuery then DOpQueryHeader else DOpHeader) chunkHeader
+    <>  foldMap (serializeOp DOpReduced) chunkBody
