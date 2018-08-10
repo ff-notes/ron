@@ -29,6 +29,7 @@ import           Data.Char (ord)
 import           Data.Functor (($>))
 
 import qualified RON.Base64 as Base64
+import           RON.Internal.Word (Word2, b00, b01, b10, b11, safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
                             ReducedChunk (..), UUID (..))
 
@@ -163,9 +164,10 @@ uuidRon = label "UUID-RON" $ do
         mscheme <- Just <$> scheme <|> skipSpace $> Nothing
         (format, word) <- base64word
         mw <- case (format, mscheme) of
-            (Ronic, Nothing   ) -> pure $ Base64.decode60 word
+            (Ronic, Nothing   ) -> pure $ safeCast <$> Base64.decode60 word
             (Ronic, Just schem) -> pure $
-                ((fromIntegral schem `shiftL` 60) .|.) <$> Base64.decode60 word
+                ((safeCast schem `shiftL` 60) .|.) . safeCast
+                <$> Base64.decode60 word
             (Long, Nothing) -> pure $ Base64.decode64 word
             (Long, Just _ ) -> fail "mixing RON scheme with long UUID"
         mw ?? "Base64 decoding error"
@@ -200,10 +202,10 @@ isUpperHexDigit c =
 scheme :: Parser Word2
 scheme = label "scheme" $
     anyChar >>= \case
-        '$' -> pure 0b00
-        '%' -> pure 0b01
-        '+' -> pure 0b10
-        '-' -> pure 0b11
+        '$' -> pure b00
+        '%' -> pure b01
+        '+' -> pure b10
+        '-' -> pure b11
         _   -> fail "not a scheme"
 
 payload :: UUID -> Parser [Atom]
@@ -262,7 +264,7 @@ uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
             word <- AttoparsecChar.takeWhile Base64.isLetter
             when (BS.length word > 10 - prefixLen) $
                 fail "too long postfix for this prefix"
-            newPart <- Base64.decode60 word ?? "Base64.decode60"
+            newPart <- safeCast <$> Base64.decode60 word ?? "Base64.decode60"
             let prefix = prevX .&. complement 0 `shiftL` (60 - 6 * prefixLen)
                 postfix = newPart `shiftR` (6 * prefixLen)
                 x = prefix .|. postfix

@@ -3,23 +3,25 @@
 
 module Gen where
 
-import           Data.Bits ((.&.))
 import           Data.Fixed (Fixed (MkFixed))
 import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorian,
                             timeOfDayToTime)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (bool, choice, integral, list, word64)
+import           Hedgehog.Gen (bool, choice, enumBounded, integral, list,
+                               word64)
 import qualified Hedgehog.Range as Range
 
+import           RON.Event (Event (..), ReplicaId (..))
+import           RON.Internal.Word (Word60, leastSignificant60)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
                             ReducedChunk (..), UUID (..))
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
 
-word60 :: MonadGen gen => gen Word64
-word60 = (.&. 0x0FFFFFFFFFFFFFFF) <$> word64'
+word60 :: MonadGen gen => gen Word60
+word60 = leastSignificant60 <$> word64'
 
 uuid :: MonadGen gen => gen UUID
 uuid = UUID <$> word64' <*> word64'
@@ -59,3 +61,9 @@ payload = list (Range.exponential 0 10) atom
 
 atom :: MonadGen gen => gen Atom
 atom = AInteger <$> integral (Range.exponentialFrom 0 (- 10e10) 10e10)
+
+event :: MonadGen gen => gen Event
+event = Event <$> eventTime <*> replicaId
+
+replicaId :: MonadGen gen => gen ReplicaId
+replicaId = ReplicaId <$> enumBounded <*> enumBounded <*> word60

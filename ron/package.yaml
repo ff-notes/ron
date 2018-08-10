@@ -23,6 +23,7 @@ library:
     - RON.Binary.Types
     - RON.Event
     - RON.Internal.Prelude
+    - RON.Internal.Word
     - RON.Text
     - RON.Text.Parse
     - RON.Text.Serialize

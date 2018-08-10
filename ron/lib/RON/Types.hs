@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StrictData #-}
 
 module RON.Types
@@ -9,7 +10,9 @@ module RON.Types
     , Op (..)
     , OpTerm (..)
     , ReducedChunk (..)
+    , reducedChunk
     , ReducedFrame
+    , reducedFrame
     , UUID (..)
     ) where
 
@@ -20,7 +23,7 @@ import           GHC.Generics (Generic)
 
 import           RON.UUID (UUID (..))
 
-data Atom = AUuid UUID | AInteger Int64
+data Atom = AInteger Int64 | AUuid UUID
     deriving (Eq, Generic, NFData, Show)
 
 data Op = Op
@@ -48,3 +51,10 @@ type ReducedFrame = ReducedChunk
 
 data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
+
+reducedChunk :: Op -> [Op] -> Chunk
+reducedChunk chunkHeader chunkBody =
+    Reduced ReducedChunk{chunkHeader, chunkIsQuery = False, chunkBody}
+
+reducedFrame :: Op -> [Op] -> Frame
+reducedFrame chunkHeader chunkBody = [reducedChunk chunkHeader chunkBody]

@@ -14,6 +14,7 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.ZigZag (zzEncode)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
+import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
                             ReducedChunk (..), UUID (..))
 
@@ -66,7 +67,7 @@ serializeAtomUuid :: UUID -> ByteStringL
 serializeAtomUuid = serializeWithDesc DAtomUuid . serializeUuid
 
 encodeDesc :: Desc -> Word4
-encodeDesc = fromIntegral . fromEnum
+encodeDesc = leastSignificant4 . fromEnum
 
 serializeWithDesc
     :: Desc
@@ -78,18 +79,17 @@ serializeWithDesc d body =
     body
   where
     len = BSL.length body
-    descByte = encodeDesc d `shiftL` 4 .|. lengthField
+    descByte = safeCast (encodeDesc d) `shiftL` 4 .|. safeCast lengthField
     lengthField -- , lengthExtended)
-        | descIsOp d  = 0
-        | len < 16    = fromIntegral len
-        | len == 16   = 0
+        | descIsOp d  = b0000
+        | len < 16    = leastSignificant4 len
+        | len == 16   = b0000
         | otherwise   = error "impossible"
 
 serializeAtom :: Atom -> ByteStringL
 serializeAtom = \case
-    AUuid uuid -> serializeAtomUuid uuid
-    AInteger int ->
-        serializeWithDesc DAtomInteger $ Binary.encode $ zzEncode64 int
+    AInteger i -> serializeWithDesc DAtomInteger $ Binary.encode $ zzEncode64 i
+    AUuid    u -> serializeAtomUuid u
   where
     {-# INLINE zzEncode64 #-}
     zzEncode64 :: Int64 -> Word64

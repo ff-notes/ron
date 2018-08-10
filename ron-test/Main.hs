@@ -2,7 +2,9 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -12,6 +14,7 @@ import           RON.Internal.Prelude
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import           Data.Foldable (for_)
+import           Data.Maybe (fromJust)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
                            forAll, property, (===))
@@ -26,11 +29,13 @@ import           Test.Tasty.TH (defaultMainGenerator)
 
 import qualified RON.Base64 as Base64
 import qualified RON.Binary as Binary
-import qualified RON.Event as Event
+import           RON.Event (ClockType (Base64Calendar), Event (Event),
+                            Naming (TrieForked), ReplicaId (ReplicaId),
+                            decodeEvent, encodeEvent)
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
-import           RON.Types (Atom (..), Chunk (..), Op (..), UUID (..))
+import           RON.Types (Atom (..), Chunk (Raw), Op (..), UUID (..))
 import qualified RON.UUID as UUID
 
 import qualified Gen
@@ -137,33 +142,26 @@ evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
     Right a -> pure a
 
-prop_calendarEvent_roundtrip = property $ do
-    time <- forAll Gen.eventTime
-    event <- evalMaybeS $ Event.mkCalendarEvent time
-    annotateShow (event, Base64.encode60short event)
-    time' <- evalMaybeS $ Event.getCalendarEvent event
-    time === time'
-
-prop_calendarEventUuid_roundtrip = property $ do
-    time <- forAll Gen.eventTime
-    origin <- forAll Gen.word60
-    event <- evalMaybeS $ UUID.mkCalendarEvent time (0, origin)
-    annotateShow (event, Text.serializeUuid event)
-    time' <- evalMaybeS $ UUID.getCalendarEvent event
-    time === time'
+prop_event_roundtrip = property $ do
+    event  <- forAll Gen.event
+    uuid   <- evalMaybeS $ encodeEvent event
+    event' <- evalMaybeS $ decodeEvent uuid
+    event === event'
 
 prop_ron_json_example = let
     input =
         "*lww #1TUAQ+gritzko @`   :bar = 1  ;\n\
         \     #(R            @`   :foo > (Q ;"
-    output = map Raw
-        [ Op{ opType     = lww
+    output =
+        [ Raw Op
+            { opType     = lww
             , opObject   = bar
             , opEvent    = bar
             , opLocation = barName
             , opPayload  = [AInteger 1]
             }
-        , Op{ opType     = lww
+        , Raw Op
+            { opType     = lww
             , opObject   = foo
             , opEvent    = foo
             , opLocation = fooName
@@ -171,12 +169,13 @@ prop_ron_json_example = let
             }
         ]
     barName = fromJust $ UUID.mkName "bar"
-    bar     = fromJust $
-        UUID.mkCalendarEvent (read "2017-10-31 10:26:00") (0, gritzko)
+    bar     = fromJust
+            $ encodeEvent $ Event (read "2017-10-31 10:26:00") replicaGritzko
     fooName = fromJust $ UUID.mkName "foo"
-    foo     = fromJust $
-        UUID.mkCalendarEvent (read "2017-10-31 10:27:00") (0, gritzko)
+    foo     = fromJust
+            $ encodeEvent $ Event (read "2017-10-31 10:27:00") replicaGritzko
     gritzko = fromJust $ Base64.decode60 "gritzko"
+    replicaGritzko = ReplicaId Base64Calendar TrieForked gritzko
     lww     = fromJust $ UUID.mkName "lww"
     in
     property $ do

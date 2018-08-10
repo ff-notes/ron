@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Serialize
@@ -19,6 +20,8 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 import qualified RON.Base64 as Base64
+import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
+                                    pattern B10, pattern B11)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
                             ReducedChunk (..))
 import           RON.UUID (UUID (..), UuidFields (..))
@@ -57,18 +60,18 @@ serializeOp Op{..} =
 serializeUuid :: UUID -> ByteStringL
 serializeUuid u@(UUID x y) = BSL.fromStrict $
     case uuidVariant of
-        0b00 -> x' <> y'
-        _    -> Base64.encode64 x <> Base64.encode64 y
+        B00 -> x' <> y'
+        _   -> Base64.encode64 x <> Base64.encode64 y
   where
     UuidFields{..} = UUID.split u
     schemeSymbol = case uuidScheme of
-        0b00 -> '$'
-        0b01 -> '%'
-        0b10 -> '+'
-        _    -> '-'
+        B00 -> '$'
+        B01 -> '%'
+        B10 -> '+'
+        B11 -> '-'
     varietyPrefix = case uuidVariety of
-        0 -> ""
-        _ -> BS.singleton (Base64.encodeLetter uuidVariety) <> "/"
+        B0000 -> ""
+        _     -> BS.singleton (Base64.encodeLetter4 uuidVariety) <> "/"
     x' = varietyPrefix <> Base64.encode60short uuidValue
     y' = case y of
         0 -> ""
@@ -76,5 +79,5 @@ serializeUuid u@(UUID x y) = BSL.fromStrict $
 
 serializeAtom :: Atom -> ByteStringL
 serializeAtom = \case
-    AUuid    u   -> ">" <> serializeUuid u
-    AInteger int -> "=" <> BSLC.pack (show int)
+    AInteger i -> "=" <> BSLC.pack (show i)
+    AUuid    u -> ">" <> serializeUuid u
