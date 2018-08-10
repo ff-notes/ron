@@ -13,6 +13,7 @@ module RON.UUID
     , mkName
     , mkScopedName
     , split
+    , zero
     ) where
 
 import           RON.Internal.Prelude
@@ -93,3 +94,6 @@ mkCalendarEvent time (replicaAssignmentRule, uuidOrigin) = do
 
 getCalendarEvent :: UUID -> Maybe UTCTime
 getCalendarEvent = Event.getCalendarEvent . uuidValue . split
+
+zero :: UUID
+zero = UUID 0 0

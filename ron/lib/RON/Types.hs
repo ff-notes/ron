@@ -37,10 +37,10 @@ data ReducedChunk = ReducedChunk
     , chunkIsQuery  :: Bool
     , chunkBody     :: [Op]
     }
-    deriving (Eq, Show)
+    deriving (Eq, Generic, NFData, Show)
 
 data Chunk = Raw Op | Reduced ReducedChunk
-    deriving (Eq, Show)
+    deriving (Eq, Generic, NFData, Show)
 
 type Frame = [Chunk]
 

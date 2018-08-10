@@ -6,14 +6,12 @@ license: BSD3
 default-extensions:
   - StrictData
 
-dependencies:
-  - base
-  - bytestring
-
 library:
   dependencies:
     - attoparsec
+    - base
     - binary
+    - bytestring
     - deepseq
     - flat
     - time
@@ -38,6 +36,8 @@ tests:
   test:
     dependencies:
       # global
+        - base
+        - bytestring
         - deepseq
         - directory
         - hedgehog
@@ -58,6 +58,7 @@ benchmarks:
   bench:
     dependencies:
       # global
+        - base
         - criterion
         - deepseq
       # package
