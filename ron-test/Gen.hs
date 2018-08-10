@@ -60,7 +60,10 @@ payload :: MonadGen gen => gen [Atom]
 payload = list (Range.exponential 0 10) atom
 
 atom :: MonadGen gen => gen Atom
-atom = AInteger <$> integral (Range.exponentialFrom 0 (- 10e10) 10e10)
+atom = choice
+    [ AInteger  <$> integral (Range.exponentialFrom 0 (- 10e10) 10e10)
+    , AUuid     <$> uuid
+    ]
 
 event :: MonadGen gen => gen Event
 event = Event <$> eventTime <*> replicaId
