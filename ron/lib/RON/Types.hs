@@ -10,9 +10,8 @@ module RON.Types
     , Op (..)
     , OpTerm (..)
     , ReducedChunk (..)
-    , reducedChunk
-    , ReducedFrame
-    , reducedFrame
+    , stateChunk
+    , stateFrame
     , UUID (..)
     ) where
 
@@ -37,25 +36,21 @@ data Op = Op
     deriving (Eq, Generic, NFData, Show)
 
 data ReducedChunk = ReducedChunk
-    { chunkHeader   :: Op
-    , chunkIsQuery  :: Bool
-    , chunkBody     :: [Op]
+    { chunkHeader :: Op
+    , chunkBody   :: [Op]
     }
     deriving (Eq, Generic, NFData, Show)
 
-data Chunk = Raw Op | Reduced ReducedChunk
+data Chunk = Raw Op | State ReducedChunk | Query ReducedChunk
     deriving (Eq, Generic, NFData, Show)
 
 type Frame = [Chunk]
 
-type ReducedFrame = ReducedChunk
-
 data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
-reducedChunk :: Op -> [Op] -> Chunk
-reducedChunk chunkHeader chunkBody =
-    Reduced ReducedChunk{chunkHeader, chunkIsQuery = False, chunkBody}
+stateChunk :: Op -> [Op] -> Chunk
+stateChunk chunkHeader chunkBody = State ReducedChunk{chunkHeader, chunkBody}
 
-reducedFrame :: Op -> [Op] -> Frame
-reducedFrame chunkHeader chunkBody = [reducedChunk chunkHeader chunkBody]
+stateFrame :: Op -> [Op] -> Frame
+stateFrame chunkHeader chunkBody = [stateChunk chunkHeader chunkBody]

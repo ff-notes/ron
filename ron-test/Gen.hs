@@ -8,7 +8,7 @@ import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorian,
                             timeOfDayToTime)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (bool, choice, enumBounded, integral, list, text,
+import           Hedgehog.Gen (choice, enumBounded, integral, list, text,
                                unicode, word64)
 import qualified Hedgehog.Range as Range
 
@@ -30,12 +30,12 @@ op :: MonadGen gen => Int -> gen Op
 op size = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload size
 
 chunk :: MonadGen gen => Int -> gen Chunk
-chunk size = choice [Raw <$> op size, Reduced <$> rchunk size]
+chunk size =
+    choice [Raw <$> op size, State <$> rchunk size, Query <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen ReducedChunk
 rchunk size = ReducedChunk
     <$> op size
-    <*> bool
     <*> list (Range.exponential 0 size) (op size)
 
 frame :: MonadGen gen => Int -> gen Frame

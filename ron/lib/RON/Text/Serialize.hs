@@ -36,14 +36,15 @@ serializeFrames = foldMap serializeFrame
 
 serializeChunk :: Chunk -> ByteStringL
 serializeChunk = \case
-    Raw op        -> serializeOp op `BSLC.snoc` ';'
-    Reduced chunk -> serializeReducedChunk chunk
+    Raw op      -> serializeOp op `BSLC.snoc` ';'
+    State chunk -> serializeReducedChunk False chunk
+    Query chunk -> serializeReducedChunk True  chunk
 
-serializeReducedChunk :: ReducedChunk -> ByteStringL
-serializeReducedChunk ReducedChunk{chunkHeader, chunkIsQuery, chunkBody} =
+serializeReducedChunk :: Bool -> ReducedChunk -> ByteStringL
+serializeReducedChunk isQuery ReducedChunk{chunkHeader, chunkBody} =
     mconcat
         [ serializeOp chunkHeader
-        , if chunkIsQuery then "?" else "!"
+        , if isQuery then "?" else "!"
         , foldMap serializeOp chunkBody
         ]
 

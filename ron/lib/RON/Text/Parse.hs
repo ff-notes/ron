@@ -48,16 +48,11 @@ chunks = label "[Chunk]" $ go chunk
 
 -- | Returns a chunk and the last op in it
 chunk :: Parser (Chunk, Op)
-chunk = label "Chunk" $ chunkReduced <|> chunkRaw op
+chunk = label "Chunk" $ rchunk <|> chunkRaw op
 
 -- | Returns a chunk and the last op in it
 chunkCont :: Op -> Parser (Chunk, Op)
-chunkCont prev = label "Chunk-cont" $ chunkReduced <|> chunkRaw (opCont prev)
-
-chunkReduced :: Parser (Chunk, Op)
-chunkReduced = do
-    (ch, x) <- rchunk
-    pure (Reduced ch, x)
+chunkCont prev = label "Chunk-cont" $ rchunk <|> chunkRaw (opCont prev)
 
 chunkRaw
     :: Parser Op  -- ^ start op parser, 'op' or 'opCont'
@@ -69,14 +64,14 @@ chunkRaw pop = do
     pure (Raw x, x)
 
 -- | Returns a chunk and the last op in it
-rchunk :: Parser (ReducedChunk, Op)
-rchunk = label "ReducedChunk" $ do
-    (chunkHeader, chunkIsQuery) <- header
+rchunk :: Parser (Chunk, Op)
+rchunk = label "Chunk-reduced" $ do
+    (chunkHeader, isQuery) <- header
     chunkBody <- ops
     let lastOp = case chunkBody of
             [] -> chunkHeader
             _  -> last chunkBody
-    pure (ReducedChunk{..}, lastOp)
+    pure ((if isQuery then Query else State) ReducedChunk{..}, lastOp)
 
 frame :: Parser Frame
 frame = label "Frame" $ chunks <* (endOfFrame <|> endOfInputEx)

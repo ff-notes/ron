@@ -45,8 +45,9 @@ serialize frame = ("RON2" <>) <$> serializeBody
 
 serializeChunk :: Chunk -> Either String ByteStringL
 serializeChunk = \case
-    Raw op         -> serializeOp DOpRaw op
-    Reduced rchunk -> serializeReducedChunk rchunk
+    Raw op       -> serializeOp DOpRaw op
+    State rchunk -> serializeReducedChunk False rchunk
+    Query rchunk -> serializeReducedChunk True  rchunk
 
 serializeOp :: Desc -> Op -> Either String ByteStringL
 serializeOp desc Op{..} = do
@@ -104,12 +105,10 @@ serializeAtom = \case
     zzEncode64 :: Int64 -> Word64
     zzEncode64 = zzEncode
 
-serializeReducedChunk :: ReducedChunk -> Either String ByteStringL
-serializeReducedChunk ReducedChunk{..} = do
+serializeReducedChunk :: Bool -> ReducedChunk -> Either String ByteStringL
+serializeReducedChunk isQuery ReducedChunk{..} = do
     header <-
-        serializeOp
-            (if chunkIsQuery then DOpQueryHeader else DOpHeader)
-            chunkHeader
+        serializeOp (if isQuery then DOpQueryHeader else DOpHeader) chunkHeader
     body <- mconcat <$> traverse (serializeOp DOpReduced) chunkBody
     pure $ header <> body
 
