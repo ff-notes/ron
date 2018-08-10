@@ -8,9 +8,11 @@
 module RON.Text.Parse
     ( chunks
     , frame
+    , parseAtom
     , parseFrame
     , parseFrames
     , parseOp
+    , parseString
     , parseUuid
     ) where
 
@@ -29,11 +31,13 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (ord)
 import           Data.Functor (($>))
+import           Data.Text (Text)
 
 import qualified RON.Base64 as Base64
 import           RON.Internal.Word (Word2, b00, b01, b10, b11, safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
                             ReducedChunk (..), UUID (..))
+import qualified RON.UUID as UUID
 
 parseFrame :: ByteStringL -> Either String Frame
 parseFrame = parseOnlyL frame
@@ -227,11 +231,19 @@ atom prevUuid = skipSpace *> atom'
         AString                            <$> string
     integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)
     uuid'   = uuid Nothing (Just prevUuid) SameOpPrevUuid
-    string  = do
-        (bs, ()) <- match . void $ char '"' >> takeWhile (/= '"') >> char '"'
-        case Json.decodeStrict bs of
-            Just s  -> pure s
-            Nothing -> fail "bad string"
+
+parseAtom :: ByteStringL -> Either String Atom
+parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
+
+string :: Parser Text
+string = do
+    (bs, ()) <- match . void $ char '"' >> takeWhile (/= '"') >> char '"'
+    case Json.decodeStrict bs of
+        Just s  -> pure s
+        Nothing -> fail "bad string"
+
+parseString :: ByteStringL -> Either String Text
+parseString = parseOnlyL $ string <* endOfInputEx
 
 data UuidCompressionBase = PrevOpSameKey | SameOpPrevUuid
 

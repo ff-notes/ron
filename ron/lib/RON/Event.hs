@@ -25,17 +25,17 @@ module RON.Event
 
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import           Data.Fixed (Fixed (MkFixed), Pico, resolution)
+import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
 import           Data.Time (TimeOfDay (TimeOfDay), UTCTime (UTCTime),
                             fromGregorianValid, makeTimeOfDayValid,
                             timeOfDayToTime, timeToTimeOfDay, toGregorian,
                             utctDay, utctDayTime)
 import           Data.Traversable (for)
-import           Numeric.Natural (Natural)
 
 import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
                                     pattern B11, Word2, Word60, Word64, Word8,
                                     leastSignificant2, leastSignificant4,
-                                    safeCast, toWord60)
+                                    leastSignificant60, safeCast, toWord60)
 import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin,
                            uuidScheme, uuidValue, uuidVariant, uuidVariety)
 import qualified RON.UUID as UUID
@@ -61,8 +61,14 @@ data Naming
     | ApplicationSpecific
     deriving (Bounded, Enum, Eq, Show)
 
+instance Hashable Naming where
+    hashWithSalt = hashUsing fromEnum
+
 data ReplicaId = ReplicaId !Naming !Word60
     deriving (Eq, Show)
+
+instance Hashable ReplicaId where
+    hashWithSalt = hashUsing $ \(ReplicaId n r) -> (n, r)
 
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.
@@ -111,23 +117,23 @@ class Replica m => Clock m where
     --
     --    2. getEvents 0 == getEvents 1
     getEvents
-        :: Natural -- ^ number of needed timestamps
+        :: Word60 -- ^ number of needed timestamps
         -> m [EpochEvent]
         -- ^ Starting value of the range.
         -- So return value @t@ means range @[t .. t + n - 1]@.
 
     -- | Make local time not less than this
-    advance :: UTCTime -> m ()
+    advance :: Word60 -> m ()
 
 getEvent :: Clock m => m EpochEvent
-getEvent = head <$> getEvents 1
+getEvent = head <$> getEvents (leastSignificant60 (1 :: Word64))
 
 getEventUuid :: Clock m => m UUID
 getEventUuid = do
     e <- getEvent
     maybe (fail $ "bad event: " ++ show e) pure $ encodeEvent $ fromEpochEvent e
 
-getEventUuids :: Clock m => Natural -> m [UUID]
+getEventUuids :: Clock m => Word60 -> m [UUID]
 getEventUuids n = do
     es <- getEvents n
     for es $ \e ->

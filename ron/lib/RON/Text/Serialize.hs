@@ -6,9 +6,11 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Serialize
-    ( serializeFrame
+    ( serializeAtom
+    , serializeFrame
     , serializeFrames
     , serializeOp
+    , serializeString
     , serializeUuid
     ) where
 
@@ -19,6 +21,8 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
+import qualified Data.ByteString.Lazy.Search as BSL
+import           Data.Text (Text)
 
 import qualified RON.Base64 as Base64
 import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
@@ -82,5 +86,8 @@ serializeUuid u@(UUID x y) = BSL.fromStrict $
 serializeAtom :: Atom -> ByteStringL
 serializeAtom = \case
     AInteger i -> "=" <> BSLC.pack (show i)
-    AString  s -> Json.encode s
+    AString  s -> serializeString s
     AUuid    u -> ">" <> serializeUuid u
+
+serializeString :: Text -> ByteStringL
+serializeString = BSL.replace "\\\"" ("\\u0022" :: ByteString) . Json.encode

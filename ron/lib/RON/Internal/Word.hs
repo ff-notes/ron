@@ -1,4 +1,5 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
@@ -24,7 +25,9 @@ module RON.Internal.Word
     -- * Word60
     , Word60
     , leastSignificant60
+    , ls60
     , toWord60
+    , word60add
     -- * Word64
     , Word64
     -- * SafeCast
@@ -34,6 +37,7 @@ module RON.Internal.Word
 import           Data.Bits ((.&.))
 import           Data.Coerce (coerce)
 import           Data.Fixed (Fixed, HasResolution)
+import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
 import           Data.Word (Word32, Word64, Word8)
 
 newtype Word2 = W2 Word8
@@ -96,17 +100,27 @@ leastSignificant6 :: Integral integral => integral -> Word6
 leastSignificant6 = W6 . (0x3F .&.) . fromIntegral
 
 newtype Word60 = W60 Word64
-    deriving (Eq, Ord, Show)
+    deriving (Enum, Eq, Ord, Show)
+
+instance Hashable Word60 where
+    hashWithSalt = hashUsing @Word64 coerce
 
 -- | 'Word60' smart constructor dropping upper bits
 leastSignificant60 :: Integral integral => integral -> Word60
 leastSignificant60 = W60 . (0x0FFFFFFFFFFFFFFF .&.) . fromIntegral
+
+-- | 'leastSignificant60' specialized for  'Word64'
+ls60 :: Word64 -> Word60
+ls60 = W60 . (0x0FFFFFFFFFFFFFFF .&.)
 
 -- | 'Word60' smart constructor checking domain
 toWord60 :: Word64 -> Maybe Word60
 toWord60 w
     | w < 0x1000000000000000 = Just $ W60 w
     | otherwise              = Nothing
+
+word60add :: Word60 -> Word60 -> Word60
+word60add (W60 a) (W60 b) = leastSignificant60 $ a + b
 
 class SafeCast v w where
     safeCast :: v -> w

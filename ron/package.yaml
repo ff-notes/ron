@@ -13,11 +13,16 @@ library:
     - base
     - binary
     - bytestring
+    - containers
     - deepseq
     - Diff
     - flat
+    - hashable
+    - mtl
+    - stringsearch
     - text
     - time
+    - unordered-containers
   exposed-modules:
     - RON.Base64
     - RON.Binary
@@ -27,6 +32,7 @@ library:
     - RON.Data.LWW
     - RON.Data.RGA
     - RON.Event
+    - RON.Event.Simulation
     - RON.Internal.Prelude
     - RON.Internal.Word
     - RON.Text

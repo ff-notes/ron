@@ -1,22 +1,26 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.RGA where
 
 import           Data.Algorithm.Diff (Diff (Both, First, Second),
                                       getGroupedDiffBy)
+import           Data.Coerce (coerce)
 import           Data.Function (on)
-import           Data.List (genericLength)
 import           Data.Maybe (fromJust, maybeToList)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Data.Traversable (for)
 
 import           RON.Event (Clock, EpochEvent, encodeEvent, fromEpochEvent,
                             getEvents)
-import           RON.Typed (AsAtom, Replicated, toAtom, toReducedOps)
-import           RON.Types (Op (..), UUID)
+import           RON.Internal.Word (leastSignificant60)
+import           RON.Typed (AsAtom, Replicated, View, initialize, toAtom,
+                            toStateChunk, toStateOps, view)
+import           RON.Types (Op (..), ReducedChunk (..), UUID)
 import qualified RON.UUID as UUID
 
 -- | 'EpochEvent' because we need comparable events
@@ -67,7 +71,7 @@ fromList = fmap RGA . fromList'
 
 fromList' :: Clock m => [a] -> m [(VertexId, Maybe a)]
 fromList' xs = do
-    vids <- getEvents $ genericLength xs
+    vids <- getEvents $ leastSignificant60 $ length xs
     pure $ zip vids $ map Just xs
 
 fromString :: Clock m => String -> m RgaString
@@ -85,21 +89,45 @@ edit newList (RGA oldRga) =
     newList' = [(undefined, Just a) | a <- newList]
     diff     = getGroupedDiffBy ((==) `on` snd) oldRga newList'
 
-newtype RgaText = RgaText RgaString
-    deriving (Replicated)
-
 rgaType :: UUID
 rgaType = fromJust $ UUID.mkName "rga"
 
 instance AsAtom a => Replicated (RGA a) where
-    toReducedOps opObject (RGA rga) = for rga mkStateOp
-      where
-        mkStateOp (vid, a) = do
-            opEvent <-
-                maybe (fail "VertexId is a bad Event") pure $
-                encodeEvent $ fromEpochEvent vid
-            pure Op{..}
-          where
-            opPayload   = toAtom <$> maybeToList a
-            opType      = rgaType
-            opLocation  = UUID.zero
+    type View (RGA a) = [a]
+    initialize = fromList
+    view = toList
+
+    toStateOps opObject (RGA rga) = for rga $ \(vid, a) -> do
+        opEvent <-
+            maybe (fail "VertexId is a bad Event") pure $
+            encodeEvent $ fromEpochEvent vid
+        pure Op
+            { opObject
+            , opEvent
+            , opLocation = UUID.zero
+            , opType     = rgaType
+            , opPayload  = toAtom <$> maybeToList a
+            }
+
+    toStateChunk this rga = do
+        chunkBody <- toStateOps this rga
+        pure ReducedChunk
+            { chunkHeader  = Op
+                { opObject   = this
+                , opEvent    = UUID.zero
+                , opLocation = UUID.zero
+                , opType     = rgaType
+                , opPayload  = []
+                }
+            , chunkBody
+            }
+
+newtype RgaText = RgaText RgaString
+    deriving (Eq, Show)
+
+instance Replicated RgaText where
+    type View RgaText = Text
+    initialize = fmap RgaText . initialize . Text.unpack
+    view = Text.pack . coerce (view @RgaString)
+    toStateOps = coerce $ toStateOps @RgaString
+    toStateChunk = coerce $ toStateChunk @RgaString

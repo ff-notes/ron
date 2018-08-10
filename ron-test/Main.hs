@@ -8,6 +8,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 import           RON.Internal.Prelude
 
@@ -33,16 +35,19 @@ import qualified RON.Base64 as Base64
 import qualified RON.Binary as Binary
 import qualified RON.Binary.Parse as Binary
 import qualified RON.Binary.Serialize as Binary
-import           RON.Data.LWW (LWW, lwwType)
-import           RON.Data.RGA (RgaText)
-import           RON.Event (CalendarEvent (..), Naming (TrieForked),
-                            ReplicaId (..), decodeEvent, encodeEvent,
-                            fromCalendarEvent)
+import           RON.Data.LWW (LWW (..), lwwType)
+import           RON.Data.RGA (RGA (..), RgaText (..))
+import           RON.Event (CalendarEvent (..), EpochEvent (..),
+                            Naming (TrieForked), ReplicaId (..), decodeEvent,
+                            encodeEvent, fromCalendarEvent)
+import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
+import           RON.Internal.Word (ls60)
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
-import           RON.Typed (Object (..), Replicated, objectToReducedOps,
-                            toReducedOps)
+import           RON.Typed (Field (..), Object (..), Replicated, View,
+                            initialize, initializeObject, lwwStructToStateChunk,
+                            lwwStructToStateOps, toStateChunk, toStateOps, view)
 import           RON.Types (Atom (..), Chunk (Raw), Op (..), UUID (..))
 import qualified RON.UUID as UUID
 
@@ -118,8 +123,18 @@ textRoundtrip gen serialize parse = property $ do
 prop_text_roundtrip_uuid =
     textRoundtrip Gen.uuid Text.serializeUuid Text.parseUuid
 
--- TODO increase limits
-prop_text_roundtrip_op = textRoundtrip (Gen.op 10) Text.serializeOp Text.parseOp
+prop_text_roundtrip_string =
+    textRoundtrip
+        (Gen.text (Range.exponential 0 10000) Gen.unicode)
+        Text.serializeString
+        Text.parseString
+
+prop_text_roundtrip_atom =
+    textRoundtrip (Gen.atom 10000) Text.serializeAtom Text.parseAtom
+
+prop_text_roundtrip_op =
+    -- TODO increase limits
+    textRoundtrip (Gen.op 100) Text.serializeOp Text.parseOp
 
 prop_text_roundtrip_frame =
     -- TODO increase limits
@@ -216,29 +231,54 @@ data TestStructView = TestStructView{tsv_int :: Int64, tsv_text :: Text}
 
 data TestStruct = TestStruct
     {ts_int :: Object (LWW Int64), ts_text :: Object RgaText}
+    deriving (Eq, Show)
 
 instance Replicated TestStruct where
-    toReducedOps this TestStruct{ts_int, ts_text} = do
-        bodyInt  <- objectToReducedOps ts_int
-        bodyText <- objectToReducedOps ts_text
-        pure $ struct : bodyInt ++ bodyText
-      where
-        Object{objectId = int_id}  = ts_int
-        Object{objectId = text_id} = ts_text
-        struct = Op{..}
-        opObject = this
-        opEvent  = this
-        opLocation = UUID.zero
-        opPayload = [AString "int", AUuid int_id, AString "text", AUuid text_id]
-        opType = fromJust $ UUID.mkName "struct"
+    type View TestStruct = TestStructView
 
-    -- parsedT <- evalEitherS $ TypedText.parse input
-    -- let value = TestStructView parsedT
-    -- outputT === value
-    -- outputT = TestStructView{tsv_int = TestStructFooView{jefv_bar = 1}}
+    initialize TestStructView{..} = do
+        ts_int  <- initializeObject tsv_int
+        ts_text <- initializeObject tsv_text
+        pure TestStruct{..}
 
--- TestStructView :: TestStruct -> TestStructView
--- TestStructView TestStruct{ts_int} = TestStructView
---     {tsv_int = TestStructFooView{jefv_bar = LWW.value jef_bar}}
---     where
---     TestStructFoo{jef_bar} = LWW.value ts_int
+    view TestStruct{..} = TestStructView
+        { tsv_int  = view $ objectValue ts_int
+        , tsv_text = view $ objectValue ts_text
+        }
+
+    toStateOps this TestStruct{ts_int, ts_text} =
+        lwwStructToStateOps
+            "TestStruct" [Field "int" ts_int, Field "text" ts_text] this
+
+    toStateChunk this TestStruct{ts_int, ts_text} =
+        lwwStructToStateChunk
+            "TestStruct" [Field "int" ts_int, Field "text" ts_text] this
+
+testStructInitial = TestStructView{tsv_int = 275, tsv_text = "275"}
+
+testStruct1 = TestStruct
+    { ts_int  = Object (UUID 0x83e96ff433c6dd65 0x20000000000000fa) $ LWW
+        (EpochEvent (ls60 0xfc2ea3b9d703b09) $ ReplicaId TrieForked $ ls60 250)
+        275
+    , ts_text = Object (UUID 0x8fc2ea3b9d703b0a 0x20000000000000fa) $ RgaText $
+        RGA
+            [   ( EpochEvent
+                    (ls60 0xfc2ea3b9d703b0b) (ReplicaId TrieForked (ls60 250))
+                , Just '2'
+                )
+            ,   ( EpochEvent
+                    (ls60 0xfc2ea3b9d703b0c) (ReplicaId TrieForked (ls60 250))
+                , Just '7'
+                )
+            ,   ( EpochEvent
+                    (ls60 0xfc2ea3b9d703b0d) (ReplicaId TrieForked (ls60 250))
+                , Just '5'
+                )
+            ]
+    }
+
+prop_TestStruct_serialize = property $ do
+    ts <- evalEitherS $ runNetworkSim $
+        runReplicaSim (ReplicaId TrieForked $ ls60 250) $
+            initialize @TestStruct testStructInitial
+    testStruct1 === ts
