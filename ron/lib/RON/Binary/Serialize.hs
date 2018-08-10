@@ -12,6 +12,7 @@ import qualified Data.Binary as Binary
 import           Data.Bits (bit, shiftL, (.|.))
 import           Data.ByteString.Lazy (cons, fromStrict)
 import qualified Data.ByteString.Lazy as BSL
+import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.ZigZag (zzEncode)
 
@@ -91,12 +92,12 @@ serializeWithDesc d body = do
         | otherwise   = error "impossible"
     mkLengthExtended
         | len < 128 = Binary.encode (fromIntegral len :: Word8)
-        | otherwise = Binary.encode (fromIntegral len :: Word32)
+        | otherwise = Binary.encode (fromIntegral len .|. bit 31 :: Word32)
 
 serializeAtom :: Atom -> Either String ByteStringL
 serializeAtom = \case
     AInteger i -> serializeWithDesc DAtomInteger $ Binary.encode $ zzEncode64 i
-    AString  s -> serializeWithDesc DAtomString  $ fromStrict $ encodeUtf8 s
+    AString  s -> serializeWithDesc DAtomString  $ serializeString s
     AUuid    u -> serializeWithDesc DAtomUuid    $ serializeUuid u
   where
     {-# INLINE zzEncode64 #-}
@@ -111,3 +112,6 @@ serializeReducedChunk ReducedChunk{..} = do
             chunkHeader
     body <- mconcat <$> traverse (serializeOp DOpReduced) chunkBody
     pure $ header <> body
+
+serializeString :: Text -> ByteStringL
+serializeString = fromStrict . encodeUtf8

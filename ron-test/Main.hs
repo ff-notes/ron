@@ -81,9 +81,15 @@ binaryRoundtrip gen serialize parse = property $ do
     x' <- evalEitherS $ parse bytes
     x === x'
 
+prop_binary_roundtrip_string =
+    binaryRoundtrip
+        (Gen.text (Range.exponential 0 1000) Gen.unicode)
+        (Right . Binary.serializeString)
+        Binary.parseString
+
 prop_binary_roundtrip_atom =
     -- TODO increase limits
-    binaryRoundtrip (Gen.atom 10) Binary.serializeAtom Binary.parseAtom
+    binaryRoundtrip (Gen.atom 1000) Binary.serializeAtom Binary.parseAtom
 
 prop_binary_roundtrip_frame =
     -- TODO increase limits

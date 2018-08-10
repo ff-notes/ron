@@ -11,10 +11,12 @@ module RON.Binary.Parse where
 import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
-                                   parseOnlyL, string, takeL, withInputSize)
+                                   parseOnlyL, takeL, withInputSize)
+import qualified Attoparsec.Extra as Atto
 import qualified Data.Binary as Binary
 import           Data.Bits (shiftR, testBit, (.&.))
 import           Data.ByteString.Lazy (cons, toStrict)
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.ZigZag (zzDecode64)
@@ -51,7 +53,7 @@ parse = parseOnlyL $ parseFrame <* endOfInputEx
 
 parseFrame :: Parser Frame
 parseFrame = label "Frame" $ do
-    _ <- string "RON2" <|> do
+    _ <- Atto.string "RON2" <|> do
         magic <- takeL 4
         fail $ "unsupported magic sequence " ++ show magic
     parseChunks
@@ -148,7 +150,7 @@ atom = label "Atom" $ do
     (desc, size) <- parseDesc
     case desc of
         DAtomInteger -> AInteger <$> parseInteger size
-        DAtomString  -> AString  <$> parseString  size
+        DAtomString  -> AString  <$> string       size
         DAtomUuid    -> AUuid    <$> parseUuid    size
         _            -> fail "expected Atom"
 
@@ -162,5 +164,9 @@ parseInteger size = label "Integer" $ do
     unless (size == 8) $ fail "integer size /=8 not implemented"
     zzDecode64 . Binary.decode <$> takeL (fromIntegral size)
 
-parseString :: Size -> Parser Text
-parseString size = decodeUtf8 . toStrict <$> takeL (fromIntegral size)
+string :: Size -> Parser Text
+string size = decodeUtf8 . toStrict <$> takeL (fromIntegral size)
+
+parseString :: ByteStringL -> Either String Text
+parseString bs =
+    parseOnlyL (string (fromIntegral $ BSL.length bs) <* endOfInputEx) bs
