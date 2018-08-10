@@ -4,9 +4,8 @@ module HexDump where
 
 import           RON.Internal.Prelude
 
-import           Numeric (showHex)
-
 import qualified Data.ByteString.Lazy as BSL
+import           Numeric (showHex)
 
 hexdump :: ByteStringL -> String
 hexdump = unlines . map showLine . split
