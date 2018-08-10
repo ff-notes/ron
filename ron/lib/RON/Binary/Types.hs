@@ -2,7 +2,7 @@
 
 module RON.Binary.Types where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 type Size = Word32
 

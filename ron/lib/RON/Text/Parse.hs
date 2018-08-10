@@ -14,7 +14,7 @@ module RON.Text.Parse
     , parseUuid
     ) where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, endOfInputEx, isSuccessful, label,
                                    option, parseOnlyL, satisfy, (??))

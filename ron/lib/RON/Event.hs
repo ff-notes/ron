@@ -6,7 +6,7 @@ module RON.Event
     , mkCalendarEvent
     ) where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import           Data.Fixed (Fixed (MkFixed), Pico, resolution)

@@ -11,7 +11,7 @@ module RON.Text.Serialize
     , serializeUuid
     ) where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC

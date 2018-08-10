@@ -24,6 +24,7 @@ library:
     - RON.Binary.Serialize
     - RON.Binary.Types
     - RON.Event
+    - RON.Internal.Prelude
     - RON.Text
     - RON.Text.Parse
     - RON.Text.Serialize
@@ -31,10 +32,7 @@ library:
     - RON.UUID
   other-modules:
     - Attoparsec.Extra
-    - Internal.Prelude
-  source-dirs:
-    - lib
-    - prelude
+  source-dirs: lib
 
 tests:
   test:
@@ -54,10 +52,7 @@ tests:
     other-modules:
       - Gen
       - HexDump
-      - Internal.Prelude
-    source-dirs:
-      - prelude
-      - test
+    source-dirs: test
 
 benchmarks:
   bench:
@@ -68,6 +63,4 @@ benchmarks:
       # package
         - ron
     main: Main
-    source-dirs:
-      - bench
-      - prelude
+    source-dirs: bench

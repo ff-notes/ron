@@ -1,5 +1,5 @@
-module Internal.Prelude
-    ( module Internal.Prelude
+module RON.Internal.Prelude
+    ( module RON.Internal.Prelude
     , module X
     ) where
 

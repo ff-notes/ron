@@ -16,7 +16,7 @@ module Attoparsec.Extra
     , (??)
     ) where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec

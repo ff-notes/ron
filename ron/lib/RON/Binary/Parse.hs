@@ -8,7 +8,7 @@
 
 module RON.Binary.Parse where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, string, takeL, withInputSize)

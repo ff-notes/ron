@@ -15,7 +15,7 @@ module RON.UUID
     , split
     ) where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))

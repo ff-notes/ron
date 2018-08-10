@@ -13,7 +13,7 @@ module RON.Types
     , UUID (..)
     ) where
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import           Control.DeepSeq (NFData)
 import           GHC.Generics (Generic)

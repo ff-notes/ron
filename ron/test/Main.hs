@@ -7,7 +7,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-import           Internal.Prelude
+import           RON.Internal.Prelude
 
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BS
