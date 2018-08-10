@@ -14,9 +14,13 @@ import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, string, takeL, withInputSize)
 import qualified Data.Binary as Binary
 import           Data.Bits (shiftR, testBit, (.&.))
+import           Data.ByteString.Lazy (cons, toStrict)
+import           Data.Text (Text)
+import           Data.Text.Encoding (decodeUtf8)
 import           Data.ZigZag (zzDecode64)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
+import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
                             ReducedChunk (..), UUID (..))
 
@@ -27,10 +31,20 @@ parseDesc = label "desc" $ do
     let sizeCode = b .&. 0b1111
     let desc = toEnum $ fromIntegral typeCode
     size <- case (sizeCode, desc) of
+        (0, DAtomString)    -> extendedLength
         (0, d) | descIsOp d -> pure 0
         (0, _)              -> pure 16
         _                   -> pure $ fromIntegral sizeCode
     pure (desc, size)
+
+extendedLength :: Parser Size
+extendedLength = do
+    b <- anyWord8
+    if testBit b 7 then do
+        bbb <- takeL 3
+        pure $ leastSignificant31 $ Binary.decode (b `cons` bbb)
+    else
+        pure $ safeCast b
 
 parse :: ByteStringL -> Either String Frame
 parse = parseOnlyL $ parseFrame <* endOfInputEx
@@ -51,8 +65,9 @@ parseChunks = do
             (:[]) <$> parseChunk size
         | True ->
             pure []
-  where
-    leastSignificant31 x = x .&. 0x7FFFFFFF
+
+leastSignificant31 :: Word32 -> Word32
+leastSignificant31 x = x .&. 0x7FFFFFFF
 
 parseChunk :: Size -> Parser Chunk
 parseChunk size = label "Chunk" $ do
@@ -126,15 +141,19 @@ parseUuid size = label "UUID" $
         _  -> fail "expected uuid of size 16"
 
 parsePayload :: Parser [Atom]
-parsePayload = label "payload" $ many parseAtom
+parsePayload = label "payload" $ many atom
 
-parseAtom :: Parser Atom
-parseAtom = label "Atom" $ do
+atom :: Parser Atom
+atom = label "Atom" $ do
     (desc, size) <- parseDesc
     case desc of
-        DAtomUuid    -> AUuid    <$> parseUuid size
         DAtomInteger -> AInteger <$> parseInteger size
+        DAtomString  -> AString  <$> parseString  size
+        DAtomUuid    -> AUuid    <$> parseUuid    size
         _            -> fail "expected Atom"
+
+parseAtom :: ByteStringL -> Either String Atom
+parseAtom = parseOnlyL $ atom <* endOfInputEx
 
 -- big-endian, zigzag-coded, lengths 1..8
 parseInteger :: Size -> Parser Int64
@@ -142,3 +161,6 @@ parseInteger size = label "Integer" $ do
     unless (size >= 1 && size <= 8) $ fail "integer size must be 1..8"
     unless (size == 8) $ fail "integer size /=8 not implemented"
     zzDecode64 . Binary.decode <$> takeL (fromIntegral size)
+
+parseString :: Size -> Parser Text
+parseString size = decodeUtf8 . toStrict <$> takeL (fromIntegral size)

@@ -14,6 +14,7 @@ module RON.Text.Serialize
 
 import           RON.Internal.Prelude
 
+import qualified Data.Aeson as Json
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
@@ -80,4 +81,5 @@ serializeUuid u@(UUID x y) = BSL.fromStrict $
 serializeAtom :: Atom -> ByteStringL
 serializeAtom = \case
     AInteger i -> "=" <> BSLC.pack (show i)
+    AString  s -> Json.encode s
     AUuid    u -> ">" <> serializeUuid u

@@ -8,8 +8,8 @@ import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorian,
                             timeOfDayToTime)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (bool, choice, enumBounded, integral, list,
-                               word64)
+import           Hedgehog.Gen (bool, choice, enumBounded, integral, list, text,
+                               unicode, word64)
 import qualified Hedgehog.Range as Range
 
 import           RON.Event (Event (..), ReplicaId (..))
@@ -26,15 +26,17 @@ word60 = leastSignificant60 <$> word64'
 uuid :: MonadGen gen => gen UUID
 uuid = UUID <$> word64' <*> word64'
 
-op :: MonadGen gen => gen Op
-op = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload
+op :: MonadGen gen => Int -> gen Op
+op size = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload size
 
 chunk :: MonadGen gen => Int -> gen Chunk
-chunk size = choice [Raw <$> op, Reduced <$> rchunk size]
+chunk size = choice [Raw <$> op size, Reduced <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen ReducedChunk
-rchunk size =
-    ReducedChunk <$> op <*> bool <*> list (Range.exponential 0 size) op
+rchunk size = ReducedChunk
+    <$> op size
+    <*> bool
+    <*> list (Range.exponential 0 size) (op size)
 
 frame :: MonadGen gen => Int -> gen Frame
 frame size = list (Range.exponential 0 size) (chunk size)
@@ -56,12 +58,13 @@ eventTime = do
         , utctDayTime = timeOfDayToTime $ TimeOfDay hh mm ss
         }
 
-payload :: MonadGen gen => gen [Atom]
-payload = list (Range.exponential 0 10) atom
+payload :: MonadGen gen => Int -> gen [Atom]
+payload size = list (Range.exponential 0 size) (atom size)
 
-atom :: MonadGen gen => gen Atom
-atom = choice
-    [ AInteger  <$> integral (Range.exponentialFrom 0 (- 10e10) 10e10)
+atom :: MonadGen gen => Int -> gen Atom
+atom size = choice
+    [ AInteger  <$> integral (Range.exponentialFrom 0 (-10e10) 10e10)
+    , AString   <$> text (Range.exponential 0 size) unicode
     , AUuid     <$> uuid
     ]
 

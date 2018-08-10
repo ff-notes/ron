@@ -32,7 +32,7 @@ module RON.Internal.Word
 import           Data.Bits ((.&.))
 import           Data.Coerce (coerce)
 import           Data.Fixed (Fixed, HasResolution)
-import           Data.Word (Word64, Word8)
+import           Data.Word (Word32, Word64, Word8)
 
 newtype Word2 = W2 Word8
     deriving (Eq, Ord, Show)
@@ -119,6 +119,7 @@ instance SafeCast Word6  Word8   where safeCast = coerce
 instance SafeCast Word6  Word60  where safeCast = coerce @Word64
                                                 . fromIntegral @Word8 . coerce
 instance SafeCast Word6  Word64  where safeCast = fromIntegral @Word8 . coerce
+instance SafeCast Word8  Word32  where safeCast = fromIntegral
 instance SafeCast Word8  Word64  where safeCast = fromIntegral
 instance SafeCast Word60 Word64  where safeCast = coerce
 instance SafeCast Word64 Integer where safeCast = fromIntegral

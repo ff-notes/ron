@@ -8,12 +8,14 @@ default-extensions:
 
 library:
   dependencies:
+    - aeson
     - attoparsec
     - base
     - binary
     - bytestring
     - deepseq
     - flat
+    - text
     - time
   exposed-modules:
     - RON.Base64

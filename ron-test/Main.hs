@@ -29,6 +29,8 @@ import           Test.Tasty.TH (defaultMainGenerator)
 
 import qualified RON.Base64 as Base64
 import qualified RON.Binary as Binary
+import qualified RON.Binary.Parse as Binary
+import qualified RON.Binary.Serialize as Binary
 import           RON.Event (ClockType (Base64Calendar), Event (Event),
                             Naming (TrieForked), ReplicaId (ReplicaId),
                             decodeEvent, encodeEvent)
@@ -66,11 +68,26 @@ prepareEnv = do
         "linux"  -> "LD_LIBRARY_PATH"
         _ -> error $ os ++ " is not supported"
 
-prop_binary_roundtrip = property $ do
-    frame <- forAll $ Gen.frame 10
-    bytes <- evalEitherS $ Binary.serialize frame
+binaryRoundtrip
+    :: (Eq a, Show a)
+    => Gen a
+    -> (a -> Either String ByteStringL)
+    -> (ByteStringL -> Either String a)
+    -> Property
+binaryRoundtrip gen serialize parse = property $ do
+    x <- forAll gen
+    bytes <- evalEitherS $ serialize x
     annotate $ hexdump bytes
-    Right frame === Binary.parse bytes
+    x' <- evalEitherS $ parse bytes
+    x === x'
+
+prop_binary_roundtrip_atom =
+    -- TODO increase limits
+    binaryRoundtrip (Gen.atom 10) Binary.serializeAtom Binary.parseAtom
+
+prop_binary_roundtrip_frame =
+    -- TODO increase limits
+    binaryRoundtrip (Gen.frame 10) Binary.serialize Binary.parse
 
 textRoundtrip
     :: (Eq a, Show a)
@@ -89,7 +106,8 @@ textRoundtrip gen serialize parse = property $ do
 prop_text_roundtrip_uuid =
     textRoundtrip Gen.uuid Text.serializeUuid Text.parseUuid
 
-prop_text_roundtrip_op = textRoundtrip Gen.op Text.serializeOp Text.parseOp
+-- TODO increase limits
+prop_text_roundtrip_op = textRoundtrip (Gen.op 10) Text.serializeOp Text.parseOp
 
 prop_text_roundtrip_frame =
     -- TODO increase limits

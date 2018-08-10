@@ -14,14 +14,16 @@ module RON.Text.Parse
     , parseUuid
     ) where
 
+import           Prelude hiding (takeWhile)
 import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, endOfInputEx, isSuccessful, label,
-                                   option, parseOnlyL, satisfy, (??))
+                                   match, option, parseOnlyL, satisfy, (??))
+import           Data.Aeson as Json
 import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
                                                    peekChar, peekChar',
-                                                   skipSpace, takeWhile1)
-import qualified Data.Attoparsec.ByteString.Char8 as AttoparsecChar
+                                                   skipSpace, takeWhile,
+                                                   takeWhile1)
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -184,7 +186,7 @@ uuidAsBase64DoubleWord = label "UUID-Base64-double-word" $ do
 
 base64word :: Parser (Base64Format, ByteString)
 base64word = label "Base64 word" $ do
-    word <- AttoparsecChar.takeWhile Base64.isLetter
+    word <- takeWhile Base64.isLetter
     let n = BS.length word
     if  | n == 0  ->
             peekChar >>= \case
@@ -225,11 +227,16 @@ atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'
   where
     atom' =
-        "=" *> skipSpace *> (AInteger <$> integer) <|>
-        ">" *> skipSpace *> (AUuid    <$> uuid'  )
-            -- TODO uuidCompressed, too
+        char '=' *> skipSpace *> (AInteger <$> integer) <|>
+        char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <|>
+        AString                            <$> string
     integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)
-    uuid' = uuid Nothing (Just prevUuid) SameOpPrevUuid
+    uuid'   = uuid Nothing (Just prevUuid) SameOpPrevUuid
+    string  = do
+        (bs, ()) <- match . void $ char '"' >> takeWhile (/= '"') >> char '"'
+        case Json.decodeStrict bs of
+            Just s  -> pure s
+            Nothing -> fail "bad string"
 
 data UuidCompressionBase = PrevOpSameKey | SameOpPrevUuid
 
@@ -261,7 +268,7 @@ uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
             void anyChar -- skip prefix compression mark
             UUID prevX prevY <-
                 mprev ?? "can't reuse prefix whithout previous UUID"
-            word <- AttoparsecChar.takeWhile Base64.isLetter
+            word <- takeWhile Base64.isLetter
             when (BS.length word > 10 - prefixLen) $
                 fail "too long postfix for this prefix"
             newPart <- safeCast <$> Base64.decode60 word ?? "Base64.decode60"
