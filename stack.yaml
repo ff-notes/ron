@@ -2,6 +2,7 @@ resolver: lts-12.2
 
 packages:
   - ron
+  - ron-test
   - swarm
 
 extra-deps:

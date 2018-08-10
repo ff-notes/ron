@@ -1,0 +1,22 @@
+name: ron-test
+
+dependencies:
+  # global
+    - base
+    - bytestring
+    - directory
+    - hedgehog
+    - tasty-hedgehog
+    - tasty-th
+    - time
+  # project
+    - ron
+
+ghc-options: -threaded -rtsopts -with-rtsopts=-N
+
+tests:
+  test:
+    main: Main
+    other-modules:
+      - Gen
+      - HexDump
