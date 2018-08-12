@@ -19,6 +19,8 @@ module RON.Internal.Word
     -- * Word6
     , Word6
     , leastSignificant6
+    -- * Word8
+    , Word8
     -- * Word60
     , Word60
     , leastSignificant60
@@ -109,7 +111,9 @@ toWord60 w
 class SafeCast v w where
     safeCast :: v -> w
 
+instance SafeCast Word2  Int     where safeCast = fromIntegral @Word8 . coerce
 instance SafeCast Word2  Word4   where safeCast = coerce
+instance SafeCast Word2  Word8   where safeCast = coerce
 instance SafeCast Word2  Word64  where safeCast = fromIntegral @Word8 . coerce
 instance SafeCast Word4  Int     where safeCast = fromIntegral @Word8 . coerce
 instance SafeCast Word4  Word64  where safeCast = fromIntegral @Word8 . coerce

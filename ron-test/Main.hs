@@ -35,9 +35,9 @@ import qualified RON.Binary.Parse as Binary
 import qualified RON.Binary.Serialize as Binary
 import           RON.Data.LWW (LWW, lwwType)
 import           RON.Data.RGA (RgaText)
-import           RON.Event (ClockType (Base64Calendar), Event (Event),
-                            Naming (TrieForked), ReplicaId (ReplicaId),
-                            decodeEvent, encodeEvent)
+import           RON.Event (CalendarEvent (..), Naming (TrieForked),
+                            ReplicaId (..), decodeEvent, encodeEvent,
+                            fromCalendarEvent)
 import qualified RON.Text as Text
 import qualified RON.Text.Parse as Text
 import qualified RON.Text.Serialize as Text
@@ -199,13 +199,13 @@ prop_ron_json_example = let
             }
         ]
     barName = fromJust $ UUID.mkName "bar"
-    bar     = fromJust
-            $ encodeEvent $ Event (read "2017-10-31 10:26:00") replicaGritzko
+    bar     = fromJust $ encodeEvent $ fromCalendarEvent
+            $ CalendarEvent (read "2017-10-31 10:26:00") replicaGritzko
     fooName = fromJust $ UUID.mkName "foo"
-    foo     = fromJust
-            $ encodeEvent $ Event (read "2017-10-31 10:27:00") replicaGritzko
+    foo     = fromJust $ encodeEvent $ fromCalendarEvent
+            $ CalendarEvent (read "2017-10-31 10:27:00") replicaGritzko
     gritzko = fromJust $ Base64.decode60 "gritzko"
-    replicaGritzko = ReplicaId Base64Calendar TrieForked gritzko
+    replicaGritzko = ReplicaId TrieForked gritzko
     in
     property $ do
         parsed <- evalEitherS $ Text.parseFrame input

@@ -13,15 +13,14 @@ import           Data.List (genericLength)
 import           Data.Maybe (fromJust, maybeToList)
 import           Data.Traversable (for)
 
-import           RON.Event (Clock, Event, encodeEvent, getEvents)
+import           RON.Event (Clock, EpochEvent, encodeEvent, fromEpochEvent,
+                            getEvents)
 import           RON.Typed (AsAtom, Replicated, toAtom, toReducedOps)
 import           RON.Types (Op (..), UUID)
 import qualified RON.UUID as UUID
 
--- | We need to compare ids by uuidValue timestamp first.
--- 'UUID's are sorted by variant first,
--- which is part of replicaId in case of 'Event'.
-type VertexId = Event
+-- | 'EpochEvent' because we need comparable events
+type VertexId = EpochEvent
 
 newtype RGA a = RGA [(VertexId, Maybe a)]
     deriving (Eq, Show)
@@ -97,7 +96,8 @@ instance AsAtom a => Replicated (RGA a) where
       where
         mkStateOp (vid, a) = do
             opEvent <-
-                maybe (fail "VertexId is a bad Event") pure $ encodeEvent vid
+                maybe (fail "VertexId is a bad Event") pure $
+                encodeEvent $ fromEpochEvent vid
             pure Op{..}
           where
             opPayload   = toAtom <$> maybeToList a

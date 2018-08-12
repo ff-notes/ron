@@ -12,7 +12,9 @@ import           Hedgehog.Gen (choice, enumBounded, integral, list, text,
                                unicode, word64)
 import qualified Hedgehog.Range as Range
 
-import           RON.Event (Event (..), ReplicaId (..))
+import           RON.Event (Event (..),
+                            LocalTime (Calendar, Epoch, Logical, Unknown),
+                            ReplicaId (..))
 import           RON.Internal.Word (Word60, leastSignificant60)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
                             ReducedChunk (..), UUID (..))
@@ -45,8 +47,8 @@ frames :: MonadGen gen => Int -> gen [Frame]
 frames size = list (Range.exponential 0 size) (frame size)
 
 -- | Event time with year 2010—2350
-eventTime :: MonadGen gen => gen UTCTime
-eventTime = do
+calendarTime :: MonadGen gen => gen UTCTime
+calendarTime = do
     y  <- integral $ Range.constant 2010 2350
     m  <- integral $ Range.constant 1 12
     d  <- integral $ Range.constant 1 31
@@ -57,6 +59,14 @@ eventTime = do
         { utctDay     = fromGregorian y m d
         , utctDayTime = timeOfDayToTime $ TimeOfDay hh mm ss
         }
+
+eventTime :: MonadGen gen => gen LocalTime
+eventTime = choice
+    [ Calendar <$> calendarTime
+    , Logical  <$> word60
+    , Epoch    <$> word60
+    , Unknown  <$> word60
+    ]
 
 payload :: MonadGen gen => Int -> gen [Atom]
 payload size = list (Range.exponential 0 size) (atom size)
@@ -72,4 +82,4 @@ event :: MonadGen gen => gen Event
 event = Event <$> eventTime <*> replicaId
 
 replicaId :: MonadGen gen => gen ReplicaId
-replicaId = ReplicaId <$> enumBounded <*> enumBounded <*> word60
+replicaId = ReplicaId <$> enumBounded <*> word60
