@@ -21,6 +21,7 @@ module RON.Event
     , getEvent
     , getEventUuid
     , getEventUuids
+    , toEpochEvent
     ) where
 
 import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
@@ -103,6 +104,11 @@ instance Ord EpochEvent where
 
 fromEpochEvent :: EpochEvent -> Event
 fromEpochEvent (EpochEvent t r) = Event (Epoch t) r
+
+toEpochEvent :: Event -> Maybe EpochEvent
+toEpochEvent (Event t r) = case t of
+    Epoch t' -> Just $ EpochEvent t' r
+    _        -> Nothing
 
 class Monad m => Replica m where
     getPid :: m ReplicaId

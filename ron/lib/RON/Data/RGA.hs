@@ -15,11 +15,12 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Traversable (for)
 
-import           RON.Event (Clock, EpochEvent, encodeEvent, fromEpochEvent,
-                            getEvents)
+import           RON.Event (Clock, EpochEvent, decodeEvent, encodeEvent,
+                            fromEpochEvent, getEvents, toEpochEvent)
 import           RON.Internal.Word (leastSignificant60)
-import           RON.Typed (AsAtom, Replicated, View, initialize, toAtom,
-                            toStateChunk, toStateOps, view)
+import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
+                            fromStateOps, initialize, toAtom, toStateChunk,
+                            toStateOps, view)
 import           RON.Types (Op (..), ReducedChunk (..), UUID)
 import qualified RON.UUID as UUID
 
@@ -122,6 +123,21 @@ instance AsAtom a => Replicated (RGA a) where
             , chunkBody
             }
 
+    fromStateOps   _ ownOps _ = rgaFromStateOps ownOps
+    fromStateChunk _ ownOps _ = rgaFromStateOps ownOps
+
+rgaFromStateOps :: AsAtom a => [Op] -> Either String (RGA a)
+rgaFromStateOps ownOps =
+    fmap RGA . for ownOps $ \Op{opEvent, opPayload} -> do
+        event <- maybe (Left "Bad opEvent") Right $ decodeEvent  opEvent
+        vid   <- maybe (Left "Bad event")   Right $ toEpochEvent event
+        case opPayload of
+            []  -> pure (vid, Nothing)
+            [a] -> do
+                x <- maybe (Left "Bad atom") Right $ fromAtom a
+                pure (vid, Just x)
+            _   -> Left "Bad opPayload"
+
 newtype RgaText = RgaText RgaString
     deriving (Eq, Show)
 
@@ -129,5 +145,7 @@ instance Replicated RgaText where
     type View RgaText = Text
     initialize = fmap RgaText . initialize . Text.unpack
     view = Text.pack . coerce (view @RgaString)
-    toStateOps = coerce $ toStateOps @RgaString
-    toStateChunk = coerce $ toStateChunk @RgaString
+    toStateOps     = coerce $ toStateOps     @RgaString
+    toStateChunk   = coerce $ toStateChunk   @RgaString
+    fromStateOps   = coerce $ fromStateOps   @RgaString
+    fromStateChunk = coerce $ fromStateChunk @RgaString

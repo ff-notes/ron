@@ -48,8 +48,9 @@ import           RON.Internal.Word (ls60)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Typed (Object (..), Replicated, View, initialize,
-                            initializeObject, toStateChunk, toStateOps, view)
+import           RON.Typed (Object (..), Replicated, View, fromStateChunk,
+                            fromStateOps, initialize, initializeObject,
+                            toStateChunk, toStateOps, view)
 import           RON.Typed.LwwStruct (Field (..))
 import qualified RON.Typed.LwwStruct as LwwStruct
 import qualified RON.Typed.Text as TypedText
@@ -259,7 +260,17 @@ instance Replicated TestStruct where
         LwwStruct.toStateChunk
             "TestStruct" [Field "int" ts_int, Field "text" ts_text] this
 
-testStructInitial = TestStructView{tsv_int = 275, tsv_text = "275"}
+    fromStateOps this _ body = do
+        ts_int  <- LwwStruct.fromStateOps "int"  this body
+        ts_text <- LwwStruct.fromStateOps "text" this body
+        pure TestStruct{..}
+
+    fromStateChunk header _ body = do
+        ts_int  <- LwwStruct.fromStateChunk "int"  header body
+        ts_text <- LwwStruct.fromStateChunk "text" header body
+        pure TestStruct{..}
+
+testStruct0 = TestStructView{tsv_int = 275, tsv_text = "275"}
 
 testStruct1 = object 0x9f $ TestStruct
     { ts_int = object 0x177 $ LWW (event 567) 275
@@ -273,11 +284,8 @@ testStruct1 = object 0x9f $ TestStruct
 replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 testStruct2 = [i|
-    *lww #B/000000002V+r3pl1c4 @B/000000002V+r3pl1c4 :0 "TestStruct"
-                                                        "int"
-                                                        >B/000000005s+r3pl1c4
-                                                        "text"
-                                                        >B/00000000As+r3pl1c4 !
+    *lww #B/000000002V+r3pl1c4 @B/000000002V+r3pl1c4 :0
+        "TestStruct" "int" >B/000000005s+r3pl1c4 "text" >B/00000000As+r3pl1c4 !
     *lww #B/000000005s+r3pl1c4 @B/000000008s+r3pl1c4 :0 =275
     *rga #B/00000000As+r3pl1c4 @B/00000000BT+r3pl1c4 :0 "2"
     *rga #B/00000000As+r3pl1c4 @B/00000000BU+r3pl1c4 :0 "7"
@@ -287,8 +295,9 @@ testStruct2 = [i|
 
 prop_TestStruct_serialize = property $ do
     ts1 <- evalEitherS $ runNetworkSim $ runReplicaSim replica $
-        initializeObject @TestStruct testStructInitial
+        initializeObject @TestStruct testStruct0
     testStruct1 === ts1
     ts2 <- evalEitherS $ TypedText.serialize ts1
-
     BSL.words testStruct2 === BSL.words ts2
+    ts3 <- evalEitherS $ TypedText.parse ts2
+    ts1 === ts3

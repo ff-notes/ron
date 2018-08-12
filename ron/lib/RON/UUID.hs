@@ -22,6 +22,7 @@ import           RON.Internal.Prelude
 
 import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftL, shiftR, (.|.))
+import           Data.Hashable (Hashable)
 import           GHC.Generics (Generic)
 import           Numeric (showHex)
 
@@ -35,7 +36,7 @@ import           RON.Internal.Word (pattern B00, pattern B0000, Word2, Word4,
 data UUID = UUID
     {-# UNPACK #-} !Word64
     {-# UNPACK #-} !Word64
-    deriving (Eq, Generic, NFData)
+    deriving (Eq, Generic, Hashable, NFData)
 
 instance Show UUID where
     showsPrec a (UUID x y) =
