@@ -6,6 +6,7 @@ dependencies:
     - bytestring
     - directory
     - hedgehog
+    - interpolate
     - tasty-hedgehog
     - tasty-th
     - text

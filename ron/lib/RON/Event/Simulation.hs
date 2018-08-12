@@ -95,6 +95,6 @@ preIncreaseTime n rid = NetworkSim $ state $ \pss ->
             fromMaybe (leastSignificant60 (0 :: Word64) :: Word60) $
             HM.lookup rid pss
         ReplicaId _ r = rid
-        d     = leastSignificant60 $ hash (time0, n, r)
+        d     = leastSignificant60 $ hash (time0, n, r) `mod` 0x100
         time  = max (succ time0) (time0 `word60add` d)
     in  (time, HM.insert rid time pss)

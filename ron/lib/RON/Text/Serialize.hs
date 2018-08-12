@@ -33,14 +33,14 @@ import           RON.UUID (UUID (..), UuidFields (..))
 import qualified RON.UUID as UUID
 
 serializeFrame :: Frame -> ByteStringL
-serializeFrame = (`BSLC.snoc` '.') . foldMap serializeChunk
+serializeFrame = (`BSLC.snoc` '.') . BSLC.intercalate "\n" . map serializeChunk
 
 serializeFrames :: [Frame] -> ByteStringL
 serializeFrames = foldMap serializeFrame
 
 serializeChunk :: Chunk -> ByteStringL
 serializeChunk = \case
-    Raw op      -> serializeOp op `BSLC.snoc` ';'
+    Raw op      -> serializeOp op <> ";\n"
     State chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
@@ -48,8 +48,8 @@ serializeReducedChunk :: Bool -> ReducedChunk -> ByteStringL
 serializeReducedChunk isQuery ReducedChunk{chunkHeader, chunkBody} =
     mconcat
         [ serializeOp chunkHeader
-        , if isQuery then "?" else "!"
-        , foldMap serializeOp chunkBody
+        , if isQuery then " ?\n" else " !\n"
+        , BSLC.unlines $ map serializeOp chunkBody
         ]
 
 serializeOp :: Op -> ByteStringL

@@ -39,6 +39,7 @@ library:
     - RON.Text.Parse
     - RON.Text.Serialize
     - RON.Typed
+    - RON.Typed.LwwStruct
     - RON.Typed.Text
     - RON.Types
     - RON.UUID

@@ -1,11 +1,12 @@
-module RON.Typed.Text (parse) where
+module RON.Typed.Text (serialize) where
 
 import           RON.Internal.Prelude
 
-import           RON.Text (parseFrame)
--- import           RON.Typed (Replicated (..))
+import qualified RON.Text as Text
+import           RON.Typed (Object, Replicated, objectToStateChunk)
+import           RON.Types (Chunk (State))
 
-parse ::
-    -- Replicated a =>
-    ByteStringL -> Either String a
-parse = parseFrame >=> error "TODO: fromFrame"
+serialize :: Replicated a => Object a -> Either String ByteStringL
+serialize obj = do
+    chunk <- objectToStateChunk obj
+    pure $ Text.serializeFrame [State chunk]
