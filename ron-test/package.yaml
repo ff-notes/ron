@@ -5,8 +5,11 @@ dependencies:
     - base
     - bytestring
     - directory
+    - extra
+    - filepath
     - hedgehog
     - interpolate
+    - tasty
     - tasty-hedgehog
     - tasty-th
     - text
@@ -17,6 +20,8 @@ dependencies:
 ghc-options: -threaded -rtsopts -with-rtsopts=-N
 
 tests:
+  # common:
+  #   main: Common.hs
   test:
     main: Main
     other-modules:
