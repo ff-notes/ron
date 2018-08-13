@@ -1,0 +1,91 @@
+*~ 'empty state + an op' ?
+		*rga#text_0a!
+		*rga#text_0a@time'A';
+
+*~ 'a state plus an op'?
+		*rga#text_sa@1!@'A'
+		*rga#text_sa@2:1'B';
+
+*~ 'an op plus another op'?
+		*rga#text_ab@2:1'B';
+		*rga#text_ab@3:2'C';
+
+*~ 'a state plus a patch'?
+		*rga#text_sp@1:0!@'A'
+		*rga#text_sp@2:1!:0'B'
+
+*~ 'a patch plus a patch'?
+		*rga#text_pp@2:1!:0'B'
+		*rga#text_pp@3:2!:0'C'
+
+*~ 'a state plus a later state'?
+		*rga#text_st@1:0!@'A'
+		*rga#text_st@2:0!@1'A'@2'B'
+
+*~ 'two diverged states'?
+		*rga#text_sS@2:0!@1'A'@2'B'
+		*rga#text_sS@3:0!@1'A'@3'C'
+
+*~ 'state + state with a new rm'?
+		*rga#text_sz@2:0!@1'A'@2'B'
+		*rga#text_sz@4:0!@1:4'A'@3:0'C'
+
+*~ 'an op and a backspace rm'?
+		*rga#text_ad@2:1'B';
+		*rga#text_ad@3:2;
+
+*~ 'a patch and a backspace rm'?
+		*rga#text_pd@3:1!@2:0'B'@3'C'
+		*rga#text_pd@4:2;
+
+*~ 'a state and an rm-patch'?
+		*rga#text_sr@2:0!@1'A'@2'B'
+		*rga#text_sr@4:3-!@3:1,@4:2,
+
+*~ 'diverged states with concurrent rms and stuff'?
+		*rga#text_sx@5:0!@1:4a'A'@2:5'B'
+		*rga#text_sx@4:0!@1:4'A'@3:0'C'
+
+*~ 'two states diverged in a convoluted way'?
+		*rga#text_sw@3:0!@1:4a'A'@3:0'C'@2:5'B'
+		*rga#text_sw@4:0!@1:4a'A'@3:0'C'@4:0'D'@2:5'B'
+
+*~ 'even more convoluted divergence'?
+		*rga#text_SW@5:0!@1:4a'A'@5:0'E'@3:0'C'@2:5'B'
+		*rga#text_SW@7:0!@1:4a'A'@6:0'F'@3:7'C'@4:0'D'@2:5'B'
+
+*~ 'a state and an insert op'?
+		*rga#text_zi@2:0!@1'A'@2'B'
+		*rga#text_zi@3:1'-';
+
+*~ 'rm eclipsed by a concurrent rm'?
+		*rga#text_dd@4:0!@1'A'@2:4'B'
+		*rga#text_dd@3:2;
+
+*~'reorders: unapplicable remove'?
+		*rga#text_s~@2:0!@1'A'@2'B'
+		*rga#text_s~@4:3;
+
+*~ 'for a stashed remove, the target arrives'?
+		*rga#text_~a@4:0!@1'A'@2'B' 
+		*rga#text_~a@4:4-!:3,
+		*rga#text_~a@3:2'C';
+
+*~ 'unapplicable patch'?
+		*rga#text_s~p@2:0!@1'A'@2'B'
+		*rga#text_s~p@5:3!@4:0'D'@5'E'
+
+*~ 'the stashed patch becomes applicable (the missing link arrives)'?
+		*rga#text_~b@2:0!@1'A'@2'B' 
+		*rga#text_~b@5:3!@4:0'D'@5'E'
+		*rga#text_~b@3:2'C';
+
+*~ 'an unappliecable patch with its own rm stash'?
+		*rga#text_~r@2:0!@1'A'@2'B'
+		*rga#text_~r@6:3!@4:0'D'@5'E'
+        	*rga#text_~r@6:6-!:3,
+
+*~ 'unapplied frames become applicable'?
+		*rga#text_~~@6:0!@1'A'@2'B' *#@6:3!@4:0'D'@5'E' *#@6:6-!:3,
+		*rga#text_~~@3:2!@'C'
+

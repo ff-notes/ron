@@ -1,0 +1,17 @@
+*cas#test1@2:d!
+	:0=2
+	@1=1
+
+*cas#test2@2:d!:1,
+
+*cas#test3@4:d!
+	:2,
+	@3:1,
+
+*cas#test4@5!@=5
+
+*cas#test5@5!@=5
+
+*cas#1VBC8+A@~!@two,
+
+*cas#repeat@1!@=2
