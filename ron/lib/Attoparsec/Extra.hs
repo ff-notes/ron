@@ -2,6 +2,7 @@
 
 module Attoparsec.Extra
     ( module Attoparsec
+    , char
     , endOfInputEx
     , getPos
     , isSuccessful
@@ -18,6 +19,7 @@ module Attoparsec.Extra
 
 import           RON.Internal.Prelude
 
+import           Data.Attoparsec.ByteString.Char8 (anyChar)
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
@@ -89,3 +91,11 @@ takeAtMost limit = do
 -- Kinda opposite to 'guard'.
 isSuccessful :: Alternative f => f a -> f Bool
 isSuccessful p = p $> True <|> pure False
+
+char :: Char -> Parser Char
+char c = do
+    c' <- anyChar
+    if c == c' then
+        pure c
+    else
+        fail $ "Expected " ++ show c ++ ", got " ++ show c'

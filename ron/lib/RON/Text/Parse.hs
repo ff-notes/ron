@@ -17,13 +17,13 @@ module RON.Text.Parse
 import           Prelude hiding (takeWhile)
 import           RON.Internal.Prelude
 
-import           Attoparsec.Extra (Parser, endOfInputEx, isSuccessful, label,
-                                   match, option, parseOnlyL, satisfy, (??))
+import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
+                                   label, match, option, parseOnlyL, satisfy,
+                                   (??))
 import           Data.Aeson as Json
-import           Data.Attoparsec.ByteString.Char8 (anyChar, char, digit,
-                                                   peekChar, peekChar',
-                                                   skipSpace, takeWhile,
-                                                   takeWhile1)
+import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, peekChar,
+                                                   peekChar', skipSpace,
+                                                   takeWhile, takeWhile1)
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -44,6 +44,7 @@ chunksTill :: Parser () -> Parser [Chunk]
 chunksTill end = label "[Chunk]" $ go chunk
   where
     go pchunk = do
+        skipSpace
         atEnd <- isSuccessful end
         if atEnd then
             pure []
@@ -62,10 +63,10 @@ chunkCont prev = label "Chunk-cont" $ rchunk <|> chunkRaw (opCont prev)
 chunkRaw
     :: Parser Op  -- ^ start op parser, 'op' or 'opCont'
     -> Parser (Chunk, Op)
-chunkRaw pop = do
+chunkRaw pop = label "Chunk-raw" $ do
     x <- pop
-    t <- term
-    unless (t == TRaw) $ fail "raw op must end with `;`"
+    skipSpace
+    void $ char ';'
     pure (Raw x, x)
 
 -- | Returns a chunk and the last op in it
