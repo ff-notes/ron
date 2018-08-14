@@ -72,11 +72,20 @@ chunkRaw pop = label "Chunk-raw" $ do
 rchunk :: Parser (Chunk, Op)
 rchunk = label "Chunk-reduced" $ do
     (chunkHeader, isQuery) <- header
-    chunkBody <- ops
+    chunkBody <- reducedOps chunkHeader <|> stop
     let lastOp = case chunkBody of
             [] -> chunkHeader
             _  -> last chunkBody
     pure ((if isQuery then Query else State) ReducedChunk{..}, lastOp)
+  where
+    reducedOps y = do
+        x <- opCont y
+        t <- optional term
+        unless (t == Just TReduced || isNothing t) $
+            fail "reduced op may end with `,` only"
+        xs <- reducedOps x <|> stop
+        pure $ x : xs
+    stop = pure []
 
 frame :: Parser Frame
 frame = label "Frame" $ chunksTill (endOfFrame <|> endOfInputEx)
@@ -95,18 +104,6 @@ parseUuid = parseOnlyL $ uuidUncompressed <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
-
-ops :: Parser [Op]
-ops = label "Frame ops" $ go op <|> stop
-  where
-    go pop = do
-        x <- pop
-        t <- optional term
-        unless (t == Just TReduced || isNothing t) $
-            fail "reduced op may end with `,` only"
-        xs <- go (opCont x) <|> stop
-        pure $ x : xs
-    stop = pure []
 
 op :: Parser Op
 op = label "Op" $ do
