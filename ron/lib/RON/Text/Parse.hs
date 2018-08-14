@@ -18,7 +18,8 @@ import           Prelude hiding (takeWhile)
 import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
-                                   label, option, parseOnlyL, satisfy, (??))
+                                   label, match, option, parseOnlyL, satisfy,
+                                   (??))
 import qualified Data.Aeson as Json
 import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, peekChar,
                                                    peekChar', skipSpace,
@@ -144,8 +145,14 @@ uuidUncompressed :: Parser UUID
 uuidUncompressed = label "UUID" $ uuidAsBase64DoubleWord <|> uuidRon
 
 uuidRon :: Parser UUID
-uuidRon = label "UUID-RON" $ do
-    x <- do
+uuidRon = do
+    (u, _, _) <- uuidRon'
+    pure u
+
+-- | Return parsed 'UUID' with matched bytes for the first and second parts
+uuidRon' :: Parser (UUID, ByteString, ByteString)
+uuidRon' = label "UUID-RON" $ do
+    (mx, x) <- match $ do
         mvariety <- optional $ satisfy isUpperHexDigit <* "/"
         (format, word0) <- base64word
         word <- case (format, mvariety) of
@@ -154,7 +161,7 @@ uuidRon = label "UUID-RON" $ do
             (Long,  Nothing) -> pure word0
             (Long,  Just _ ) -> "mixing RON variety with long UUID"
         Base64.decode64 word ?? "Base64 decoding error"
-    y <- option 0 $ do
+    (my, y) <- match $ option 0 $ do
         mscheme <- Just <$> scheme <|> skipSpace $> Nothing
         (format, word) <- base64word
         mw <- case (format, mscheme) of
@@ -165,7 +172,7 @@ uuidRon = label "UUID-RON" $ do
             (Long, Nothing) -> pure $ Base64.decode64 word
             (Long, Just _ ) -> fail "mixing RON scheme with long UUID"
         mw ?? "Base64 decoding error"
-    pure $ UUID x y
+    pure (UUID x y, mx, my)
 
 uuidAsBase64DoubleWord :: Parser UUID
 uuidAsBase64DoubleWord = label "UUID-Base64-double-word" $ do
@@ -260,7 +267,7 @@ uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
       where
 
         mprev = case position of
-            PrevOpSameKey   -> prevOpSameKey
+            PrevOpSameKey  -> prevOpSameKey
             SameOpPrevUuid -> sameOpPrevUuid
 
         reuse :: Int -> Parser UUID
@@ -268,14 +275,15 @@ uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
             void anyChar -- skip prefix compression mark
             UUID prevX prevY <-
                 mprev ?? "can't reuse prefix whithout previous UUID"
-            word <- takeWhile Base64.isLetter
-            when (BS.length word > 10 - prefixLen) $
+            (UUID newX newY, newXWord, newYWord) <- uuidRon'
+            when (BS.length newXWord > 10 - prefixLen) $
                 fail "too long postfix for this prefix"
-            newPart <- safeCast <$> Base64.decode60 word ?? "Base64.decode60"
             let prefix = prevX .&. complement 0 `shiftL` (60 - 6 * prefixLen)
-                postfix = newPart `shiftR` (6 * prefixLen)
+                postfix = newX `shiftR` (6 * prefixLen)
                 x = prefix .|. postfix
-            pure $ UUID x prevY
+                y   | BS.null newYWord = prevY
+                    | otherwise        = newY
+            pure $ UUID x y
 
 -- | Return 'Op' and 'chunkIsQuery'
 header :: Parser (Op, Bool)
