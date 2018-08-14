@@ -1,7 +1,7 @@
 *cas#test1@1=1;
 *cas#test1@2=2;
 
-*cas#test2@1=1
+*cas#test2@1=1;
 *cas#test2@2:1;
 
 *cas#test3@3:1;

@@ -7,20 +7,20 @@
 *lww#test3@1:a'A1';
 *lww#test3@2:a'A2';
 
-*lww#test4@2:1! 
+*lww#test4@2:1!
     :a  'A1'
     :b  'B1'
     :c  'C1'
-*lww#test4@3:1! 
+*lww#test4@3:1!
     :a  'A2'
     :b  'B2'
 
 *lww#array@1:0!
-    :0%0 =0,  
+    :0%0 =0,
     :)1%0 =-1
-*lww#array@2:0! 
-    :0%)1 '1',  
-    :)1%0 =1,  
+*lww#array@2:0!
+    :0%)1 '1',
+    :)1%0 =1,
     :)1%)1 =65536
 
 *lww#weird@0:0!
@@ -28,4 +28,4 @@
 *lww#weird@2 :pi ^3.141592653589793 ;
 *lww#weird@3 :minus =-9223372036854775808 ;
 
-*lww#raw@1:one=1;@2:two^2.0:three'три'
+*lww#raw@1:one=1!@2:two^2.0:three'три'
