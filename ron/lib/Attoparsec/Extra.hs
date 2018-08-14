@@ -15,6 +15,7 @@ module Attoparsec.Extra
     , takeL
     , withInputSize
     , (??)
+    , (<+>)
     ) where
 
 import           RON.Internal.Prelude
@@ -24,6 +25,7 @@ import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
+import           Data.List (intercalate)
 
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
 parseOnlyL p = parseOnly p . toStrict
@@ -99,3 +101,15 @@ char c = do
         pure c
     else
         fail $ "Expected " ++ show c ++ ", got " ++ show c'
+
+(<+>) :: Parser a -> Parser a -> Parser a
+(<+>) p1 p2 = Internal.Parser $ \t pos more lose suc -> let
+    lose1 t' _pos more1 ctx1 msg1 = Internal.runParser p2 t' pos more1 lose2 suc
+      where
+        lose2 _t _pos _more ctx2 msg2 = lose t pos more [] $ unwords
+            [ "Many fails:\n"
+            , intercalate " > " ctx1, ":", msg1, "|\n"
+            , intercalate " > " ctx2, ":", msg2
+            ]
+    in Internal.runParser p1 t pos more lose1 suc
+infixl 3 <+>

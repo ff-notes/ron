@@ -19,7 +19,7 @@ import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
                                    label, match, option, parseOnlyL, satisfy,
-                                   (??))
+                                   (<+>), (??))
 import qualified Data.Aeson as Json
 import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, peekChar,
                                                    peekChar', skipSpace,
@@ -54,16 +54,17 @@ chunksTill end = label "[Chunk]" $ go chunk
 
 -- | Returns a chunk and the last op in it
 chunk :: Parser (Chunk, Op)
-chunk = label "Chunk" $ rchunk <|> chunkRaw op
+chunk = label "Chunk" $ rchunk <+> chunkRaw op
 
 -- | Returns a chunk and the last op in it
 chunkCont :: Op -> Parser (Chunk, Op)
-chunkCont prev = label "Chunk-cont" $ rchunk <|> chunkRaw (opCont prev)
+chunkCont prev = label "Chunk-cont" $ rchunk <+> chunkRaw (opCont prev)
 
 chunkRaw
     :: Parser Op  -- ^ start op parser, 'op' or 'opCont'
     -> Parser (Chunk, Op)
 chunkRaw pop = label "Chunk-raw" $ do
+    skipSpace
     x <- pop
     skipSpace
     void $ char ';'
@@ -80,6 +81,7 @@ rchunk = label "Chunk-reduced" $ do
     pure ((if isQuery then Query else State) ReducedChunk{..}, lastOp)
   where
     reducedOps y = do
+        skipSpace
         x <- opCont y
         t <- optional term
         unless (t == Just TReduced || isNothing t) $
@@ -142,7 +144,7 @@ data Base64Format = Ronic | Long
     deriving (Eq, Show)
 
 uuidUncompressed :: Parser UUID
-uuidUncompressed = label "UUID" $ uuidAsBase64DoubleWord <|> uuidRon
+uuidUncompressed = label "UUID" $ uuidAsBase64DoubleWord <+> uuidRon
 
 uuidRon :: Parser UUID
 uuidRon = do
@@ -226,8 +228,8 @@ atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'
   where
     atom' =
-        char '=' *> skipSpace *> (AInteger <$> integer) <|>
-        char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <|>
+        char '=' *> skipSpace *> (AInteger <$> integer) <+>
+        char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <+>
         AString                            <$> string
     integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)
     uuid'   = uuid Nothing (Just prevUuid) SameOpPrevUuid
