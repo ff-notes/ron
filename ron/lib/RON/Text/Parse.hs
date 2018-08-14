@@ -6,9 +6,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Parse
-    ( chunks
-    , frame
-    , parseAtom
+    ( parseAtom
     , parseFrame
     , parseFrames
     , parseOp
@@ -42,13 +40,16 @@ import qualified RON.UUID as UUID
 parseFrame :: ByteStringL -> Either String Frame
 parseFrame = parseOnlyL frame
 
-chunks :: Parser [Chunk]
-chunks = label "[Chunk]" $ go chunk
+chunksTill :: Parser () -> Parser [Chunk]
+chunksTill end = label "[Chunk]" $ go chunk
   where
-    go pchunk =
-        optional pchunk >>= \case
-            Just (ch, lastOp) -> (ch :) <$> go (chunkCont lastOp)
-            Nothing           -> pure []
+    go pchunk = do
+        atEnd <- isSuccessful end
+        if atEnd then
+            pure []
+        else do
+            (ch, lastOp) <- pchunk
+            (ch :) <$> go (chunkCont lastOp)
 
 -- | Returns a chunk and the last op in it
 chunk :: Parser (Chunk, Op)
@@ -78,18 +79,13 @@ rchunk = label "Chunk-reduced" $ do
     pure ((if isQuery then Query else State) ReducedChunk{..}, lastOp)
 
 frame :: Parser Frame
-frame = label "Frame" $ chunks <* (endOfFrame <|> endOfInputEx)
+frame = label "Frame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
 parseFrames :: ByteStringL -> Either String [Frame]
 parseFrames = parseOnlyL $ many frameInStream <* endOfInputEx
 
 frameInStream :: Parser Frame
-frameInStream = label "Frame-stream" $ do
-    chs <- chunks
-    endOfFrame <|> (assertNotEmpty chs *> endOfInputEx)
-    pure chs
-  where
-    assertNotEmpty chs = when (null chs) $ fail "empty frame must end with `.`"
+frameInStream = label "Frame-stream" $ chunksTill endOfFrame
 
 parseOp :: ByteStringL -> Either String Op
 parseOp = parseOnlyL $ op <* skipSpace <* endOfInputEx
