@@ -18,9 +18,8 @@ import           Prelude hiding (takeWhile)
 import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
-                                   label, match, option, parseOnlyL, satisfy,
-                                   (??))
-import           Data.Aeson as Json
+                                   label, option, parseOnlyL, satisfy, (??))
+import qualified Data.Aeson as Json
 import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, peekChar,
                                                    peekChar', skipSpace,
                                                    takeWhile, takeWhile1)
@@ -234,8 +233,8 @@ parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
 
 string :: Parser Text
 string = do
-    (bs, ()) <- match . void $ char '"' >> takeWhile (/= '"') >> char '"'
-    case Json.decodeStrict bs of
+    bs <- char '\'' *> takeWhile (/= '\'') <* char '\''
+    case Json.decodeStrict $ '"' `BSC.cons` (bs `BSC.snoc` '"') of
         Just s  -> pure s
         Nothing -> fail "bad string"
 

@@ -90,4 +90,7 @@ serializeAtom = \case
     AUuid    u -> ">" <> serializeUuid u
 
 serializeString :: Text -> ByteStringL
-serializeString = BSL.replace "\\\"" ("\\u0022" :: ByteString) . Json.encode
+serializeString =
+    fixQuotes . BSL.replace "'" ("\\u0027" :: ByteString) . Json.encode
+  where
+    fixQuotes = (`BSLC.snoc` '\'') . BSLC.cons '\'' . BSL.init . BSL.tail

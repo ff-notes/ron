@@ -285,11 +285,11 @@ replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 testStruct2 = [i|
     *lww #B/000000002V+r3pl1c4 @B/000000002V+r3pl1c4 :0
-        "TestStruct" "int" >B/000000005s+r3pl1c4 "text" >B/00000000As+r3pl1c4 !
+        'TestStruct' 'int' >B/000000005s+r3pl1c4 'text' >B/00000000As+r3pl1c4 !
     *lww #B/000000005s+r3pl1c4 @B/000000008s+r3pl1c4 :0 =275
-    *rga #B/00000000As+r3pl1c4 @B/00000000BT+r3pl1c4 :0 "2"
-    *rga #B/00000000As+r3pl1c4 @B/00000000BU+r3pl1c4 :0 "7"
-    *rga #B/00000000As+r3pl1c4 @B/00000000BV+r3pl1c4 :0 "5"
+    *rga #B/00000000As+r3pl1c4 @B/00000000BT+r3pl1c4 :0 '2'
+    *rga #B/00000000As+r3pl1c4 @B/00000000BU+r3pl1c4 :0 '7'
+    *rga #B/00000000As+r3pl1c4 @B/00000000BV+r3pl1c4 :0 '5'
     .
     |]
 
