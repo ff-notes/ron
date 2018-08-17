@@ -103,7 +103,7 @@ parseOp :: ByteStringL -> Either String Op
 parseOp = parseOnlyL $ op <* skipSpace <* endOfInputEx
 
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseOnlyL $ uuidSimple <* skipSpace <* endOfInputEx
+parseUuid = parseOnlyL $ uuidUncompressed <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
@@ -144,8 +144,9 @@ uuid :: Maybe UUID -> Maybe UUID -> UuidZipBase -> Parser UUID
 uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $
     uuid22 <+> uuid11 <+> uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase
 
-uuidSimple :: Parser UUID
-uuidSimple = label "UUID-simple" $ uuid Nothing Nothing PrevOpSameKey
+uuidUncompressed :: Parser UUID
+uuidUncompressed =
+    label "UUID-uncompressed" $ uuid Nothing Nothing PrevOpSameKey
 
 uuid11 :: Parser UUID
 uuid11 = label "UUID-RON-11-letter-value" $ do
