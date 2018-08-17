@@ -86,8 +86,8 @@ takeAtMost limit = do
         pos <- getPos
         guard (pos >= maxPos) <|> endOfInput
 
-(??) :: Maybe a -> String -> Parser a
-(??) a msg = maybe (fail msg) pure a
+(??) :: Maybe a -> Parser a -> Parser a
+(??) a alt = maybe alt pure a
 
 -- | Apply parser and check it is applied successfully.
 -- Kinda opposite to 'guard'.

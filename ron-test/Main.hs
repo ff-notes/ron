@@ -168,7 +168,8 @@ prop_uuid_abbreviations = property $ do
     -- serialize
     "A/LED" === RT.serializeUuid aLed
     -- parse
-    for_ encodings $ \e ->
+    for_ encodings $ \e -> do
+        annotateShow e
         Right aLed === RT.parseUuid (BSL.pack e)
   where
     encodings =
@@ -293,7 +294,7 @@ testStruct2 = [i|
     .
     |]
 
-prop_TestStruct_serialize = property $ do
+prop_lwwStruct = property $ do
     ts1 <- evalEitherS $ runNetworkSim $ runReplicaSim replica $
         initializeObject @TestStruct testStruct0
     testStruct1 === ts1

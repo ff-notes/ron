@@ -18,23 +18,23 @@ import           Prelude hiding (takeWhile)
 import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
-                                   label, match, option, parseOnlyL, satisfy,
-                                   (<+>), (??))
+                                   label, manyTill, parseOnlyL, satisfy, (<+>),
+                                   (??))
 import qualified Data.Aeson as Json
-import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, peekChar,
-                                                   peekChar', skipSpace,
+import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, skipSpace,
                                                    takeWhile, takeWhile1)
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (ord)
-import           Data.Functor (($>))
 import           Data.Text (Text)
 
 import qualified RON.Base64 as Base64
-import           RON.Internal.Word (Word2, b00, b01, b10, b11, safeCast)
+import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
+                                    b11, ls60, safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
                             ReducedChunk (..), UUID (..))
+import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
 parseFrame :: ByteStringL -> Either String Frame
@@ -94,7 +94,7 @@ frame :: Parser Frame
 frame = label "Frame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
 parseFrames :: ByteStringL -> Either String [Frame]
-parseFrames = parseOnlyL $ many frameInStream <* endOfInputEx
+parseFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
 
 frameInStream :: Parser Frame
 frameInStream = label "Frame-stream" $ chunksTill endOfFrame
@@ -103,7 +103,7 @@ parseOp :: ByteStringL -> Either String Op
 parseOp = parseOnlyL $ op <* skipSpace <* endOfInputEx
 
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseOnlyL $ uuidUncompressed <* skipSpace <* endOfInputEx
+parseUuid = parseOnlyL $ uuidSimple <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
@@ -140,70 +140,133 @@ opCont prev = label "Op-cont" $ do
             -- no key => use previous key
             pure (False, prevOpSameKey)
 
-data Base64Format = Ronic | Long
-    deriving (Eq, Show)
+uuid :: Maybe UUID -> Maybe UUID -> UuidZipBase -> Parser UUID
+uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $
+    uuid22 <+> uuid11 <+> uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase
 
-uuidUncompressed :: Parser UUID
-uuidUncompressed = label "UUID" $ uuidAsBase64DoubleWord <+> uuidRon
+uuidSimple :: Parser UUID
+uuidSimple = label "UUID-simple" $ uuid Nothing Nothing PrevOpSameKey
 
-uuidRon :: Parser UUID
-uuidRon = do
-    (u, _, _) <- uuidRon'
-    pure u
+uuid11 :: Parser UUID
+uuid11 = label "UUID-RON-11-letter-value" $ do
+    rawX <- base64word 11
+    guard $ BS.length rawX == 11
+    x <- Base64.decode64 rawX ?? fail "Base64.decode64"
+    skipSpace
+    rawScheme <- optional pScheme
+    rawOrigin <- optional $ base64word $ maybe 11 (const 10) rawScheme
+    y <- case (rawScheme, BS.length <$> rawOrigin) of
+        (Nothing, Just 11) ->
+            case rawOrigin of
+                Nothing     -> pure 0
+                Just origin -> Base64.decode64 origin ?? fail "Base64.decode64"
+        _ -> do
+            origin <- case rawOrigin of
+                Nothing     -> pure $ ls60 0
+                Just origin -> Base64.decode60 origin ?? fail "Base64.decode60"
+            pure $ UUID.buildY b00 (fromMaybe b00 rawScheme) origin
+    pure $ UUID x y
 
--- | Return parsed 'UUID' with matched bytes for the first and second parts
-uuidRon' :: Parser (UUID, ByteString, ByteString)
-uuidRon' = label "UUID-RON" $ do
-    (mx, x) <- match $ do
-        mvariety <- optional $ satisfy isUpperHexDigit <* "/"
-        (format, word0) <- base64word
-        word <- case (format, mvariety) of
-            (Ronic, Nothing) -> pure $ '0' `BSC.cons` word0
-            (Ronic, Just v ) -> pure $  v   `BS.cons` word0
-            (Long,  Nothing) -> pure word0
-            (Long,  Just _ ) -> "mixing RON variety with long UUID"
-        Base64.decode64 word ?? "Base64 decoding error"
-    (my, y) <- match $ option 0 $ do
-        mscheme <- Just <$> scheme <|> skipSpace $> Nothing
-        (format, word) <- base64word
-        mw <- case (format, mscheme) of
-            (Ronic, Nothing   ) -> pure $ safeCast <$> Base64.decode60 word
-            (Ronic, Just schem) -> pure $
-                ((safeCast schem `shiftL` 60) .|.) . safeCast
-                <$> Base64.decode60 word
-            (Long, Nothing) -> pure $ Base64.decode64 word
-            (Long, Just _ ) -> fail "mixing RON scheme with long UUID"
-        mw ?? "Base64 decoding error"
-    pure (UUID x y, mx, my)
+data UuidZipBase = PrevOpSameKey | SameOpPrevUuid
 
-uuidAsBase64DoubleWord :: Parser UUID
-uuidAsBase64DoubleWord = label "UUID-Base64-double-word" $ do
-    xy <- takeWhile1 Base64.isLetter
+uuidZip :: Maybe UUID -> Maybe UUID -> UuidZipBase -> Parser UUID
+uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
+    changeZipBase <- isSuccessful $ char '`'
+    rawVariety <- optional pVariety
+    rawReuseValue <- optional pReuse
+    rawValue <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseValue
+    skipSpace
+    rawScheme <- optional pScheme
+    rawReuseOrigin <- optional pReuse
+    rawOrigin <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseOrigin
+
+    let isReusing =
+            changeZipBase || isJust rawReuseValue || isJust rawReuseOrigin
+    unless (isReusing || isJust rawVariety || isJust rawValue
+            || isJust rawScheme || isJust rawOrigin) $
+        fail "Empty UUID"
+
+    if isReusing then do
+        let mprev = whichPrev changeZipBase
+        prev <- UUID.split <$> mprev ?? fail "No previous UUID to reuse"
+        if uuidVariant prev /= b00 then
+            undefined
+        else do
+            uuidVariety <- pure $ fromMaybe (uuidVariety prev) rawVariety
+            uuidValue <- pure $ reuse rawReuseValue rawValue (uuidValue prev)
+            let uuidVariant = b00
+            uuidScheme <- pure $ fromMaybe (uuidScheme prev) rawScheme
+            uuidOrigin <-
+                pure $ reuse rawReuseOrigin rawOrigin (uuidOrigin prev)
+            pure $ UUID.build UuidFields{..}
+    else
+        pure $ UUID.build UuidFields
+            { uuidVariety = fromMaybe b0000    rawVariety
+            , uuidValue   = fromMaybe (ls60 0) rawValue
+            , uuidVariant = b00
+            , uuidScheme  = fromMaybe b00      rawScheme
+            , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
+            }
+  where
+
+    whichPrev changeZipBase
+        | changeZipBase = sameOpPrevUuid
+        | otherwise = case defaultZipBase of
+            PrevOpSameKey  -> prevOpSameKey
+            SameOpPrevUuid -> sameOpPrevUuid
+
+    reuse :: Maybe Int -> Maybe Word60 -> Word60 -> Word60
+    reuse Nothing          Nothing    prev = prev
+    reuse Nothing          (Just new) _    = new
+    reuse (Just prefixLen) Nothing    prev =
+        ls60 $ safeCast prev .&. complement 0 `shiftL` (60 - 6 * prefixLen)
+    reuse (Just prefixLen) (Just new) prev = ls60 $ prefix .|. postfix
+      where
+        prefix  = safeCast prev .&. complement 0 `shiftL` (60 - 6 * prefixLen)
+        postfix = safeCast new `shiftR` (6 * prefixLen)
+
+pReuse :: Parser Int
+pReuse = anyChar >>= \case
+    '(' -> pure 4
+    '[' -> pure 5
+    '{' -> pure 6
+    '}' -> pure 7
+    ']' -> pure 8
+    ')' -> pure 9
+    _   -> fail "not a reuse symbol"
+
+uuid22 :: Parser UUID
+uuid22 = label "UUID-Base64-double-word" $ do
+    xy <- base64word 22
     guard $ BS.length xy == 22
     maybe (fail "Base64 decoding error") pure $
         UUID
             <$> Base64.decode64 (BS.take 11 xy)
             <*> Base64.decode64 (BS.drop 11 xy)
 
-base64word :: Parser (Base64Format, ByteString)
-base64word = label "Base64 word" $ do
-    word <- takeWhile Base64.isLetter
-    let n = BS.length word
-    if  | n == 0  ->
-            peekChar >>= \case
-                Just c  -> fail $ "unexpected " ++ show c
-                Nothing -> fail "unexpected end of input"
-        | n == 11 -> pure (Long, word)
-        | n <  11 -> pure (Ronic, word)
-        | True    -> fail "too long Base64 word"
+base64word :: Int -> Parser ByteString
+base64word maxSize = label "Base64 word" $ do
+    word <- takeWhile1 Base64.isLetter
+    guard $ BS.length word <= maxSize
+    pure word
+
+base64word60 :: Int -> Parser Word60
+base64word60 maxSize = label "Base64 word60" $ do
+    word <- base64word maxSize
+    Base64.decode60 word ?? fail "decode60"
 
 isUpperHexDigit :: Word8 -> Bool
 isUpperHexDigit c =
     (fromIntegral (c - fromIntegral (ord '0')) :: Word) <= 9 ||
     (fromIntegral (c - fromIntegral (ord 'A')) :: Word) <= 5
 
-scheme :: Parser Word2
-scheme = label "scheme" $
+pVariety :: Parser Word4
+pVariety = label "variety" $ do
+    letter <- satisfy isUpperHexDigit <* "/"
+    Base64.decodeLetter4 letter ?? fail "Base64.decodeLetter4"
+
+pScheme :: Parser Word2
+pScheme = label "scheme" $
     anyChar >>= \case
         '$' -> pure b00
         '%' -> pure b01
@@ -246,46 +309,6 @@ string = do
 
 parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
-
-data UuidCompressionBase = PrevOpSameKey | SameOpPrevUuid
-
-uuid :: Maybe UUID -> Maybe UUID -> UuidCompressionBase -> Parser UUID
-uuid prevOpSameKey sameOpPrevUuid = label "UUID" . go False
-  where
-    go allowEmpty position =
-        peekChar' >>= \case
-            '`' -> anyChar *> go True SameOpPrevUuid
-            '(' -> reuse 4
-            '[' -> reuse 5
-            '{' -> reuse 6
-            '}' -> reuse 7
-            ']' -> reuse 8
-            ')' -> reuse 9
-            c   | Base64.isLetter c -> uuidUncompressed
-                | allowEmpty -> case mprev of
-                    Just u  -> pure u
-                    Nothing -> fail "empty uuid"
-                | otherwise -> fail $ "unsupported compression " ++ show c
-      where
-
-        mprev = case position of
-            PrevOpSameKey  -> prevOpSameKey
-            SameOpPrevUuid -> sameOpPrevUuid
-
-        reuse :: Int -> Parser UUID
-        reuse prefixLen = label "reuse" $ do
-            void anyChar -- skip prefix compression mark
-            UUID prevX prevY <-
-                mprev ?? "can't reuse prefix whithout previous UUID"
-            (UUID newX newY, newXWord, newYWord) <- uuidRon'
-            when (BS.length newXWord > 10 - prefixLen) $
-                fail "too long postfix for this prefix"
-            let prefix = prevX .&. complement 0 `shiftL` (60 - 6 * prefixLen)
-                postfix = newX `shiftR` (6 * prefixLen)
-                x = prefix .|. postfix
-                y   | BS.null newYWord = prevY
-                    | otherwise        = newY
-            pure $ UUID x y
 
 -- | Return 'Op' and 'chunkIsQuery'
 header :: Parser (Op, Bool)

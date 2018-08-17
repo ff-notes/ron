@@ -10,6 +10,8 @@ module RON.UUID
     ( UUID (..)
     , UuidFields (..)
     , build
+    , buildX
+    , buildY
     , split
     , zero
     -- * Name
@@ -62,13 +64,19 @@ split (UUID x y) = UuidFields
     }
 
 build :: UuidFields -> UUID
-build UuidFields{..} = UUID x y
-  where
-    x = (safeCast uuidVariety `shiftL` 60) .|.
-        safeCast uuidValue
-    y = (safeCast uuidVariant `shiftL` 62) .|.
-        (safeCast uuidScheme  `shiftL` 60) .|.
-        safeCast uuidOrigin
+build UuidFields{..} = UUID
+    (buildX uuidVariety uuidValue)
+    (buildY uuidVariant uuidScheme uuidOrigin)
+
+buildX :: Word4 -> Word60 -> Word64
+buildX uuidVariety uuidValue =
+    (safeCast uuidVariety `shiftL` 60) .|. safeCast uuidValue
+
+buildY :: Word2 -> Word2 -> Word60 -> Word64
+buildY uuidVariant uuidScheme uuidOrigin
+    =   (safeCast uuidVariant `shiftL` 62)
+    .|. (safeCast uuidScheme  `shiftL` 60)
+    .|.  safeCast uuidOrigin
 
 -- | Make an unscoped (unqualified) name
 mkName
