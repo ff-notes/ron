@@ -182,13 +182,20 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
     rawReuseOrigin <- optional pReuse
     rawOrigin <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseOrigin
 
-    let isReusing =
-            changeZipBase || isJust rawReuseValue || isJust rawReuseOrigin
-    unless (isReusing || isJust rawVariety || isJust rawValue
-            || isJust rawScheme || isJust rawOrigin) $
-        fail "Empty UUID"
+    let isSimple =
+            not changeZipBase && isNothing rawReuseValue && isJust rawValue
+            && isNothing rawReuseOrigin
+            && (isNothing rawScheme || isJust rawOrigin)
 
-    if isReusing then do
+    if isSimple then
+        pure $ UUID.build UuidFields
+            { uuidVariety = fromMaybe b0000    rawVariety
+            , uuidValue   = fromMaybe (ls60 0) rawValue
+            , uuidVariant = b00
+            , uuidScheme  = fromMaybe b00      rawScheme
+            , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
+            }
+    else do
         let mprev = whichPrev changeZipBase
         prev <- UUID.split <$> mprev ?? fail "No previous UUID to reuse"
         if uuidVariant prev /= b00 then
@@ -201,14 +208,6 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
             uuidOrigin <-
                 pure $ reuse rawReuseOrigin rawOrigin (uuidOrigin prev)
             pure $ UUID.build UuidFields{..}
-    else
-        pure $ UUID.build UuidFields
-            { uuidVariety = fromMaybe b0000    rawVariety
-            , uuidValue   = fromMaybe (ls60 0) rawValue
-            , uuidVariant = b00
-            , uuidScheme  = fromMaybe b00      rawScheme
-            , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
-            }
   where
 
     whichPrev changeZipBase
@@ -318,7 +317,6 @@ string = do
                 '\'' -> (chunk <>) . BSC.cons '\'' <$> content
                 c    -> (chunk <>) . BSC.cons '\\' . BSC.cons c <$> content
             _ -> fail "cannot happen"
-        --  <* char '\''
 
 parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
