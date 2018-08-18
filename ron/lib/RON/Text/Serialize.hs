@@ -91,6 +91,6 @@ serializeAtom = \case
 
 serializeString :: Text -> ByteStringL
 serializeString =
-    fixQuotes . BSL.replace "'" ("\\u0027" :: ByteString) . Json.encode
+    fixQuotes . BSL.replace "'" ("\\'" :: ByteString) . Json.encode
   where
     fixQuotes = (`BSLC.snoc` '\'') . BSLC.cons '\'' . BSL.init . BSL.tail

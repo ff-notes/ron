@@ -41,7 +41,7 @@ parseFrame :: ByteStringL -> Either String Frame
 parseFrame = parseOnlyL frame
 
 chunksTill :: Parser () -> Parser [Chunk]
-chunksTill end = label "[Chunk]" $ go chunk
+chunksTill end = label "[Chunk]" $ go pChunk
   where
     go pchunk = do
         skipSpace
@@ -53,8 +53,8 @@ chunksTill end = label "[Chunk]" $ go chunk
             (ch :) <$> go (chunkCont lastOp)
 
 -- | Returns a chunk and the last op in it
-chunk :: Parser (Chunk, Op)
-chunk = label "Chunk" $ rchunk <+> chunkRaw op
+pChunk :: Parser (Chunk, Op)
+pChunk = label "Chunk" $ rchunk <+> chunkRaw op
 
 -- | Returns a chunk and the last op in it
 chunkCont :: Op -> Parser (Chunk, Op)
@@ -303,10 +303,20 @@ parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
 
 string :: Parser Text
 string = do
-    bs <- char '\'' *> takeWhile (/= '\'') <* char '\''
+    bs <- char '\'' *> content
     case Json.decodeStrict $ '"' `BSC.cons` (bs `BSC.snoc` '"') of
         Just s  -> pure s
         Nothing -> fail "bad string"
+  where
+    content = do
+        chunk <- takeWhile $ \c -> c /= '\'' && c /= '\\'
+        anyChar >>= \case
+            '\'' -> pure chunk
+            '\\' -> anyChar >>= \case
+                '\'' -> (chunk <>) . BSC.cons '\'' <$> content
+                c    -> (chunk <>) . BSC.cons '\\' . BSC.cons c <$> content
+            _ -> fail "cannot happen"
+        --  <* char '\''
 
 parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
