@@ -59,10 +59,16 @@ pChunk = label "Chunk" $ rchunk <+> chunkRaw op
 
 -- | Returns a chunk and the last op in it
 chunkCont :: Op -> Parser (Chunk, Op)
-chunkCont prev = label "Chunk-cont" $ rchunk <+> chunkRaw (opCont prev)
+chunkCont prev = label "Chunk-cont" $ rchunk <+> chunkRaw (opContRaw prev)
+
+opContRaw :: Op -> Parser Op
+opContRaw prev = do
+    (isNotEmpty, x) <- opCont prev
+    unless isNotEmpty $ fail "Empty raw op"
+    pure x
 
 chunkRaw
-    :: Parser Op  -- ^ start op parser, 'op' or 'opCont'
+    :: Parser Op  -- ^ start op parser, 'op' or 'opContRaw'
     -> Parser (Chunk, Op)
 chunkRaw pop = label "Chunk-raw" $ do
     skipSpace
@@ -83,10 +89,11 @@ rchunk = label "Chunk-reduced" $ do
   where
     reducedOps y = do
         skipSpace
-        x <- opCont y
+        (isNotEmpty, x) <- opCont y
         t <- optional term
         unless (t == Just TReduced || isNothing t) $
             fail "reduced op may end with `,` only"
+        unless (isNotEmpty || t == Just TReduced) $ fail "Empty reduced op"
         xs <- reducedOps x <|> stop
         pure $ x : xs
     stop = pure []
@@ -121,15 +128,15 @@ op = label "Op" $ do
     key name keyChar prev = label name $
         skipSpace *> char keyChar *> uuid Nothing prev PrevOpSameKey
 
-opCont :: Op -> Parser Op
+-- | Returns (isNotEmpty, op)
+opCont :: Op -> Parser (Bool, Op)
 opCont prev = label "Op-cont" $ do
     (hasTyp, opType)     <- key "type"     '*' (opType     prev) Nothing
     (hasObj, opObject)   <- key "object"   '#' (opObject   prev) (Just opType)
     (hasEvt, opEvent)    <- key "event"    '@' (opEvent    prev) (Just opObject)
     (hasLoc, opLocation) <- key "location" ':' (opLocation prev) (Just opEvent)
-    unless (hasTyp || hasObj || hasEvt || hasLoc) $ fail "no key found"
     opPayload <- payload opObject
-    pure Op{..}
+    pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), Op{..})
   where
     key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
         skipSpace
