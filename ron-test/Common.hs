@@ -33,9 +33,9 @@ loadCases = do
     commonTestDir = "../gritzko~ron-test"
 
 test :: TestName -> ByteStringL -> ByteStringL -> TestTree
-test name bytesIn _bytesOut = testProperty name $ property $ do
+test name bytesIn bytesOut = testProperty name $ property $ do
     _frameIn  <- evalEitherS $ RT.parseFrame bytesIn
-    -- frameOut <- evalEitherS $ RT.parseFrame bytesOut
+    _frameOut <- evalEitherS $ RT.parseFrame bytesOut
     -- frameIn === frameOut
     pure ()
 
