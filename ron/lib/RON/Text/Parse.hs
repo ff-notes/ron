@@ -42,45 +42,33 @@ parseFrame :: ByteStringL -> Either String Frame
 parseFrame = parseOnlyL frame
 
 chunksTill :: Parser () -> Parser [Chunk]
-chunksTill end = label "[Chunk]" $ go pChunk
+chunksTill end = label "[Chunk]" $ go opZero
   where
-    go pchunk = do
+    go prev = do
         skipSpace
         atEnd <- isSuccessful end
         if atEnd then
             pure []
         else do
-            (ch, lastOp) <- pchunk
-            (ch :) <$> go (chunkCont lastOp)
+            (ch, lastOp) <- pChunk prev
+            (ch :) <$> go lastOp
 
 -- | Returns a chunk and the last op in it
-pChunk :: Parser (Chunk, Op)
-pChunk = label "Chunk" $ rchunk <+> chunkRaw op
+pChunk :: Op -> Parser (Chunk, Op)
+pChunk prev = label "Chunk" $ rchunk prev <+> chunkRaw prev
 
--- | Returns a chunk and the last op in it
-chunkCont :: Op -> Parser (Chunk, Op)
-chunkCont prev = label "Chunk-cont" $ rchunk <+> chunkRaw (opContRaw prev)
-
-opContRaw :: Op -> Parser Op
-opContRaw prev = do
-    (isNotEmpty, x) <- opCont prev
-    unless isNotEmpty $ fail "Empty raw op"
-    pure x
-
-chunkRaw
-    :: Parser Op  -- ^ start op parser, 'op' or 'opContRaw'
-    -> Parser (Chunk, Op)
-chunkRaw pop = label "Chunk-raw" $ do
+chunkRaw :: Op -> Parser (Chunk, Op)
+chunkRaw prev = label "Chunk-raw" $ do
     skipSpace
-    x <- pop
+    (_, x) <- op prev
     skipSpace
     void $ char ';'
     pure (Raw x, x)
 
 -- | Returns a chunk and the last op in it
-rchunk :: Parser (Chunk, Op)
-rchunk = label "Chunk-reduced" $ do
-    (chunkHeader, isQuery) <- header
+rchunk :: Op -> Parser (Chunk, Op)
+rchunk prev = label "Chunk-reduced" $ do
+    (chunkHeader, isQuery) <- header prev
     chunkBody <- reducedOps chunkHeader <|> stop
     let lastOp = case chunkBody of
             [] -> chunkHeader
@@ -89,7 +77,7 @@ rchunk = label "Chunk-reduced" $ do
   where
     reducedOps y = do
         skipSpace
-        (isNotEmpty, x) <- opCont y
+        (isNotEmpty, x) <- op y
         t <- optional term
         unless (t == Just TReduced || isNothing t) $
             fail "reduced op may end with `,` only"
@@ -108,33 +96,24 @@ frameInStream :: Parser Frame
 frameInStream = label "Frame-stream" $ chunksTill endOfFrame
 
 parseOp :: ByteStringL -> Either String Op
-parseOp = parseOnlyL $ op <* skipSpace <* endOfInputEx
+parseOp = parseOnlyL $ do
+    (isNotEmpty, x) <- op opZero <* skipSpace <* endOfInputEx
+    guard isNotEmpty
+    pure x
 
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseOnlyL $ uuidUncompressed <* skipSpace <* endOfInputEx
+parseUuid = parseOnlyL $
+    uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
-op :: Parser Op
-op = label "Op" $ do
-    opType     <- key "type"     '*' Nothing
-    opObject   <- key "object"   '#' (Just opType)
-    opEvent    <- key "event"    '@' (Just opObject)
-    opLocation <- key "location" ':' (Just opEvent)
-    opPayload  <- payload opObject
-    pure Op{..}
-  where
-    key name keyChar prev = label name $
-        skipSpace *> char keyChar *> uuid Nothing prev PrevOpSameKey
-
--- | Returns (isNotEmpty, op)
-opCont :: Op -> Parser (Bool, Op)
-opCont prev = label "Op-cont" $ do
-    (hasTyp, opType)     <- key "type"     '*' (opType     prev) Nothing
-    (hasObj, opObject)   <- key "object"   '#' (opObject   prev) (Just opType)
-    (hasEvt, opEvent)    <- key "event"    '@' (opEvent    prev) (Just opObject)
-    (hasLoc, opLocation) <- key "location" ':' (opLocation prev) (Just opEvent)
+op :: Op -> Parser (Bool, Op)
+op prev = label "Op-cont" $ do
+    (hasTyp, opType)     <- key "type"     '*' (opType     prev) UUID.zero
+    (hasObj, opObject)   <- key "object"   '#' (opObject   prev) opType
+    (hasEvt, opEvent)    <- key "event"    '@' (opEvent    prev) opObject
+    (hasLoc, opLocation) <- key "location" ':' (opLocation prev) opEvent
     opPayload <- payload opObject
     pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), Op{..})
   where
@@ -142,19 +121,15 @@ opCont prev = label "Op-cont" $ do
         skipSpace
         isKeyPresent <- isSuccessful $ char keyChar
         if isKeyPresent then do
-            u <- uuid (Just prevOpSameKey) sameOpPrevUuid PrevOpSameKey
+            u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
             pure (True, u)
         else
             -- no key => use previous key
             pure (False, prevOpSameKey)
 
-uuid :: Maybe UUID -> Maybe UUID -> UuidZipBase -> Parser UUID
+uuid :: UUID -> UUID -> UuidZipBase -> Parser UUID
 uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $
     uuid22 <+> uuid11 <+> uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase
-
-uuidUncompressed :: Parser UUID
-uuidUncompressed =
-    label "UUID-uncompressed" $ uuid Nothing Nothing PrevOpSameKey
 
 uuid11 :: Parser UUID
 uuid11 = label "UUID-RON-11-letter-value" $ do
@@ -178,7 +153,7 @@ uuid11 = label "UUID-RON-11-letter-value" $ do
 
 data UuidZipBase = PrevOpSameKey | SameOpPrevUuid
 
-uuidZip :: Maybe UUID -> Maybe UUID -> UuidZipBase -> Parser UUID
+uuidZip :: UUID -> UUID -> UuidZipBase -> Parser UUID
 uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
     changeZipBase <- isSuccessful $ char '`'
     rawVariety <- optional pVariety
@@ -203,8 +178,7 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
             , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
             }
     else do
-        let mprev = whichPrev changeZipBase
-        prev <- UUID.split <$> mprev ?? fail "No previous UUID to reuse"
+        let prev = UUID.split $ whichPrev changeZipBase
         if uuidVariant prev /= b00 then
             undefined
         else do
@@ -304,7 +278,7 @@ atom prevUuid = skipSpace *> atom'
         char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <+>
         AString                            <$> string
     integer = signed decimal
-    uuid'   = uuid Nothing (Just prevUuid) SameOpPrevUuid
+    uuid'   = uuid UUID.zero prevUuid SameOpPrevUuid
 
 parseAtom :: ByteStringL -> Either String Atom
 parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
@@ -329,9 +303,9 @@ parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
 
 -- | Return 'Op' and 'chunkIsQuery'
-header :: Parser (Op, Bool)
-header = do
-    x <- op
+header :: Op -> Parser (Op, Bool)
+header prev = do
+    (_, x) <- op prev
     t <- term
     case t of
         THeader -> pure (x, False)
@@ -347,3 +321,12 @@ term = do
         ',' -> pure TReduced
         ';' -> pure TRaw
         _   -> fail "not a term"
+
+opZero :: Op
+opZero = Op
+    { opType     = UUID.zero
+    , opObject   = UUID.zero
+    , opEvent    = UUID.zero
+    , opLocation = UUID.zero
+    , opPayload  = []
+    }
