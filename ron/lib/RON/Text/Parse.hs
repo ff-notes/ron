@@ -21,8 +21,9 @@ import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
                                    label, manyTill, parseOnlyL, satisfy, (<+>),
                                    (??))
 import qualified Data.Aeson as Json
-import           Data.Attoparsec.ByteString.Char8 (anyChar, digit, skipSpace,
-                                                   takeWhile, takeWhile1)
+import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
+                                                   signed, skipSpace, takeWhile,
+                                                   takeWhile1)
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -292,10 +293,11 @@ atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'
   where
     atom' =
+        char '^' *> skipSpace *> (AFloat   <$> double ) <+>
         char '=' *> skipSpace *> (AInteger <$> integer) <+>
         char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <+>
         AString                            <$> string
-    integer = read <$> (maybe id (:) <$> optional (char '-') <*> some digit)
+    integer = signed decimal
     uuid'   = uuid Nothing (Just prevUuid) SameOpPrevUuid
 
 parseAtom :: ByteStringL -> Either String Atom

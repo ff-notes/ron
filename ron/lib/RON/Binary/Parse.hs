@@ -14,6 +14,7 @@ import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, takeL, withInputSize)
 import qualified Attoparsec.Extra as Atto
 import qualified Data.Binary as Binary
+import           Data.Binary.Get (getDoublebe, runGet)
 import           Data.Bits (shiftR, testBit, (.&.))
 import           Data.ByteString.Lazy (cons, toStrict)
 import qualified Data.ByteString.Lazy as BSL
@@ -90,14 +91,16 @@ assertSize expected consumed =
     "size mismatch: expected " ++ show expected ++ ", got " ++ show consumed
 
 parseReducedOps :: Int -> Parser [Op]
-parseReducedOps = label "[Op]" . \case
-    0        -> pure []
-    expected -> do
-        (consumed, (TReduced, op)) <- withInputSize parseDescAndOp
-        case compare consumed expected of
-            LT -> (op :) <$> parseReducedOps (expected - consumed)
-            EQ -> pure [op]
-            GT -> fail "impossible"
+parseReducedOps = label "[Op]" . go
+  where
+    go = \case
+        0        -> pure []
+        expected -> do
+            (consumed, (TReduced, op)) <- withInputSize parseDescAndOp
+            case compare consumed expected of
+                LT -> (op :) <$> go (expected - consumed)
+                EQ -> pure [op]
+                GT -> fail "impossible"
 
 parseDescAndOp :: Parser (OpTerm, Op)
 parseDescAndOp = label "d+Op" $ do
@@ -125,7 +128,7 @@ parseOpKey expectedType = label "OpKey" $ do
     (desc, size) <- parseDesc
     let go = do
             guard $ desc == expectedType
-            parseUuid size
+            uuid size
     case desc of
         DUuidType     -> go
         DUuidObject   -> go
@@ -133,8 +136,8 @@ parseOpKey expectedType = label "OpKey" $ do
         DUuidLocation -> go
         _             -> fail $ show desc
 
-parseUuid :: Size -> Parser UUID
-parseUuid size = label "UUID" $
+uuid :: Size -> Parser UUID
+uuid size = label "UUID" $
     case size of
         16 -> do
             x <- Binary.decode <$> takeL 8
@@ -149,17 +152,23 @@ atom :: Parser Atom
 atom = label "Atom" $ do
     (desc, size) <- parseDesc
     case desc of
-        DAtomInteger -> AInteger <$> parseInteger size
-        DAtomString  -> AString  <$> string       size
-        DAtomUuid    -> AUuid    <$> parseUuid    size
+        DAtomFloat   -> AFloat   <$> float   size
+        DAtomInteger -> AInteger <$> integer size
+        DAtomString  -> AString  <$> string  size
+        DAtomUuid    -> AUuid    <$> uuid    size
         _            -> fail "expected Atom"
 
 parseAtom :: ByteStringL -> Either String Atom
 parseAtom = parseOnlyL $ atom <* endOfInputEx
 
+float :: Size -> Parser Double
+float = \case
+    8 -> runGet getDoublebe <$> takeL 8
+    _ -> undefined
+
 -- big-endian, zigzag-coded, lengths 1..8
-parseInteger :: Size -> Parser Int64
-parseInteger size = label "Integer" $ do
+integer :: Size -> Parser Int64
+integer size = label "Integer" $ do
     unless (size >= 1 && size <= 8) $ fail "integer size must be 1..8"
     unless (size == 8) $ fail "integer size /=8 not implemented"
     zzDecode64 . Binary.decode <$> takeL (fromIntegral size)

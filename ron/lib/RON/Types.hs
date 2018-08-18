@@ -23,7 +23,7 @@ import           GHC.Generics (Generic)
 
 import           RON.UUID (UUID (..))
 
-data Atom = AInteger Int64 | AString Text | AUuid UUID
+data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Eq, Generic, NFData, Show)
 
 data Op = Op

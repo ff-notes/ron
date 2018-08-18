@@ -9,6 +9,7 @@ module RON.Binary.Serialize where
 import           RON.Internal.Prelude
 
 import qualified Data.Binary as Binary
+import           Data.Binary.Put (putDoublebe, runPut)
 import           Data.Bits (bit, shiftL, (.|.))
 import           Data.ByteString.Lazy (cons, fromStrict)
 import qualified Data.ByteString.Lazy as BSL
@@ -81,22 +82,24 @@ serializeWithDesc d body = do
     pure $ descByte `cons` lengthExtended <> body
   where
     len = BSL.length body
-    lengthFields
-        | d == DAtomString = if
+    lengthFields = case d of
+        DAtomString
             | len == 0     -> Right (b0000, mkLengthExtended)
             | len < 16     -> Right (leastSignificant4 len, BSL.empty)
             | len < bit 31 -> Right (b0000, mkLengthExtended)
             | otherwise    -> Left "String is too long"
-        | descIsOp d  = Right (b0000, BSL.empty)
-        | len < 16    = Right (leastSignificant4 len, BSL.empty)
-        | len == 16   = Right (b0000, BSL.empty)
-        | otherwise   = error "impossible"
+        _
+            | descIsOp d   -> Right (b0000, BSL.empty)
+            | len < 16     -> Right (leastSignificant4 len, BSL.empty)
+            | len == 16    -> Right (b0000, BSL.empty)
+            | otherwise    -> Left "impossible"
     mkLengthExtended
         | len < 128 = Binary.encode (fromIntegral len :: Word8)
         | otherwise = Binary.encode (fromIntegral len .|. bit 31 :: Word32)
 
 serializeAtom :: Atom -> Either String ByteStringL
 serializeAtom = \case
+    AFloat   f -> serializeWithDesc DAtomFloat   $ serializeFloat f
     AInteger i -> serializeWithDesc DAtomInteger $ Binary.encode $ zzEncode64 i
     AString  s -> serializeWithDesc DAtomString  $ serializeString s
     AUuid    u -> serializeWithDesc DAtomUuid    $ serializeUuid u
@@ -104,6 +107,9 @@ serializeAtom = \case
     {-# INLINE zzEncode64 #-}
     zzEncode64 :: Int64 -> Word64
     zzEncode64 = zzEncode
+
+serializeFloat :: Double -> ByteStringL
+serializeFloat = runPut . putDoublebe
 
 serializeReducedChunk :: Bool -> ReducedChunk -> Either String ByteStringL
 serializeReducedChunk isQuery ReducedChunk{..} = do

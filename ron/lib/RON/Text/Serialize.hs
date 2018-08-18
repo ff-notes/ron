@@ -85,9 +85,10 @@ serializeUuid u@(UUID x y) = BSL.fromStrict $
 
 serializeAtom :: Atom -> ByteStringL
 serializeAtom = \case
-    AInteger i -> "=" <> BSLC.pack (show i)
+    AFloat   f -> BSLC.cons '^' $ BSLC.pack (show f)
+    AInteger i -> BSLC.cons '=' $ BSLC.pack (show i)
     AString  s -> serializeString s
-    AUuid    u -> ">" <> serializeUuid u
+    AUuid    u -> BSLC.cons '>' $ serializeUuid u
 
 serializeString :: Text -> ByteStringL
 serializeString =

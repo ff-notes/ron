@@ -8,8 +8,8 @@ import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorian,
                             timeOfDayToTime)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (choice, enumBounded, integral, list, text,
-                               unicode, word64)
+import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
+                               text, unicode, word64)
 import qualified Hedgehog.Range as Range
 
 import           RON.Event (Event (..),
@@ -73,7 +73,8 @@ payload size = list (Range.exponential 0 size) (atom size)
 
 atom :: MonadGen gen => Int -> gen Atom
 atom size = choice
-    [ AInteger  <$> integral (Range.exponentialFrom 0 (-10e10) 10e10)
+    [ AFloat    <$> double (Range.exponentialFloatFrom 0 (-1e308) 1e308)
+    , AInteger  <$> integral (Range.exponentialFrom 0 (-1e18) 1e18)
     , AString   <$> text (Range.exponential 0 size) unicode
     , AUuid     <$> uuid
     ]
