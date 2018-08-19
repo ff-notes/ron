@@ -3,7 +3,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Serialize
     ( serializeAtom
@@ -16,82 +15,79 @@ module RON.Text.Serialize
 
 import           RON.Internal.Prelude
 
+import           Control.Monad.State.Strict (State, evalState, state)
 import qualified Data.Aeson as Json
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Lazy.Search as BSL
 import           Data.Text (Text)
 
-import qualified RON.Base64 as Base64
-import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
-                                    pattern B10, pattern B11)
+import           RON.Text.Common (opZero)
+import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
+                                          serializeUuidKey)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
                             ReducedChunk (..))
-import           RON.UUID (UUID (..), UuidFields (..))
-import qualified RON.UUID as UUID
+import           RON.UUID (UUID (..), zero)
 
 serializeFrame :: Frame -> ByteStringL
-serializeFrame = (`BSLC.snoc` '.') . BSLC.intercalate "\n" . map serializeChunk
+serializeFrame chunks
+    = (`BSLC.snoc` '.')
+    . BSLC.intercalate "\n"
+    . (`evalState` opZero)
+    $ traverse serializeChunk chunks
 
 serializeFrames :: [Frame] -> ByteStringL
 serializeFrames = foldMap serializeFrame
 
-serializeChunk :: Chunk -> ByteStringL
+serializeChunk :: Chunk -> State Op ByteStringL
 serializeChunk = \case
-    Raw op      -> serializeOp op <> ";\n"
+    Raw op      -> (<> ";\n") <$> serializeOpZip op
     State chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
-serializeReducedChunk :: Bool -> ReducedChunk -> ByteStringL
+serializeReducedChunk :: Bool -> ReducedChunk -> State Op ByteStringL
 serializeReducedChunk isQuery ReducedChunk{chunkHeader, chunkBody} =
-    mconcat
-        [ serializeOp chunkHeader
-        , if isQuery then " ?\n" else " !\n"
-        , BSLC.unlines $ map serializeOp chunkBody
+    mconcat <$> sequence
+        [ serializeOpZip chunkHeader
+        , pure $ if isQuery then " ?\n" else " !\n"
+        , BSLC.unlines <$> traverse serializeOpZip chunkBody
         ]
 
 serializeOp :: Op -> ByteStringL
-serializeOp Op{..} =
-    let typ      =     serializeUuid opType
-        object   =     serializeUuid opObject
-        event    =     serializeUuid opEvent
-        location =     serializeUuid opLocation
-        payload  = map serializeAtom opPayload
-    in  BSLC.unwords $
-            "*" <> typ : "#" <> object : "@" <> event : ":" <> location :
-            payload
+serializeOp op = evalState (serializeOpZip op) opZero
 
-serializeUuid :: UUID -> ByteStringL
-serializeUuid u@(UUID x y) = BSL.fromStrict $
-    case uuidVariant of
-        B00 -> x' <> y'
-        _   -> Base64.encode64 x <> Base64.encode64 y
+serializeOpZip :: Op -> State Op ByteStringL
+serializeOpZip this = state $ \prev -> let
+    typ = serializeUuidKey (opType     prev) zero            (opType     this)
+    obj = serializeUuidKey (opObject   prev) (opType   this) (opObject   this)
+    evt = serializeUuidKey (opEvent    prev) (opObject this) (opEvent    this)
+    loc = serializeUuidKey (opLocation prev) (opEvent  this) (opLocation this)
+    payload  = serializePayload (opObject this) (opPayload  this)
+    in
+    ( BSLC.unwords $
+        key '*' typ ++ key '#' obj ++ key '@' evt ++ key ':' loc ++ [payload]
+    , this
+    )
   where
-    UuidFields{..} = UUID.split u
-    schemeSymbol = case uuidScheme of
-        B00 -> '$'
-        B01 -> '%'
-        B10 -> '+'
-        B11 -> '-'
-    varietyPrefix = case uuidVariety of
-        B0000 -> ""
-        _     -> BS.singleton (Base64.encodeLetter4 uuidVariety) <> "/"
-    x' = varietyPrefix <> Base64.encode60short uuidValue
-    y' = case y of
-        0 -> ""
-        _ -> BSC.singleton schemeSymbol <> Base64.encode60short uuidOrigin
+    key c u = [BSLC.cons c u | not $ BSL.null u]
 
 serializeAtom :: Atom -> ByteStringL
-serializeAtom = \case
-    AFloat   f -> BSLC.cons '^' $ BSLC.pack (show f)
-    AInteger i -> BSLC.cons '=' $ BSLC.pack (show i)
-    AString  s -> serializeString s
-    AUuid    u -> BSLC.cons '>' $ serializeUuid u
+serializeAtom a = evalState (serializeAtomZip a) zero
+
+serializeAtomZip :: Atom -> State UUID ByteStringL
+serializeAtomZip = \case
+    AFloat   f -> pure $ BSLC.cons '^' $ BSLC.pack (show f)
+    AInteger i -> pure $ BSLC.cons '=' $ BSLC.pack (show i)
+    AString  s -> pure $ serializeString s
+    AUuid    u ->
+        state $ \prev -> (BSLC.cons '>' $ serializeUuidAtom prev u, u)
 
 serializeString :: Text -> ByteStringL
 serializeString =
     fixQuotes . BSL.replace "'" ("\\'" :: ByteString) . Json.encode
   where
     fixQuotes = (`BSLC.snoc` '\'') . BSLC.cons '\'' . BSL.init . BSL.tail
+
+serializePayload :: UUID -> [Atom] -> ByteStringL
+serializePayload prev =
+    BSLC.unwords . (`evalState` prev) . traverse serializeAtomZip

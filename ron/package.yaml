@@ -36,8 +36,10 @@ library:
     - RON.Internal.Prelude
     - RON.Internal.Word
     - RON.Text
+    - RON.Text.Common
     - RON.Text.Parse
     - RON.Text.Serialize
+    - RON.Text.Serialize.UUID
     - RON.Typed
     - RON.Typed.LwwStruct
     - RON.Typed.Text

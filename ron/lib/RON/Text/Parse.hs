@@ -33,6 +33,7 @@ import           Data.Text (Text)
 import qualified RON.Base64 as Base64
 import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
+import           RON.Text.Common (opZero)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
                             ReducedChunk (..), UUID (..))
 import           RON.UUID (UuidFields (..))
@@ -97,8 +98,7 @@ frameInStream = label "Frame-stream" $ chunksTill endOfFrame
 
 parseOp :: ByteStringL -> Either String Op
 parseOp = parseOnlyL $ do
-    (isNotEmpty, x) <- op opZero <* skipSpace <* endOfInputEx
-    guard isNotEmpty
+    (_, x) <- op opZero <* skipSpace <* endOfInputEx
     pure x
 
 parseUuid :: ByteStringL -> Either String UUID
@@ -321,12 +321,3 @@ term = do
         ',' -> pure TReduced
         ';' -> pure TRaw
         _   -> fail "not a term"
-
-opZero :: Op
-opZero = Op
-    { opType     = UUID.zero
-    , opObject   = UUID.zero
-    , opEvent    = UUID.zero
-    , opLocation = UUID.zero
-    , opPayload  = []
-    }
