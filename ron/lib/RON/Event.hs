@@ -2,8 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module RON.Event
     ( CalendarEvent (..)
@@ -14,6 +13,7 @@ module RON.Event
     , Naming (..)
     , Replica (..)
     , ReplicaId (..)
+    , Calendar (..)
     , decodeEvent
     , encodeEvent
     , fromCalendarEvent
@@ -21,38 +21,48 @@ module RON.Event
     , getEvent
     , getEventUuid
     , getEventUuids
+    , mkCalendarDate
+    , mkCalendarDateTime
+    , mkCalendarDateTimeNano
     , toEpochEvent
     ) where
 
-import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
-import           Data.Fixed (Fixed (MkFixed), Pico, resolution)
+import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
-import           Data.Time (TimeOfDay (TimeOfDay), UTCTime (UTCTime),
-                            fromGregorianValid, makeTimeOfDayValid,
-                            timeOfDayToTime, timeToTimeOfDay, toGregorian,
-                            utctDay, utctDayTime)
-import           Data.Traversable (for)
 
 import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
-                                    pattern B11, Word2, Word60, Word64, Word8,
-                                    leastSignificant2, leastSignificant4,
-                                    leastSignificant60, safeCast, toWord60)
+                                    pattern B11, Word12, Word16, Word2, Word24,
+                                    Word32, Word6, Word60, Word64, Word8,
+                                    leastSignificant12, leastSignificant2,
+                                    leastSignificant24, leastSignificant4,
+                                    leastSignificant6, leastSignificant60, ls12,
+                                    ls24, ls6, ls60, safeCast)
 import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin,
                            uuidScheme, uuidValue, uuidVariant, uuidVariety)
 import qualified RON.UUID as UUID
 
+data Calendar = Calendar
+    { months          :: Word12
+    , days            :: Word6
+    , hours           :: Word6
+    , minutes         :: Word6
+    , seconds         :: Word6
+    , nanosecHundreds :: Word24
+    }
+    deriving (Eq, Ord, Show)
+
 -- | Clock type is encoded in 2 higher bits of variety, value in uuidValue
 data LocalTime
-    = Calendar !UTCTime
+    = TCalendar !Calendar
         -- ^ Calendar format. https://github.com/gritzko/ron/issues/19.
         -- Year range is 2010—2350.
         -- Precision is 100 ns.
-    | Logical !Word60
+    | TLogical !Word60
         -- ^ https://en.wikipedia.org/wiki/Logical_clock
-    | Epoch !Word60
+    | TEpoch !Word60
         -- ^ RFC 4122 epoch, hundreds of nanoseconds since 1582.
         -- Year range is 1582—5234.
-    | Unknown !Word60
+    | TUnknown !Word60
     deriving (Eq, Show)
 
 data Naming
@@ -78,7 +88,7 @@ data Event = Event !LocalTime !ReplicaId
     deriving (Eq, Show)
 
 -- | Calendar-based Lamport time event, specific case of 'Event'.
-data CalendarEvent = CalendarEvent !UTCTime !ReplicaId
+data CalendarEvent = CalendarEvent !Calendar !ReplicaId
     deriving (Eq, Show)
 
 instance Ord CalendarEvent where
@@ -89,7 +99,7 @@ instance Ord CalendarEvent where
             (t2, fromEnum n2, r2)
 
 fromCalendarEvent :: CalendarEvent -> Event
-fromCalendarEvent (CalendarEvent t r) = Event (Calendar t) r
+fromCalendarEvent (CalendarEvent t r) = Event (TCalendar t) r
 
 -- | Epoch-based Lamport time event, specific case of 'Event'.
 data EpochEvent = EpochEvent !Word60 !ReplicaId
@@ -103,12 +113,12 @@ instance Ord EpochEvent where
             (t2, fromEnum n2, r2)
 
 fromEpochEvent :: EpochEvent -> Event
-fromEpochEvent (EpochEvent t r) = Event (Epoch t) r
+fromEpochEvent (EpochEvent t r) = Event (TEpoch t) r
 
 toEpochEvent :: Event -> Maybe EpochEvent
 toEpochEvent (Event t r) = case t of
-    Epoch t' -> Just $ EpochEvent t' r
-    _        -> Nothing
+    TEpoch t' -> Just $ EpochEvent t' r
+    _         -> Nothing
 
 class Monad m => Replica m where
     getPid :: m ReplicaId
@@ -135,95 +145,68 @@ getEvent :: Clock m => m EpochEvent
 getEvent = head <$> getEvents (leastSignificant60 (1 :: Word64))
 
 getEventUuid :: Clock m => m UUID
-getEventUuid = do
-    e <- getEvent
-    maybe (fail $ "bad event: " ++ show e) pure $ encodeEvent $ fromEpochEvent e
+getEventUuid = encodeEvent . fromEpochEvent <$> getEvent
 
 getEventUuids :: Clock m => Word60 -> m [UUID]
-getEventUuids n = do
-    es <- getEvents n
-    for es $ \e ->
-        maybe (fail $ "bad event: " ++ show e) pure $
-        encodeEvent $ fromEpochEvent e
+getEventUuids = fmap (map $ encodeEvent . fromEpochEvent) . getEvents
 
-encodeUTCTime :: UTCTime -> Maybe Word60
-encodeUTCTime UTCTime{utctDay, utctDayTime} = do
-    yearRel2010 <-
-        if year >= 2010 then pure $ fromIntegral year - 2010 else Nothing
-    let months = yearRel2010 * 12 + (month - 1)
-    secs <- if rawSecs < 60 then pure $ fromIntegral rawSecs else Nothing
-    toWord60 $
-        (months     `shiftL` 48) .|.
-        ((days - 1) `shiftL` 42) .|.
-        (hours      `shiftL` 36) .|.
-        (mins       `shiftL` 30) .|.
-        (secs       `shiftL` 24) .|.
-        ns100
-  where
-    ns100 = fromIntegral $ ps `div` (100 * 1000)  -- <= 10^7
-    (rawSecs, ps) = s `divMod` picoResolution
-    MkFixed s = fs :: Pico
-    picoResolution = resolution fs  -- 10^12
-    TimeOfDay (fromIntegral -> hours) (fromIntegral -> mins) fs =
-        timeToTimeOfDay utctDayTime
-    (year, fromIntegral -> month, fromIntegral -> days) =
-        toGregorian utctDay
+encodeCalendar :: Calendar -> Word60
+encodeCalendar Calendar{..} = ls60 $
+    (safeCast months     `shiftL` 48) .|.
+    (safeCast days       `shiftL` 42) .|.
+    (safeCast hours      `shiftL` 36) .|.
+    (safeCast minutes    `shiftL` 30) .|.
+    (safeCast seconds    `shiftL` 24) .|.
+    safeCast  nanosecHundreds
 
-decodeUTCTime :: Word60 -> Maybe UTCTime
-decodeUTCTime w = do
-    utctDay <- fromGregorianValid (year + 2010) (month + 1) (days + 1)
-    timeOfDay <- makeTimeOfDayValid
-        hours mins (secs + (MkFixed $ ns100 * 100 * 1000 :: Pico))
-    pure UTCTime{utctDay, utctDayTime = timeOfDayToTime timeOfDay}
+decodeCalendar :: Word60 -> Calendar
+decodeCalendar w = Calendar
+    { months          = leastSignificant12 $ v `shiftR` 48
+    , days            = leastSignificant6  $ v `shiftR` 42
+    , hours           = leastSignificant6  $ v `shiftR` 36
+    , minutes         = leastSignificant6  $ v `shiftR` 30
+    , seconds         = leastSignificant6  $ v `shiftR` 24
+    , nanosecHundreds = leastSignificant24   v
+    }
   where
     v = safeCast w :: Word64
-    ns100  = safeCast     $  v              .&. 0xFFFFFF
-    secs   = safeCast     $ (v `shiftR` 24) .&. 0x3F
-    mins   = fromIntegral $ (v `shiftR` 30) .&. 0x3F
-    hours  = fromIntegral $ (v `shiftR` 36) .&. 0x3F
-    days   = fromIntegral $ (v `shiftR` 42) .&. 0x3F
-    months =                (v `shiftR` 48) .&. 0xFFF
-    (safeCast -> year, fromIntegral -> month) = months `divMod` 12
 
-encodeLocalTime :: LocalTime -> Maybe (Word2, Word60)
+encodeLocalTime :: LocalTime -> (Word2, Word60)
 encodeLocalTime = \case
-    Calendar t -> (B00,) <$> encodeUTCTime t
-    Logical  t -> pure (B01, t)
-    Epoch    t -> pure (B10, t)
-    Unknown  t -> pure (B11, t)
+    TCalendar t -> (B00, encodeCalendar t)
+    TLogical  t -> (B01, t)
+    TEpoch    t -> (B10, t)
+    TUnknown  t -> (B11, t)
 
-decodeLocalTime :: Word2 -> Word60 -> Maybe LocalTime
-decodeLocalTime clockTypeCode value = case clockTypeCode of
-    B00 -> Calendar <$> decodeUTCTime value
-    B01 -> pure $ Logical value
-    B10 -> pure $ Epoch   value
-    B11 -> pure $ Unknown value
+decodeLocalTime :: Word2 -> Word60 -> LocalTime
+decodeLocalTime = \case
+    B00 -> TCalendar . decodeCalendar
+    B01 -> TLogical
+    B10 -> TEpoch
+    B11 -> TUnknown
 
-encodeEvent :: Event -> Maybe UUID
-encodeEvent (Event time replicaId) = do
-    (varietyMS2, uuidValue) <- encodeLocalTime time
-    let (varietyLS2, uuidOrigin) = encodeReplicaId replicaId
-        uuidVariety =
-            leastSignificant4 $
-                ((safeCast varietyMS2 :: Word8) `shiftL` 2) .|.
-                ( safeCast varietyLS2 :: Word8)
-    pure $ UUID.build UuidFields
-        { uuidVariety
-        , uuidValue
-        , uuidVariant = B00
-        , uuidScheme  = B10
-        , uuidOrigin
-        }
+encodeEvent :: Event -> UUID
+encodeEvent (Event time replicaId) = UUID.build UuidFields
+    { uuidVariety
+    , uuidValue
+    , uuidVariant = B00
+    , uuidScheme  = B10
+    , uuidOrigin
+    }
+  where
+    (varietyMS2, uuidValue) = encodeLocalTime time
+    (varietyLS2, uuidOrigin) = encodeReplicaId replicaId
+    uuidVariety = leastSignificant4 $
+        ((safeCast varietyMS2 :: Word8) `shiftL` 2) .|.
+        ( safeCast varietyLS2 :: Word8)
 
-decodeEvent :: UUID -> Maybe Event
+decodeEvent :: UUID -> Event
 decodeEvent uuid = Event
-    <$> decodeLocalTime
-            (leastSignificant2 (safeCast uuidVariety `shiftR` 2 :: Word8))
-            uuidValue
-    <*> pure
-            (decodeReplicaId
-                (leastSignificant2 (safeCast uuidVariety :: Word8))
-                uuidOrigin)
+    (decodeLocalTime
+        (leastSignificant2 (safeCast uuidVariety `shiftR` 2 :: Word8))
+        uuidValue)
+    (decodeReplicaId
+        (leastSignificant2 (safeCast uuidVariety :: Word8)) uuidOrigin)
   where
     UuidFields{uuidVariety, uuidValue, uuidOrigin} = UUID.split uuid
 
@@ -235,3 +218,26 @@ encodeReplicaId (ReplicaId naming origin) =
     ( leastSignificant2 $ fromEnum naming
     , origin
     )
+
+mkCalendarDate :: (Word16, Word16, Word8) -> Maybe Calendar
+mkCalendarDate ymd = mkCalendarDateTime ymd (0, 0, 0)
+
+mkCalendarDateTime
+    :: (Word16, Word16, Word8) -> (Word8, Word8, Word8) -> Maybe Calendar
+mkCalendarDateTime ymd hms = mkCalendarDateTimeNano ymd hms 0
+
+mkCalendarDateTimeNano
+    :: (Word16, Word16, Word8)
+    -> (Word8,  Word8,  Word8)
+    -> Word32
+    -> Maybe Calendar
+mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
+    -- TODO(2018-08-19, cblp) check bounds
+    pure Calendar
+        { months          = ls12 $ (y - 2010) * 12 + m - 1
+        , days            = ls6  $ d - 1
+        , hours           = ls6  hh
+        , minutes         = ls6  mm
+        , seconds         = ls6  ss
+        , nanosecHundreds = ls24 ns
+        }

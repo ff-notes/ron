@@ -39,11 +39,10 @@ instance AsAtom a => Replicated (LWW a) where
         time <- getEvent
         pure LWW{time, value}
 
-    toStateOps this lww = listSingleton <$> toOp this lww
+    toStateOps this lww = pure [toOp this lww]
 
-    toStateChunk this lww = do
-        chunkHeader <- toOp this lww
-        pure ReducedChunk{chunkHeader, chunkBody = []}
+    toStateChunk this lww =
+        pure $ ReducedChunk{chunkHeader = toOp this lww, chunkBody = []}
 
     fromStateOps _ ownOps _ = case ownOps of
         []     -> Left "Empty state"
@@ -51,28 +50,25 @@ instance AsAtom a => Replicated (LWW a) where
 
     fromStateChunk op _ _ = fromOp op
 
-toOp :: (Monad m, AsAtom a) => UUID -> LWW a -> m Op
-toOp this LWW{time, value} = do
-    opEvent <-
-        maybe (fail "LWW.time is a bad Event") pure $
-        encodeEvent $ fromEpochEvent time
-    pure Op
-        { opType     = lwwType
-        , opObject   = this
-        , opEvent
-        , opLocation = UUID.zero
-        , opPayload  = [toAtom value]
-        }
+toOp :: (AsAtom a) => UUID -> LWW a -> Op
+toOp this LWW{time, value} = Op
+    { opType     = lwwType
+    , opObject   = this
+    , opEvent    = encodeEvent $ fromEpochEvent time
+    , opLocation = UUID.zero
+    , opPayload  = [toAtom value]
+    }
 
 fromOp :: AsAtom a => Op -> Either String (LWW a)
 fromOp Op{opEvent, opPayload} = do
-    event <- maybe (Left "Bad opEvent") Right $ decodeEvent  opEvent
-    time  <- maybe (Left "Bad event")   Right $ toEpochEvent event
+    time <- maybe (Left "Bad event") pure $ toEpochEvent event
     case opPayload of
         [a] -> do
             value <- maybe (Left "Bad atom") Right $ fromAtom a
             pure LWW{time, value}
         _   -> Left "Bad opPayload"
+  where
+    event = decodeEvent  opEvent
 
 listSingleton :: a -> [a]
 listSingleton x = [x]

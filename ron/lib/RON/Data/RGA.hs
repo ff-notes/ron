@@ -98,13 +98,10 @@ instance AsAtom a => Replicated (RGA a) where
     initialize = fromList
     view = toList
 
-    toStateOps opObject (RGA rga) = for rga $ \(vid, a) -> do
-        opEvent <-
-            maybe (fail "VertexId is a bad Event") pure $
-            encodeEvent $ fromEpochEvent vid
+    toStateOps opObject (RGA rga) = for rga $ \(vid, a) ->
         pure Op
             { opObject
-            , opEvent
+            , opEvent    = encodeEvent $ fromEpochEvent vid
             , opLocation = UUID.zero
             , opType     = rgaType
             , opPayload  = toAtom <$> maybeToList a
@@ -129,8 +126,8 @@ instance AsAtom a => Replicated (RGA a) where
 rgaFromStateOps :: AsAtom a => [Op] -> Either String (RGA a)
 rgaFromStateOps ownOps =
     fmap RGA . for ownOps $ \Op{opEvent, opPayload} -> do
-        event <- maybe (Left "Bad opEvent") Right $ decodeEvent  opEvent
-        vid   <- maybe (Left "Bad event")   Right $ toEpochEvent event
+        let event = decodeEvent  opEvent
+        vid <- maybe (Left "Bad event")   Right $ toEpochEvent event
         case opPayload of
             []  -> pure (vid, Nothing)
             [a] -> do

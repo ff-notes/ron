@@ -1,21 +1,19 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumDecimals #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Gen where
 
-import           Data.Fixed (Fixed (MkFixed))
-import           Data.Time (TimeOfDay (..), UTCTime (..), fromGregorian,
-                            timeOfDayToTime)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
                                text, unicode, word64)
 import qualified Hedgehog.Range as Range
 
-import           RON.Event (Event (..),
-                            LocalTime (Calendar, Epoch, Logical, Unknown),
+import           RON.Event (Calendar (..), Event (..),
+                            LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
                             ReplicaId (..))
-import           RON.Internal.Word (Word60, leastSignificant60)
+import           RON.Internal.Word (Word60, leastSignificant60, ls12, ls24, ls6)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
                             ReducedChunk (..), UUID (..))
 
@@ -46,26 +44,22 @@ frame size = list (Range.exponential 0 size) (chunk size)
 frames :: MonadGen gen => Int -> gen [Frame]
 frames size = list (Range.exponential 0 size) (frame size)
 
--- | Event time with year 2010—2350
-calendarTime :: MonadGen gen => gen UTCTime
-calendarTime = do
-    y  <- integral $ Range.constant 2010 2350
-    m  <- integral $ Range.constant 1 12
-    d  <- integral $ Range.constant 1 31
-    hh <- integral $ Range.constant 0 23
-    mm <- integral $ Range.constant 0 59
-    ss <- fmap (MkFixed . (*100000)) $ integral $ Range.constant 0 599999999
-    pure UTCTime
-        { utctDay     = fromGregorian y m d
-        , utctDayTime = timeOfDayToTime $ TimeOfDay hh mm ss
-        }
+calendar :: MonadGen gen => gen Calendar
+calendar = do
+    months          <- ls12 <$> integral (Range.constant 0 4095)
+    days            <- ls6  <$> integral (Range.constant 0 30)
+    hours           <- ls6  <$> integral (Range.constant 0 23)
+    minutes         <- ls6  <$> integral (Range.constant 0 59)
+    seconds         <- ls6  <$> integral (Range.constant 0 59)
+    nanosecHundreds <- ls24 <$> integral (Range.constant 0 10000000)
+    pure Calendar{..}
 
 eventTime :: MonadGen gen => gen LocalTime
 eventTime = choice
-    [ Calendar <$> calendarTime
-    , Logical  <$> word60
-    , Epoch    <$> word60
-    , Unknown  <$> word60
+    [ TCalendar <$> calendar
+    , TLogical  <$> word60
+    , TEpoch    <$> word60
+    , TUnknown  <$> word60
     ]
 
 payload :: MonadGen gen => Int -> gen [Atom]

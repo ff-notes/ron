@@ -20,8 +20,21 @@ module RON.Internal.Word
     -- * Word6
     , Word6
     , leastSignificant6
+    , ls6
     -- * Word8
     , Word8
+    -- * Word12
+    , Word12
+    , leastSignificant12
+    , ls12
+    -- * Word16
+    , Word16
+    -- * Word24
+    , Word24
+    , leastSignificant24
+    , ls24
+    -- * Word32
+    , Word32
     -- * Word60
     , Word60
     , leastSignificant60
@@ -38,7 +51,7 @@ import           Data.Bits ((.&.))
 import           Data.Coerce (coerce)
 import           Data.Fixed (Fixed, HasResolution)
 import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
-import           Data.Word (Word32, Word64, Word8)
+import           Data.Word (Word16, Word32, Word64, Word8)
 
 newtype Word2 = W2 Word8
     deriving (Eq, Ord, Show)
@@ -99,6 +112,32 @@ newtype Word6 = W6 Word8
 leastSignificant6 :: Integral integral => integral -> Word6
 leastSignificant6 = W6 . (0x3F .&.) . fromIntegral
 
+-- | 'leastSignificant6' specialized for 'Word8'
+ls6 :: Word8 -> Word6
+ls6 = W6 . (0x3F .&.)
+
+newtype Word12 = W12 Word16
+    deriving (Eq, Ord, Show)
+
+-- | 'Word12' smart constructor dropping upper bits
+leastSignificant12 :: Integral integral => integral -> Word12
+leastSignificant12 = W12 . (0xFFF .&.) . fromIntegral
+
+-- | 'leastSignificant12' specialized for 'Word16'
+ls12 :: Word16 -> Word12
+ls12 = W12 . (0xFFF .&.)
+
+newtype Word24 = W24 Word32
+    deriving (Eq, Ord, Show)
+
+-- | 'Word24' smart constructor dropping upper bits
+leastSignificant24 :: Integral integral => integral -> Word24
+leastSignificant24 = W24 . (0xFFFFFF .&.) . fromIntegral
+
+-- | 'leastSignificant24' specialized for 'Word32'
+ls24 :: Word32 -> Word24
+ls24 = W24 . (0xFFF .&.)
+
 newtype Word60 = W60 Word64
     deriving (Enum, Eq, Ord, Show)
 
@@ -109,7 +148,7 @@ instance Hashable Word60 where
 leastSignificant60 :: Integral integral => integral -> Word60
 leastSignificant60 = W60 . (0x0FFFFFFFFFFFFFFF .&.) . fromIntegral
 
--- | 'leastSignificant60' specialized for  'Word64'
+-- | 'leastSignificant60' specialized for 'Word64'
 ls60 :: Word64 -> Word60
 ls60 = W60 . (0x0FFFFFFFFFFFFFFF .&.)
 
@@ -139,6 +178,9 @@ instance SafeCast Word6  Word60  where safeCast = coerce @Word64
 instance SafeCast Word6  Word64  where safeCast = fromIntegral @Word8 . coerce
 instance SafeCast Word8  Word32  where safeCast = fromIntegral
 instance SafeCast Word8  Word64  where safeCast = fromIntegral
+instance SafeCast Word12 Word64  where safeCast = fromIntegral @Word16 . coerce
+instance SafeCast Word24 Word64  where safeCast = fromIntegral @Word32 . coerce
+instance SafeCast Word24 Word32  where safeCast = coerce
 instance SafeCast Word60 Word64  where safeCast = coerce
 instance SafeCast Word64 Integer where safeCast = fromIntegral
 

@@ -42,7 +42,7 @@ import           RON.Data.RGA (RGA (..), RgaText (..))
 import           RON.Event (CalendarEvent (..), EpochEvent (..),
                             Naming (ApplicationSpecific, TrieForked),
                             ReplicaId (..), decodeEvent, encodeEvent,
-                            fromCalendarEvent)
+                            fromCalendarEvent, mkCalendarDateTime)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import qualified RON.Text as RT
@@ -184,10 +184,10 @@ prop_uuid_abbreviations = property $ do
         ]
     aLed = either error id $ RT.parseUuid "A/LED"
 
-evalMaybeS :: (MonadTest m, HasCallStack) => Maybe a -> m a
-evalMaybeS = \case
-    Nothing -> withFrozenCallStack $ failWith Nothing ""
-    Just a  -> pure a
+-- evalMaybeS :: (MonadTest m, HasCallStack) => Maybe a -> m a
+-- evalMaybeS = \case
+--     Nothing -> withFrozenCallStack $ failWith Nothing ""
+--     Just a  -> pure a
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
@@ -196,8 +196,8 @@ evalEitherS = \case
 
 prop_event_roundtrip = property $ do
     event  <- forAll Gen.event
-    uuid   <- evalMaybeS $ encodeEvent event
-    event' <- evalMaybeS $ decodeEvent uuid
+    let uuid   = encodeEvent event
+    let event' = decodeEvent uuid
     event === event'
 
 prop_ron_json_example = let
@@ -221,11 +221,13 @@ prop_ron_json_example = let
             }
         ]
     barName = fromJust $ UUID.mkName "bar"
-    bar     = fromJust $ encodeEvent $ fromCalendarEvent
-            $ CalendarEvent (read "2017-10-31 10:26:00") replicaGritzko
+    bar     = encodeEvent $ fromCalendarEvent $ CalendarEvent
+                (fromJust $ mkCalendarDateTime (2017, 10, 31) (10, 26, 00))
+                replicaGritzko
     fooName = fromJust $ UUID.mkName "foo"
-    foo     = fromJust $ encodeEvent $ fromCalendarEvent
-            $ CalendarEvent (read "2017-10-31 10:27:00") replicaGritzko
+    foo     = encodeEvent $ fromCalendarEvent $ CalendarEvent
+                (fromJust $ mkCalendarDateTime (2017, 10, 31) (10, 27, 00))
+                replicaGritzko
     gritzko = fromJust $ Base64.decode60 "gritzko"
     replicaGritzko = ReplicaId TrieForked gritzko
     in
