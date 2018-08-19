@@ -28,4 +28,4 @@
 *lww#weird@2 :pi ^3.141592653589793 ;
 *lww#weird@3 :minus =-9223372036854775808 ;
 
-*lww#raw@1:one=1!@2:two^2.0:three'три'
+*lww#raw@1:one=1;@2:two^2.0;:three'три';
