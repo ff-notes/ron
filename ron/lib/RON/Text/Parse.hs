@@ -164,10 +164,14 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
     rawReuseOrigin <- optional pReuse
     rawOrigin <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseOrigin
 
-    let isSimple =
-            not changeZipBase && isNothing rawReuseValue && isJust rawValue
-            && isNothing rawReuseOrigin
-            && (isNothing rawScheme || isJust rawOrigin)
+    let prev = UUID.split $ whichPrev changeZipBase
+    let isSimple
+            =   uuidVariant prev /= b00
+            ||  (   not changeZipBase
+                &&  isNothing rawReuseValue && isJust rawValue
+                &&  isNothing rawReuseOrigin
+                &&  (isNothing rawScheme || isJust rawOrigin)
+                )
 
     if isSimple then
         pure $ UUID.build UuidFields
@@ -178,17 +182,13 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
             , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
             }
     else do
-        let prev = UUID.split $ whichPrev changeZipBase
-        if uuidVariant prev /= b00 then
-            undefined
-        else do
-            uuidVariety <- pure $ fromMaybe (uuidVariety prev) rawVariety
-            uuidValue <- pure $ reuse rawReuseValue rawValue (uuidValue prev)
-            let uuidVariant = b00
-            uuidScheme <- pure $ fromMaybe (uuidScheme prev) rawScheme
-            uuidOrigin <-
-                pure $ reuse rawReuseOrigin rawOrigin (uuidOrigin prev)
-            pure $ UUID.build UuidFields{..}
+        uuidVariety <- pure $ fromMaybe (uuidVariety prev) rawVariety
+        uuidValue <- pure $ reuse rawReuseValue rawValue (uuidValue prev)
+        let uuidVariant = b00
+        uuidScheme <- pure $ fromMaybe (uuidScheme prev) rawScheme
+        uuidOrigin <-
+            pure $ reuse rawReuseOrigin rawOrigin (uuidOrigin prev)
+        pure $ UUID.build UuidFields{..}
   where
 
     whichPrev changeZipBase

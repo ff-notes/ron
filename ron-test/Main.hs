@@ -287,12 +287,12 @@ testStruct1 = object 0x9f $ TestStruct
 replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 testStruct2 = [i|
-    *lww #B/000000002V+r3pl1c4 @`
-        'TestStruct' 'int' >B/000000005s+r3pl1c4 'text' >B/00000000As+r3pl1c4 !
-         #B/000000005s+r3pl1c4 @B/000000008s+r3pl1c4 =275
-    *rga #B/00000000As+r3pl1c4 @B/00000000BT+r3pl1c4 '2'
-                               @B/00000000BU+r3pl1c4 '7'
-                               @B/00000000BV+r3pl1c4 '5'
+    *lww #B/000000002V+r3pl1c4 @`            'TestStruct' 'int'  >`000000005s
+                                                          'text' >`00000000As !
+         #B/000000005s+r3pl1c4 @`000000008s  =275
+    *rga #B/00000000As+r3pl1c4 @`00000000BT  '2'
+                               @`00000000BU  '7'
+                               @`00000000BV  '5'
     .
     |]
 

@@ -32,7 +32,7 @@ import           RON.UUID (UUID (..), zero)
 serializeFrame :: Frame -> ByteStringL
 serializeFrame chunks
     = (`BSLC.snoc` '.')
-    . BSLC.intercalate "\n"
+    . mconcat
     . (`evalState` opZero)
     $ traverse serializeChunk chunks
 

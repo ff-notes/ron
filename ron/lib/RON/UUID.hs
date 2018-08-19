@@ -52,7 +52,7 @@ data UuidFields = UuidFields
     , uuidScheme  :: !Word2
     , uuidOrigin  :: !Word60
     }
-    deriving Show
+    deriving (Eq, Show)
 
 split :: UUID -> UuidFields
 split (UUID x y) = UuidFields
