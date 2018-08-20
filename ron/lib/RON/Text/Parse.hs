@@ -74,7 +74,7 @@ rchunk prev = label "Chunk-reduced" $ do
     let lastOp = case chunkBody of
             [] -> chunkHeader
             _  -> last chunkBody
-    pure ((if isQuery then Query else State) ReducedChunk{..}, lastOp)
+    pure ((if isQuery then Query else Value) ReducedChunk{..}, lastOp)
   where
     reducedOps y = do
         skipSpace

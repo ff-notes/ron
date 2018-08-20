@@ -288,10 +288,10 @@ replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 testStruct2 = [i|
     *lww #B/000000002V+r3pl1c4 @`    'TestStruct' 'int' >]5s 'text' >]As !
-         #]5s                  @]8s  =275
-    *rga #]As                  @]BT  '2'
-                               @)U   '7'
-                               @)V   '5'
+         #]5s                  @]8s  =275 ,
+    *rga #]As                  @]BT  '2' ,
+                               @)U   '7' ,
+                               @)V   '5' ,
     .
     |]
 

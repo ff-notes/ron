@@ -38,7 +38,7 @@ import           RON.Internal.Word (pattern B00, pattern B0000, Word2, Word4,
 data UUID = UUID
     {-# UNPACK #-} !Word64
     {-# UNPACK #-} !Word64
-    deriving (Eq, Generic, Hashable, NFData)
+    deriving (Eq, Generic, Hashable, NFData, Ord)
 
 instance Show UUID where
     showsPrec a (UUID x y) =

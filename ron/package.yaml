@@ -29,6 +29,8 @@ library:
     - RON.Binary.Parse
     - RON.Binary.Serialize
     - RON.Binary.Types
+    - RON.Data
+    - RON.Data.Internal
     - RON.Data.LWW
     - RON.Data.RGA
     - RON.Event

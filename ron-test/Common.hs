@@ -1,17 +1,25 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
+import           Control.Monad (when)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.List.Extra (dropEnd, isSuffixOf)
+-- import qualified Data.ByteString.Lazy.Char8 as BSLC
+import           Data.Function (on)
+import           Data.List.Extra (dropEnd, isSuffixOf, sortOn)
 import           Data.Traversable (for)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           Hedgehog (MonadTest, property)
+import           Hedgehog (MonadTest, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 import           System.Directory (listDirectory)
 import           System.FilePath ((</>))
 import           Test.Tasty (TestName, TestTree, defaultMain, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 
+import           RON.Data (reduce)
 import qualified RON.Text as RT
+import           RON.Types (Chunk (Query, Raw, Value),
+                            ReducedChunk (ReducedChunk), UUID, chunkHeader,
+                            opObject)
 
 type ByteStringL = BSL.ByteString
 
@@ -34,12 +42,20 @@ loadCases = do
 
 test :: TestName -> ByteStringL -> ByteStringL -> TestTree
 test name bytesIn bytesOut = testProperty name $ property $ do
-    _frameIn  <- evalEitherS $ RT.parseFrame bytesIn
-    _frameOut <- evalEitherS $ RT.parseFrame bytesOut
-    -- frameIn === frameOut
-    pure ()
+    frameIn  <- evalEitherS $ RT.parseFrame bytesIn
+    frameOut <- evalEitherS $ RT.parseFrame bytesOut
+    when (take 2 name == "01") $ do
+        let reduced = reduce frameIn
+        -- ((===) `on` BSLC.lines)         bytesOut (RT.serializeFrame reduced)
+        ((===) `on` sortOn chunkObject) frameOut reduced
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
     Right a -> pure a
+
+chunkObject :: Chunk -> UUID
+chunkObject = opObject . \case
+    Raw op                          -> op
+    Value ReducedChunk{chunkHeader} -> chunkHeader
+    Query ReducedChunk{chunkHeader} -> chunkHeader

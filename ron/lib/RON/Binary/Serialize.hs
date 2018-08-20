@@ -47,7 +47,7 @@ serialize frame = ("RON2" <>) <$> serializeBody
 serializeChunk :: Chunk -> Either String ByteStringL
 serializeChunk = \case
     Raw op       -> serializeOp DOpRaw op
-    State rchunk -> serializeReducedChunk False rchunk
+    Value rchunk -> serializeReducedChunk False rchunk
     Query rchunk -> serializeReducedChunk True  rchunk
 
 serializeOp :: Desc -> Op -> Either String ByteStringL

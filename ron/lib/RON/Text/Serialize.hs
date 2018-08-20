@@ -21,6 +21,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Lazy.Search as BSL
 import           Data.Text (Text)
+import           Data.Traversable (for)
 
 import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
@@ -41,17 +42,20 @@ serializeFrames = foldMap serializeFrame
 
 serializeChunk :: Chunk -> State Op ByteStringL
 serializeChunk = \case
-    Raw op      -> (<> ";\n") <$> serializeOpZip op
-    State chunk -> serializeReducedChunk False chunk
+    Raw op      -> (<> " ;\n") <$> serializeOpZip op
+    Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
 serializeReducedChunk :: Bool -> ReducedChunk -> State Op ByteStringL
 serializeReducedChunk isQuery ReducedChunk{chunkHeader, chunkBody} =
-    mconcat <$> sequence
-        [ serializeOpZip chunkHeader
-        , pure $ if isQuery then " ?\n" else " !\n"
-        , BSLC.unlines <$> traverse serializeOpZip chunkBody
-        ]
+    BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
+  where
+    serializeHeader = do
+        h <- serializeOpZip chunkHeader
+        pure $ BSLC.unwords [h, if isQuery then "?" else "!"]
+    serializeBody = for chunkBody $ \op -> do
+        o <- serializeOpZip op
+        pure $ "\t" <> BSLC.unwords [o, ","]
 
 serializeOp :: Op -> ByteStringL
 serializeOp op = evalState (serializeOpZip op) opZero
@@ -64,8 +68,12 @@ serializeOpZip this = state $ \prev -> let
     loc = serializeUuidKey (opLocation prev) (opEvent  this) (opLocation this)
     payload  = serializePayload (opObject this) (opPayload  this)
     in
-    ( BSLC.unwords $
-        key '*' typ ++ key '#' obj ++ key '@' evt ++ key ':' loc ++ [payload]
+    ( BSLC.unwords
+        $   key '*' typ
+        ++  key '#' obj
+        ++  key '@' evt
+        ++  key ':' loc
+        ++  [payload | not $ BSL.null payload]
     , this
     )
   where

@@ -31,7 +31,7 @@ op size = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload size
 
 chunk :: MonadGen gen => Int -> gen Chunk
 chunk size =
-    choice [Raw <$> op size, State <$> rchunk size, Query <$> rchunk size]
+    choice [Raw <$> op size, Value <$> rchunk size, Query <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen ReducedChunk
 rchunk size = ReducedChunk
