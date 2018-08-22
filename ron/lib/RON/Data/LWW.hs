@@ -3,7 +3,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.LWW where
+module RON.Data.LWW
+    ( LWW (..)
+    , lwwReduce
+    , lwwType
+    ) where
 
 import           Control.Monad (guard)
 import           Data.Either (partitionEithers)
@@ -12,6 +16,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromJust, maybeToList)
 import           Data.Semigroup (Semigroup, sconcat)
+import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal (Reducer)
 import           RON.Event (EpochEvent, decodeEvent, encodeEvent,
@@ -76,9 +81,6 @@ fromOp Op{opEvent, opPayload} = do
   where
     event = decodeEvent  opEvent
 
-listSingleton :: a -> [a]
-listSingleton x = [x]
-
 data LwwPerField = LwwPerField
     {lpfBaseEvent, lpfEvent :: !UUID, lpfPayload :: ![Atom]}
 
@@ -128,7 +130,6 @@ fromChunk = \case
       where
         (loLeftovers, reduceables) = partitionEithers
             [maybe (Left op) Right $ lpfFromOp op | op <- chunkBody]
-        lpfFromOp :: Op -> Maybe (UUID, LwwPerField)
         lpfFromOp op = do
             guard $ opType op == lwwType && opObject op == opObject chunkHeader
             pure
@@ -153,13 +154,9 @@ toChunk obj LpfObject{loBaseEvent, loFields, loLeftovers} = Value ReducedChunk
     , chunkBody = map lwwToOp (Map.assocs loFields) ++ loLeftovers
     }
   where
-    chunkEvent
-        | null loFields = UUID.zero
-        | otherwise     = maximum $ lpfEvent <$> loFields
-    chunkLocation
-        | null loFields = UUID.zero
-        | otherwise     =
-            minimum $ loBaseEvent : map lpfBaseEvent (Map.elems loFields)
+    chunkEvent = maximumDef UUID.zero $ lpfEvent <$> loFields
+    chunkLocation =
+        minimum $ loBaseEvent : map lpfBaseEvent (Map.elems loFields)
     lwwToOp (opLocation, LwwPerField{lpfEvent, lpfPayload}) = Op
         { opType    = lwwType
         , opObject  = obj

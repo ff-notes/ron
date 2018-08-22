@@ -13,12 +13,13 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducer)
 import           RON.Data.LWW (lwwReduce, lwwType)
+import           RON.Data.VersionVector (vvReduce, vvType)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (Op),
                             ReducedChunk (ReducedChunk), UUID, chunkHeader,
                             opObject, opType)
 
 reducers :: Map UUID Reducer
-reducers = Map.fromList [(lwwType, lwwReduce)]
+reducers = Map.fromList [(lwwType, lwwReduce), (vvType, vvReduce)]
 
 reduce :: Frame -> Frame
 reduce chunks = values' ++ queries

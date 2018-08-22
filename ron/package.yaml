@@ -19,6 +19,7 @@ library:
     - flat
     - hashable
     - mtl
+    - safe
     - stringsearch
     - text
     - time
@@ -33,6 +34,7 @@ library:
     - RON.Data.Internal
     - RON.Data.LWW
     - RON.Data.RGA
+    - RON.Data.VersionVector
     - RON.Event
     - RON.Event.Simulation
     - RON.Internal.Prelude

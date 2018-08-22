@@ -44,9 +44,12 @@ test :: TestName -> ByteStringL -> ByteStringL -> TestTree
 test name bytesIn bytesOut = testProperty name $ property $ do
     frameIn  <- evalEitherS $ RT.parseFrame bytesIn
     frameOut <- evalEitherS $ RT.parseFrame bytesOut
-    when (take 2 name == "01") $ do
+    when (take 2 name `elem` ["01", "02"]) $ do
         let reduced = reduce frameIn
-        -- ((===) `on` BSLC.lines)         bytesOut (RT.serializeFrame reduced)
+        -- when (take 2 name == "01") $
+        --     ((===) `on` filter (not . BSL.null) . BSLC.lines)
+        --         bytesOut
+        --         (RT.serializeFrame reduced)
         ((===) `on` sortOn chunkObject) frameOut reduced
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
