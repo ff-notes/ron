@@ -7,16 +7,11 @@ module RON.Data.VersionVector
     , vvType
     ) where
 
-import           Control.Monad (guard)
-import           Data.Either (partitionEithers)
-import           Data.List.NonEmpty (NonEmpty ((:|)))
-import           Data.Map.Strict (Map)
+import           RON.Internal.Prelude
+
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust, maybeToList)
-import           Data.Semigroup (Semigroup, sconcat)
 
 import           RON.Data.Internal (Reducer)
-import           RON.Internal.Word (Word64)
 import           RON.Types (Chunk (Query, Raw, Value), Op (Op),
                             ReducedChunk (ReducedChunk), UUID (UUID), chunkBody,
                             chunkHeader, opEvent, opLocation, opObject,
@@ -25,15 +20,15 @@ import qualified RON.UUID as UUID
 
 type Origin = Word64
 
-type Time = Word64
-
 data VersionVector = VersionVector
-    {vvBaseEvent :: UUID, vvVersions :: Map Origin Time, vvLeftovers :: [Op]}
+    {vvBaseEvent :: UUID, vvVersions :: Map Origin Op, vvLeftovers :: [Op]}
 
 instance Semigroup VersionVector where
     VersionVector base1 vers1 left1 <> VersionVector base2 vers2 left2 =
         VersionVector
-            (min base1 base2) (Map.unionWith max vers1 vers2) (left1 ++ left2)
+            (min base1 base2)
+            (Map.unionWith (maxOn opTime) vers1 vers2)
+            (left1 ++ left2)
 
 vvType :: UUID
 vvType = fromJust $ UUID.mkName "vv"
@@ -49,16 +44,16 @@ vvReduce obj chunks = maybeToList reduced ++ leftovers
 
 fromChunk :: Chunk -> Maybe VersionVector
 fromChunk = \case
-    Raw Op{opEvent} -> Just VersionVector
+    Raw op@Op{opEvent} -> Just VersionVector
         { vvBaseEvent = opEvent
-        , vvVersions  = Map.singleton origin time
+        , vvVersions  = Map.singleton origin op
         , vvLeftovers = []
         }
       where
-        UUID time origin = opEvent
+        UUID _ origin = opEvent
     Value ReducedChunk{chunkHeader, chunkBody} -> Just VersionVector
         { vvBaseEvent = opLocation chunkHeader
-        , vvVersions  = Map.fromListWith max reduceables
+        , vvVersions  = Map.fromListWith (maxOn opTime) reduceables
         , vvLeftovers
         }
       where
@@ -66,9 +61,9 @@ fromChunk = \case
             [maybe (Left op) Right $ fromOp op | op <- chunkBody]
         fromOp op = do
             guard $ opType op == vvType && opObject op == opObject chunkHeader
-            pure (origin, time)
+            pure (origin, op)
           where
-            UUID time origin = opEvent op
+            UUID _ origin = opEvent op
     Query _ -> Nothing
 
 toChunk :: UUID -> VersionVector -> Chunk
@@ -81,18 +76,12 @@ toChunk obj VersionVector{vvBaseEvent, vvVersions, vvLeftovers} = Value
             , opLocation = chunkLocation
             , opPayload  = []
             }
-        , chunkBody = map vvToOp (Map.assocs vvVersions) ++ vvLeftovers
+        , chunkBody = Map.elems vvVersions ++ vvLeftovers
         }
   where
-    chunkEvent
-        | null events = UUID.zero
-        | otherwise   = maximum events
+    chunkEvent = maximumDef UUID.zero events
     chunkLocation = minimum $ vvBaseEvent : events
-    vvToOp (origin, time) = Op
-        { opType     = vvType
-        , opObject   = obj
-        , opEvent    = UUID time origin
-        , opLocation = UUID.zero
-        , opPayload  = []
-        }
-    events = [UUID time origin | (origin, time) <- Map.assocs vvVersions]
+    events = [UUID (opTime op) origin | (origin, op) <- Map.assocs vvVersions]
+
+opTime :: Op -> Word64
+opTime Op{opEvent = UUID time _} = time

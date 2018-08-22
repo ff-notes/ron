@@ -9,14 +9,9 @@ module RON.Data.LWW
     , lwwType
     ) where
 
-import           Control.Monad (guard)
-import           Data.Either (partitionEithers)
-import           Data.List.NonEmpty (NonEmpty ((:|)))
-import           Data.Map.Strict (Map)
+import           RON.Internal.Prelude
+
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust, maybeToList)
-import           Data.Semigroup (Semigroup, sconcat)
-import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal (Reducer)
 import           RON.Event (EpochEvent, decodeEvent, encodeEvent,
@@ -24,7 +19,7 @@ import           RON.Event (EpochEvent, decodeEvent, encodeEvent,
 import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
                             fromStateOps, initialize, toAtom, toStateChunk,
                             toStateOps, view)
-import           RON.Types (Atom, Chunk (..), Op (..), ReducedChunk (..), UUID)
+import           RON.Types (Chunk (..), Op (..), ReducedChunk (..), UUID)
 import qualified RON.UUID as UUID
 
 data LWW a = LWW
@@ -81,13 +76,13 @@ fromOp Op{opEvent, opPayload} = do
   where
     event = decodeEvent  opEvent
 
-data LwwPerField = LwwPerField
-    {lpfBaseEvent, lpfEvent :: !UUID, lpfPayload :: ![Atom]}
+-- | Time is 'opEvent lpfOp'. Value is 'opPayload lpfOp', actually the whole op.
+data LwwPerField = LwwPerField{lpfBaseEvent :: !UUID, lpfOp :: !Op}
 
 instance Semigroup LwwPerField where
     x <> y
-        | lpfEvent x < lpfEvent y = y
-        | otherwise               = x
+        | ((<) `on` (opEvent . lpfOp)) x y = y
+        | otherwise                        = x
 
 data LpfObject = LpfObject
     {loBaseEvent :: UUID, loFields :: Map UUID LwwPerField, loLeftovers :: [Op]}
@@ -110,16 +105,12 @@ lwwReduce obj chunks = maybeToList reduced ++ leftovers
 
 fromChunk :: Chunk -> Maybe LpfObject
 fromChunk = \case
-    Raw Op{opEvent, opLocation, opPayload} -> Just LpfObject
+    Raw op@Op{opEvent, opLocation} -> Just LpfObject
         { loBaseEvent = opEvent
         , loFields    =
             Map.singleton
                 opLocation
-                LwwPerField
-                    { lpfBaseEvent = opEvent
-                    , lpfEvent     = opEvent
-                    , lpfPayload   = opPayload
-                    }
+                LwwPerField{lpfBaseEvent = opEvent, lpfOp = op}
         , loLeftovers = []
         }
     Value ReducedChunk{chunkHeader, chunkBody} -> Just LpfObject
@@ -134,11 +125,7 @@ fromChunk = \case
             guard $ opType op == lwwType && opObject op == opObject chunkHeader
             pure
                 ( opLocation op
-                , LwwPerField
-                    { lpfBaseEvent = opLocation chunkHeader
-                    , lpfEvent     = opEvent   op
-                    , lpfPayload   = opPayload op
-                    }
+                , LwwPerField{lpfBaseEvent = opLocation chunkHeader, lpfOp = op}
                 )
     Query _ -> Nothing
 
@@ -151,16 +138,9 @@ toChunk obj LpfObject{loBaseEvent, loFields, loLeftovers} = Value ReducedChunk
         , opLocation = chunkLocation
         , opPayload  = []
         }
-    , chunkBody = map lwwToOp (Map.assocs loFields) ++ loLeftovers
+    , chunkBody = map lpfOp (Map.elems loFields) ++ loLeftovers
     }
   where
-    chunkEvent = maximumDef UUID.zero $ lpfEvent <$> loFields
+    chunkEvent = maximumDef UUID.zero $ opEvent . lpfOp <$> loFields
     chunkLocation =
         minimum $ loBaseEvent : map lpfBaseEvent (Map.elems loFields)
-    lwwToOp (opLocation, LwwPerField{lpfEvent, lpfPayload}) = Op
-        { opType    = lwwType
-        , opObject  = obj
-        , opEvent   = lpfEvent
-        , opLocation
-        , opPayload = lpfPayload
-        }
