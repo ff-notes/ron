@@ -15,4 +15,5 @@ TODO
 - [ ] migrate oleg's js to these tests
 - [ ] serialize torture tests from the jb java repo
 - [ ] add fuzz testing too
-
+- [ ] add negative tests (RON code that is NOT valid)
+  - [ ] with _recommended_ error messages
