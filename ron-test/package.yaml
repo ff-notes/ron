@@ -9,6 +9,7 @@ dependencies:
     - filepath
     - hedgehog
     - interpolate
+    - syb
     - tasty
     - tasty-hedgehog
     - tasty-th

@@ -1,12 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Monad (when)
+import           RON.Internal.Prelude
+
 import qualified Data.ByteString.Lazy as BSL
+import           Data.Generics (gcompare)
 -- import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Function (on)
 import           Data.List.Extra (dropEnd, isSuffixOf, sortOn)
-import           Data.Traversable (for)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, property, (===))
 import           Hedgehog.Internal.Property (failWith)
@@ -18,9 +19,7 @@ import           Test.Tasty.Hedgehog (testProperty)
 import           RON.Data (reduce)
 import qualified RON.Text as RT
 import           RON.Types (Chunk (Query, Raw, Value), RChunk (RChunk), UUID,
-                            chunkHeader, opObject)
-
-type ByteStringL = BSL.ByteString
+                            chunkBody, chunkHeader, opObject)
 
 main :: IO ()
 main = do
@@ -43,13 +42,20 @@ test :: TestName -> ByteStringL -> ByteStringL -> TestTree
 test name bytesIn bytesOut = testProperty name $ property $ do
     frameIn  <- evalEitherS $ RT.parseFrame bytesIn
     frameOut <- evalEitherS $ RT.parseFrame bytesOut
-    when (take 2 name `elem` ["01", "02", "03"]) $ do
+    when (take 2 name `notElem` ["05", "06"]) $ do
         let reduced = reduce frameIn
-        -- when (take 2 name == "03") $
+        -- when (take 2 name == "04") $
         --     ((===) `on` filter (not . BSL.null) . BSLC.lines)
         --         bytesOut
         --         (RT.serializeFrame reduced)
-        ((===) `on` sortOn chunkObject) frameOut reduced
+        ((===) `on` prepareFrame) frameOut reduced
+  where
+    prepareFrame =
+        map sortChunkOps . sortOn chunkObject . filter (not . isQuery)
+    sortChunkOps chunk = case chunk of
+        Value rc@RChunk{chunkBody} ->
+            Value rc{chunkBody = sortBy gcompare chunkBody}
+        _ -> chunk
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
@@ -58,6 +64,11 @@ evalEitherS = \case
 
 chunkObject :: Chunk -> UUID
 chunkObject = opObject . \case
-    Raw op                          -> op
+    Raw op                    -> op
     Value RChunk{chunkHeader} -> chunkHeader
     Query RChunk{chunkHeader} -> chunkHeader
+
+isQuery :: Chunk -> Bool
+isQuery = \case
+    Query _ -> True
+    _       -> False

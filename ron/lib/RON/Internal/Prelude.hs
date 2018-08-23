@@ -13,7 +13,7 @@ import           Data.Foldable as X
 import           Data.Function as X
 import           Data.Functor as X
 import           Data.Int as X (Int16, Int32, Int64, Int8)
-import           Data.List as X (foldl', sortOn)
+import           Data.List as X (foldl', sort, sortBy, sortOn)
 import           Data.List.NonEmpty as X (NonEmpty ((:|)))
 import           Data.Map.Strict as X (Map)
 import           Data.Maybe as X

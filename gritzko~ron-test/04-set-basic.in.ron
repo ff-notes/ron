@@ -7,15 +7,15 @@
 *set#test3@3:1;
 *set#test3@4:2;
 
-*set#test4@2!@=2@1=1
+*set#test4@2:0!@=2@1=1
 *set#test4@5!@=5@3:2,@4:1,
 
-*set#test5@2!@=2@1=1
-*set#test5@3!@:2,@4:1,
-*set#test5@5!@=5
+*set#test5@2:0!@=2@1=1
+*set#test5@4!@3:2,@4:1,
+*set#test5@5:0!@=5
 
 *set#test6@3!@:2,@4:1,
-*set#test6@5!@=5
+*set#test6@5:0!@=5
 *set#test6@2!@=2@1=1
 
 *set#mice@1YKDY54a01+1YKDY5!>mouse$1YKDY5

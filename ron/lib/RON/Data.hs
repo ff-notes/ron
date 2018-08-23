@@ -25,6 +25,7 @@ import           RON.Data.Internal (OpType, Reducer, Reducible, applyPatch,
                                     patchFromChunk, patchFromOp, patchToChunk,
                                     stateFromChunk, stateToChunk)
 import           RON.Data.LWW (LwwPerField)
+import           RON.Data.Set (Set)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (Op),
                             RChunk (RChunk), ROp (ROp), UUID, chunkBody,
@@ -33,7 +34,8 @@ import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (Op),
 import qualified RON.UUID as UUID
 
 reducers :: Map UUID Reducer
-reducers = Map.fromList [mkReducer @LwwPerField, mkReducer @VersionVector]
+reducers = Map.fromList
+    [mkReducer @LwwPerField, mkReducer @Set, mkReducer @VersionVector]
 
 reduce :: Frame -> Frame
 reduce chunks = values' ++ queries where
