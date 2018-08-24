@@ -14,13 +14,17 @@ import           RON.Internal.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducer, Reducible (..))
+import           RON.Data.Internal (OpType, Reducer, Reducible, applyOp,
+                                    initial, toStateChunk)
 import           RON.Event (EpochEvent, decodeEvent, encodeEvent,
                             fromEpochEvent, getEvent, toEpochEvent)
 import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
                             fromStateOps, initialize, toAtom, toStateChunk,
                             toStateOps, view)
-import           RON.Types (Chunk (..), Op (..), RChunk (..), ROp (..), UUID)
+import           RON.Types (Chunk (Query, Raw, Value), Op (Op), RChunk (RChunk),
+                            ROp (ROp), UUID, chunkBody, chunkHeader, opEvent,
+                            opLocation, opObject, opPayload, opType,
+                            ropLocation, ropEvent)
 import qualified RON.UUID as UUID
 
 --------------------------------------------------------------------------------

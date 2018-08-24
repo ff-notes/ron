@@ -7,6 +7,7 @@ import           Control.Applicative as X
 import           Control.Monad as X
 import           Data.ByteString as X (ByteString)
 import qualified Data.ByteString.Lazy as BSL
+import           Data.Coerce as X
 import           Data.Either as X
 import           Data.Function as X
 import           Data.Functor as X
