@@ -17,9 +17,8 @@ import           Test.Tasty.Hedgehog (testProperty)
 
 import           RON.Data (reduce)
 import qualified RON.Text as RT
-import           RON.Types (Chunk (Query, Raw, Value),
-                            ReducedChunk (ReducedChunk), UUID, chunkHeader,
-                            opObject)
+import           RON.Types (Chunk (Query, Raw, Value), RChunk (RChunk), UUID,
+                            chunkHeader, opObject)
 
 type ByteStringL = BSL.ByteString
 
@@ -60,5 +59,5 @@ evalEitherS = \case
 chunkObject :: Chunk -> UUID
 chunkObject = opObject . \case
     Raw op                          -> op
-    Value ReducedChunk{chunkHeader} -> chunkHeader
-    Query ReducedChunk{chunkHeader} -> chunkHeader
+    Value RChunk{chunkHeader} -> chunkHeader
+    Query RChunk{chunkHeader} -> chunkHeader

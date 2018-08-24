@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,14 +14,18 @@ import           RON.Internal.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducer)
+import           RON.Data.Internal (Reducer, Reducible (..))
 import           RON.Event (EpochEvent, decodeEvent, encodeEvent,
                             fromEpochEvent, getEvent, toEpochEvent)
 import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
                             fromStateOps, initialize, toAtom, toStateChunk,
                             toStateOps, view)
-import           RON.Types (Chunk (..), Op (..), ReducedChunk (..), UUID)
+import           RON.Types (Chunk (..), Op (..), RChunk (..), ROp (..), UUID)
 import qualified RON.UUID as UUID
+
+--------------------------------------------------------------------------------
+-- Typed -----------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 data LWW a = LWW
     { time  :: !EpochEvent
@@ -45,10 +50,10 @@ instance AsAtom a => Replicated (LWW a) where
         time <- getEvent
         pure LWW{time, value}
 
-    toStateOps this lww = pure [toOp this lww]
+    toStateOps this s = pure [toOp this s]
 
-    toStateChunk this lww =
-        pure $ ReducedChunk{chunkHeader = toOp this lww, chunkBody = []}
+    toStateChunk this s =
+        pure $ RChunk{chunkHeader = toOp this s, chunkBody = []}
 
     fromStateOps _ ownOps _ = case ownOps of
         []     -> Left "Empty state"
@@ -76,16 +81,20 @@ fromOp Op{opEvent, opPayload} = do
   where
     event = decodeEvent  opEvent
 
--- | Time is 'opEvent lpfOp'. Value is 'opPayload lpfOp', actually the whole op.
-data LwwPerField = LwwPerField{lpfBaseEvent :: !UUID, lpfOp :: !Op}
+--------------------------------------------------------------------------------
+-- Just function ---------------------------------------------------------------
+--------------------------------------------------------------------------------
 
-instance Semigroup LwwPerField where
+-- | Time is 'opEvent lpfOp'. Value is 'opPayload lpfOp', actually the whole op.
+data LPF = LPF{lpfBaseEvent :: !UUID, lpfOp :: !Op}
+
+instance Semigroup LPF where
     x <> y
         | ((<) `on` (opEvent . lpfOp)) x y = y
         | otherwise                        = x
 
 data LpfObject = LpfObject
-    {loBaseEvent :: UUID, loFields :: Map UUID LwwPerField, loLeftovers :: [Op]}
+    {loBaseEvent :: UUID, loFields :: Map UUID LPF, loLeftovers :: [Op]}
 
 instance Semigroup LpfObject where
     LpfObject base1 fields1 leftovers1 <> LpfObject base2 fields2 leftovers2 =
@@ -110,10 +119,10 @@ fromChunk = \case
         , loFields    =
             Map.singleton
                 opLocation
-                LwwPerField{lpfBaseEvent = opEvent, lpfOp = op}
+                LPF{lpfBaseEvent = opEvent, lpfOp = op}
         , loLeftovers = []
         }
-    Value ReducedChunk{chunkHeader, chunkBody} -> Just LpfObject
+    Value RChunk{chunkHeader, chunkBody} -> Just LpfObject
         { loBaseEvent = opLocation chunkHeader
         , loFields    = Map.fromListWith (<>) reduceables
         , loLeftovers
@@ -125,12 +134,12 @@ fromChunk = \case
             guard $ opType op == lwwType && opObject op == opObject chunkHeader
             pure
                 ( opLocation op
-                , LwwPerField{lpfBaseEvent = opLocation chunkHeader, lpfOp = op}
+                , LPF{lpfBaseEvent = opLocation chunkHeader, lpfOp = op}
                 )
     Query _ -> Nothing
 
 toChunk :: UUID -> LpfObject -> Chunk
-toChunk obj LpfObject{loBaseEvent, loFields, loLeftovers} = Value ReducedChunk
+toChunk obj LpfObject{loBaseEvent, loFields, loLeftovers} = Value RChunk
     { chunkHeader = Op
         { opType     = lwwType
         , opObject   = obj
@@ -144,3 +153,26 @@ toChunk obj LpfObject{loBaseEvent, loFields, loLeftovers} = Value ReducedChunk
     chunkEvent = maximumDef UUID.zero $ opEvent . lpfOp <$> loFields
     chunkLocation =
         minimum $ loBaseEvent : map lpfBaseEvent (Map.elems loFields)
+
+--------------------------------------------------------------------------------
+-- Several functions -----------------------------------------------------------
+--------------------------------------------------------------------------------
+
+lww :: ROp -> ROp -> ROp
+lww = maxOn ropEvent
+
+newtype LwwPerField = LwwPerField (Map UUID ROp)
+
+instance Semigroup LwwPerField where
+    LwwPerField fields1 <> LwwPerField fields2 =
+        LwwPerField $ Map.unionWith lww fields1 fields2
+
+instance Reducible LwwPerField where
+    type OpType LwwPerField = "lww"
+
+    initial = LwwPerField mempty
+
+    toStateChunk (LwwPerField fields) = Map.elems fields
+
+    applyOp rop@ROp{ropLocation} (LwwPerField fields) =
+        pure $ LwwPerField $ Map.insertWith lww ropLocation rop fields

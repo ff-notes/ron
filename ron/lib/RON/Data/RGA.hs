@@ -21,7 +21,7 @@ import           RON.Internal.Word (leastSignificant60)
 import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
                             fromStateOps, initialize, toAtom, toStateChunk,
                             toStateOps, view)
-import           RON.Types (Op (..), ReducedChunk (..), UUID)
+import           RON.Types (Op (..), RChunk (..), UUID)
 import qualified RON.UUID as UUID
 
 -- | 'EpochEvent' because we need comparable events
@@ -109,7 +109,7 @@ instance AsAtom a => Replicated (RGA a) where
 
     toStateChunk this rga = do
         chunkBody <- toStateOps this rga
-        pure ReducedChunk
+        pure RChunk
             { chunkHeader  = Op
                 { opObject   = this
                 , opEvent    = UUID.zero

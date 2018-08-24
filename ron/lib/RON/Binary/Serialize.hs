@@ -20,7 +20,7 @@ import           Data.ZigZag (zzEncode)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
-                            ReducedChunk (..), UUID (..))
+                            RChunk (..), UUID (..))
 
 serialize :: Frame -> Either String ByteStringL
 serialize frame = ("RON2" <>) <$> serializeBody
@@ -111,8 +111,8 @@ serializeAtom = \case
 serializeFloat :: Double -> ByteStringL
 serializeFloat = runPut . putDoublebe
 
-serializeReducedChunk :: Bool -> ReducedChunk -> Either String ByteStringL
-serializeReducedChunk isQuery ReducedChunk{..} = do
+serializeReducedChunk :: Bool -> RChunk -> Either String ByteStringL
+serializeReducedChunk isQuery RChunk{..} = do
     header <-
         serializeOp (if isQuery then DOpQueryHeader else DOpHeader) chunkHeader
     body <- mconcat <$> traverse (serializeOp DOpReduced) chunkBody

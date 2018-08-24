@@ -22,7 +22,7 @@ import           Data.Int (Int64)
 import qualified Data.Text as Text
 
 import           RON.Event (Clock, getEventUuid)
-import           RON.Types (Atom (..), Op (..), ReducedChunk (..), UUID)
+import           RON.Types (Atom (..), Op (..), RChunk (..), UUID)
 
 data Object a = Object
     { objectId    :: !UUID
@@ -45,7 +45,7 @@ class Replicated a where
     toStateChunk
         :: UUID  -- ^ 'opObject'
         -> a
-        -> Either String ReducedChunk
+        -> Either String RChunk
 
     fromStateOps
         :: UUID               -- ^ 'opObject'
@@ -78,18 +78,18 @@ instance AsAtom Int64 where
 objectToStateOps :: Replicated a => Object a -> Either String [Op]
 objectToStateOps Object{..} = toStateOps objectId objectValue
 
-objectToStateChunk :: Replicated a => Object a -> Either String ReducedChunk
+objectToStateChunk :: Replicated a => Object a -> Either String RChunk
 objectToStateChunk Object{..} = toStateChunk objectId objectValue
 
 initializeObject :: (Replicated a, Clock m) => View a -> m (Object a)
 initializeObject v = Object <$> getEventUuid <*> initialize v
 
-objectFromStateChunk :: Replicated a => ReducedChunk -> Either String (Object a)
+objectFromStateChunk :: Replicated a => RChunk -> Either String (Object a)
 objectFromStateChunk chunk = do
     objectValue <- fromStateChunk chunkHeader ownOps ops
     pure Object{objectId, objectValue}
   where
-    ReducedChunk{chunkHeader, chunkBody} = chunk
+    RChunk{chunkHeader, chunkBody} = chunk
     Op{opObject = objectId} = chunkHeader
     ops = HM.fromListWith (flip (++))
         [(opObject, [op]) | op @ Op{opObject} <- chunkBody]

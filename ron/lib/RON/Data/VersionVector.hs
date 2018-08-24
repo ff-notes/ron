@@ -12,10 +12,9 @@ import           RON.Internal.Prelude
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducer)
-import           RON.Types (Chunk (Query, Raw, Value), Op (Op),
-                            ReducedChunk (ReducedChunk), UUID (UUID), chunkBody,
-                            chunkHeader, opEvent, opLocation, opObject,
-                            opPayload, opType)
+import           RON.Types (Chunk (Query, Raw, Value), Op (Op), RChunk (RChunk),
+                            UUID (UUID), chunkBody, chunkHeader, opEvent,
+                            opLocation, opObject, opPayload, opType)
 import qualified RON.UUID as UUID
 
 type Origin = Word64
@@ -51,7 +50,7 @@ fromChunk = \case
         }
       where
         UUID _ origin = opEvent
-    Value ReducedChunk{chunkHeader, chunkBody} -> Just VersionVector
+    Value RChunk{chunkHeader, chunkBody} -> Just VersionVector
         { vvBaseEvent = opLocation chunkHeader
         , vvVersions  = Map.fromListWith (maxOn opTime) reduceables
         , vvLeftovers
@@ -68,7 +67,7 @@ fromChunk = \case
 
 toChunk :: UUID -> VersionVector -> Chunk
 toChunk obj VersionVector{vvBaseEvent, vvVersions, vvLeftovers} = Value
-    ReducedChunk
+    RChunk
         { chunkHeader = Op
             { opType     = vvType
             , opObject   = obj

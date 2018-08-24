@@ -35,7 +35,7 @@ import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
-                            ReducedChunk (..), UUID (..))
+                            RChunk (..), UUID (..))
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
@@ -74,7 +74,7 @@ rchunk prev = label "Chunk-reduced" $ do
     let lastOp = case chunkBody of
             [] -> chunkHeader
             _  -> last chunkBody
-    pure ((if isQuery then Query else Value) ReducedChunk{..}, lastOp)
+    pure ((if isQuery then Query else Value) RChunk{..}, lastOp)
   where
     reducedOps y = do
         skipSpace

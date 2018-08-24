@@ -25,7 +25,7 @@ import           Data.ZigZag (zzDecode64)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
-                            ReducedChunk (..), UUID (..))
+                            RChunk (..), UUID (..))
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -77,7 +77,7 @@ parseChunk size = label "Chunk" $ do
     (consumed0, (term, op)) <- withInputSize parseDescAndOp
     let parseReducedChunk chunkHeader isQuery = do
             chunkBody <- parseReducedOps $ fromIntegral size - consumed0
-            pure $ (if isQuery then Query else Value) ReducedChunk{..}
+            pure $ (if isQuery then Query else Value) RChunk{..}
     case term of
         THeader  -> parseReducedChunk op False
         TQuery   -> parseReducedChunk op True

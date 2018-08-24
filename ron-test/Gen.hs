@@ -14,8 +14,8 @@ import           RON.Event (Calendar (..), Event (..),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
                             ReplicaId (..))
 import           RON.Internal.Word (Word60, leastSignificant60, ls12, ls24, ls6)
-import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
-                            ReducedChunk (..), UUID (..))
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), RChunk (..),
+                            UUID (..))
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
@@ -33,8 +33,8 @@ chunk :: MonadGen gen => Int -> gen Chunk
 chunk size =
     choice [Raw <$> op size, Value <$> rchunk size, Query <$> rchunk size]
 
-rchunk :: MonadGen gen => Int -> gen ReducedChunk
-rchunk size = ReducedChunk
+rchunk :: MonadGen gen => Int -> gen RChunk
+rchunk size = RChunk
     <$> op size
     <*> list (Range.exponential 0 size) (op size)
 

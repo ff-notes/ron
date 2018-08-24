@@ -15,8 +15,8 @@ import           RON.Data.Internal (Reducer)
 import           RON.Data.LWW (lwwReduce, lwwType)
 import           RON.Data.VersionVector (vvReduce, vvType)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (Op),
-                            ReducedChunk (ReducedChunk), UUID, chunkHeader,
-                            opObject, opType)
+                            RChunk (RChunk), UUID, chunkHeader, opObject,
+                            opType)
 
 reducers :: Map UUID Reducer
 reducers = Map.fromList [(lwwType, lwwReduce), (vvType, vvReduce)]
@@ -26,8 +26,8 @@ reduce chunks = values' ++ queries
   where
     chunkObjectAndType = opObjectAndType . \case
         Raw                              op  -> op
-        Value ReducedChunk{chunkHeader = op} -> op
-        Query ReducedChunk{chunkHeader = op} -> op
+        Value RChunk{chunkHeader = op} -> op
+        Query RChunk{chunkHeader = op} -> op
     opObjectAndType Op{..} = (opObject, opType)
     (queries, values) = partition isQuery chunks
     values' =

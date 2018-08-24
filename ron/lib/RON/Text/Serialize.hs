@@ -26,8 +26,7 @@ import           Data.Traversable (for)
 import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
-import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
-                            ReducedChunk (..))
+import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), RChunk (..))
 import           RON.UUID (UUID (..), zero)
 
 serializeFrame :: Frame -> ByteStringL
@@ -46,8 +45,8 @@ serializeChunk = \case
     Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
-serializeReducedChunk :: Bool -> ReducedChunk -> State Op ByteStringL
-serializeReducedChunk isQuery ReducedChunk{chunkHeader, chunkBody} =
+serializeReducedChunk :: Bool -> RChunk -> State Op ByteStringL
+serializeReducedChunk isQuery RChunk{chunkHeader, chunkBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
     serializeHeader = do

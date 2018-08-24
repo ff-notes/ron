@@ -18,7 +18,7 @@ import           Data.Traversable (for)
 import           RON.Data.LWW (lwwType)
 import           RON.Typed (Object (..), Replicated, objectFromStateOps,
                             objectToStateOps)
-import           RON.Types (Atom (..), Op (..), ReducedChunk (..), UUID)
+import           RON.Types (Atom (..), Op (..), RChunk (..), UUID)
 import qualified RON.UUID as UUID
 
 data Field = forall a. Replicated a => Field Text (Object a)
@@ -26,10 +26,10 @@ data Field = forall a. Replicated a => Field Text (Object a)
 toStateOps :: Text -> [Field] -> UUID -> Either String [Op]
 toStateOps = undefined
 
-toStateChunk :: Text -> [Field] -> UUID -> Either String ReducedChunk
+toStateChunk :: Text -> [Field] -> UUID -> Either String RChunk
 toStateChunk structName fields this = do
     fieldOps <- for fields $ \(Field _ object) -> objectToStateOps object
-    pure $ ReducedChunk
+    pure $ RChunk
         { chunkHeader = Op
             { opType = lwwType
             , opObject = this
