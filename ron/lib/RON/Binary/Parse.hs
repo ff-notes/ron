@@ -24,8 +24,12 @@ import           Data.ZigZag (zzDecode64)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
-import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), OpTerm (..),
-                            RChunk (..), UUID (..))
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            Chunk (Query, Raw, Value), Frame, Op (Op),
+                            OpTerm (THeader, TQuery, TRaw, TReduced),
+                            RChunk (RChunk), ROp (ROp), UUID (UUID), chunkBody,
+                            chunkHeader, opObject, opR, opType, ropEvent,
+                            ropLocation, ropPayload)
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -116,12 +120,12 @@ parseDescAndOp = label "d+Op" $ do
 
 parseOp :: Parser Op
 parseOp = label "Op" $ do
-    opType     <- parseOpKey DUuidType
-    opObject   <- parseOpKey DUuidObject
-    opEvent    <- parseOpKey DUuidEvent
-    opLocation <- parseOpKey DUuidLocation
-    opPayload  <- parsePayload
-    pure Op{..}
+    opType      <- parseOpKey DUuidType
+    opObject    <- parseOpKey DUuidObject
+    ropEvent    <- parseOpKey DUuidEvent
+    ropLocation <- parseOpKey DUuidLocation
+    ropPayload  <- parsePayload
+    pure Op{opR = ROp{..}, ..}
 
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do

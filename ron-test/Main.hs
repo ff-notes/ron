@@ -54,7 +54,7 @@ import           RON.Typed (Object (..), Replicated, View, fromStateChunk,
 import           RON.Typed.LwwStruct (Field (..))
 import qualified RON.Typed.LwwStruct as LwwStruct
 import qualified RON.Typed.Text as TypedText
-import           RON.Types (Atom (..), Chunk (Raw), Op (..), UUID (..))
+import           RON.Types (Atom (..), Chunk (Raw), Op (..), UUID (..), ROp(..))
 import qualified RON.UUID as UUID
 
 import qualified Gen
@@ -206,18 +206,22 @@ prop_ron_json_example = let
         \     #(R            @`   :foo > (Q ;"
     output =
         [ Raw Op
-            { opType     = lwwType
-            , opObject   = bar
-            , opEvent    = bar
-            , opLocation = barName
-            , opPayload  = [AInteger 1]
+            { opType   = lwwType
+            , opObject = bar
+            , opR      = ROp
+                { ropEvent    = bar
+                , ropLocation = barName
+                , ropPayload  = [AInteger 1]
+                }
             }
         , Raw Op
-            { opType     = lwwType
-            , opObject   = foo
-            , opEvent    = foo
-            , opLocation = fooName
-            , opPayload  = [AUuid bar]
+            { opType   = lwwType
+            , opObject = foo
+            , opR      = ROp
+                { ropEvent    = foo
+                , ropLocation = fooName
+                , ropPayload  = [AUuid bar]
+                }
             }
         ]
     barName = fromJust $ UUID.mkName "bar"

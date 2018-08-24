@@ -21,7 +21,9 @@ import           RON.Internal.Word (leastSignificant60)
 import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
                             fromStateOps, initialize, toAtom, toStateChunk,
                             toStateOps, view)
-import           RON.Types (Op (..), RChunk (..), UUID)
+import           RON.Types (Op (Op), RChunk (RChunk), ROp (ROp), UUID,
+                            chunkBody, chunkHeader, opObject, opR, opType,
+                            ropEvent, ropLocation, ropPayload)
 import qualified RON.UUID as UUID
 
 -- | 'EpochEvent' because we need comparable events
@@ -100,22 +102,26 @@ instance AsAtom a => Replicated (RGA a) where
 
     toStateOps opObject (RGA rga) = for rga $ \(vid, a) ->
         pure Op
-            { opObject
-            , opEvent    = encodeEvent $ fromEpochEvent vid
-            , opLocation = UUID.zero
-            , opType     = rgaType
-            , opPayload  = toAtom <$> maybeToList a
+            { opType = rgaType
+            , opObject
+            , opR    = ROp
+                { ropEvent    = encodeEvent $ fromEpochEvent vid
+                , ropLocation = UUID.zero
+                , ropPayload  = toAtom <$> maybeToList a
+                }
             }
 
     toStateChunk this rga = do
         chunkBody <- toStateOps this rga
         pure RChunk
-            { chunkHeader  = Op
-                { opObject   = this
-                , opEvent    = UUID.zero
-                , opLocation = UUID.zero
-                , opType     = rgaType
-                , opPayload  = []
+            { chunkHeader = Op
+                { opType   = rgaType
+                , opObject = this
+                , opR      = ROp
+                    { ropEvent    = UUID.zero
+                    , ropLocation = UUID.zero
+                    , ropPayload  = []
+                    }
                 }
             , chunkBody
             }
@@ -125,15 +131,15 @@ instance AsAtom a => Replicated (RGA a) where
 
 rgaFromStateOps :: AsAtom a => [Op] -> Either String (RGA a)
 rgaFromStateOps ownOps =
-    fmap RGA . for ownOps $ \Op{opEvent, opPayload} -> do
-        let event = decodeEvent  opEvent
-        vid <- maybe (Left "Bad event")   Right $ toEpochEvent event
-        case opPayload of
+    fmap RGA . for ownOps $ \Op{opR = ROp{ropEvent, ropPayload}} -> do
+        let event = decodeEvent ropEvent
+        vid <- maybe (Left "Bad event") Right $ toEpochEvent event
+        case ropPayload of
             []  -> pure (vid, Nothing)
             [a] -> do
                 x <- maybe (Left "Bad atom") Right $ fromAtom a
                 pure (vid, Just x)
-            _   -> Left "Bad opPayload"
+            _   -> Left "Bad payload"
 
 newtype RgaText = RgaText RgaString
     deriving (Eq, Show)

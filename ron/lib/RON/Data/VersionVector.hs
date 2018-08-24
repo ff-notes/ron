@@ -17,8 +17,8 @@ import           RON.Data.Internal (OpType, Reducer, Reducible, applyOp,
                                     initial, toStateChunk)
 import           RON.Types (Chunk (Query, Raw, Value), Op (Op), RChunk (RChunk),
                             ROp (ROp), UUID (UUID), chunkBody, chunkHeader,
-                            opEvent, opLocation, opObject, opPayload, opType,
-                            ropEvent)
+                            opEvent, opLocation, opObject, opR, opType,
+                            ropEvent, ropLocation, ropPayload)
 import qualified RON.UUID as UUID
 
 type Origin = Word64
@@ -47,13 +47,13 @@ vvReduce obj chunks = maybeToList reduced ++ leftovers
 
 fromChunk :: Chunk -> Maybe VV
 fromChunk = \case
-    Raw op@Op{opEvent} -> Just VV
-        { vvBaseEvent = opEvent
+    Raw op@Op{opR = ROp{ropEvent}} -> Just VV
+        { vvBaseEvent = ropEvent
         , vvVersions  = Map.singleton origin op
         , vvLeftovers = []
         }
       where
-        UUID _ origin = opEvent
+        UUID _ origin = ropEvent
     Value RChunk{chunkHeader, chunkBody} -> Just VV
         { vvBaseEvent = opLocation chunkHeader
         , vvVersions  = Map.fromListWith (maxOn opTime) reduceables
@@ -75,9 +75,11 @@ toChunk obj VV{vvBaseEvent, vvVersions, vvLeftovers} = Value
         { chunkHeader = Op
             { opType     = vvType
             , opObject   = obj
-            , opEvent    = chunkEvent
-            , opLocation = chunkLocation
-            , opPayload  = []
+            , opR        = ROp
+                { ropEvent    = chunkEvent
+                , ropLocation = chunkLocation
+                , ropPayload  = []
+                }
             }
         , chunkBody = Map.elems vvVersions ++ vvLeftovers
         }
@@ -87,7 +89,7 @@ toChunk obj VV{vvBaseEvent, vvVersions, vvLeftovers} = Value
     events = [UUID (opTime op) origin | (origin, op) <- Map.assocs vvVersions]
 
 opTime :: Op -> Word64
-opTime Op{opEvent = UUID time _} = time
+opTime Op{opR = ROp{ropEvent = UUID time _}} = time
 
 --------------------------------------------------------------------------------
 

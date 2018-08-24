@@ -19,8 +19,11 @@ import           Data.ZigZag (zzEncode)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
-import           RON.Types (Atom (..), Chunk (..), Frame, Op (..),
-                            RChunk (..), UUID (..))
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            Chunk (Query, Raw, Value), Frame, Op (Op),
+                            RChunk (RChunk), ROp (ROp), UUID (UUID), chunkBody,
+                            chunkHeader, opObject, opR, opType, ropEvent,
+                            ropLocation, ropPayload)
 
 serialize :: Frame -> Either String ByteStringL
 serialize frame = ("RON2" <>) <$> serializeBody
@@ -55,12 +58,13 @@ serializeOp desc Op{..} = do
     keys <- sequenceA
         [ serializeUuidType     opType
         , serializeUuidObject   opObject
-        , serializeUuidEvent    opEvent
-        , serializeUuidLocation opLocation
+        , serializeUuidEvent    ropEvent
+        , serializeUuidLocation ropLocation
         ]
-    payload <- traverse serializeAtom opPayload
+    payload <- traverse serializeAtom ropPayload
     serializeWithDesc desc $ mconcat $ keys ++ payload
   where
+    ROp{..} = opR
     serializeUuidType     = serializeWithDesc DUuidType     . serializeUuid
     serializeUuidObject   = serializeWithDesc DUuidObject   . serializeUuid
     serializeUuidEvent    = serializeWithDesc DUuidEvent    . serializeUuid

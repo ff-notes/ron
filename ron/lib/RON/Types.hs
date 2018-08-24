@@ -8,12 +8,15 @@ module RON.Types
     , Chunk (..)
     , Frame
     , Op (..)
+    , opEvent
+    , opLocation
+    , opPayload
     , OpTerm (..)
     , RChunk (..)
     , ROp (..)
+    , UUID (..)
     , valueChunk
     , valueFrame
-    , UUID (..)
     ) where
 
 import           RON.Internal.Prelude
@@ -28,11 +31,9 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Eq, Generic, NFData, Show)
 
 data Op = Op
-    { opType     :: {-# UNPACK #-} UUID
-    , opObject   :: {-# UNPACK #-} UUID
-    , opEvent    :: {-# UNPACK #-} UUID
-    , opLocation :: {-# UNPACK #-} UUID
-    , opPayload  ::                [Atom]
+    { opType   :: {-# UNPACK #-} UUID
+    , opObject :: {-# UNPACK #-} UUID
+    , opR      :: {-# UNPACK #-} ROp
     }
     deriving (Eq, Generic, NFData, Show)
 
@@ -62,3 +63,12 @@ valueChunk chunkHeader chunkBody = Value RChunk{chunkHeader, chunkBody}
 
 valueFrame :: Op -> [Op] -> Frame
 valueFrame chunkHeader chunkBody = [valueChunk chunkHeader chunkBody]
+
+opEvent :: Op -> UUID
+opEvent = ropEvent . opR
+
+opLocation :: Op -> UUID
+opLocation = ropLocation . opR
+
+opPayload :: Op -> [Atom]
+opPayload = ropPayload . opR

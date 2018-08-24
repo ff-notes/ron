@@ -26,8 +26,11 @@ import           Data.Traversable (for)
 import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
-import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), RChunk (..))
-import           RON.UUID (UUID (..), zero)
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            Chunk (Query, Raw, Value), Frame, Op,
+                            RChunk (RChunk), chunkBody, chunkHeader, opEvent,
+                            opLocation, opObject, opPayload, opType)
+import           RON.UUID (UUID, zero)
 
 serializeFrame :: Frame -> ByteStringL
 serializeFrame chunks

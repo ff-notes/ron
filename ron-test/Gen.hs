@@ -15,7 +15,7 @@ import           RON.Event (Calendar (..), Event (..),
                             ReplicaId (..))
 import           RON.Internal.Word (Word60, leastSignificant60, ls12, ls24, ls6)
 import           RON.Types (Atom (..), Chunk (..), Frame, Op (..), RChunk (..),
-                            UUID (..))
+                            ROp (..), UUID (..))
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
@@ -27,7 +27,10 @@ uuid :: MonadGen gen => gen UUID
 uuid = UUID <$> word64' <*> word64'
 
 op :: MonadGen gen => Int -> gen Op
-op size = Op <$> uuid <*> uuid <*> uuid <*> uuid <*> payload size
+op size = Op <$> uuid <*> uuid <*> rop size
+
+rop :: MonadGen gen => Int -> gen ROp
+rop size = ROp <$> uuid <*> uuid <*> payload size
 
 chunk :: MonadGen gen => Int -> gen Chunk
 chunk size =

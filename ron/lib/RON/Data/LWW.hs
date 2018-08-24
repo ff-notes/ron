@@ -22,9 +22,9 @@ import           RON.Typed (AsAtom, Replicated, View, fromAtom, fromStateChunk,
                             fromStateOps, initialize, toAtom, toStateChunk,
                             toStateOps, view)
 import           RON.Types (Chunk (Query, Raw, Value), Op (Op), RChunk (RChunk),
-                            ROp (ROp), UUID, chunkBody, chunkHeader, opEvent,
-                            opLocation, opObject, opPayload, opType,
-                            ropLocation, ropEvent)
+                            ROp (ROp), UUID, chunkBody, chunkHeader, opLocation,
+                            opObject, opR, opType, ropEvent, ropLocation,
+                            ropPayload)
 import qualified RON.UUID as UUID
 
 --------------------------------------------------------------------------------
@@ -67,23 +67,25 @@ instance AsAtom a => Replicated (LWW a) where
 
 toOp :: (AsAtom a) => UUID -> LWW a -> Op
 toOp this LWW{time, value} = Op
-    { opType     = lwwType
-    , opObject   = this
-    , opEvent    = encodeEvent $ fromEpochEvent time
-    , opLocation = UUID.zero
-    , opPayload  = [toAtom value]
+    { opType   = lwwType
+    , opObject = this
+    , opR      = ROp
+        { ropEvent    = encodeEvent $ fromEpochEvent time
+        , ropLocation = UUID.zero
+        , ropPayload  = [toAtom value]
+        }
     }
 
 fromOp :: AsAtom a => Op -> Either String (LWW a)
-fromOp Op{opEvent, opPayload} = do
+fromOp Op{opR = ROp{ropEvent, ropPayload}} = do
     time <- maybe (Left "Bad event") pure $ toEpochEvent event
-    case opPayload of
+    case ropPayload of
         [a] -> do
             value <- maybe (Left "Bad atom") Right $ fromAtom a
             pure LWW{time, value}
-        _   -> Left "Bad opPayload"
+        _   -> Left "Bad payload"
   where
-    event = decodeEvent  opEvent
+    event = decodeEvent ropEvent
 
 --------------------------------------------------------------------------------
 -- Just function ---------------------------------------------------------------
@@ -94,7 +96,7 @@ data LPF = LPF{lpfBaseEvent :: !UUID, lpfOp :: !Op}
 
 instance Semigroup LPF where
     x <> y
-        | ((<) `on` (opEvent . lpfOp)) x y = y
+        | ((<) `on` (ropEvent . opR . lpfOp)) x y = y
         | otherwise                        = x
 
 data LpfObject = LpfObject
@@ -118,12 +120,12 @@ lwwReduce obj chunks = maybeToList reduced ++ leftovers
 
 fromChunk :: Chunk -> Maybe LpfObject
 fromChunk = \case
-    Raw op@Op{opEvent, opLocation} -> Just LpfObject
-        { loBaseEvent = opEvent
+    Raw op@Op{opR = ROp{ropEvent, ropLocation}} -> Just LpfObject
+        { loBaseEvent = ropEvent
         , loFields    =
             Map.singleton
-                opLocation
-                LPF{lpfBaseEvent = opEvent, lpfOp = op}
+                ropLocation
+                LPF{lpfBaseEvent = ropEvent, lpfOp = op}
         , loLeftovers = []
         }
     Value RChunk{chunkHeader, chunkBody} -> Just LpfObject
@@ -147,14 +149,16 @@ toChunk obj LpfObject{loBaseEvent, loFields, loLeftovers} = Value RChunk
     { chunkHeader = Op
         { opType     = lwwType
         , opObject   = obj
-        , opEvent    = chunkEvent
-        , opLocation = chunkLocation
-        , opPayload  = []
+        , opR        = ROp
+            { ropEvent    = chunkEvent
+            , ropLocation = chunkLocation
+            , ropPayload  = []
+            }
         }
     , chunkBody = map lpfOp (Map.elems loFields) ++ loLeftovers
     }
   where
-    chunkEvent = maximumDef UUID.zero $ opEvent . lpfOp <$> loFields
+    chunkEvent = maximumDef UUID.zero $ ropEvent . opR . lpfOp <$> loFields
     chunkLocation =
         minimum $ loBaseEvent : map lpfBaseEvent (Map.elems loFields)
 
