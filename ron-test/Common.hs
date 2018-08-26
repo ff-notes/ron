@@ -1,25 +1,29 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 import           RON.Internal.Prelude
 
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Generics (gcompare)
--- import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.List.Extra (dropEnd, isSuffixOf, sortOn)
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           Hedgehog (MonadTest, property, (===))
-import           Hedgehog.Internal.Property (failWith)
+import           Data.List.Extra (dropEnd, isPrefixOf, isSuffixOf)
+import qualified Data.Map.Merge.Strict as Map
+import qualified Data.Map.Strict as Map
+import           Hedgehog (Property, property, (===))
 import           System.Directory (listDirectory)
 import           System.FilePath ((</>))
-import           Test.Tasty (TestName, TestTree, defaultMain, testGroup)
+import           Test.Tasty (TestTree, defaultMain, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.HUnit (assertFailure, testCase)
 
 import           RON.Data (reduce)
 import qualified RON.Text as RT
-import           RON.Types (Chunk (Query, Raw, Value), RChunk (RChunk), UUID,
-                            chunkBody, chunkHeader, opObject)
+import qualified RON.Text.Serialize as RT
+import           RON.Types (Chunk (Query, Raw, Value), Op (Op), RChunk (RChunk),
+                            UUID, chunkBody, chunkHeader, opObject, opType)
+import qualified RON.UUID as UUID
 
 main :: IO ()
 main = do
@@ -32,35 +36,46 @@ loadCases = do
     for files $ \fileIn -> do
         let name = dropEnd 7 fileIn
             fileOut = name <> ".out.ron"
-        bytesIn  <- BSL.readFile $ commonTestDir </> fileIn
-        bytesOut <- BSL.readFile $ commonTestDir </> fileOut
-        pure $ test name bytesIn bytesOut
+        chunksIn0  <- readChunks $ commonTestDir </> fileIn
+        chunksOut0 <- readChunks $ commonTestDir </> fileOut
+        pure $ testGroup name $
+            case collectLefts (chunksIn0, chunksOut0) of
+                Left errs ->
+                    [testCase part $ assertFailure err | (part, err) <- errs]
+                Right (chunksIn1, chunksOut1) ->
+                    [ testProperty (BSLC.unpack $ RT.serializeUuid obj) $
+                        reduceAndCompareChunks chunksIn2 chunksOut2
+                    | (obj, (chunksIn2, chunksOut2)) <-
+                        Map.assocs $ zipDef [] [] chunksIn1 chunksOut1
+                    , not $ "06" `isPrefixOf` name
+                    ]
   where
     commonTestDir = "../gritzko~ron-test"
+    readChunks file = do
+        bytes <- BSL.readFile file
+        let eFrame = RT.parseFrame bytes
+        pure $ groupObjects . filter isRelevant <$> eFrame
+    zipDef a b = Map.merge
+        (Map.mapMissing $ const (,b))
+        (Map.mapMissing $ const (a,))
+        (Map.zipWithMatched $ const (,))
 
-test :: TestName -> ByteStringL -> ByteStringL -> TestTree
-test name bytesIn bytesOut = testProperty name $ property $ do
-    frameIn  <- evalEitherS $ RT.parseFrame bytesIn
-    frameOut <- evalEitherS $ RT.parseFrame bytesOut
-    when (take 2 name `notElem` ["05", "06"]) $ do
-        let reduced = reduce frameIn
-        -- when (take 2 name == "04") $
-        --     ((===) `on` filter (not . BSL.null) . BSLC.lines)
-        --         bytesOut
-        --         (RT.serializeFrame reduced)
-        ((===) `on` prepareFrame) frameOut reduced
-  where
-    prepareFrame =
-        map sortChunkOps . sortOn chunkObject . filter (not . isQuery)
-    sortChunkOps chunk = case chunk of
-        Value rc@RChunk{chunkBody} ->
-            Value rc{chunkBody = sortBy gcompare chunkBody}
-        _ -> chunk
+groupObjects :: [Chunk] -> Map UUID [Chunk]
+groupObjects chunks =
+    Map.fromListWith (++) [(chunkObject chunk, [chunk])| chunk <- chunks]
 
-evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
-evalEitherS = \case
-    Left  x -> withFrozenCallStack $ failWith Nothing x
-    Right a -> pure a
+reduceAndCompareChunks :: [Chunk] -> [Chunk] -> Property
+reduceAndCompareChunks chunksIn chunksOut =
+    property $ ((===) `on` prepareChunks) chunksOut (reduce chunksIn)
+
+prepareChunks :: [Chunk] -> [Chunk]
+prepareChunks = map sortChunkOps . sortBy gcompare
+
+sortChunkOps :: Chunk -> Chunk
+sortChunkOps chunk = case chunk of
+    Value rc@RChunk{chunkBody} ->
+        Value rc{chunkBody = sortBy gcompare chunkBody}
+    _ -> chunk
 
 chunkObject :: Chunk -> UUID
 chunkObject = opObject . \case
@@ -68,7 +83,16 @@ chunkObject = opObject . \case
     Value RChunk{chunkHeader} -> chunkHeader
     Query RChunk{chunkHeader} -> chunkHeader
 
-isQuery :: Chunk -> Bool
-isQuery = \case
-    Query _ -> True
-    _       -> False
+isRelevant :: Chunk -> Bool
+isRelevant = \case
+    Query _ -> False
+    Value RChunk{chunkHeader = Op{opType}} ->
+        opType /= fromJust (UUID.mkName "~")
+    _       -> True
+
+collectLefts :: (Either a b, Either a b) -> Either [(String, a)] (b, b)
+collectLefts = \case
+    (Left a1,  Left a2 ) -> Left [("in",  a1), ("out", a2)]
+    (Left a,   Right _ ) -> Left [("in",  a)]
+    (Right _,  Left a  ) -> Left [("out", a)]
+    (Right b1, Right b2) -> Right (b1, b2)

@@ -4,6 +4,7 @@ dependencies:
   # global
     - base
     - bytestring
+    - containers
     - directory
     - extra
     - filepath
@@ -12,6 +13,7 @@ dependencies:
     - syb
     - tasty
     - tasty-hedgehog
+    - tasty-hunit
     - tasty-th
     - text
     - time

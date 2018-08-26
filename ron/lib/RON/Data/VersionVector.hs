@@ -10,9 +10,8 @@ import           RON.Internal.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (OpType, Reducible, stateFromChunk,
-                                    stateToChunk)
-import           RON.Types (ROp (ROp), UUID (UUID), ropEvent)
+import           RON.Data.Internal (Reducible (..), mkReducedState)
+import           RON.Types (ROp (..), UUID (UUID))
 
 type Origin = Word64
 
@@ -37,7 +36,9 @@ instance Monoid VersionVector where
 instance Reducible VersionVector where
     type OpType VersionVector = "vv"
 
-    stateToChunk (VersionVector vv) = Map.elems vv
+    fromRawOp = undefined
 
-    stateFromChunk ops =
+    fromChunk _ ops =
         VersionVector $ Map.fromListWith latter [(ropOrigin op, op) | op <- ops]
+
+    toChunks (VersionVector vv) = mkReducedState $ Map.elems vv

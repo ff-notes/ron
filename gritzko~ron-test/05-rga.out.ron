@@ -35,14 +35,14 @@
 
 *~ 'two diverged states'?
 *~ 'a merged state'!
-*rga#text_sS@3:0!
+*rga#text_sS@3000000001:0!
 	@1 'A' ,
 	@3 'C' ,
 	@2 'B' ,
 
 *~ 'state + state with a new rm'?
 *~ 'rm applied'!
-*rga#text_sz@4:0!
+*rga#text_sz@4000000001:0!
 	@1 :4 'A' ,
 	@3 :0 'C' ,
 	@2 'B' ,
@@ -73,7 +73,7 @@
 
 *~ 'two states diverged in a convoluted way'?
 *~ 'merged'!
-*rga#text_sw@4:0!
+*rga#text_sw@5:0!
 	@1 :4a 'A' ,
 	@3 :0 'C' ,
 	@4 'D' ,
@@ -81,7 +81,7 @@
 
 *~ 'even more convoluted divergence'?
 *~ 'merged'!
-*rga#text_SW@7:0!
+*rga#text_SW@7000000001:0!
 	@1 :4a 'A' ,
 	@6 :0 'F' ,
 	@5 'E' ,
@@ -98,17 +98,16 @@
 
 *~ 'rm eclipsed by a concurrent rm'?
 *~ 'skipped'!
-*rga#text_dd@4000000001:0!
+*rga#text_dd@4:0!
 	@1 'A' ,
 	@2 :4 'B' ,
 
 *~'reorders: unapplicable remove'?
 *~ 'rm that is stashed in a separate rm frame'!
-*rga#text_s~@4:0!
+*rga#text_s~@2:0!
 	@1 'A' ,
 	@2 'B' ,
-*rga#text_s~@4:0-0!
-	:3 ,
+*rga#text_s~@4:3;
 
 *~ 'for a stashed remove, the target arrives'?
 *~ 'target removed'!
@@ -119,7 +118,7 @@
 
 *~ 'unapplicable patch'?
 *~ 'the patch goes into a separate frame'!
-*rga#text_s~p@5:0!
+*rga#text_s~p@2:0!
 	@1 'A' ,
 	@2 'B' ,
 *rga#text_s~p@5:3!
@@ -137,14 +136,13 @@
 
 *~ 'an unappliecable patch with its own rm stash'?
 *~ 'all separate frames'!
-*rga#text_~r@6:0!
+*rga#text_~r@2:0!
 	@1 'A' ,
 	@2 'B' ,
-*rga#text_~r@6:3!
+*rga#text_~r@5:3!
 	@4 :0 'D' ,
 	@5 'E' ,
-*rga#text_~r@6:0-0!
-	:3 ,
+*rga#text_~r@6:3;
 
 *~ 'unapplied frames become applicable'?
 *~ 'all applied'!
@@ -154,4 +152,3 @@
 	@3 :6 'C' ,
 	@4 :0 'D' ,
 	@5 'E' ,
-

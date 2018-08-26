@@ -1,17 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.Set (Set) where
 
-import           RON.Internal.Prelude
+import           RON.Internal.Prelude hiding (Set)
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (OpType, Reducible, stateFromChunk,
-                                    stateToChunk)
-import           RON.Types (ROp (ROp), UUID, ropEvent, ropLocation, ropPayload)
+import           RON.Data.Internal (Reducible (..), mkReducedPatch,
+                                    mkReducedState)
+import           RON.Types (ROp (..), UUID)
+import           RON.UUID (pattern Zero)
 
 data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: ROp}
     deriving (Eq)
@@ -25,19 +27,33 @@ itemFromOp op@ROp{ropEvent, ropLocation, ropPayload} = (itemId, item) where
     itemId = if itemIsAlive then ropEvent else ropLocation
     item = SetItem{itemIsAlive, itemOriginalOp = op}
 
-newtype Set = Set (Map UUID SetItem)
+data Set = Set{setRef :: Maybe UUID, setItems :: Map UUID SetItem}
     deriving (Eq)
 
 instance Semigroup Set where
-    Set items1 <> Set items2 = Set $ Map.unionWith (<>) items1 items2
+    Set ref1 items1 <> Set ref2 items2 =
+        Set (min ref1 ref2) (Map.unionWith (<>) items1 items2)
 
 instance Monoid Set where
-    mempty = Set mempty
+    mempty = Set Nothing mempty
 
 instance Reducible Set where
     type OpType Set = "set"
 
-    stateFromChunk = Set . Map.fromListWith (<>) . map itemFromOp
+    fromRawOp op@ROp{ropEvent} = Set
+        { setRef = Just ropEvent
+        , setItems = uncurry Map.singleton $ itemFromOp op
+        }
 
-    stateToChunk (Set items) =
-        sortOn ropEvent $ map itemOriginalOp $ Map.elems items
+    fromChunk ref ops = Set
+        { setRef = Just ref
+        , setItems = Map.fromListWith (<>) $ map itemFromOp ops
+        }
+
+    toChunks Set{setRef, setItems} = case fromMaybe Zero setRef of
+        Zero -> mkReducedState     ops
+        ref  -> mkReducedPatch ref ops
+      where
+        ops = sortOn ropEvent . map itemOriginalOp $ Map.elems setItems
+
+    sameState = (==) `on` setItems

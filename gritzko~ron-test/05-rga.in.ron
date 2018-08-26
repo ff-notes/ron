@@ -62,30 +62,29 @@
 		*rga#text_dd@4:0!@1'A'@2:4'B'
 		*rga#text_dd@3:2;
 
-*~'reorders: unapplicable remove'?
+*~'reorders: inapplicable remove'?
 		*rga#text_s~@2:0!@1'A'@2'B'
 		*rga#text_s~@4:3;
 
 *~ 'for a stashed remove, the target arrives'?
-		*rga#text_~a@4:0!@1'A'@2'B' 
+		*rga#text_~a@4:0!@1'A'@2'B'
 		*rga#text_~a@4:4-!:3,
 		*rga#text_~a@3:2'C';
 
-*~ 'unapplicable patch'?
+*~ 'inapplicable patch'?
 		*rga#text_s~p@2:0!@1'A'@2'B'
 		*rga#text_s~p@5:3!@4:0'D'@5'E'
 
 *~ 'the stashed patch becomes applicable (the missing link arrives)'?
-		*rga#text_~b@2:0!@1'A'@2'B' 
+		*rga#text_~b@2:0!@1'A'@2'B'
 		*rga#text_~b@5:3!@4:0'D'@5'E'
 		*rga#text_~b@3:2'C';
 
-*~ 'an unappliecable patch with its own rm stash'?
+*~ 'an inapplicable patch with its own rm stash'?
 		*rga#text_~r@2:0!@1'A'@2'B'
-		*rga#text_~r@6:3!@4:0'D'@5'E'
-        	*rga#text_~r@6:6-!:3,
+		*rga#text_~r@5:3!@4:0'D'@5'E'
+		*rga#text_~r@6:6-!:3,
 
 *~ 'unapplied frames become applicable'?
 		*rga#text_~~@6:0!@1'A'@2'B' *#@6:3!@4:0'D'@5'E' *#@6:6-!:3,
 		*rga#text_~~@3:2!@'C'
-

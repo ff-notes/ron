@@ -2,41 +2,72 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.Internal where
 
+import           RON.Internal.Prelude
+
 import           GHC.TypeLits (KnownSymbol, Symbol)
-import           RON.Types (Chunk, ROp, UUID)
+
+import           RON.Types (Chunk, ROp (..), UUID)
+import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
-type Reducer = UUID -> [Chunk] -> [Chunk]
+type Reducer = UUID -> NonEmpty Chunk -> [Chunk]
 
 -- TODO(2018-08-24, cblp) Semilattice a, Semilattice (Patch a)
-class (Monoid a, KnownSymbol (OpType a), Semigroup (Patch a)) => Reducible a
-    where
+class (Monoid a, KnownSymbol (OpType a)) => Reducible a where
 
     type OpType a :: Symbol
 
-    type Patch a
-    type Patch a = a
+    fromRawOp :: ROp -> a
 
-    stateFromChunk :: [ROp] -> a
+    fromChunk
+        :: UUID  -- ^ ref event, 0 for state chunks
+        -> [ROp]
+        -> a
 
-    stateToChunk :: a -> [ROp]
+    toChunks :: a -> Reduced
 
-    patchFromOp :: ROp -> Patch a
-    default patchFromOp :: Patch a ~ a => ROp -> Patch a
-    patchFromOp rop = stateFromChunk [rop]
+    sameState :: a -> a -> Bool
+    default sameState :: Eq a => a -> a -> Bool
+    sameState = (==)
 
-    patchFromChunk :: [ROp] -> Patch a
-    default patchFromChunk :: Patch a ~ a => [ROp] -> Patch a
-    patchFromChunk = stateFromChunk
+data Reduced = Reduced
+    { reducedStateVersion :: UUID
+    , reducedStateBody    :: [ROp]
+    , reducedPatches      :: [RChunk']
+    , reducedUnappliedOps :: [ROp]
+    }
 
-    patchToChunk :: Patch a -> [ROp]
-    default patchToChunk :: Patch a ~ a => Patch a -> [ROp]
-    patchToChunk = stateToChunk
+data RChunk' = RChunk'
+    { rchunk'Version :: UUID
+    , rchunk'Ref     :: UUID
+    , rchunk'Body    :: [ROp]
+    }
 
-    applyPatch :: a -> Patch a -> a
-    default applyPatch :: Patch a ~ a => a -> Patch a -> a
-    applyPatch = (<>)
+mkReducedState :: [ROp] -> Reduced
+mkReducedState reducedStateBody = Reduced
+    { reducedStateVersion = ropsEvent reducedStateBody
+    , reducedStateBody
+    , reducedPatches = []
+    , reducedUnappliedOps = []
+    }
+
+mkReducedPatch :: UUID -> [ROp] -> Reduced
+mkReducedPatch ref ops = Reduced
+    { reducedStateVersion = zero
+    , reducedStateBody = []
+    , reducedPatches = [mkRChunk' ref ops]
+    , reducedUnappliedOps = []
+    }
+
+ropsEvent :: [ROp] -> UUID
+ropsEvent = maximumDef zero . map ropEvent
+
+mkRChunk' :: UUID -> [ROp] -> RChunk'
+mkRChunk' ref rchunk'Body = RChunk'
+    {rchunk'Version = ropsEvent rchunk'Body, rchunk'Ref = ref, rchunk'Body}

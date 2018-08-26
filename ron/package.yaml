@@ -21,9 +21,11 @@ library:
     - mtl
     - safe
     - stringsearch
+    - syb
     - text
     - time
     - unordered-containers
+    - vector
   exposed-modules:
     - RON.Base64
     - RON.Binary
@@ -45,9 +47,6 @@ library:
     - RON.Text.Parse
     - RON.Text.Serialize
     - RON.Text.Serialize.UUID
-    - RON.Typed
-    - RON.Typed.LwwStruct
-    - RON.Typed.Text
     - RON.Types
     - RON.UUID
   other-modules:

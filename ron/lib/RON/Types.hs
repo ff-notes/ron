@@ -31,14 +31,14 @@ import           GHC.Generics (Generic)
 import           RON.UUID (UUID (..))
 
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
-    deriving (Data, Eq, Generic, NFData, Show)
+    deriving (Data, Eq, Generic, Hashable, NFData, Show)
 
 data ROp = ROp
     { ropEvent    :: UUID
     , ropLocation :: UUID
     , ropPayload  :: [Atom]
     }
-    deriving (Data, Eq, Generic, NFData)
+    deriving (Data, Eq, Generic, Hashable, NFData, Show)
 
 data Op = Op
     { opType   :: UUID
@@ -66,10 +66,10 @@ data RChunk = RChunk
     { chunkHeader :: Op
     , chunkBody   :: [Op]
     }
-    deriving (Eq, Generic, NFData, Show)
+    deriving (Data, Eq, Generic, NFData, Show)
 
 data Chunk = Raw Op | Value RChunk | Query RChunk
-    deriving (Eq, Generic, NFData, Show)
+    deriving (Data, Eq, Generic, NFData, Show)
 
 type Frame = [Chunk]
 
