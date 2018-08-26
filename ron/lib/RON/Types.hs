@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StrictData #-}
 
@@ -30,19 +31,34 @@ import           RON.UUID (UUID (..))
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Eq, Generic, NFData, Show)
 
-data Op = Op
-    { opType   :: {-# UNPACK #-} UUID
-    , opObject :: {-# UNPACK #-} UUID
-    , opR      :: {-# UNPACK #-} ROp
-    }
-    deriving (Eq, Generic, NFData, Show)
-
 data ROp = ROp
     { ropEvent    :: {-# UNPACK #-} UUID
     , ropLocation :: {-# UNPACK #-} UUID
     , ropPayload  ::                [Atom]
     }
     deriving (Eq, Generic, NFData, Show)
+
+data Op = Op
+    { opType   :: {-# UNPACK #-} UUID
+    , opObject :: {-# UNPACK #-} UUID
+    , opR      :: {-# UNPACK #-} ROp
+    }
+    deriving (Eq, Generic, NFData)
+
+instance Show Op where
+    show Op{opType, opObject, opR = ROp{ropEvent, ropLocation, ropPayload}} =
+        unwords
+            [ "Op"
+            , insert '*' $ show opType
+            , insert '#' $ show opObject
+            , insert '@' $ show ropEvent
+            , insert ':' $ show ropLocation
+            , show ropPayload
+            ]
+      where
+        insert k = \case
+            []   -> [k]
+            c:cs -> c:k:cs
 
 data RChunk = RChunk
     { chunkHeader :: Op

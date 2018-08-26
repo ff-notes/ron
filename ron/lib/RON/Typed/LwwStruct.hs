@@ -1,6 +1,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RON.Typed.LwwStruct
     ( Field (..)
@@ -10,12 +11,13 @@ module RON.Typed.LwwStruct
     , toStateOps
     ) where
 
+import           RON.Internal.Prelude
+
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text)
 import           Data.Traversable (for)
 
-import           RON.Data.LWW (lwwType)
 import           RON.Typed (Object (Object), Replicated, objectFromStateOps,
                             objectId, objectToStateOps)
 import           RON.Types (Atom (AString, AUuid), Op (Op), RChunk (RChunk),
@@ -33,7 +35,7 @@ toStateChunk structName fields this = do
     fieldOps <- for fields $ \(Field _ object) -> objectToStateOps object
     pure $ RChunk
         { chunkHeader = Op
-            { opType   = lwwType
+            { opType   = fromJust $ UUID.mkName "lww"
             , opObject = this
             , opR      = ROp
                 { ropEvent    = this

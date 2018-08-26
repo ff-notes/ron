@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Foldable (for_)
 import           Data.Int (Int64)
 import           Data.Maybe (fromJust)
-import           Data.String.Interpolate.IsString (i)
+-- import           Data.String.Interpolate.IsString (i)
 import           Data.Text (Text)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
@@ -37,24 +37,15 @@ import qualified RON.Base64 as Base64
 import qualified RON.Binary as RB
 import qualified RON.Binary.Parse as RB
 import qualified RON.Binary.Serialize as RB
-import           RON.Data.LWW (LWW (..), lwwType)
-import           RON.Data.RGA (RGA (..), RgaText (..))
-import           RON.Event (CalendarEvent (..), EpochEvent (..),
-                            Naming (ApplicationSpecific, TrieForked),
+import           RON.Event (CalendarEvent (..), Naming (TrieForked),
                             ReplicaId (..), decodeEvent, encodeEvent,
                             fromCalendarEvent, mkCalendarDateTime)
-import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
-import           RON.Internal.Word (ls60)
+-- import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Typed (Object (..), Replicated, View, fromStateChunk,
-                            fromStateOps, initialize, initializeObject,
-                            toStateChunk, toStateOps, view)
-import           RON.Typed.LwwStruct (Field (..))
-import qualified RON.Typed.LwwStruct as LwwStruct
-import qualified RON.Typed.Text as TypedText
-import           RON.Types (Atom (..), Chunk (Raw), Op (..), UUID (..), ROp(..))
+import           RON.Types (Atom (..), Chunk (Raw), Op (..), ROp (..),
+                            UUID (..))
 import qualified RON.UUID as UUID
 
 import qualified Gen
@@ -242,68 +233,39 @@ prop_ron_json_example = let
 data TestStructView = TestStructView{tsv_int :: Int64, tsv_text :: Text}
     deriving (Eq, Show)
 
-data TestStruct = TestStruct
-    {ts_int :: Object (LWW Int64), ts_text :: Object RgaText}
-    deriving (Eq, Show)
+-- data TestStruct = TestStruct
+--     {ts_int :: Object (LWW Int64), ts_text :: Object RgaText}
+--     deriving (Eq, Show)
 
-instance Replicated TestStruct where
-    type View TestStruct = TestStructView
+-- testStruct0 = TestStructView{tsv_int = 275, tsv_text = "275"}
 
-    initialize TestStructView{..} = do
-        ts_int  <- initializeObject tsv_int
-        ts_text <- initializeObject tsv_text
-        pure TestStruct{..}
+-- testStruct1 = object 0x9f $ TestStruct
+--     { ts_int = object 0x177 $ LWW (event 567) 275
+--     , ts_text = object 0x2b7 $ RgaText $ RGA
+--         [(event 733, Just '2'), (event 734, Just '7'), (event 735, Just '5')]
+--     }
+--   where
+--     event t = EpochEvent (ls60 t) replica
+--     object o = Object (UUID (0xb000000000000000 + o) 0x2d83d30067100000)
 
-    view TestStruct{..} = TestStructView
-        { tsv_int  = view $ objectValue ts_int
-        , tsv_text = view $ objectValue ts_text
-        }
+-- replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
-    toStateOps this TestStruct{ts_int, ts_text} =
-        LwwStruct.toStateOps
-            "TestStruct" [Field "int" ts_int, Field "text" ts_text] this
+-- testStruct2 = [i|
+--     *lww #B/000000002V+r3pl1c4 @`    'TestStruct' 'int' >]5s 'text' >]As !
+--          #]5s                  @]8s  =275 ,
+--     *rga #]As                  @]BT  '2' ,
+--                                @)U   '7' ,
+--                                @)V   '5' ,
+--     .
+--     |]
 
-    toStateChunk this TestStruct{ts_int, ts_text} =
-        LwwStruct.toStateChunk
-            "TestStruct" [Field "int" ts_int, Field "text" ts_text] this
+-- prop_lwwStruct = property $ do
+--     ts1 <- evalEitherS $ runNetworkSim $ runReplicaSim replica $
+--         initializeObject @TestStruct testStruct0
+--     testStruct1 === ts1
+--     ts2 <- evalEitherS $ TypedText.serialize ts1
+--     BSL.words testStruct2 === BSL.words ts2
+--     ts3 <- evalEitherS $ TypedText.parse ts2
+--     ts1 === ts3
 
-    fromStateOps this _ body = do
-        ts_int  <- LwwStruct.fromStateOps "int"  this body
-        ts_text <- LwwStruct.fromStateOps "text" this body
-        pure TestStruct{..}
-
-    fromStateChunk header _ body = do
-        ts_int  <- LwwStruct.fromStateChunk "int"  header body
-        ts_text <- LwwStruct.fromStateChunk "text" header body
-        pure TestStruct{..}
-
-testStruct0 = TestStructView{tsv_int = 275, tsv_text = "275"}
-
-testStruct1 = object 0x9f $ TestStruct
-    { ts_int = object 0x177 $ LWW (event 567) 275
-    , ts_text = object 0x2b7 $ RgaText $ RGA
-        [(event 733, Just '2'), (event 734, Just '7'), (event 735, Just '5')]
-    }
-  where
-    event t = EpochEvent (ls60 t) replica
-    object o = Object (UUID (0xb000000000000000 + o) 0x2d83d30067100000)
-
-replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
-
-testStruct2 = [i|
-    *lww #B/000000002V+r3pl1c4 @`    'TestStruct' 'int' >]5s 'text' >]As !
-         #]5s                  @]8s  =275 ,
-    *rga #]As                  @]BT  '2' ,
-                               @)U   '7' ,
-                               @)V   '5' ,
-    .
-    |]
-
-prop_lwwStruct = property $ do
-    ts1 <- evalEitherS $ runNetworkSim $ runReplicaSim replica $
-        initializeObject @TestStruct testStruct0
-    testStruct1 === ts1
-    ts2 <- evalEitherS $ TypedText.serialize ts1
-    BSL.words testStruct2 === BSL.words ts2
-    ts3 <- evalEitherS $ TypedText.parse ts2
-    ts1 === ts3
+lwwType = fromJust $ UUID.mkName "lww"

@@ -1,35 +1,42 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.Internal where
 
-import           RON.Internal.Prelude
-
-import           GHC.TypeLits (Symbol)
+import           GHC.TypeLits (KnownSymbol, Symbol)
 import           RON.Types (Chunk, ROp, UUID)
 
 -- | Reduce all chunks of specific type and object in the frame
 type Reducer = UUID -> [Chunk] -> [Chunk]
 
--- TODO(2018-08-24, cblp) Semilattice
-class Semigroup a => Reducible a where
-    {-# MINIMAL initial, toStateChunk, (applyOp | applyPatch) #-}
+-- TODO(2018-08-24, cblp) Semilattice a, Semilattice (Patch a)
+class (Monoid a, KnownSymbol (OpType a), Semigroup (Patch a)) => Reducible a
+    where
 
     type OpType a :: Symbol
 
-    -- TODO(2018-08-24, cblp) Monoid.mempty?
-    initial :: a
+    type Patch a
+    type Patch a = a
 
-    fromStateChunk :: [ROp] -> Either String a
-    fromStateChunk ops = applyPatch ops initial
+    stateFromChunk :: [ROp] -> a
 
-    toStateChunk :: a -> [ROp]
+    stateToChunk :: a -> [ROp]
 
-    applyOp :: ROp -> a -> Either String a
-    applyOp op = applyPatch [op]
+    patchFromOp :: ROp -> Patch a
+    default patchFromOp :: Patch a ~ a => ROp -> Patch a
+    patchFromOp rop = stateFromChunk [rop]
 
-    applyPatch :: [ROp] -> a -> Either String a
-    applyPatch = \case
-        []     -> pure
-        op:ops -> applyOp op >=> applyPatch ops
+    patchFromChunk :: [ROp] -> Patch a
+    default patchFromChunk :: Patch a ~ a => [ROp] -> Patch a
+    patchFromChunk = stateFromChunk
+
+    patchToChunk :: Patch a -> [ROp]
+    default patchToChunk :: Patch a ~ a => Patch a -> [ROp]
+    patchToChunk = stateToChunk
+
+    applyPatch :: a -> Patch a -> a
+    default applyPatch :: Patch a ~ a => a -> Patch a -> a
+    applyPatch = (<>)

@@ -5,6 +5,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module RON.UUID
     ( UUID (..)
@@ -13,6 +15,7 @@ module RON.UUID
     , buildX
     , buildY
     , split
+    , pattern Zero
     , zero
     -- * Name
     , getName
@@ -24,13 +27,15 @@ import           RON.Internal.Prelude
 
 import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftL, shiftR, (.|.))
+import qualified Data.ByteString.Char8 as BSC
+import           Data.Char (chr)
 import           Data.Hashable (Hashable)
 import           GHC.Generics (Generic)
-import           Numeric (showHex)
 
 import qualified RON.Base64 as Base64
-import           RON.Internal.Word (pattern B00, pattern B0000, Word2, Word4,
-                                    Word60, b00, b0000, leastSignificant2,
+import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
+                                    pattern B10, pattern B11, Word2, Word4,
+                                    Word60, leastSignificant2,
                                     leastSignificant4, leastSignificant60,
                                     safeCast)
 
@@ -41,9 +46,30 @@ data UUID = UUID
     deriving (Eq, Generic, Hashable, NFData, Ord)
 
 instance Show UUID where
-    showsPrec a (UUID x y) =
-        showParen (a >= 11) $
-        showString "UUID 0x" . showHex x . showString " 0x" . showHex y
+    -- showsPrec a (UUID x y) =
+    --     showParen (a >= 11) $
+    --     showString "UUID 0x" . showHex x . showString " 0x" . showHex y
+    show this = show serialized
+      where
+        UUID x y = this
+        UuidFields{..} = split this
+        serialized = case uuidVariant of
+            B00 -> unzipped
+            _   -> generic
+        unzipped = x' <> y'
+        variety = case uuidVariety of
+            B0000 -> ""
+            _     -> chr (fromIntegral $ Base64.encodeLetter4 uuidVariety) : "/"
+        x' = variety <> BSC.unpack (Base64.encode60short uuidValue)
+        y' = case (uuidScheme, uuidOrigin) of
+            (B00, safeCast -> 0 :: Word64) -> ""
+            _ -> scheme : BSC.unpack (Base64.encode60short uuidOrigin)
+        generic = BSC.unpack $ Base64.encode64 x <> Base64.encode64 y
+        scheme = case uuidScheme of
+            B00 -> '$'
+            B01 -> '%'
+            B10 -> '+'
+            B11 -> '-'
 
 data UuidFields = UuidFields
     { uuidVariety :: !Word4
@@ -93,10 +119,10 @@ mkScopedName scope nam = do
     scope' <- Base64.decode60 scope
     nam'   <- Base64.decode60 nam
     pure $ build UuidFields
-        { uuidVariety = b0000
+        { uuidVariety = B0000
         , uuidValue   = scope'
-        , uuidVariant = b00
-        , uuidScheme  = b00
+        , uuidVariant = B00
+        , uuidScheme  = B00
         , uuidOrigin  = nam'
         }
 
@@ -116,3 +142,6 @@ getName uuid = case split uuid of
 
 zero :: UUID
 zero = UUID 0 0
+
+pattern Zero :: UUID
+pattern Zero = UUID 0 0
