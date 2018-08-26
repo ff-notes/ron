@@ -32,16 +32,16 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Eq, Generic, NFData, Show)
 
 data ROp = ROp
-    { ropEvent    :: {-# UNPACK #-} UUID
-    , ropLocation :: {-# UNPACK #-} UUID
-    , ropPayload  ::                [Atom]
+    { ropEvent    :: UUID
+    , ropLocation :: UUID
+    , ropPayload  :: [Atom]
     }
-    deriving (Eq, Generic, NFData, Show)
+    deriving (Eq, Generic, NFData)
 
 data Op = Op
-    { opType   :: {-# UNPACK #-} UUID
-    , opObject :: {-# UNPACK #-} UUID
-    , opR      :: {-# UNPACK #-} ROp
+    { opType   :: UUID
+    , opObject :: UUID
+    , opR      :: ROp
     }
     deriving (Eq, Generic, NFData)
 
