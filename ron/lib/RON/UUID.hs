@@ -15,8 +15,9 @@ module RON.UUID
     , buildX
     , buildY
     , split
-    , pattern Zero
+    , succValue
     , zero
+    , pattern Zero
     -- * Name
     , getName
     , mkName
@@ -145,3 +146,8 @@ zero = UUID 0 0
 
 pattern Zero :: UUID
 pattern Zero = UUID 0 0
+
+succValue :: UUID -> UUID
+succValue = build . go . split where
+    go u@UuidFields{uuidValue} = u
+        {uuidValue = if uuidValue < maxBound then succ uuidValue else uuidValue}

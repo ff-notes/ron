@@ -141,16 +141,20 @@ ls24 = W24 . (0xFFF .&.)
 newtype Word60 = W60 Word64
     deriving (Enum, Eq, Ord, Show)
 
+instance Bounded Word60 where
+    minBound = W60 0
+    maxBound = W60 0xFFFFFFFFFFFFFFF
+
 instance Hashable Word60 where
     hashWithSalt = hashUsing @Word64 coerce
 
 -- | 'Word60' smart constructor dropping upper bits
 leastSignificant60 :: Integral integral => integral -> Word60
-leastSignificant60 = W60 . (0x0FFFFFFFFFFFFFFF .&.) . fromIntegral
+leastSignificant60 = W60 . (0xFFFFFFFFFFFFFFF .&.) . fromIntegral
 
 -- | 'leastSignificant60' specialized for 'Word64'
 ls60 :: Word64 -> Word60
-ls60 = W60 . (0x0FFFFFFFFFFFFFFF .&.)
+ls60 = W60 . (0xFFFFFFFFFFFFFFF .&.)
 
 -- | 'Word60' smart constructor checking domain
 toWord60 :: Word64 -> Maybe Word60
