@@ -10,7 +10,7 @@ import           RON.Internal.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (OpType, Patch, Reducible, stateFromChunk,
+import           RON.Data.Internal (OpType, Reducible, stateFromChunk,
                                     stateToChunk)
 import           RON.Types (ROp (ROp), UUID (UUID), ropEvent)
 
@@ -26,6 +26,7 @@ latter :: ROp -> ROp -> ROp
 latter = maxOn ropTime
 
 newtype VersionVector = VersionVector (Map Origin ROp)
+    deriving (Eq)
 
 instance Semigroup VersionVector where
     (<>) = coerce $ Map.unionWith latter
@@ -35,9 +36,8 @@ instance Monoid VersionVector where
 
 instance Reducible VersionVector where
     type OpType VersionVector = "vv"
-    type Patch  VersionVector = VersionVector
 
     stateToChunk (VersionVector vv) = Map.elems vv
 
-    stateFromChunk rops = VersionVector $
-        Map.fromListWith latter [(ropOrigin rop, rop) | rop <- rops]
+    stateFromChunk ops =
+        VersionVector $ Map.fromListWith latter [(ropOrigin op, op) | op <- ops]
