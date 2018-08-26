@@ -28,8 +28,8 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (Op),
                             RChunk (RChunk), ROp (ROp), UUID, chunkBody,
-                            chunkHeader, opLocation, opObject, opR, opType,
-                            ropEvent, ropLocation, ropPayload)
+                            chunkHeader, opEvent, opLocation, opObject, opR,
+                            opType, ropEvent, ropLocation, ropPayload)
 import qualified RON.UUID as UUID
 
 reducers :: Map UUID Reducer
@@ -63,20 +63,29 @@ typeName :: forall a . Reducible a => UUID
 typeName =
     fromJust . UUID.mkName . BSC.pack $ symbolVal (Proxy :: Proxy (OpType a))
 
-mkReducer :: forall a . Reducible a => (UUID, Reducer)
+mkReducer :: forall a . (Eq a, Reducible a) => (UUID, Reducer)
 mkReducer = (typeName @a, reducer @a)
 
-reducer :: forall a . Reducible a => Reducer
+reducer :: forall a . (Eq a, Reducible a) => Reducer
 reducer obj chunks = chunk' ++ rLeftovers where
     chunk' = case (rState, rPatch) of
-        (Nothing,    Nothing        ) -> []
-        (Just state, Nothing        ) -> mkStateChunk state
-        (Nothing,    Just patch     ) -> mkPatchChunk patch
-        (Just state, Just (patch, _)) -> mkStateChunk $ applyPatch state patch
-    mkStateChunk state = mkRChunk (ropsEvent rops) UUID.Zero rops
-        where rops = stateToChunk state
+        (Nothing,    Nothing   ) -> []
+        (Just state, Nothing   ) -> mkStateChunk state
+        (Nothing,    Just patch) -> mkPatchChunk patch
+        (Just (state, stateEvent), Just (patch, _)) ->
+            mkStateChunk (applyPatch state patch, stateEvent)
+    mkStateChunk (state, MaxOnFst (stateEvent, oldState)) =
+        mkRChunk chunkEvent UUID.Zero rops
+      where
+        chunkEvent0 = ropsEvent rops
+        chunkEvent
+            | chunkEvent0 == stateEvent, state /= oldState =
+                UUID.succValue chunkEvent0
+            | otherwise = chunkEvent0
+        rops = stateToChunk state
     mkPatchChunk (patch, Min patchRef) = mkRChunk (ropsEvent rops) patchRef rops
-        where rops = patchToChunk @a patch
+      where
+        rops = patchToChunk @a patch
     mkRChunk ropEvent ropLocation rops =
         [ Value RChunk
             { chunkHeader = mkOp ROp{ropEvent, ropLocation, ropPayload = []}
@@ -97,7 +106,10 @@ reducer obj chunks = chunk' ++ rLeftovers where
                 guardSameObject op
                 pure $ opR op
             case opLocation chunkHeader of
-                UUID.Zero -> pure (Just $ stateFromChunk @a body, Nothing, [])
+                UUID.Zero -> pure
+                    (Just (s, MaxOnFst (opEvent chunkHeader, s)), Nothing, [])
+                  where
+                    s = stateFromChunk @a body
                 ref ->
                     pure (Nothing, Just (patchFromChunk @a body, Min ref), [])
         _ -> Nothing
