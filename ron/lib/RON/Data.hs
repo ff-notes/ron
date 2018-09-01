@@ -75,8 +75,10 @@ mkReducer = (typeName @a, reducer @a)
 
 reducer :: forall a . Reducible a => Reducer
 reducer obj chunks = chunks' ++ leftovers where
-    chunks'
-        =   [ Value RChunk
+    chunks' = case mReducedState of
+        Nothing -> []
+        Just reducedState ->
+            [ Value RChunk
                 { chunkHeader = mkOp ROp
                     { ropEvent = stateVersion
                     , ropLocation = Zero
@@ -86,29 +88,31 @@ reducer obj chunks = chunks' ++ leftovers where
                 }
             | not $ null reducedStateBody
             ]
-        ++  map (Value . wrapRChunk) reducedPatches
-        ++  map (Raw . mkOp) reducedUnappliedOps
-    Reduced { reducedStateVersion
-            , reducedStateBody
-            , reducedPatches
-            , reducedUnappliedOps
-            } =
-        toChunks reducedState
-    stateVersion
-        | reducedStateVersion > seenStateVersion = reducedStateVersion
-        | sameState reducedState seenState = seenStateVersion
-        | otherwise = UUID.succValue seenStateVersion
+            ++  map (Value . wrapRChunk) reducedPatches
+            ++  map (Raw . mkOp) reducedUnappliedOps
+          where
+            Reduced { reducedStateVersion
+                    , reducedStateBody
+                    , reducedPatches
+                    , reducedUnappliedOps
+                    } =
+                toChunks reducedState
+            stateVersion = case mSeenState of
+                Just (MaxOnFst (seenStateVersion, seenState))
+                    | reducedStateVersion > seenStateVersion ->
+                        reducedStateVersion
+                    | sameState reducedState seenState -> seenStateVersion
+                    | otherwise -> UUID.succValue seenStateVersion
+                Nothing -> reducedStateVersion
     typ = typeName @a
     mkOp = Op typ obj
-    (reducedState, MaxOnFst (seenStateVersion, seenState), leftovers) =
-        sconcat $ fmap load chunks
-    load chunk =
-        fromMaybe (mempty, MaxOnFst (Zero, mempty), [chunk]) $ load' chunk
+    (mReducedState, mSeenState, leftovers) = sconcat $ fmap load chunks
+    load chunk = fromMaybe (Nothing, Nothing, [chunk]) $ load' chunk
     load' chunk = case chunk of
         Raw op@Op{opR} -> do
             guardSameObject op
             let state = fromRawOp @a opR
-            pure (state, MaxOnFst (Zero, mempty), [])
+            pure (Just state, Nothing, [])
         Value RChunk{chunkHeader, chunkBody} -> do
             guardSameObject chunkHeader
             body <- for chunkBody $ \op -> do
@@ -117,10 +121,11 @@ reducer obj chunks = chunks' ++ leftovers where
             let ref = opLocation chunkHeader
             let state = fromChunk @a ref body
             pure
-                ( state
-                , MaxOnFst $ case ref of
-                    Zero -> (opEvent chunkHeader, state)  -- state
-                    _    -> (Zero, mempty)  -- patch
+                ( Just state
+                , case ref of
+                    Zero ->  -- state
+                        Just $ MaxOnFst (opEvent chunkHeader, state)
+                    _    -> Nothing  -- patch
                 , []
                 )
         _ -> Nothing

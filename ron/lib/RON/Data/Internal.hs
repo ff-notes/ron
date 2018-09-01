@@ -19,7 +19,7 @@ import           RON.UUID (zero)
 type Reducer = UUID -> NonEmpty Chunk -> [Chunk]
 
 -- TODO(2018-08-24, cblp) Semilattice a, Semilattice (Patch a)
-class (Monoid a, KnownSymbol (OpType a)) => Reducible a where
+class (Semigroup a, KnownSymbol (OpType a)) => Reducible a where
 
     type OpType a :: Symbol
 
