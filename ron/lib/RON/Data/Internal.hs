@@ -18,7 +18,7 @@ import           RON.UUID (zero)
 -- | Reduce all chunks of specific type and object in the frame
 type Reducer = UUID -> NonEmpty Chunk -> [Chunk]
 
--- TODO(2018-08-24, cblp) Semilattice a, Semilattice (Patch a)
+-- TODO(2018-08-24, cblp) Semilattice a
 class (Semigroup a, KnownSymbol (OpType a)) => Reducible a where
 
     type OpType a :: Symbol
