@@ -45,8 +45,8 @@ reduce :: Frame -> Frame
 reduce chunks = values' ++ queries where
     chunkObjectAndType = opObjectAndType . \case
         Raw                              op  -> op
-        Value RChunk{chunkHeader = op} -> op
-        Query RChunk{chunkHeader = op} -> op
+        Value RChunk{rchunkHeader = op} -> op
+        Query RChunk{rchunkHeader = op} -> op
     opObjectAndType Op{..} = (opObject, opType)
     (queries, values) = partition isQuery chunks
     values' =
@@ -79,12 +79,12 @@ reducer obj chunks = chunks' ++ leftovers where
         Nothing -> []
         Just reducedState ->
             [ Value RChunk
-                { chunkHeader = mkOp Op'
+                { rchunkHeader = mkOp Op'
                     { opEvent = stateVersion
                     , opRef = Zero
                     , opPayload = []
                     }
-                , chunkBody = map mkOp reducedStateBody
+                , rchunkBody = map mkOp reducedStateBody
                 }
             | not $ null reducedStateBody
             ]
@@ -113,18 +113,18 @@ reducer obj chunks = chunks' ++ leftovers where
             guardSameObject op
             let state = fromRawOp @a op'
             pure (Just state, Nothing, [])
-        Value RChunk{chunkHeader, chunkBody} -> do
-            guardSameObject chunkHeader
-            body <- for chunkBody $ \op -> do
+        Value RChunk{rchunkHeader, rchunkBody} -> do
+            guardSameObject rchunkHeader
+            body <- for rchunkBody $ \op -> do
                 guardSameObject op
                 pure $ op' op
-            let ref = opRef $ op' chunkHeader
+            let ref = opRef $ op' rchunkHeader
             let state = fromChunk @a ref body
             pure
                 ( Just state
                 , case ref of
                     Zero ->  -- state
-                        Just $ MaxOnFst (opEvent $ op' chunkHeader, state)
+                        Just $ MaxOnFst (opEvent $ op' rchunkHeader, state)
                     _    -> Nothing  -- patch
                 , []
                 )
@@ -132,7 +132,7 @@ reducer obj chunks = chunks' ++ leftovers where
     guardSameObject Op{opType, opObject} =
         guard $ opType == typ && opObject == obj
     wrapRChunk RChunk'{..} = RChunk
-        { chunkHeader = mkOp
+        { rchunkHeader = mkOp
             Op'{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
-        , chunkBody = map mkOp rchunk'Body
+        , rchunkBody = map mkOp rchunk'Body
         }

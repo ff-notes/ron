@@ -116,8 +116,8 @@ serializeFloat = runPut . putDoublebe
 serializeReducedChunk :: Bool -> RChunk -> Either String ByteStringL
 serializeReducedChunk isQuery RChunk{..} = do
     header <-
-        serializeOp (if isQuery then DOpQueryHeader else DOpHeader) chunkHeader
-    body <- mconcat <$> traverse (serializeOp DOpReduced) chunkBody
+        serializeOp (if isQuery then DOpQueryHeader else DOpHeader) rchunkHeader
+    body <- mconcat <$> traverse (serializeOp DOpReduced) rchunkBody
     pure $ header <> body
 
 serializeString :: Text -> ByteStringL

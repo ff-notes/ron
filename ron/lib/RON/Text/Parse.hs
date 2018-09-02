@@ -71,11 +71,11 @@ chunkRaw prev = label "Chunk-raw" $ do
 -- | Returns a chunk and the last op in it
 rchunk :: Op -> Parser (Chunk, Op)
 rchunk prev = label "Chunk-reduced" $ do
-    (chunkHeader, isQuery) <- header prev
-    chunkBody <- reducedOps chunkHeader <|> stop
-    let lastOp = case chunkBody of
-            [] -> chunkHeader
-            _  -> last chunkBody
+    (rchunkHeader, isQuery) <- header prev
+    rchunkBody <- reducedOps rchunkHeader <|> stop
+    let lastOp = case rchunkBody of
+            [] -> rchunkHeader
+            _  -> last rchunkBody
     pure ((if isQuery then Query else Value) RChunk{..}, lastOp)
   where
     reducedOps y = do

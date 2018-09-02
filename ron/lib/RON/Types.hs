@@ -60,8 +60,8 @@ instance Show Op where
             c:cs -> c:k:cs
 
 data RChunk = RChunk
-    { chunkHeader :: Op
-    , chunkBody   :: [Op]
+    { rchunkHeader :: Op
+    , rchunkBody   :: [Op]
     }
     deriving (Data, Eq, Generic, NFData, Show)
 
@@ -74,7 +74,7 @@ data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
 valueChunk :: Op -> [Op] -> Chunk
-valueChunk chunkHeader chunkBody = Value RChunk{chunkHeader, chunkBody}
+valueChunk rchunkHeader rchunkBody = Value RChunk{rchunkHeader, rchunkBody}
 
 valueFrame :: Op -> [Op] -> Frame
-valueFrame chunkHeader chunkBody = [valueChunk chunkHeader chunkBody]
+valueFrame rchunkHeader rchunkBody = [valueChunk rchunkHeader rchunkBody]

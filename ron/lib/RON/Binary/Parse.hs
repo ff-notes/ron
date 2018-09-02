@@ -77,8 +77,8 @@ leastSignificant31 x = x .&. 0x7FFFFFFF
 parseChunk :: Size -> Parser Chunk
 parseChunk size = label "Chunk" $ do
     (consumed0, (term, op)) <- withInputSize parseDescAndOp
-    let parseReducedChunk chunkHeader isQuery = do
-            chunkBody <- parseReducedOps $ fromIntegral size - consumed0
+    let parseReducedChunk rchunkHeader isQuery = do
+            rchunkBody <- parseReducedOps $ fromIntegral size - consumed0
             pure $ (if isQuery then Query else Value) RChunk{..}
     case term of
         THeader  -> parseReducedChunk op False

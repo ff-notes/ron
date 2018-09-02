@@ -48,13 +48,13 @@ serializeChunk = \case
     Query chunk -> serializeReducedChunk True  chunk
 
 serializeReducedChunk :: Bool -> RChunk -> State Op ByteStringL
-serializeReducedChunk isQuery RChunk{chunkHeader, chunkBody} =
+serializeReducedChunk isQuery RChunk{rchunkHeader, rchunkBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
     serializeHeader = do
-        h <- serializeOpZip chunkHeader
+        h <- serializeOpZip rchunkHeader
         pure $ BSLC.unwords [h, if isQuery then "?" else "!"]
-    serializeBody = for chunkBody $ \op -> do
+    serializeBody = for rchunkBody $ \op -> do
         o <- serializeOpZip op
         pure $ "\t" <> BSLC.unwords [o, ","]
 
