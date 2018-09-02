@@ -35,8 +35,8 @@ library:
     - RON.Data
     - RON.Data.Internal
     - RON.Data.LWW
+    - RON.Data.ORSet
     - RON.Data.RGA
-    - RON.Data.Set
     - RON.Data.VersionVector
     - RON.Event
     - RON.Event.Simulation

@@ -12,7 +12,7 @@ module RON.Data
     , typeName
     ) where
 
-import           RON.Internal.Prelude hiding (Set)
+import           RON.Internal.Prelude
 
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Foldable (fold)
@@ -25,8 +25,8 @@ import           GHC.TypeLits (symbolVal)
 import           RON.Data.Internal (RChunk' (..), Reduced (..), Reducer,
                                     Reducible (..))
 import           RON.Data.LWW (LwwPerField)
+import           RON.Data.ORSet (ORSet)
 import           RON.Data.RGA (RGA)
-import           RON.Data.Set (Set)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..),
                             RChunk (..), ROp (..), UUID, opEvent, opLocation)
@@ -37,7 +37,7 @@ reducers :: Map UUID Reducer
 reducers = Map.fromList
     [ mkReducer @LwwPerField
     , mkReducer @RGA
-    , mkReducer @Set
+    , mkReducer @ORSet
     , mkReducer @VersionVector
     ]
 

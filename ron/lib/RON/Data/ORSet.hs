@@ -4,11 +4,11 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.Set (Set) where
-
-import           RON.Internal.Prelude hiding (Set)
+module RON.Data.ORSet (ORSet) where
 
 import qualified Data.Map.Strict as Map
+
+import           RON.Internal.Prelude
 
 import           RON.Data.Internal (Reducible (..), mkReducedPatch,
                                     mkReducedState)
@@ -27,30 +27,30 @@ itemFromOp op@ROp{ropEvent, ropLocation, ropPayload} = (itemId, item) where
     itemId = if itemIsAlive then ropEvent else ropLocation
     item = SetItem{itemIsAlive, itemOriginalOp = op}
 
-data Set = Set{setRef :: Maybe UUID, setItems :: Map UUID SetItem}
+data ORSet = ORSet{setRef :: Maybe UUID, setItems :: Map UUID SetItem}
     deriving (Eq)
 
-instance Semigroup Set where
-    Set ref1 items1 <> Set ref2 items2 =
-        Set (min ref1 ref2) (Map.unionWith (<>) items1 items2)
+instance Semigroup ORSet where
+    ORSet ref1 items1 <> ORSet ref2 items2 =
+        ORSet (min ref1 ref2) (Map.unionWith (<>) items1 items2)
 
-instance Monoid Set where
-    mempty = Set Nothing mempty
+instance Monoid ORSet where
+    mempty = ORSet Nothing mempty
 
-instance Reducible Set where
-    type OpType Set = "set"
+instance Reducible ORSet where
+    type OpType ORSet = "set"
 
-    fromRawOp op@ROp{ropEvent} = Set
+    fromRawOp op@ROp{ropEvent} = ORSet
         { setRef = Just ropEvent
         , setItems = uncurry Map.singleton $ itemFromOp op
         }
 
-    fromChunk ref ops = Set
+    fromChunk ref ops = ORSet
         { setRef = Just ref
         , setItems = Map.fromListWith (<>) $ map itemFromOp ops
         }
 
-    toChunks Set{setRef, setItems} = case fromMaybe Zero setRef of
+    toChunks ORSet{setRef, setItems} = case fromMaybe Zero setRef of
         Zero -> mkReducedState     ops
         ref  -> mkReducedPatch ref ops
       where
