@@ -14,20 +14,20 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (RChunk' (..), Reduced (..), Reducible (..))
 import           RON.Internal.Word (pattern B11)
-import           RON.Types (ROp (..), UUID)
+import           RON.Types (Op' (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
 import qualified RON.UUID as UUID
 
--- | ropEvent = vertex id
---   ropLocation:
+-- | opEvent = vertex id
+--   opRef:
 --      0 = value is alive,
 --      _ = tombstone event, value is backup for undo
---   ropPayload: the value
+--   opPayload: the value
 -- TODO record pattern synonyms
-newtype Vertex = Vertex ROp
+newtype Vertex = Vertex Op'
     deriving (Eq, Show)
 
-unVertex :: Vertex -> ROp
+unVertex :: Vertex -> Op'
 unVertex (Vertex op) = op
 
 data VertexListItem = VertexListItem
@@ -65,12 +65,12 @@ vertexListToList mv = case mv of
             Nothing -> []
         in itemValue : rest
 
-vertexListToOps :: Maybe VertexList -> [ROp]
+vertexListToOps :: Maybe VertexList -> [Op']
 vertexListToOps = map unVertex . vertexListToList
 
 vertexListFromList :: [Vertex] -> Maybe VertexList
 vertexListFromList = foldr go mempty where
-    go v@(Vertex ROp{ropEvent = vid}) vlist =
+    go v@(Vertex Op'{opEvent = vid}) vlist =
         Just $ VertexList{listHead = vid, listItems = vlist'}
       where
         item itemNext = VertexListItem{itemValue = v, itemNext}
@@ -79,7 +79,7 @@ vertexListFromList = foldr go mempty where
             Just VertexList{listHead, listItems} ->
                 HashMap.insert vid (item $ Just listHead) listItems
 
-vertexListFromOps :: [ROp] -> Maybe VertexList
+vertexListFromOps :: [Op'] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
 
 data RGA = RGA
@@ -111,23 +111,22 @@ instance Monoid RGA where
 instance Reducible RGA where
     type OpType RGA = "rga"
 
-    fromRawOp op@ROp{ropEvent, ropLocation, ropPayload} = case ropPayload of
+    fromRawOp op@Op'{opEvent, opRef, opPayload} = case opPayload of
         [] ->  -- remove op
-            mempty{rgaUnappliedRemovals = Map.singleton ropLocation ropEvent}
+            mempty{rgaUnappliedRemovals = Map.singleton opRef opEvent}
         _:_ ->  -- append op
             mempty
                 { rgaUnappliedPatches =
                     Map.singleton
-                        ropLocation
+                        opRef
                         VertexList
-                            { listHead = ropEvent
+                            { listHead = opEvent
                             , listItems =
                                 HashMap.singleton
-                                    ropEvent
+                                    opEvent
                                     VertexListItem
-                                        { itemValue =
-                                            Vertex op{ropLocation = Zero}
-                                        , itemNext = Nothing
+                                        { itemValue = Vertex op{opRef = Zero}
+                                        , itemNext  = Nothing
                                         }
                             }
                 }
@@ -153,7 +152,7 @@ instance Reducible RGA where
             , let rchunk'Body = vertexListToOps $ Just vertices
             ]
         , reducedUnappliedOps =
-            [ ROp{ropEvent = tombstone, ropLocation = vid, ropPayload = []}
+            [ Op'{opEvent = tombstone, opRef = vid, opPayload = []}
             | (vid, tombstone) <- Map.assocs rgaUnappliedRemovals
             ]
         }
@@ -161,7 +160,7 @@ instance Reducible RGA where
         reducedStateBody = vertexListToOps rgaState
         chunkVersion ops = maximumDef Zero
             [ max vertexId tombstone
-            | ROp{ropEvent = vertexId, ropLocation = tombstone} <- ops
+            | Op'{opEvent = vertexId, opRef = tombstone} <- ops
             ]
 
     sameState = (==) `on` rgaState
@@ -249,10 +248,9 @@ reapplyRemovals rga =
         , let VertexList targetHead targetItems = targetPatch
         ]
     apply parent tombstone targetItems = do
-        item@VertexListItem{itemValue = Vertex v@ROp{ropLocation}} <-
+        item@VertexListItem{itemValue = Vertex v@Op'{opRef}} <-
             HashMap.lookup parent targetItems
-        let item' = item
-                {itemValue = Vertex v{ropLocation = max ropLocation tombstone}}
+        let item' = item{itemValue = Vertex v{opRef = max opRef tombstone}}
         pure $ HashMap.insert parent item' targetItems
 
 merge :: VertexList -> VertexList -> VertexList
@@ -269,12 +267,12 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
         GT -> v1 : merge' vs1 w2
         EQ -> mergeVertices : merge' vs1 vs2
   where
-    Vertex ROp{ropEvent = e1, ropLocation = tombstone1, ropPayload = p1} = v1
-    Vertex ROp{ropEvent = e2, ropLocation = tombstone2, ropPayload = p2} = v2
+    Vertex Op'{opEvent = e1, opRef = tombstone1, opPayload = p1} = v1
+    Vertex Op'{opEvent = e2, opRef = tombstone2, opPayload = p2} = v2
 
     -- priority of deletion
-    mergeVertices = Vertex ROp
-        { ropEvent    = e1
-        , ropLocation = max tombstone1 tombstone2
-        , ropPayload  = maxOn length p1 p2
+    mergeVertices = Vertex Op'
+        { opEvent   = e1
+        , opRef     = max tombstone1 tombstone2
+        , opPayload = maxOn length p1 p2
         }

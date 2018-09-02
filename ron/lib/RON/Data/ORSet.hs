@@ -12,19 +12,19 @@ import           RON.Internal.Prelude
 
 import           RON.Data.Internal (Reducible (..), mkReducedPatch,
                                     mkReducedState)
-import           RON.Types (ROp (..), UUID)
+import           RON.Types (Op' (..), UUID)
 import           RON.UUID (pattern Zero)
 
-data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: ROp}
+data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op'}
     deriving (Eq)
 
 instance Semigroup SetItem where
     (<>) = minOn itemIsAlive
 
-itemFromOp :: ROp -> (UUID, SetItem)
-itemFromOp op@ROp{ropEvent, ropLocation, ropPayload} = (itemId, item) where
-    itemIsAlive = not $ null ropPayload
-    itemId = if itemIsAlive then ropEvent else ropLocation
+itemFromOp :: Op' -> (UUID, SetItem)
+itemFromOp op@Op'{opEvent, opRef, opPayload} = (itemId, item) where
+    itemIsAlive = not $ null opPayload
+    itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{itemIsAlive, itemOriginalOp = op}
 
 data ORSet = ORSet{setRef :: Maybe UUID, setItems :: Map UUID SetItem}
@@ -40,8 +40,8 @@ instance Monoid ORSet where
 instance Reducible ORSet where
     type OpType ORSet = "set"
 
-    fromRawOp op@ROp{ropEvent} = ORSet
-        { setRef = Just ropEvent
+    fromRawOp op@Op'{opEvent} = ORSet
+        { setRef = Just opEvent
         , setItems = uncurry Map.singleton $ itemFromOp op
         }
 
@@ -54,6 +54,6 @@ instance Reducible ORSet where
         Zero -> mkReducedState     ops
         ref  -> mkReducedPatch ref ops
       where
-        ops = sortOn ropEvent . map itemOriginalOp $ Map.elems setItems
+        ops = sortOn opEvent . map itemOriginalOp $ Map.elems setItems
 
     sameState = (==) `on` setItems

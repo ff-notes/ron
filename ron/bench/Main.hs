@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 import           RON.Internal.Prelude
 
 import           Control.DeepSeq (force)
@@ -7,8 +9,7 @@ import           Criterion.Main (defaultConfig, defaultMainWith)
 import           Criterion.Types (timeLimit)
 
 import           RON.Text (parseFrames, serializeFrames)
-import           RON.Types (Chunk (Raw), Op (Op), ROp (ROp), opObject, opR,
-                            opType, ropEvent, ropLocation, ropPayload)
+import           RON.Types (Chunk (Raw), Op (..), Op' (..))
 import qualified RON.UUID as UUID
 
 main :: IO ()
@@ -18,8 +19,8 @@ main = do
         defaultConfig{timeLimit = 1}
         [bench (show n) $ nf parseFrames batch | (n, batch) <- serialized]
   where
-    op = Op{opType = UUID.zero, opObject = UUID.zero, opR = rop}
-    rop = ROp{ropEvent = UUID.zero, ropLocation = UUID.zero, ropPayload = []}
+    op = Op{opType = UUID.zero, opObject = UUID.zero, op'}
+    op' = Op'{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
     frame n = replicate n $ Raw op
 
     serialized =

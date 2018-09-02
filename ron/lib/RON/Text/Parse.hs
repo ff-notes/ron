@@ -35,13 +35,10 @@ import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (Op),
+                            Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (RChunk), ROp (ROp), UUID (UUID), chunkBody,
-                            chunkHeader, opEvent, opLocation, opObject, opR,
-                            opType, ropEvent, ropLocation, ropPayload)
-import           RON.UUID (UuidFields (UuidFields), uuidOrigin, uuidScheme,
-                           uuidValue, uuidVariant, uuidVariety)
+                            RChunk (..), UUID (UUID))
+import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
 parseFrame :: ByteStringL -> Either String Frame
@@ -115,14 +112,15 @@ endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 op :: Op -> Parser (Bool, Op)
 op prev = label "Op-cont" $ do
-    (hasTyp, opType)      <- key "type"     '*' (opType     prev) UUID.zero
-    (hasObj, opObject)    <- key "object"   '#' (opObject   prev) opType
-    (hasEvt, ropEvent)    <- key "event"    '@' (opEvent    prev) opObject
-    (hasLoc, ropLocation) <- key "location" ':' (opLocation prev) ropEvent
-    ropPayload <- payload opObject
-    let opR = ROp{..}
-    pure (hasTyp || hasObj || hasEvt || hasLoc || not (null ropPayload), Op{..})
+    (hasTyp, opType)   <- key "type"   '*' (opType   prev)  UUID.zero
+    (hasObj, opObject) <- key "object" '#' (opObject prev)  opType
+    (hasEvt, opEvent)  <- key "event"  '@' (opEvent  prev') opObject
+    (hasLoc, opRef)    <- key "ref"    ':' (opRef    prev') opEvent
+    opPayload <- payload opObject
+    let op' = Op'{..}
+    pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), Op{..})
   where
+    prev' = op' prev
     key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
         skipSpace
         isKeyPresent <- isSuccessful $ char keyChar

@@ -12,7 +12,7 @@ import           RON.Internal.Prelude
 
 import           GHC.TypeLits (KnownSymbol, Symbol)
 
-import           RON.Types (Chunk, ROp (..), UUID)
+import           RON.Types (Chunk, Op' (..), UUID)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -23,11 +23,11 @@ class (Semigroup a, KnownSymbol (OpType a)) => Reducible a where
 
     type OpType a :: Symbol
 
-    fromRawOp :: ROp -> a
+    fromRawOp :: Op' -> a
 
     fromChunk
         :: UUID  -- ^ ref event, 0 for state chunks
-        -> [ROp]
+        -> [Op']
         -> a
 
     toChunks :: a -> Reduced
@@ -36,20 +36,23 @@ class (Semigroup a, KnownSymbol (OpType a)) => Reducible a where
     default sameState :: Eq a => a -> a -> Bool
     sameState = (==)
 
+    -- () -> [Patch] -> [Op] -> ([Patch], [Op])
+    -- NonEmpty State -> [Patch] -> [Op] -> (State, [Patch], [Op])
+
 data Reduced = Reduced
     { reducedStateVersion :: UUID
-    , reducedStateBody    :: [ROp]
+    , reducedStateBody    :: [Op']
     , reducedPatches      :: [RChunk']
-    , reducedUnappliedOps :: [ROp]
+    , reducedUnappliedOps :: [Op']
     }
 
 data RChunk' = RChunk'
     { rchunk'Version :: UUID
     , rchunk'Ref     :: UUID
-    , rchunk'Body    :: [ROp]
+    , rchunk'Body    :: [Op']
     }
 
-mkReducedState :: [ROp] -> Reduced
+mkReducedState :: [Op'] -> Reduced
 mkReducedState reducedStateBody = Reduced
     { reducedStateVersion = ropsEvent reducedStateBody
     , reducedStateBody
@@ -57,7 +60,7 @@ mkReducedState reducedStateBody = Reduced
     , reducedUnappliedOps = []
     }
 
-mkReducedPatch :: UUID -> [ROp] -> Reduced
+mkReducedPatch :: UUID -> [Op'] -> Reduced
 mkReducedPatch ref ops = Reduced
     { reducedStateVersion = zero
     , reducedStateBody = []
@@ -65,9 +68,9 @@ mkReducedPatch ref ops = Reduced
     , reducedUnappliedOps = []
     }
 
-ropsEvent :: [ROp] -> UUID
-ropsEvent = maximumDef zero . map ropEvent
+ropsEvent :: [Op'] -> UUID
+ropsEvent = maximumDef zero . map opEvent
 
-mkRChunk' :: UUID -> [ROp] -> RChunk'
+mkRChunk' :: UUID -> [Op'] -> RChunk'
 mkRChunk' ref rchunk'Body = RChunk'
     {rchunk'Version = ropsEvent rchunk'Body, rchunk'Ref = ref, rchunk'Body}

@@ -13,14 +13,14 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducible (..), mkReducedPatch,
                                     mkReducedState)
-import           RON.Types (ROp (..), UUID)
+import           RON.Types (Op' (..), UUID)
 import           RON.UUID (pattern Zero)
 
-lww :: ROp -> ROp -> ROp
-lww = maxOn ropEvent
+lww :: Op' -> Op' -> Op'
+lww = maxOn opEvent
 
--- | Key is 'ropLocation', value is the original op
-data LwwPerField = LwwPerField{lpfRef :: Maybe UUID, lpfFields :: Map UUID ROp}
+-- | Key is 'opRef', value is the original op
+data LwwPerField = LwwPerField{lpfRef :: Maybe UUID, lpfFields :: Map UUID Op'}
     deriving (Eq)
 
 instance Semigroup LwwPerField where
@@ -33,12 +33,12 @@ instance Monoid LwwPerField where
 instance Reducible LwwPerField where
     type OpType LwwPerField = "lww"
 
-    fromRawOp op@ROp{ropEvent, ropLocation} = LwwPerField
-        {lpfRef = Just ropEvent, lpfFields = Map.singleton ropLocation op}
+    fromRawOp op@Op'{opEvent, opRef} = LwwPerField
+        {lpfRef = Just opEvent, lpfFields = Map.singleton opRef op}
 
     fromChunk ref ops = LwwPerField
         { lpfRef    = Just ref
-        , lpfFields = Map.fromListWith lww [(ropLocation op, op) | op <- ops]
+        , lpfFields = Map.fromListWith lww [(opRef op, op) | op <- ops]
         }
 
     toChunks LwwPerField{lpfRef, lpfFields} = case fromMaybe Zero lpfRef of

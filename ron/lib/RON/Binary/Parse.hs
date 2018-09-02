@@ -25,11 +25,9 @@ import           Data.ZigZag (zzDecode64)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (Op),
-                            OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (RChunk), ROp (ROp), UUID (UUID), chunkBody,
-                            chunkHeader, opObject, opR, opType, ropEvent,
-                            ropLocation, ropPayload)
+                            Chunk (Query, Raw, Value), Frame, Op (..),
+                            Op' (..), OpTerm (THeader, TQuery, TRaw, TReduced),
+                            RChunk (..), UUID (UUID))
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -120,12 +118,12 @@ parseDescAndOp = label "d+Op" $ do
 
 parseOp :: Parser Op
 parseOp = label "Op" $ do
-    opType      <- parseOpKey DUuidType
-    opObject    <- parseOpKey DUuidObject
-    ropEvent    <- parseOpKey DUuidEvent
-    ropLocation <- parseOpKey DUuidLocation
-    ropPayload  <- parsePayload
-    pure Op{opR = ROp{..}, ..}
+    opType    <- parseOpKey DUuidType
+    opObject  <- parseOpKey DUuidObject
+    opEvent   <- parseOpKey DUuidEvent
+    opRef     <- parseOpKey DUuidRef
+    opPayload <- parsePayload
+    pure Op{op' = Op'{..}, ..}
 
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do
@@ -134,11 +132,11 @@ parseOpKey expectedType = label "OpKey" $ do
             guard $ desc == expectedType
             uuid size
     case desc of
-        DUuidType     -> go
-        DUuidObject   -> go
-        DUuidEvent    -> go
-        DUuidLocation -> go
-        _             -> fail $ show desc
+        DUuidType   -> go
+        DUuidObject -> go
+        DUuidEvent  -> go
+        DUuidRef    -> go
+        _           -> fail $ show desc
 
 uuid :: Size -> Parser UUID
 uuid size = label "UUID" $

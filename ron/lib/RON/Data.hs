@@ -28,8 +28,8 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSet)
 import           RON.Data.RGA (RGA)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..),
-                            RChunk (..), ROp (..), UUID, opEvent, opLocation)
+import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
+                            RChunk (..), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -79,10 +79,10 @@ reducer obj chunks = chunks' ++ leftovers where
         Nothing -> []
         Just reducedState ->
             [ Value RChunk
-                { chunkHeader = mkOp ROp
-                    { ropEvent = stateVersion
-                    , ropLocation = Zero
-                    , ropPayload = []
+                { chunkHeader = mkOp Op'
+                    { opEvent = stateVersion
+                    , opRef = Zero
+                    , opPayload = []
                     }
                 , chunkBody = map mkOp reducedStateBody
                 }
@@ -109,22 +109,22 @@ reducer obj chunks = chunks' ++ leftovers where
     (mReducedState, mSeenState, leftovers) = sconcat $ fmap load chunks
     load chunk = fromMaybe (Nothing, Nothing, [chunk]) $ load' chunk
     load' chunk = case chunk of
-        Raw op@Op{opR} -> do
+        Raw op@Op{op'} -> do
             guardSameObject op
-            let state = fromRawOp @a opR
+            let state = fromRawOp @a op'
             pure (Just state, Nothing, [])
         Value RChunk{chunkHeader, chunkBody} -> do
             guardSameObject chunkHeader
             body <- for chunkBody $ \op -> do
                 guardSameObject op
-                pure $ opR op
-            let ref = opLocation chunkHeader
+                pure $ op' op
+            let ref = opRef $ op' chunkHeader
             let state = fromChunk @a ref body
             pure
                 ( Just state
                 , case ref of
                     Zero ->  -- state
-                        Just $ MaxOnFst (opEvent chunkHeader, state)
+                        Just $ MaxOnFst (opEvent $ op' chunkHeader, state)
                     _    -> Nothing  -- patch
                 , []
                 )
@@ -132,10 +132,7 @@ reducer obj chunks = chunks' ++ leftovers where
     guardSameObject Op{opType, opObject} =
         guard $ opType == typ && opObject == obj
     wrapRChunk RChunk'{..} = RChunk
-        { chunkHeader = mkOp ROp
-            { ropEvent = rchunk'Version
-            , ropLocation = rchunk'Ref
-            , ropPayload = []
-            }
+        { chunkHeader = mkOp
+            Op'{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
         , chunkBody = map mkOp rchunk'Body
         }

@@ -10,12 +10,9 @@ module RON.Types
     , Chunk (..)
     , Frame
     , Op (..)
-    , opEvent
-    , opLocation
-    , opPayload
+    , Op' (..)
     , OpTerm (..)
     , RChunk (..)
-    , ROp (..)
     , UUID (..)
     , valueChunk
     , valueFrame
@@ -33,29 +30,29 @@ import           RON.UUID (UUID (..))
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Data, Eq, Generic, Hashable, NFData, Show)
 
-data ROp = ROp
-    { ropEvent    :: UUID
-    , ropLocation :: UUID
-    , ropPayload  :: [Atom]
-    }
-    deriving (Data, Eq, Generic, Hashable, NFData, Show)
-
 data Op = Op
     { opType   :: UUID
     , opObject :: UUID
-    , opR      :: ROp
+    , op'      :: Op'
     }
     deriving (Data, Eq, Generic, NFData)
 
+data Op' = Op'
+    { opEvent   :: UUID
+    , opRef     :: UUID
+    , opPayload :: [Atom]
+    }
+    deriving (Data, Eq, Generic, Hashable, NFData, Show)
+
 instance Show Op where
-    show Op{opType, opObject, opR = ROp{ropEvent, ropLocation, ropPayload}} =
+    show Op{opType, opObject, op' = Op'{opEvent, opRef, opPayload}} =
         unwords
             [ "Op"
             , insert '*' $ show opType
             , insert '#' $ show opObject
-            , insert '@' $ show ropEvent
-            , insert ':' $ show ropLocation
-            , show ropPayload
+            , insert '@' $ show opEvent
+            , insert ':' $ show opRef
+            , show opPayload
             ]
       where
         insert k = \case
@@ -81,12 +78,3 @@ valueChunk chunkHeader chunkBody = Value RChunk{chunkHeader, chunkBody}
 
 valueFrame :: Op -> [Op] -> Frame
 valueFrame chunkHeader chunkBody = [valueChunk chunkHeader chunkBody]
-
-opEvent :: Op -> UUID
-opEvent = ropEvent . opR
-
-opLocation :: Op -> UUID
-opLocation = ropLocation . opR
-
-opPayload :: Op -> [Atom]
-opPayload = ropPayload . opR

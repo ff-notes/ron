@@ -20,10 +20,8 @@ import           Data.ZigZag (zzEncode)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (Op),
-                            RChunk (RChunk), ROp (ROp), UUID (UUID), chunkBody,
-                            chunkHeader, opObject, opR, opType, ropEvent,
-                            ropLocation, ropPayload)
+                            Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
+                            RChunk (..), UUID (UUID))
 
 serialize :: Frame -> Either String ByteStringL
 serialize frame = ("RON2" <>) <$> serializeBody
@@ -56,19 +54,19 @@ serializeChunk = \case
 serializeOp :: Desc -> Op -> Either String ByteStringL
 serializeOp desc Op{..} = do
     keys <- sequenceA
-        [ serializeUuidType     opType
-        , serializeUuidObject   opObject
-        , serializeUuidEvent    ropEvent
-        , serializeUuidLocation ropLocation
+        [ serializeUuidType   opType
+        , serializeUuidObject opObject
+        , serializeUuidEvent  opEvent
+        , serializeUuidRef    opRef
         ]
-    payload <- traverse serializeAtom ropPayload
+    payload <- traverse serializeAtom opPayload
     serializeWithDesc desc $ mconcat $ keys ++ payload
   where
-    ROp{..} = opR
-    serializeUuidType     = serializeWithDesc DUuidType     . serializeUuid
-    serializeUuidObject   = serializeWithDesc DUuidObject   . serializeUuid
-    serializeUuidEvent    = serializeWithDesc DUuidEvent    . serializeUuid
-    serializeUuidLocation = serializeWithDesc DUuidLocation . serializeUuid
+    Op'{..} = op'
+    serializeUuidType   = serializeWithDesc DUuidType   . serializeUuid
+    serializeUuidObject = serializeWithDesc DUuidObject . serializeUuid
+    serializeUuidEvent  = serializeWithDesc DUuidEvent  . serializeUuid
+    serializeUuidRef    = serializeWithDesc DUuidRef    . serializeUuid
 
 serializeUuid :: UUID -> ByteStringL
 serializeUuid (UUID x y) = Binary.encode x <> Binary.encode y

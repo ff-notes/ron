@@ -44,7 +44,7 @@ import           RON.Event (CalendarEvent (..), Naming (TrieForked),
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (Atom (..), Chunk (Raw), Op (..), ROp (..),
+import           RON.Types (Atom (..), Chunk (Raw), Op (..), Op' (..),
                             UUID (..))
 import qualified RON.UUID as UUID
 
@@ -197,22 +197,15 @@ prop_ron_json_example = let
         \     #(R            @`   :foo > (Q ;"
     output =
         [ Raw Op
-            { opType   = lwwType
+            { opType = lwwType
             , opObject = bar
-            , opR      = ROp
-                { ropEvent    = bar
-                , ropLocation = barName
-                , ropPayload  = [AInteger 1]
-                }
+            , op' =
+                Op'{opEvent = bar, opRef = barName, opPayload = [AInteger 1]}
             }
         , Raw Op
-            { opType   = lwwType
+            { opType = lwwType
             , opObject = foo
-            , opR      = ROp
-                { ropEvent    = foo
-                , ropLocation = fooName
-                , ropPayload  = [AUuid bar]
-                }
+            , op' = Op'{opEvent = foo, opRef = fooName, opPayload = [AUuid bar]}
             }
         ]
     barName = fromJust $ UUID.mkName "bar"

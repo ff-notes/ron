@@ -16,12 +16,12 @@ data Desc
     | DUuidType
     | DUuidObject
     | DUuidEvent
-    | DUuidLocation
+    | DUuidRef
 
     | DAtomUuidZip
     | DUuidZipObject
     | DUuidZipEvent
-    | DUuidZipLocation
+    | DUuidZipRef
 
     | DAtomUuid
     | DAtomInteger

@@ -27,9 +27,8 @@ import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op,
-                            RChunk (RChunk), chunkBody, chunkHeader, opEvent,
-                            opLocation, opObject, opPayload, opType)
+                            Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
+                            RChunk (..))
 import           RON.UUID (UUID, zero)
 
 serializeFrame :: Frame -> ByteStringL
@@ -64,11 +63,12 @@ serializeOp op = evalState (serializeOpZip op) opZero
 
 serializeOpZip :: Op -> State Op ByteStringL
 serializeOpZip this = state $ \prev -> let
-    typ = serializeUuidKey (opType     prev) zero            (opType     this)
-    obj = serializeUuidKey (opObject   prev) (opType   this) (opObject   this)
-    evt = serializeUuidKey (opEvent    prev) (opObject this) (opEvent    this)
-    loc = serializeUuidKey (opLocation prev) (opEvent  this) (opLocation this)
-    payload  = serializePayload (opObject this) (opPayload  this)
+    prev' = op' prev
+    typ = serializeUuidKey (opType   prev)  zero             (opType   this)
+    obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
+    evt = serializeUuidKey (opEvent  prev') (opObject this)  (opEvent  this')
+    loc = serializeUuidKey (opRef    prev') (opEvent  this') (opRef    this')
+    payload  = serializePayload (opObject this) (opPayload this')
     in
     ( BSLC.unwords
         $   key '*' typ
@@ -79,6 +79,7 @@ serializeOpZip this = state $ \prev -> let
     , this
     )
   where
+    this' = op' this
     key c u = [BSLC.cons c u | not $ BSL.null u]
 
 serializeAtom :: Atom -> ByteStringL
