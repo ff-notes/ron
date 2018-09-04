@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.LWW
-    ( LwwPerField
+    ( LwwPerField (..)
     ) where
 
 import           RON.Internal.Prelude

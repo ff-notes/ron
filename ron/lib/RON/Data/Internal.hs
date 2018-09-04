@@ -32,7 +32,7 @@ class (Eq a, Semigroup a, KnownSymbol (OpType a)) => Reducible a where
     stateFromChunk :: [Op'] -> a
 
     -- | Result is a state chunk
-    stateToChunk :: a -> (UUID, [Op'])
+    stateToChunk :: a -> ({- version -} UUID, [Op'])
 
     applyPatches :: a -> Unapplied -> (a, Unapplied)
     default applyPatches :: Monoid a => a -> Unapplied -> (a, Unapplied)

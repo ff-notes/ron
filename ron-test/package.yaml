@@ -6,6 +6,7 @@ dependencies:
     - bytestring
     - containers
     - directory
+    - errors
     - extra
     - filepath
     - hedgehog
@@ -30,3 +31,4 @@ tests:
     other-modules:
       - Gen
       - HexDump
+      - LwwStruct

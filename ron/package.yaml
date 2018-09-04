@@ -16,6 +16,7 @@ library:
     - containers
     - deepseq
     - Diff
+    - extra
     - flat
     - hashable
     - mtl

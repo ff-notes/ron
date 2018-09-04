@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.RGA (RGA) where
+module RON.Data.RGA (RGA (..), vertexListFromOps, vertexListToOps) where
 
 import           RON.Internal.Prelude
 

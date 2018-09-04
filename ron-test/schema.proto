@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+// alias Char {
+//     RON   String
+//     view  { C++     (use wchar_t)
+//             Haskell (use Char)
+//           }
+// }
+
+// alias RgaText {
+//     RON   (RGA Char)
+//     view  { Haskell (use Text) }
+// }
+
+import "google/protobuf/descriptor.proto";
+
+message View {
+    oneof View {
+        string  use     = 1;
+        string  create  = 2;
+    }
+}
+
+extend google.protobuf.MessageOptions {
+    View view_haskell = 1000;
+}
+
+message TestStruct {
+    option (view_haskell) = {create: ""};
+
+    sint64 int = 1;
+    string text = 2;
+}

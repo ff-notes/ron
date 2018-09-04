@@ -4,7 +4,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -17,10 +16,7 @@ import           RON.Internal.Prelude
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Foldable (for_)
-import           Data.Int (Int64)
 import           Data.Maybe (fromJust)
--- import           Data.String.Interpolate.IsString (i)
-import           Data.Text (Text)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
                            forAll, property, (===))
@@ -40,7 +36,6 @@ import qualified RON.Binary.Serialize as RB
 import           RON.Event (CalendarEvent (..), Naming (TrieForked),
                             ReplicaId (..), decodeEvent, encodeEvent,
                             fromCalendarEvent, mkCalendarDateTime)
--- import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
@@ -50,6 +45,7 @@ import qualified RON.UUID as UUID
 
 import qualified Gen
 import           HexDump (hexdump)
+import qualified LwwStruct
 
 main :: IO ()
 main = do
@@ -223,42 +219,6 @@ prop_ron_json_example = let
         parsed <- evalEitherS $ RT.parseFrame input
         output === parsed
 
-data TestStructView = TestStructView{tsv_int :: Int64, tsv_text :: Text}
-    deriving (Eq, Show)
-
--- data TestStruct = TestStruct
---     {ts_int :: Object (LWW Int64), ts_text :: Object RgaText}
---     deriving (Eq, Show)
-
--- testStruct0 = TestStructView{tsv_int = 275, tsv_text = "275"}
-
--- testStruct1 = object 0x9f $ TestStruct
---     { ts_int = object 0x177 $ LWW (event 567) 275
---     , ts_text = object 0x2b7 $ RgaText $ RGA
---         [(event 733, Just '2'), (event 734, Just '7'), (event 735, Just '5')]
---     }
---   where
---     event t = EpochEvent (ls60 t) replica
---     object o = Object (UUID (0xb000000000000000 + o) 0x2d83d30067100000)
-
--- replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
-
--- testStruct2 = [i|
---     *lww #B/000000002V+r3pl1c4 @`    'TestStruct' 'int' >]5s 'text' >]As !
---          #]5s                  @]8s  =275 ,
---     *rga #]As                  @]BT  '2' ,
---                                @)U   '7' ,
---                                @)V   '5' ,
---     .
---     |]
-
--- prop_lwwStruct = property $ do
---     ts1 <- evalEitherS $ runNetworkSim $ runReplicaSim replica $
---         initializeObject @TestStruct testStruct0
---     testStruct1 === ts1
---     ts2 <- evalEitherS $ TypedText.serialize ts1
---     BSL.words testStruct2 === BSL.words ts2
---     ts3 <- evalEitherS $ TypedText.parse ts2
---     ts1 === ts3
-
 lwwType = fromJust $ UUID.mkName "lww"
+
+prop_lwwStruct = LwwStruct.prop_lwwStruct

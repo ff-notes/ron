@@ -9,7 +9,8 @@
 {-# LANGUAGE TypeApplications #-}
 
 module RON.Data
-    ( reduce
+    ( Reducible (..)
+    , reduce
     , typeName
     ) where
 
