@@ -1,18 +1,19 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module RON.Data.RGA (RGA) where
 
 import           RON.Internal.Prelude
 
+import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (RChunk' (..), Reduced (..), Reducible (..))
+import           RON.Data.Internal (RChunk' (..), Reducible (..), Unapplied)
 import           RON.Internal.Word (pattern B11)
 import           RON.Types (Op' (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
@@ -82,131 +83,145 @@ vertexListFromList = foldr go mempty where
 vertexListFromOps :: [Op'] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
 
-data RGA = RGA
-    { rgaState             :: Maybe VertexList
-    , rgaUnappliedPatches  :: Map UUID VertexList
+newtype RGA = RGA (Maybe VertexList)
+    deriving (Eq, Semigroup, Show)
+
+data PatchSet = PatchSet
+    { psPatches  :: Map UUID VertexList
         -- ^ the key is the parent event, the value is a non-empty VertexList
-    , rgaUnappliedRemovals :: Map UUID UUID
+    , psRemovals :: Map UUID UUID
         -- ^ the key is the target event, the value is the tombstone event
     }
     deriving (Eq, Show)
 
-instance Semigroup RGA where
-    rga1 <> rga2 = reapply $ preMerge rga1 rga2
+instance Semigroup PatchSet where
+    rga1 <> rga2 = reapplyPatchSet $ preMerge rga1 rga2
 
-preMerge :: RGA -> RGA -> RGA
-preMerge (RGA state1 patches1 rm1) (RGA state2 patches2 rm2) = RGA
-    { rgaState             = state1 <> state2
-    , rgaUnappliedPatches  = Map.unionWith (<>) patches1 patches2
-    , rgaUnappliedRemovals = Map.unionWith max rm1 rm2
-    }
+preMerge :: PatchSet -> PatchSet -> PatchSet
+preMerge (PatchSet p1 r1) (PatchSet p2 r2) = PatchSet
+    {psPatches = Map.unionWith (<>) p1 p2, psRemovals = Map.unionWith max r1 r2}
 
-instance Monoid RGA where
-    mempty = RGA
-        { rgaState             = mempty
-        , rgaUnappliedPatches  = mempty
-        , rgaUnappliedRemovals = mempty
-        }
+instance Monoid PatchSet where
+    mempty = PatchSet{psPatches = mempty, psRemovals = mempty}
+
+patchSetFromRawOp :: Op' -> PatchSet
+patchSetFromRawOp op@Op'{opEvent, opRef, opPayload} = case opPayload of
+    [] ->  -- remove op
+        mempty{psRemovals = Map.singleton opRef opEvent}
+    _:_ ->  -- append op
+        mempty
+            { psPatches =
+                Map.singleton
+                    opRef
+                    VertexList
+                        { listHead = opEvent
+                        , listItems =
+                            HashMap.singleton
+                                opEvent
+                                VertexListItem
+                                    { itemValue = Vertex op{opRef = Zero}
+                                    , itemNext  = Nothing
+                                    }
+                        }
+            }
+
+patchSetFromChunk :: RChunk' -> PatchSet
+patchSetFromChunk RChunk'{rchunk'Ref, rchunk'Body} =
+    case uuidScheme $ UUID.split rchunk'Ref of
+        B11 ->
+            -- derived event -- rm-patch compatibility
+            foldMap patchSetFromRawOp rchunk'Body
+        _ ->  -- patch
+            case vertexListFromOps rchunk'Body of
+                Just patch -> mempty{psPatches = Map.singleton rchunk'Ref patch}
+                Nothing -> mempty
 
 instance Reducible RGA where
     type OpType RGA = "rga"
 
-    fromRawOp op@Op'{opEvent, opRef, opPayload} = case opPayload of
-        [] ->  -- remove op
-            mempty{rgaUnappliedRemovals = Map.singleton opRef opEvent}
-        _:_ ->  -- append op
-            mempty
-                { rgaUnappliedPatches =
-                    Map.singleton
-                        opRef
-                        VertexList
-                            { listHead = opEvent
-                            , listItems =
-                                HashMap.singleton
-                                    opEvent
-                                    VertexListItem
-                                        { itemValue = Vertex op{opRef = Zero}
-                                        , itemNext  = Nothing
-                                        }
-                            }
-                }
+    stateFromChunk = RGA . vertexListFromOps
 
-    fromChunk ref ops = case ref of
-        Zero ->  -- state
-            mempty{rgaState = vertexListFromOps ops}
-        (uuidScheme . UUID.split -> B11) ->
-            -- derived event -- rm-patch compatibility
-            foldMap fromRawOp ops
-        _ ->  -- patch
-            case vertexListFromOps ops of
-                Just patch ->
-                    mempty{rgaUnappliedPatches = Map.singleton ref patch}
-                Nothing -> mempty
+    stateToChunk (RGA rga) = (chunkVersion ops, ops) where
+        ops = vertexListToOps rga
 
-    toChunks RGA{..} = Reduced
-        { reducedStateVersion = chunkVersion reducedStateBody
-        , reducedStateBody
-        , reducedPatches =
-            [ RChunk'{rchunk'Version = chunkVersion rchunk'Body, ..}
-            | (rchunk'Ref, vertices) <- Map.assocs rgaUnappliedPatches
-            , let rchunk'Body = vertexListToOps $ Just vertices
-            ]
-        , reducedUnappliedOps =
-            [ Op'{opEvent = tombstone, opRef = vid, opPayload = []}
-            | (vid, tombstone) <- Map.assocs rgaUnappliedRemovals
-            ]
-        }
-      where
-        reducedStateBody = vertexListToOps rgaState
-        chunkVersion ops = maximumDef Zero
-            [ max vertexId tombstone
-            | Op'{opEvent = vertexId, opRef = tombstone} <- ops
-            ]
+    applyPatches rga (patches, ops) =
+        bimap id patchSetToChunks . reapplyPatchSetToState rga $
+        foldMap patchSetFromChunk patches <> foldMap patchSetFromRawOp ops
 
-    sameState = (==) `on` rgaState
+    reduceUnappliedPatches (patches, ops) =
+        patchSetToChunks . reapplyPatchSet $
+        foldMap patchSetFromChunk patches <> foldMap patchSetFromRawOp ops
 
-reapply :: RGA -> RGA
-reapply = go reapplyRemovals reapplyPatches where
-    go f1 f2 x = case f1 x of
-        Just x1 -> go f1 f2 x1
-        Nothing -> case f2 x of
-            Just x2 -> go f2 f1 x2
-            Nothing -> x
-
-reapplyPatches :: RGA -> Maybe RGA
-reapplyPatches rga =
-    reapplyPatchesToState rga <|> reapplyPatchesToOtherPatches rga
-  where
-    reapplyPatchesToState RGA{..} = do
-        VertexList{listHead = targetHead, listItems = targetItems} <- rgaState
-        asum
-            [ do
-                targetItems' <- apply parent patch targetItems
-                pure RGA
-                    { rgaState = Just $ VertexList targetHead targetItems'
-                    , rgaUnappliedPatches =
-                        Map.delete parent rgaUnappliedPatches
-                    , ..
-                    }
-            | (parent, patch) <- Map.assocs rgaUnappliedPatches
-            ]
-    reapplyPatchesToOtherPatches RGA{..} = asum
-        [ do
-            targetItems' <- apply parent patch targetItems
-            pure RGA
-                { rgaUnappliedPatches =
-                    Map.insert
-                        targetParent
-                        (VertexList targetHead targetItems') $
-                    Map.delete parent rgaUnappliedPatches
-                , ..
-                }
-        | (parent, patch) <- Map.assocs rgaUnappliedPatches
-        , (targetParent, targetPatch) <- Map.assocs rgaUnappliedPatches
-        , parent /= targetParent
-        , let VertexList targetHead targetItems = targetPatch
+patchSetToChunks :: PatchSet -> Unapplied
+patchSetToChunks PatchSet{..} =
+    (   [ RChunk'{rchunk'Version = chunkVersion rchunk'Body, ..}
+        | (rchunk'Ref, vertices) <- Map.assocs psPatches
+        , let rchunk'Body = vertexListToOps $ Just vertices
         ]
-    apply parent patch targetItems = do
+    ,   [ Op'{opEvent = tombstone, opRef = vid, opPayload = []}
+        | (vid, tombstone) <- Map.assocs psRemovals
+        ]
+    )
+
+chunkVersion :: [Op'] -> UUID
+chunkVersion ops = maximumDef Zero
+    [ max vertexId tombstone
+    | Op'{opEvent = vertexId, opRef = tombstone} <- ops
+    ]
+
+reapplyPatchSet :: PatchSet -> PatchSet
+reapplyPatchSet ps =
+    continue ps [reapplyPatchesToOtherPatches, reapplyRemovalsToPatches]
+
+reapplyPatchSetToState :: RGA -> PatchSet -> (RGA, PatchSet)
+reapplyPatchSetToState rga ps =
+    continue (rga, ps) [reapplyPatchesToState, reapplyRemovalsToState]
+
+continue :: x -> [x -> Maybe x] -> x
+continue x fs = case asum $ map ($ x) fs of
+    Nothing -> x
+    Just x' -> continue x' fs
+
+reapplyPatchesToState :: (RGA, PatchSet) -> Maybe (RGA, PatchSet)
+reapplyPatchesToState (RGA state, ps@PatchSet{..}) = case state of
+    Just VertexList{listHead = targetHead, listItems = targetItems} -> asum
+        [ do
+            targetItems' <- applyPatch parent patch targetItems
+            pure
+                ( RGA . Just $ VertexList targetHead targetItems'
+                , ps{psPatches = Map.delete parent psPatches}
+                )
+        | (parent, patch) <- Map.assocs psPatches
+        ]
+    Nothing -> do
+        -- state is empty => only virtual 0 node exists
+        -- => we can apply only 0 patch
+        patch <- Map.lookup Zero psPatches
+        pure (RGA $ Just patch, ps{psPatches = Map.delete Zero psPatches})
+
+reapplyPatchesToOtherPatches :: PatchSet -> Maybe PatchSet
+reapplyPatchesToOtherPatches ps@PatchSet{..} = asum
+    [ do
+        targetItems' <- applyPatch parent patch targetItems
+        pure ps
+            { psPatches =
+                Map.insert targetParent (VertexList targetHead targetItems') $
+                Map.delete parent psPatches
+            }
+    | (parent, patch) <- Map.assocs psPatches
+    , (targetParent, targetPatch) <- Map.assocs psPatches
+    , parent /= targetParent
+    , let VertexList targetHead targetItems = targetPatch
+    ]
+
+applyPatch
+    :: UUID
+    -> VertexList
+    -> HashMap UUID VertexListItem
+    -> Maybe (HashMap UUID VertexListItem)
+applyPatch parent patch targetItems = case parent of
+    Zero -> undefined
+    _ -> do
         item@VertexListItem{itemNext} <- HashMap.lookup parent targetItems
         let VertexList next' newItems = case itemNext of
                 Nothing   -> patch
@@ -214,44 +229,44 @@ reapplyPatches rga =
         let item' = item{itemNext = Just next'}
         pure $ HashMap.insert parent item' targetItems <> newItems
 
-reapplyRemovals :: RGA -> Maybe RGA
-reapplyRemovals rga =
-    reapplyRemovalsToState rga <|> reapplyRemovalsToPatches rga
-  where
-    reapplyRemovalsToState RGA{..} = do
-        VertexList{listHead = targetHead, listItems = targetItems} <- rgaState
-        asum
-            [ do
-                targetItems' <- apply parent tombstone targetItems
-                pure RGA
-                    { rgaState = Just $ VertexList targetHead targetItems'
-                    , rgaUnappliedRemovals =
-                        Map.delete parent rgaUnappliedRemovals
-                    , ..
-                    }
-            | (parent, tombstone) <- Map.assocs rgaUnappliedRemovals
-            ]
-    reapplyRemovalsToPatches RGA{..} = asum
+reapplyRemovalsToState :: (RGA, PatchSet) -> Maybe (RGA, PatchSet)
+reapplyRemovalsToState (RGA state, ps@PatchSet{..}) = do
+    VertexList{listHead = targetHead, listItems = targetItems} <- state
+    asum
         [ do
-            targetItems' <- apply parent tombstone targetItems
-            pure RGA
-                { rgaUnappliedRemovals = Map.delete parent rgaUnappliedRemovals
-                , rgaUnappliedPatches =
-                    Map.insert
-                        targetParent
-                        (VertexList targetHead targetItems')
-                        rgaUnappliedPatches
-                , ..
-                }
-        | (parent, tombstone) <- Map.assocs rgaUnappliedRemovals
-        , (targetParent, targetPatch) <- Map.assocs rgaUnappliedPatches
-        , let VertexList targetHead targetItems = targetPatch
+            targetItems' <- applyRemoval parent tombstone targetItems
+            pure
+                ( RGA . Just $ VertexList targetHead targetItems'
+                , ps{psRemovals = Map.delete parent psRemovals}
+                )
+        | (parent, tombstone) <- Map.assocs psRemovals
         ]
-    apply parent tombstone targetItems = do
-        item@VertexListItem{itemValue = Vertex v@Op'{opRef}} <-
-            HashMap.lookup parent targetItems
-        let item' = item{itemValue = Vertex v{opRef = max opRef tombstone}}
-        pure $ HashMap.insert parent item' targetItems
+
+reapplyRemovalsToPatches :: PatchSet -> Maybe PatchSet
+reapplyRemovalsToPatches PatchSet{..} = asum
+    [ do
+        targetItems' <- applyRemoval parent tombstone targetItems
+        pure PatchSet
+            { psRemovals = Map.delete parent psRemovals
+            , psPatches =
+                Map.insert
+                    targetParent (VertexList targetHead targetItems') psPatches
+            }
+    | (parent, tombstone) <- Map.assocs psRemovals
+    , (targetParent, targetPatch) <- Map.assocs psPatches
+    , let VertexList targetHead targetItems = targetPatch
+    ]
+
+applyRemoval
+    :: UUID
+    -> UUID
+    -> HashMap UUID VertexListItem
+    -> Maybe (HashMap UUID VertexListItem)
+applyRemoval parent tombstone targetItems = do
+    item@VertexListItem{itemValue = Vertex v@Op'{opRef}} <-
+        HashMap.lookup parent targetItems
+    let item' = item{itemValue = Vertex v{opRef = max opRef tombstone}}
+    pure $ HashMap.insert parent item' targetItems
 
 merge :: VertexList -> VertexList -> VertexList
 merge v1 v2 =

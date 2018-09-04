@@ -17,7 +17,7 @@ import           Data.HashMap.Strict as X (HashMap)
 import           Data.HashSet as X (HashSet)
 import           Data.Int as X (Int16, Int32, Int64, Int8)
 import           Data.List as X (foldl', sort, sortBy, sortOn)
-import           Data.List.NonEmpty as X (NonEmpty ((:|)))
+import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
 import           Data.Map.Strict as X (Map)
 import           Data.Maybe as X
 import           Data.Proxy as X
@@ -42,3 +42,6 @@ instance Ord a => Semigroup (MaxOnFst a b) where
     mof1@(MaxOnFst (a1, _)) <> mof2@(MaxOnFst (a2, _))
         | a1 < a2   = mof2
         | otherwise = mof1
+
+listSingleton :: a -> [a]
+listSingleton a = [a]

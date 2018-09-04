@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -22,8 +23,7 @@ import           Data.Map.Strict (Map, (!?))
 import qualified Data.Map.Strict as Map
 import           GHC.TypeLits (symbolVal)
 
-import           RON.Data.Internal (RChunk' (..), Reduced (..), Reducer,
-                                    Reducible (..))
+import           RON.Data.Internal (RChunk' (..), Reducer, Reducible (..))
 import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSet)
 import           RON.Data.RGA (RGA)
@@ -44,7 +44,7 @@ reducers = Map.fromList
 reduce :: Frame -> Frame
 reduce chunks = values' ++ queries where
     chunkObjectAndType = opObjectAndType . \case
-        Raw                              op  -> op
+        Raw                         op  -> op
         Value RChunk{rchunkHeader = op} -> op
         Query RChunk{rchunkHeader = op} -> op
     opObjectAndType Op{..} = (opObject, opType)
@@ -65,9 +65,9 @@ isQuery :: Chunk -> Bool
 isQuery = \case
     Query _ -> True
     _       -> False
+
 typeName :: forall a . Reducible a => UUID
 typeName =
-
     fromJust . UUID.mkName . BSC.pack $ symbolVal (Proxy :: Proxy (OpType a))
 
 mkReducer :: forall a . Reducible a => (UUID, Reducer)
@@ -75,64 +75,72 @@ mkReducer = (typeName @a, reducer @a)
 
 reducer :: forall a . Reducible a => Reducer
 reducer obj chunks = chunks' ++ leftovers where
-    chunks' = case mReducedState of
-        Nothing -> []
-        Just reducedState ->
-            [ Value RChunk
-                { rchunkHeader = mkOp Op'
-                    { opEvent = stateVersion
-                    , opRef = Zero
-                    , opPayload = []
-                    }
-                , rchunkBody = map mkOp reducedStateBody
+    chunks'
+        =  maybeToList stateChunk'
+        ++ map (Value . wrapRChunk) unappliedPatches
+        ++ map (Raw . wrapOp) unappliedOps
+    mStates = nonEmpty states
+    (stateChunk', (unappliedPatches, unappliedOps)) = case mStates of
+        Nothing -> (Nothing, reduceUnappliedPatches @a (patches, rawops))
+        Just nStates -> let
+            state = sconcat $ fmap snd nStates
+            (reducedState, unapplied') = applyPatches state (patches, rawops)
+            (reducedStateVersion, reducedStateBody) = stateToChunk reducedState
+            MaxOnFst (seenStateVersion, seenState) =
+                sconcat $ fmap MaxOnFst nStates
+            stateVersion = if
+                | reducedStateVersion > seenStateVersion -> reducedStateVersion
+                | reducedState == seenState -> seenStateVersion
+                | otherwise -> UUID.succValue seenStateVersion
+            rc = RChunk'
+                { rchunk'Version = stateVersion
+                , rchunk'Ref = Zero
+                , rchunk'Body = reducedStateBody
                 }
-            | not $ null reducedStateBody
-            ]
-            ++  map (Value . wrapRChunk) reducedPatches
-            ++  map (Raw . mkOp) reducedUnappliedOps
-          where
-            Reduced { reducedStateVersion
-                    , reducedStateBody
-                    , reducedPatches
-                    , reducedUnappliedOps
-                    } =
-                toChunks reducedState
-            stateVersion = case mSeenState of
-                Just (MaxOnFst (seenStateVersion, seenState))
-                    | reducedStateVersion > seenStateVersion ->
-                        reducedStateVersion
-                    | sameState reducedState seenState -> seenStateVersion
-                    | otherwise -> UUID.succValue seenStateVersion
-                Nothing -> reducedStateVersion
+            in  ( Just $ Value $ wrapRChunk rc
+                , reduceUnappliedPatches @a unapplied'
+                )
     typ = typeName @a
-    mkOp = Op typ obj
-    (mReducedState, mSeenState, leftovers) = sconcat $ fmap load chunks
-    load chunk = fromMaybe (Nothing, Nothing, [chunk]) $ load' chunk
+    wrapOp = Op typ obj
+    (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op'], leftovers :: [Chunk])
+        = foldMap load chunks
+    load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of
         Raw op@Op{op'} -> do
             guardSameObject op
-            let state = fromRawOp @a op'
-            pure (Just state, Nothing, [])
+            pure ([], [], [op'], [])
         Value RChunk{rchunkHeader, rchunkBody} -> do
             guardSameObject rchunkHeader
             body <- for rchunkBody $ \op -> do
                 guardSameObject op
                 pure $ op' op
             let ref = opRef $ op' rchunkHeader
-            let state = fromChunk @a ref body
-            pure
-                ( Just state
-                , case ref of
-                    Zero ->  -- state
-                        Just $ MaxOnFst (opEvent $ op' rchunkHeader, state)
-                    _    -> Nothing  -- patch
-                , []
-                )
+            case ref of
+                Zero ->  -- state
+                    -- let state = fromChunk @a ref body
+                    pure
+                        ( [(opEvent $ op' rchunkHeader, stateFromChunk body)]
+                        , []
+                        , []
+                        , []
+                        )
+                _ ->  -- patch
+                    pure
+                        ( []
+                        ,   [ RChunk'
+                                { rchunk'Version = opEvent $ op' rchunkHeader
+                                , rchunk'Ref = ref
+                                , rchunk'Body = body
+                                }
+                            ]
+                        , []
+                        , []
+                        )
         _ -> Nothing
     guardSameObject Op{opType, opObject} =
         guard $ opType == typ && opObject == obj
     wrapRChunk RChunk'{..} = RChunk
-        { rchunkHeader = mkOp
+        { rchunkHeader = wrapOp
             Op'{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
-        , rchunkBody = map mkOp rchunk'Body
+        , rchunkBody = map wrapOp rchunk'Body
         }

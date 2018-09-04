@@ -10,13 +10,11 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Internal.Prelude
 
-import           RON.Data.Internal (Reducible (..), mkReducedPatch,
-                                    mkReducedState)
+import           RON.Data.Internal (Reducible (..), mkStateChunk)
 import           RON.Types (Op' (..), UUID)
-import           RON.UUID (pattern Zero)
 
 data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op'}
-    deriving (Eq)
+    deriving (Eq, Show)
 
 instance Semigroup SetItem where
     (<>) = minOn itemIsAlive
@@ -27,33 +25,19 @@ itemFromOp op@Op'{opEvent, opRef, opPayload} = (itemId, item) where
     itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{itemIsAlive, itemOriginalOp = op}
 
-data ORSet = ORSet{setRef :: Maybe UUID, setItems :: Map UUID SetItem}
-    deriving (Eq)
+newtype ORSet = ORSet (Map UUID SetItem)
+    deriving (Eq, Show)
 
 instance Semigroup ORSet where
-    ORSet ref1 items1 <> ORSet ref2 items2 =
-        ORSet (min ref1 ref2) (Map.unionWith (<>) items1 items2)
+    ORSet set1 <> ORSet set2 = ORSet $ Map.unionWith (<>) set1 set2
 
 instance Monoid ORSet where
-    mempty = ORSet Nothing mempty
+    mempty = ORSet mempty
 
 instance Reducible ORSet where
     type OpType ORSet = "set"
 
-    fromRawOp op@Op'{opEvent} = ORSet
-        { setRef = Just opEvent
-        , setItems = uncurry Map.singleton $ itemFromOp op
-        }
+    stateFromChunk = ORSet . Map.fromListWith (<>) . map itemFromOp
 
-    fromChunk ref ops = ORSet
-        { setRef = Just ref
-        , setItems = Map.fromListWith (<>) $ map itemFromOp ops
-        }
-
-    toChunks ORSet{setRef, setItems} = case fromMaybe Zero setRef of
-        Zero -> mkReducedState     ops
-        ref  -> mkReducedPatch ref ops
-      where
-        ops = sortOn opEvent . map itemOriginalOp $ Map.elems setItems
-
-    sameState = (==) `on` setItems
+    stateToChunk (ORSet set) =
+        mkStateChunk . sortOn opEvent . map itemOriginalOp $ Map.elems set

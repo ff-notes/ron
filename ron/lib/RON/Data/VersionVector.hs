@@ -10,22 +10,22 @@ import           RON.Internal.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), mkReducedState)
+import           RON.Data.Internal (Reducible (..), mkStateChunk)
 import           RON.Types (Op' (..), UUID (UUID))
 
 type Origin = Word64
 
-ropTime :: Op' -> Word64
-ropTime Op'{opEvent = UUID time _} = time
+opTime :: Op' -> Word64
+opTime Op'{opEvent = UUID time _} = time
 
-ropOrigin :: Op' -> Word64
-ropOrigin Op'{opEvent = UUID _ origin} = origin
+opOrigin :: Op' -> Word64
+opOrigin Op'{opEvent = UUID _ origin} = origin
 
 latter :: Op' -> Op' -> Op'
-latter = maxOn ropTime
+latter = maxOn opTime
 
 newtype VersionVector = VersionVector (Map Origin Op')
-    deriving (Eq)
+    deriving (Eq, Show)
 
 instance Semigroup VersionVector where
     (<>) = coerce $ Map.unionWith latter
@@ -36,9 +36,7 @@ instance Monoid VersionVector where
 instance Reducible VersionVector where
     type OpType VersionVector = "vv"
 
-    fromRawOp = undefined
+    stateFromChunk ops =
+        VersionVector $ Map.fromListWith latter [(opOrigin op, op) | op <- ops]
 
-    fromChunk _ ops =
-        VersionVector $ Map.fromListWith latter [(ropOrigin op, op) | op <- ops]
-
-    toChunks (VersionVector vv) = mkReducedState $ Map.elems vv
+    stateToChunk (VersionVector vv) = mkStateChunk $ Map.elems vv
