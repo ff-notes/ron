@@ -37,8 +37,17 @@ import           RON.Types (Atom (..), Chunk (Value), Frame, Op (..), Op' (..),
 import           RON.UUID (zero)
 import qualified RON.UUID as UUID
 
+-- | (type, object) -> body
+type Frame' = Map (UUID, UUID) [Op']
+
+-- | name -> op
+type LwwChunk = Map UUID Op'
+
 data Object a = Object {- object id -} UUID {- value -} a
     deriving (Eq, Show)
+
+objectId :: Object a -> UUID
+objectId (Object oid _) = oid
 
 data LwwField a = LwwField {- time -} UUID {- value -} a
     deriving (Eq, Show)
@@ -68,15 +77,14 @@ instance Replicated Text (RGA Char) where
         fmap RGA . traverse (\a -> (, zero, a) <$> getEventUuid) . Text.unpack
     view (RGA rga) = Text.pack $ map thd3 rga
 
-class ReplicatedObject a where
+class ReplicatedAsObject a where
     objectToChunks :: Object a -> [StateChunk]
     objectFromChunks
         :: UUID  -- ^ this object id
-        -> Map (UUID, UUID) (UUID, [Op'])
-            -- ^ (type, object) -> (version, body)
+        -> Frame'
         -> Either String (Object a)
 
-instance AsPayload a => ReplicatedObject (RGA a) where
+instance ReplicatedAsPayload a => ReplicatedAsObject (RGA a) where
     objectToChunks (Object oid (RGA rga)) =
         StateChunk{stateType = typeName @Prim.RGA, stateObject = oid, ..}
         : otherChunks
@@ -89,28 +97,24 @@ instance AsPayload a => ReplicatedObject (RGA a) where
             stateToChunk . Prim.RGA $ Prim.vertexListFromOps ops
 
     objectFromChunks oid chunks = do
-        (_version, chunk) <- note "no such object in chunk" $
+        chunk <- note "no such object in chunk" $
             Map.lookup (typeName @Prim.RGA, oid) chunks
         fmap (Object oid . RGA) . for chunk $ \Op'{..} -> do
             value <- fromPayload opPayload chunks
             pure (opEvent, opRef, value)
 
 -- | TODO Very bad name
-class AsPayload a where
+class ReplicatedAsPayload a where
     toPayload :: a -> ([Atom], [StateChunk])
-    fromPayload
-        :: [Atom]
-        -> Map (UUID, UUID) (UUID, [Op'])
-            -- ^ (type, object) -> (version, body)
-        -> Either String a
+    fromPayload :: [Atom] -> Frame' -> Either String a
 
-instance AsPayload Int64 where
+instance ReplicatedAsPayload Int64 where
     toPayload int = ([AInteger int], [])
     fromPayload atoms _ = case atoms of
         [AInteger int] -> pure int
         _ -> Left "bad payload"
 
-instance AsPayload Char where
+instance ReplicatedAsPayload Char where
     toPayload c = ([AString $ Text.singleton c], [])
     fromPayload atoms _ = case atoms of
         [AString s] -> case Text.uncons s of
@@ -118,18 +122,15 @@ instance AsPayload Char where
             _ -> Left "too long string to encode a single character"
         _ -> Left "bad payload"
 
-instance ReplicatedObject a => AsPayload (Object a) where
+instance ReplicatedAsObject a => ReplicatedAsPayload (Object a) where
     toPayload obj@(Object oid _) = ([AUuid oid], objectToChunks obj)
     fromPayload atoms chunks = case atoms of
         [AUuid oid] -> objectFromChunks oid chunks
         _ -> Left "bad payload"
 
 lwwFieldFromOps
-    :: AsPayload a
-    => UUID
-    -> Map UUID Op'
-    -> Map (UUID, UUID) (UUID, [Op'])
-    -> Either String (LwwField a)
+    :: ReplicatedAsPayload a
+    => UUID -> LwwChunk -> Frame' -> Either String (LwwField a)
 lwwFieldFromOps name ops chunks = do
     Op'{..} <- note "no such name in lww chunk" $ Map.lookup name ops
     value <- fromPayload opPayload chunks
@@ -168,7 +169,7 @@ instance Replicated TestStruct TestStructState where
     initialize TestStruct{..} =
         TestStructState <$> initialize int <*> initialize text
     view TestStructState{..} = TestStruct{int = view s_int, text = view s_text}
-instance ReplicatedObject TestStructState where
+instance ReplicatedAsObject TestStructState where
     objectToChunks (Object oid TestStructState{..}) =
         StateChunk{stateType = typeName @LwwPerField, stateObject = oid, ..}
         : otherChunks
@@ -184,7 +185,7 @@ instance ReplicatedObject TestStructState where
                 ]
         (stateVersion, stateBody) = stateToChunk state
     objectFromChunks oid chunks = do
-        (_version, chunk) <- note "no such object in chunk" $
+        chunk <- note "no such object in chunk" $
             Map.lookup (typeName @LwwPerField, oid) chunks
         let ops = Map.fromList [(opRef op, op) | op <- chunk]
         Object oid <$> do
@@ -227,7 +228,7 @@ prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
     ts1 <- evalEitherS $ runNetworkSim $ runReplicaSim replica $
         initialize @TestStruct testStruct0
-    let Object tsId _ = ts1
+    let tsId = objectId ts1
     testStruct1 === ts1
     let ts2 = testStructSerialize ts1
     BSLC.words testStruct2 === BSLC.words ts2
@@ -261,9 +262,9 @@ data StateChunk = StateChunk
     , stateBody    :: [Op']
     }
 
-findObjects :: Frame -> Map (UUID, UUID) (UUID, [Op'])
+findObjects :: Frame -> Frame'
 findObjects frame = Map.fromList
-    [ ((opType, opObject), (opEvent, map op' rchunkBody))
+    [ ((opType, opObject), map op' rchunkBody)
     | Value RChunk{rchunkHeader, rchunkBody} <- frame
-    , let Op{opType, opObject, op' = Op'{opEvent}} = rchunkHeader
+    , let Op{opType, opObject} = rchunkHeader
     ]
