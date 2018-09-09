@@ -38,7 +38,7 @@ serializeUuid this =
 serializeUuidKey :: UUID -> UUID -> UUID -> ByteStringL
 serializeUuidKey prevKey prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
-        B00 -> minimumBy (comparing BS.length)
+        B00 -> minimumByLength
             $   unzipped thisFields
             :   [ z
                 | prevKey /= zero || this == zero
@@ -57,7 +57,7 @@ serializeUuidKey prevKey prev this =
 serializeUuidAtom :: UUID -> UUID -> ByteStringL
 serializeUuidAtom prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
-        B00 -> minimumBy (comparing BS.length)
+        B00 -> minimumByLength
             $   unzipped thisFields
             :   [ z
                 | prev /= zero
@@ -89,7 +89,10 @@ unzipped UuidFields{..} = x' <> y'
 zipUuid :: Bool -> UuidFields -> UuidFields -> Maybe ByteString
 zipUuid changeZipBase prev this
     | prev == this       = pure ""
-    | canReuseWholeParts = pure $ mconcat [variety, value, scheme, origin]
+    | canReuseWholeParts = pure $ let
+        val = maybe value  (minByLength value)  valueZip
+        ori = maybe origin (minByLength origin) originZip
+        in mconcat [variety, val, scheme, ori]
     | otherwise          = do
         val <- valueZip
         ori <- originZip
@@ -149,3 +152,9 @@ serializeVariety = \case
 
 serializeUuidGeneric :: UUID -> ByteString
 serializeUuidGeneric (UUID x y) = Base64.encode64 x <> Base64.encode64 y
+
+minimumByLength :: Foldable f => f ByteString -> ByteString
+minimumByLength = minimumBy $ comparing BS.length
+
+minByLength :: ByteString -> ByteString -> ByteString
+minByLength = minOn BS.length

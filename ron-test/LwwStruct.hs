@@ -213,14 +213,14 @@ replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 testStruct2 :: ByteStringL
 testStruct2 = [i|
-    *lww #B/000000002V+r3pl1c4 @`000000008s            !
-                               @]5s         :int  =275 ,
-                               @]8s         :text >]As ,
+    *lww #B/000000002V+r3pl1c4 @`]8s            !
+                               @]5s  :int  =275 ,
+                               @]8s  :text >]As ,
 
-    *rga #]As                  @]Fs         :0         !
-                               @]At               '2'  ,
-                               @]B~               '7'  ,
-                               @]Fs               '5'  ,
+    *rga #]As                  @]Fs  :0         !
+                               @]At        '2'  ,
+                               @]B~        '7'  ,
+                               @]Fs        '5'  ,
     .
     |]
 
