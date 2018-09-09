@@ -17,6 +17,7 @@ import           Data.Hashable as X (Hashable)
 import           Data.HashMap.Strict as X (HashMap)
 import           Data.HashSet as X (HashSet)
 import           Data.Int as X (Int16, Int32, Int64, Int8)
+import           Data.Kind as X (Type)
 import           Data.List as X (foldl', sort, sortBy, sortOn)
 import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
 import           Data.Map.Strict as X (Map)
@@ -29,6 +30,7 @@ import           Data.Traversable as X
 import           Data.Tuple.Extra as X
 import           Data.Vector as X (Vector)
 import           Data.Word as X (Word16, Word32, Word64, Word8)
+import           GHC.TypeLits as X
 import           Safe.Foldable as X
 
 type ByteStringL = BSL.ByteString
