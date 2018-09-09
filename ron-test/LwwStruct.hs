@@ -37,11 +37,10 @@ import           RON.Types (Atom (..), Chunk (Value), Frame, Op (..), Op' (..),
 import           RON.UUID (zero)
 import qualified RON.UUID as UUID
 
--- | (type, object) -> body
-type Frame' = Map (UUID, UUID) [Op']
+-- | (type, object)
+type ObjectKey = (UUID, UUID)
 
--- | name -> op
-type LwwChunk = Map UUID Op'
+type Frame' = Map ObjectKey [Op']
 
 data Object a = Object {- object id -} UUID {- value -} a
     deriving (Eq, Show)
@@ -103,7 +102,6 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (RGA a) where
             value <- fromPayload opPayload chunks
             pure (opEvent, opRef, value)
 
--- | TODO Very bad name
 class ReplicatedAsPayload a where
     toPayload :: a -> ([Atom], [StateChunk])
     fromPayload :: [Atom] -> Frame' -> Either String a
@@ -130,9 +128,12 @@ instance ReplicatedAsObject a => ReplicatedAsPayload (Object a) where
 
 lwwFieldFromOps
     :: ReplicatedAsPayload a
-    => UUID -> LwwChunk -> Frame' -> Either String (LwwField a)
+    => UUID -> [Op'] -> Frame' -> Either String (LwwField a)
 lwwFieldFromOps name ops chunks = do
-    Op'{..} <- note "no such name in lww chunk" $ Map.lookup name ops
+    Op'{..} :| unreducedGarbage <-
+        note "no such name in lww chunk" $
+        nonEmpty $ filter ((name ==) . opRef) ops
+    unless (null unreducedGarbage) $ Left "unreduced garbage"
     value <- fromPayload opPayload chunks
     pure $ LwwField opEvent value
 
@@ -185,9 +186,8 @@ instance ReplicatedAsObject TestStructState where
                 ]
         (stateVersion, stateBody) = stateToChunk state
     objectFromChunks oid chunks = do
-        chunk <- note "no such object in chunk" $
+        ops <- note "no such object in chunk" $
             Map.lookup (typeName @LwwPerField, oid) chunks
-        let ops = Map.fromList [(opRef op, op) | op <- chunk]
         Object oid <$> do
             s_int  <- lwwFieldFromOps intName  ops chunks
             s_text <- lwwFieldFromOps textName ops chunks
