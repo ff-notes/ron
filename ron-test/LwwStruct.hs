@@ -17,11 +17,12 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, fromPayload,
-                           getObject, getObjectStateChunk, newObject,
-                           newPayload, collectFrame)
+import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload,
+                           collectFrame, fromPayload, getObject,
+                           getObjectStateChunk, newObject, newPayload)
+import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame)
 import           RON.Data.VersionVector (VersionVector (..))
-import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..),
+import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..),
                             getEventUuid)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
@@ -59,30 +60,6 @@ findObjects = fmap Map.fromList . traverse loadBody where
         when (opObject /= chunkObject) $
             Left "reduced op object id does not match chunk object id"
         pure op'
-
--- LWW -------------------------------------------------------------------------
-
-lwwType :: UUID
-lwwType = fromJust $ UUID.mkName "lww"
-
-newLwwFrame
-    :: Clock clock => [(UUID, I ReplicatedAsPayload)] -> clock (Object Frame')
-newLwwFrame fields = collectFrame $ do
-    payloads <- for fields $ \(_, I value) -> newPayload value
-    e <- lift getEventUuid
-    tell $ Map.singleton (lwwType, e) $ StateChunk e
-        [Op' e name p | ((name, _), p) <- zip fields payloads]
-    pure e
-
-getLwwField
-    :: ReplicatedAsPayload a => UUID -> StateChunk -> Frame' -> Either String a
-getLwwField name StateChunk{..} chunks = do
-    let ops = filter ((name ==) . opRef) stateBody
-    Op'{..} <- case ops of
-        []   -> Left "no such name in lww chunk"
-        [op] -> pure op
-        _    -> Left "unreduced state"
-    fromPayload opPayload chunks
 
 -- RGA -------------------------------------------------------------------------
 
