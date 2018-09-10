@@ -8,6 +8,7 @@ module RON.Internal.Prelude
 
 import           Control.Applicative as X
 import           Control.Monad as X
+import           Control.Monad.Except as X (throwError)
 import           Data.ByteString as X (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Coerce as X
@@ -21,7 +22,7 @@ import           Data.HashMap.Strict as X (HashMap)
 import           Data.HashSet as X (HashSet)
 import           Data.Int as X (Int16, Int32, Int64, Int8)
 import           Data.Kind as X (Type)
-import           Data.List as X (foldl', sort, sortBy, sortOn)
+import           Data.List as X (foldl', partition, sort, sortBy, sortOn)
 import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
 import           Data.Map.Strict as X (Map)
 import           Data.Maybe as X

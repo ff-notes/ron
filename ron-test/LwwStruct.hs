@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,7 +11,10 @@ module LwwStruct (prop_lwwStruct) where
 
 import           RON.Internal.Prelude
 
+import           Control.Monad.Except (MonadError, runExceptT)
+import           Control.Monad.State.Strict (MonadState, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
+import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
@@ -19,11 +23,11 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
                            getObjectStateChunk, newObject, objectOpType)
-import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame)
+import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame, setLwwField)
 import           RON.Data.ORSet (ORSetHash (..))
 import           RON.Data.RGA (RgaList (..))
 import           RON.Data.VersionVector (VersionVector (..))
-import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
+import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
@@ -116,6 +120,22 @@ instance ReplicatedAsObject Example1 where
         str3           <- getLwwField str3Name ops obj
         ORSetHash set4 <- getLwwField set4Name ops obj
         pure Example1{..}
+setInt1
+    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
+    => Int64 -> m ()
+setInt1 = setLwwField int1Name . I
+setStr2
+    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
+    => String -> m ()
+setStr2 = setLwwField str2Name . I . RgaList
+setStr3
+    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
+    => Text -> m ()
+setStr3 = setLwwField str3Name . I
+setSet4
+    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
+    => HashSet Example2 -> m ()
+setSet4 = setLwwField set4Name . I . ORSetHash
 
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance ReplicatedAsPayload Example2
@@ -135,8 +155,8 @@ example0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
 replica :: ReplicaId
 replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
-example2 :: ByteStringL
-example2 = [i|
+ex1expect :: ByteStringL
+ex1expect = [i|
     *lww    #B/]B~+r3pl1c4  @`                      !
                                     :int1   =275    ,
                                     :set4   >]2V    ,
@@ -152,18 +172,55 @@ example2 = [i|
     .
     |]
 
+ex4expect :: ByteStringL
+ex4expect = [i|
+    *lww    #B/]B~+r3pl1c4  @`]Qs                   !
+                            @]Fs    :int1   =166    ,
+                            @]Qs    :set4   >]Ws    ,
+                            @]Gs    :str2   >]Ns    ,
+                            @]Os    :str3   '206'   ,
+
+            #]Vs            @`      :0              !
+                                    :vv5    >]R~    ,
+
+    *rga    #]At            @]As    :0              !
+                            @]5s            '2'     ,
+                            @]8s            '7'     ,
+                            @]As            '5'     ,
+
+            #]Ns            @]J~                    !
+                            @]Is            '2'     ,
+                            @)t             '0'     ,
+                            @]J~            '8'     ,
+
+    *set    #]2V            @`                      !
+
+            #]Ws            @]Qt                    !
+                                            >]Vs    ,
+
+    *vv     #]R~            @`                      !
+    .
+    |]
+
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
-    ex1 <-
-        evalEitherS $ runNetworkSim $ runReplicaSim replica $ newObject example0
-    let (oid, ex2) = serializeObject ex1
-    BSLC.words example2 === BSLC.words ex2
-    ex3 <- evalEitherS $ parseObject oid ex2
-    ex1 === ex3
-    example3 <- evalEitherS $ getObject ex3
+    let ex1 = runNetworkSim $ runReplicaSim replica $ newObject example0
+    let (oid, ex1s) = serializeObject ex1
+    BSLC.words ex1expect === BSLC.words ex1s
+
+    ex2 <- evalEitherS $ parseObject oid ex1s
+    ex1 === ex2
+
+    example3 <- evalEitherS $ getObject ex2
     example0 === example3
 
-    -- setInt1
+    let ex4 = runNetworkSim $ runReplicaSim replica $
+            (`execStateT` ex2) $ runExceptT $ do
+                setInt1 166
+                setStr2 "208"
+                setStr3 "206"
+                setSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
+    BSLC.words ex4expect === BSLC.words (snd $ serializeObject ex4)
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case

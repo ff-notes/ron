@@ -16,6 +16,7 @@ library:
     - containers
     - deepseq
     - Diff
+    - errors
     - extra
     - flat
     - hashable

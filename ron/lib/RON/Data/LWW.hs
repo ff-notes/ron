@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -9,17 +10,20 @@ module RON.Data.LWW
     , getLwwField
     , lwwType
     , newLwwFrame
+    , setLwwField
     ) where
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.Writer.Strict (lift, tell)
+import           Control.Monad.Except (MonadError)
+import           Control.Monad.State.Strict (MonadState, get, put)
+import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducible (..), ReplicatedAsObject,
                                     ReplicatedAsPayload (..), collectFrame,
-                                    mkStateChunk)
-import           RON.Event (Clock, getEventUuid)
+                                    getObjectStateChunk, mkStateChunk)
+import           RON.Event (Clock, advanceToUuid, getEventUuid)
 import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
 import qualified RON.UUID as UUID
 
@@ -65,3 +69,23 @@ getLwwField name StateChunk{..} Object{..} = do
         [op] -> pure op
         _    -> Left "unreduced state"
     fromPayload opPayload objectFrame
+
+setLwwField
+    :: (Clock m, MonadError String m, MonadState (Object a) m)
+    => UUID
+    -> I ReplicatedAsPayload
+    -> m ()
+setLwwField field (I value) = do
+    obj@Object{..} <- get
+    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    advanceToUuid stateVersion
+    let chunk = filter ((field /=) . opRef) stateBody
+    e <- getEventUuid
+    (p, newFrame) <- runWriterT $ newPayload value
+    let newOp = Op' e field p
+    let chunk' = sortOn opRef $ newOp : chunk
+    let state' = StateChunk e chunk'
+    put Object
+        { objectFrame = Map.insert objectId state' objectFrame <> newFrame
+        , ..
+        }

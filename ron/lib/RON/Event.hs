@@ -14,6 +14,7 @@ module RON.Event
     , Replica (..)
     , ReplicaId (..)
     , Calendar (..)
+    , advanceToUuid
     , decodeEvent
     , encodeEvent
     , fromCalendarEvent
@@ -27,6 +28,8 @@ module RON.Event
     , toEpochEvent
     ) where
 
+import           Control.Monad.Except (ExceptT, lift)
+import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
 
@@ -123,6 +126,12 @@ toEpochEvent (Event t r) = case t of
 class Monad m => Replica m where
     getPid :: m ReplicaId
 
+instance Replica m => Replica (ExceptT e m) where
+    getPid = lift getPid
+
+instance Replica m => Replica (StateT s m) where
+    getPid = lift getPid
+
 class Replica m => Clock m where
     -- | Get sequential timestamps.
     --
@@ -140,6 +149,17 @@ class Replica m => Clock m where
 
     -- | Make local time not less than this
     advance :: Word60 -> m ()
+
+instance Clock m => Clock (ExceptT e m) where
+    getEvents = lift . getEvents
+    advance   = lift . advance
+
+instance Clock m => Clock (StateT s m) where
+    getEvents = lift . getEvents
+    advance   = lift . advance
+
+advanceToUuid :: Clock clock => UUID -> clock ()
+advanceToUuid = advance . uuidValue . UUID.split
 
 getEvent :: Clock m => m EpochEvent
 getEvent = head <$> getEvents (leastSignificant60 (1 :: Word64))
