@@ -1,3 +1,4 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -74,32 +75,38 @@ findObjects = fmap Map.fromList . traverse loadBody where
             Left "reduced op object id does not match chunk object id"
         pure op'
 
-collectFrame
-    :: (Functor m, Semigroup f) => WriterT f m (Object f) -> m (Object f)
-collectFrame = fmap (\(Object oid f, f') -> Object oid $ f <> f') . runWriterT
-
-objectToPayload :: Object Frame' -> WriterT Frame' clock [Atom]
-objectToPayload = undefined
+collectFrame :: Functor m => WriterT frame m UUID -> m (Object frame)
+collectFrame = fmap (uncurry Object) . runWriterT
 
 objectFromPayload
-    :: String
-    -> (UUID -> Frame' -> Either String b)
+    :: (UUID -> Frame' -> Either String b)
     -> [Atom]
     -> Frame'
     -> Either String b
-objectFromPayload name handler atoms frame = case atoms of
+objectFromPayload handler atoms frame = case atoms of
     [AUuid oid] -> handler oid frame
-    _ -> Left $ name ++ ": bad payload"
+    _ -> Left "bad payload"
 
-getObject :: UUID -> UUID -> Frame' -> Either String StateChunk
-getObject typ oid frame =
+getObjectStateChunk :: UUID -> UUID -> Frame' -> Either String StateChunk
+getObjectStateChunk typ oid frame =
     note "no such object in chunk" $ Map.lookup (typ, oid) frame
 
--- ReplicatedAsPayload ---------------------------------------------------------
+-- Replicated ------------------------------------------------------------------
 
 class ReplicatedAsPayload a where
     newPayload :: Clock clock => a -> WriterT Frame' clock [Atom]
+    default newPayload
+        :: (Clock clock, ReplicatedAsObject a)
+        => a -> WriterT Frame' clock [Atom]
+    newPayload a = do
+        Object oid frame <- lift $ newObject a
+        tell frame
+        pure [AUuid oid]
+
     fromPayload :: [Atom] -> Frame' -> Either String a
+    default fromPayload
+        :: ReplicatedAsObject a => [Atom] -> Frame' -> Either String a
+    fromPayload = objectFromPayload getObject
 
 instance ReplicatedAsPayload Int64 where
     newPayload int = pure [AInteger int]
@@ -121,6 +128,10 @@ instance ReplicatedAsPayload Char where
             _ -> Left "too long string to encode a single character"
         _ -> Left "Char: bad payload"
 
+class ReplicatedAsObject a where
+    newObject :: Clock clock => a -> clock (Object Frame')
+    getObject :: UUID -> Frame' -> Either String a
+
 -- LWW -------------------------------------------------------------------------
 
 lwwType :: UUID
@@ -131,8 +142,9 @@ newLwwFrame
 newLwwFrame fields = collectFrame $ do
     payloads <- for fields $ \(_, I value) -> newPayload value
     e <- lift getEventUuid
-    pure $ Object e $ Map.singleton (lwwType, e) $ StateChunk e
+    tell $ Map.singleton (lwwType, e) $ StateChunk e
         [Op' e name p | ((name, _), p) <- zip fields payloads]
+    pure e
 
 getLwwField
     :: ReplicatedAsPayload a => UUID -> StateChunk -> Frame' -> Either String a
@@ -151,8 +163,10 @@ rgaType = fromJust $ UUID.mkName "rga"
 
 newtype RGA a = RGA [a]
 
-instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a) where
-    newPayload (RGA items) = do
+instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a)
+
+instance ReplicatedAsPayload a => ReplicatedAsObject (RGA a) where
+    newObject (RGA items) = collectFrame $ do
         ops <- for items $ \a -> do
             vertexId <- lift getEventUuid
             payload <- newPayload a
@@ -160,10 +174,10 @@ instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a) where
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
-        pure [AUuid oid]
+        pure oid
 
-    fromPayload = objectFromPayload "RGA" $ \oid frame -> do
-        StateChunk{..} <- getObject rgaType oid frame
+    getObject oid frame = do
+        StateChunk{..} <- getObjectStateChunk rgaType oid frame
         items <- for stateBody $ \Op'{..} -> do
             value <- fromPayload opPayload frame
             pure (opRef, value)
@@ -178,9 +192,12 @@ newtype ORSetHash a = ORSetHash (HashSet a)
 
 instance (Eq a, Hashable a, ReplicatedAsPayload a)
     => ReplicatedAsPayload (ORSetHash a)
+
+instance (Eq a, Hashable a, ReplicatedAsPayload a)
+    => ReplicatedAsObject (ORSetHash a)
     where
 
-    newPayload (ORSetHash items) = do
+    newObject (ORSetHash items) = collectFrame $ do
         ops <- for (toList items) $ \a -> do
             e <- lift getEventUuid
             payload <- newPayload a
@@ -188,10 +205,10 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (setType, oid) $ StateChunk version ops
-        pure [AUuid oid]
+        pure oid
 
-    fromPayload = objectFromPayload "ORSet Hash" $ \oid frame -> do
-        StateChunk{..} <- getObject setType oid frame
+    getObject oid frame = do
+        StateChunk{..} <- getObjectStateChunk setType oid frame
         items <- for stateBody $ \Op'{..} -> do
             value <- fromPayload opPayload frame
             pure (opRef, value)
@@ -203,16 +220,18 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
 vvType :: UUID
 vvType = fromJust $ UUID.mkName "vv"
 
-instance ReplicatedAsPayload VersionVector where
-    newPayload (VersionVector vv) = do
+instance ReplicatedAsPayload VersionVector
+
+instance ReplicatedAsObject VersionVector where
+    newObject (VersionVector vv) = collectFrame $ do
         oid <- lift getEventUuid
         let ops = Map.elems vv
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (vvType, oid) $ StateChunk version ops
-        pure [AUuid oid]
+        pure oid
 
-    fromPayload = objectFromPayload "VersionVector" $ \oid frame -> do
-        StateChunk{..} <- getObject vvType oid frame
+    getObject oid frame = do
+        StateChunk{..} <- getObjectStateChunk vvType oid frame
         pure $ stateFromChunk stateBody
 
 -- Example ---------------------------------------------------------------------
@@ -246,44 +265,41 @@ vv5Name = fromJust $ UUID.mkName "vv5"
 data Example1 = Example1
     {int1 :: Int64, str2 :: String, str3 :: Text, set4 :: HashSet Example2}
     deriving (Eq, Show)
-newExample1 :: Clock clock => Example1 -> clock (Object Frame')
-newExample1 Example1{..} = newLwwFrame
-    [ (int1Name, I int1)
-    , (set4Name, I $ ORSetHash set4)
-    , (str2Name, I $ RGA str2)
-    , (str3Name, I str3)
-    ]
-getExample1 :: UUID -> Frame' -> Either String Example1
-getExample1 oid frame = do
-    ops <- getObject lwwType oid frame
-    int1           <- getLwwField int1Name ops frame
-    RGA str2       <- getLwwField str2Name ops frame
-    str3           <- getLwwField str3Name ops frame
-    ORSetHash set4 <- getLwwField set4Name ops frame
-    pure Example1{..}
+instance ReplicatedAsPayload Example1
+instance ReplicatedAsObject Example1 where
+    newObject Example1{..} = newLwwFrame
+        [ (int1Name, I int1)
+        , (set4Name, I $ ORSetHash set4)
+        , (str2Name, I $ RGA str2)
+        , (str3Name, I str3)
+        ]
+    getObject oid frame = do
+        ops <- getObjectStateChunk lwwType oid frame
+        int1           <- getLwwField int1Name ops frame
+        RGA str2       <- getLwwField str2Name ops frame
+        str3           <- getLwwField str3Name ops frame
+        ORSetHash set4 <- getLwwField set4Name ops frame
+        pure Example1{..}
 
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
-instance ReplicatedAsPayload Example2 where
-    newPayload = lift . newExample2 >=> objectToPayload
-    fromPayload = objectFromPayload "Example2" getExample2
-newExample2 :: Clock clock => Example2 -> clock (Object Frame')
-newExample2 Example2{..} = newLwwFrame [(vv5Name, I vv5)]
-getExample2 :: UUID -> Frame' -> Either String Example2
-getExample2 oid frame = do
-    ops <- getObject lwwType oid frame
-    vv5 <- getLwwField int1Name ops frame
-    pure Example2{..}
+instance ReplicatedAsPayload Example2
+instance ReplicatedAsObject Example2 where
+    newObject Example2{..} = newLwwFrame [(vv5Name, I vv5)]
+    getObject oid frame = do
+        ops <- getObjectStateChunk lwwType oid frame
+        vv5 <- getLwwField int1Name ops frame
+        pure Example2{..}
 {- /GENERATED -}
 
-testStruct0 :: Example1
-testStruct0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
+example0 :: Example1
+example0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
 
 -- | "r3pl1c4"
 replica :: ReplicaId
 replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
-testStruct2 :: ByteStringL
-testStruct2 = [i|
+example2 :: ByteStringL
+example2 = [i|
     *lww    #B/00000000B~+r3pl1c4   @`                      !
                                             :int1   =275    ,
                                             :set4   >]2V    ,
@@ -301,15 +317,15 @@ testStruct2 = [i|
 
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
-    Object ts1id ts1frame <-
+    Object ex1id ex1frame <-
         evalEitherS $ runNetworkSim $ runReplicaSim replica $
-        newExample1 testStruct0
-    let ts2 = serializeFrame' ts1frame
-    BSLC.words testStruct2 === BSLC.words ts2
-    ts3frame <- evalEitherS $ parseFrame' ts2
-    ts1frame === ts3frame
-    testStruct3 <- evalEitherS $ getExample1 ts1id ts3frame
-    testStruct0 === testStruct3
+        newObject example0
+    let ex2 = serializeFrame' ex1frame
+    BSLC.words example2 === BSLC.words ex2
+    ex3frame <- evalEitherS $ parseFrame' ex2
+    ex1frame === ex3frame
+    example3 <- evalEitherS $ getObject ex1id ex3frame
+    example0 === example3
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
