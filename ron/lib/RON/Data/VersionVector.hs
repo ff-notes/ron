@@ -56,6 +56,8 @@ vvType = fromJust $ UUID.mkName "vv"
 instance ReplicatedAsPayload VersionVector
 
 instance ReplicatedAsObject VersionVector where
+    objectOpType = vvType
+
     newObject (VersionVector vv) = collectFrame $ do
         oid <- lift getEventUuid
         let ops = Map.elems vv
@@ -63,6 +65,6 @@ instance ReplicatedAsObject VersionVector where
         tell $ Map.singleton (vvType, oid) $ StateChunk version ops
         pure oid
 
-    getObject oid frame = do
-        StateChunk{..} <- getObjectStateChunk vvType oid frame
+    getObject obj = do
+        StateChunk{..} <- getObjectStateChunk obj
         pure $ stateFromChunk stateBody

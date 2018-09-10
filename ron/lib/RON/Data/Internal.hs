@@ -99,14 +99,14 @@ class ReplicatedAsPayload a where
         :: (Clock clock, ReplicatedAsObject a)
         => a -> WriterT Frame' clock [Atom]
     newPayload a = do
-        Object oid frame <- lift $ newObject a
+        Object (_, oid) frame <- lift $ newObject a
         tell frame
         pure [AUuid oid]
 
     fromPayload :: [Atom] -> Frame' -> Either String a
     default fromPayload
         :: ReplicatedAsObject a => [Atom] -> Frame' -> Either String a
-    fromPayload = objectFromPayload getObject
+    fromPayload = objectFromPayload (objectOpType @a) getObject
 
 instance ReplicatedAsPayload Int64 where
     newPayload int = pure [AInteger int]
@@ -129,21 +129,26 @@ instance ReplicatedAsPayload Char where
         _ -> Left "Char: bad payload"
 
 class ReplicatedAsObject a where
-    newObject :: Clock clock => a -> clock (Object Frame')
-    getObject :: UUID -> Frame' -> Either String a
+    objectOpType :: UUID
+    newObject :: Clock clock => a -> clock (Object a)
+    getObject :: Object a -> Either String a
 
 objectFromPayload
-    :: (UUID -> Frame' -> Either String b)
+    :: UUID
+    -> (Object a -> Either String a)
     -> [Atom]
     -> Frame'
-    -> Either String b
-objectFromPayload handler atoms frame = case atoms of
-    [AUuid oid] -> handler oid frame
+    -> Either String a
+objectFromPayload typ handler atoms frame = case atoms of
+    [AUuid oid] -> handler $ Object (typ, oid) frame
     _ -> Left "bad payload"
 
-collectFrame :: Functor m => WriterT frame m UUID -> m (Object frame)
-collectFrame = fmap (uncurry Object) . runWriterT
+collectFrame
+    :: forall a m
+    . (ReplicatedAsObject a, Functor m) => WriterT Frame' m UUID -> m (Object a)
+collectFrame =
+    fmap (\(oid, frame) -> Object (objectOpType @a, oid) frame) . runWriterT
 
-getObjectStateChunk :: UUID -> UUID -> Frame' -> Either String StateChunk
-getObjectStateChunk typ oid frame =
+getObjectStateChunk :: Object a -> Either String StateChunk
+getObjectStateChunk (Object (typ, oid) frame) =
     maybe (Left "no such object in chunk") Right $ Map.lookup (typ, oid) frame

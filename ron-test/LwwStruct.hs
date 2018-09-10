@@ -3,6 +3,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module LwwStruct (prop_lwwStruct) where
 
@@ -16,7 +18,7 @@ import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
-                           getObjectStateChunk, newObject)
+                           getObjectStateChunk, newObject, objectOpType)
 import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame)
 import           RON.Data.ORSet (ORSetHash (..))
 import           RON.Data.RGA (RgaList (..))
@@ -35,12 +37,20 @@ import qualified RON.UUID as UUID
 parseFrame' :: ByteStringL -> Either String Frame'
 parseFrame' = parseFrame >=> findObjects
 
+parseObject
+    :: forall a
+    . ReplicatedAsObject a => UUID -> ByteStringL -> Either String (Object a)
+parseObject oid bytes = Object (objectOpType @a, oid) <$> parseFrame' bytes
+
 serializeFrame' :: Frame' -> ByteStringL
 serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value RChunk{..} where
         rchunkHeader = Op{op' = Op'{opRef = zero, opPayload = [], ..}, ..}
         rchunkBody = [Op{..} | op' <- stateBody]
         opEvent = stateVersion
+
+serializeObject :: Object a -> (UUID, ByteStringL)
+serializeObject (Object (_, oid) frame) = (oid, serializeFrame' frame)
 
 findObjects :: Frame -> Either String Frame'
 findObjects = fmap Map.fromList . traverse loadBody where
@@ -92,27 +102,29 @@ data Example1 = Example1
     deriving (Eq, Show)
 instance ReplicatedAsPayload Example1
 instance ReplicatedAsObject Example1 where
+    objectOpType = lwwType
     newObject Example1{..} = newLwwFrame
         [ (int1Name, I int1)
         , (set4Name, I $ ORSetHash set4)
         , (str2Name, I $ RgaList str2)
         , (str3Name, I str3)
         ]
-    getObject oid frame = do
-        ops <- getObjectStateChunk lwwType oid frame
-        int1           <- getLwwField int1Name ops frame
-        RgaList str2   <- getLwwField str2Name ops frame
-        str3           <- getLwwField str3Name ops frame
-        ORSetHash set4 <- getLwwField set4Name ops frame
+    getObject obj = do
+        ops <- getObjectStateChunk obj
+        int1           <- getLwwField int1Name ops obj
+        RgaList str2   <- getLwwField str2Name ops obj
+        str3           <- getLwwField str3Name ops obj
+        ORSetHash set4 <- getLwwField set4Name ops obj
         pure Example1{..}
 
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance ReplicatedAsPayload Example2
 instance ReplicatedAsObject Example2 where
+    objectOpType = lwwType
     newObject Example2{..} = newLwwFrame [(vv5Name, I vv5)]
-    getObject oid frame = do
-        ops <- getObjectStateChunk lwwType oid frame
-        vv5 <- getLwwField int1Name ops frame
+    getObject obj = do
+        ops <- getObjectStateChunk obj
+        vv5 <- getLwwField int1Name ops obj
         pure Example2{..}
 {- /GENERATED -}
 
@@ -142,15 +154,16 @@ example2 = [i|
 
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
-    Object ex1id ex1frame <-
-        evalEitherS $ runNetworkSim $ runReplicaSim replica $
-        newObject example0
-    let ex2 = serializeFrame' ex1frame
+    ex1 <-
+        evalEitherS $ runNetworkSim $ runReplicaSim replica $ newObject example0
+    let (oid, ex2) = serializeObject ex1
     BSLC.words example2 === BSLC.words ex2
-    ex3frame <- evalEitherS $ parseFrame' ex2
-    ex1frame === ex3frame
-    example3 <- evalEitherS $ getObject ex1id ex3frame
+    ex3 <- evalEitherS $ parseObject oid ex2
+    ex1 === ex3
+    example3 <- evalEitherS $ getObject ex3
     example0 === example3
+
+    -- setInt1
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case

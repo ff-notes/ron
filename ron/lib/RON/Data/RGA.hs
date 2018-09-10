@@ -26,7 +26,7 @@ import           RON.Data.Internal (RChunk' (..), Reducible (..),
                                     collectFrame, getObjectStateChunk)
 import           RON.Event (getEventUuid)
 import           RON.Internal.Word (pattern B11)
-import           RON.Types (Op' (..), StateChunk (..), UUID)
+import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
 import qualified RON.UUID as UUID
 
@@ -311,6 +311,8 @@ newtype RgaList a = RgaList [a]
 instance ReplicatedAsPayload a => ReplicatedAsPayload (RgaList a)
 
 instance ReplicatedAsPayload a => ReplicatedAsObject (RgaList a) where
+    objectOpType = rgaType
+
     newObject (RgaList items) = collectFrame $ do
         ops <- for items $ \a -> do
             vertexId <- lift getEventUuid
@@ -321,9 +323,9 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (RgaList a) where
         tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
         pure oid
 
-    getObject oid frame = do
-        StateChunk{..} <- getObjectStateChunk rgaType oid frame
+    getObject obj@Object{..} = do
+        StateChunk{..} <- getObjectStateChunk obj
         items <- for stateBody $ \Op'{..} -> do
-            value <- fromPayload opPayload frame
+            value <- fromPayload opPayload objectFrame
             pure (opRef, value)
         pure $ RgaList [value | (opRef, value) <- items, opRef == Zero]

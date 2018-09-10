@@ -17,7 +17,7 @@ import           RON.Data.Internal (Reducible (..), ReplicatedAsObject (..),
                                     ReplicatedAsPayload (..), collectFrame,
                                     getObjectStateChunk, mkStateChunk)
 import           RON.Event (getEventUuid)
-import           RON.Types (Op' (..), StateChunk (..), UUID)
+import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
 import qualified RON.UUID as UUID
 
@@ -62,6 +62,8 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
     => ReplicatedAsObject (ORSetHash a)
     where
 
+    objectOpType = setType
+
     newObject (ORSetHash items) = collectFrame $ do
         ops <- for (toList items) $ \a -> do
             e <- lift getEventUuid
@@ -72,10 +74,10 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
         tell $ Map.singleton (setType, oid) $ StateChunk version ops
         pure oid
 
-    getObject oid frame = do
-        StateChunk{..} <- getObjectStateChunk setType oid frame
+    getObject obj@Object{..} = do
+        StateChunk{..} <- getObjectStateChunk obj
         items <- for stateBody $ \Op'{..} -> do
-            value <- fromPayload opPayload frame
+            value <- fromPayload opPayload objectFrame
             pure (opRef, value)
         pure $ ORSetHash $ HashSet.fromList
             [value | (opRef, value) <- items, opRef == zero]

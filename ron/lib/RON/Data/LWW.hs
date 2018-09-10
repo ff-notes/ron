@@ -16,10 +16,11 @@ import           RON.Internal.Prelude
 import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), ReplicatedAsPayload (..),
-                                    collectFrame, mkStateChunk)
+import           RON.Data.Internal (Reducible (..), ReplicatedAsObject,
+                                    ReplicatedAsPayload (..), collectFrame,
+                                    mkStateChunk)
 import           RON.Event (Clock, getEventUuid)
-import           RON.Types (Frame', Object, Op' (..), StateChunk (..), UUID)
+import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
 import qualified RON.UUID as UUID
 
 lww :: Op' -> Op' -> Op'
@@ -45,7 +46,8 @@ lwwType :: UUID
 lwwType = fromJust $ UUID.mkName "lww"
 
 newLwwFrame
-    :: Clock clock => [(UUID, I ReplicatedAsPayload)] -> clock (Object Frame')
+    :: (Clock clock, ReplicatedAsObject a)
+    => [(UUID, I ReplicatedAsPayload)] -> clock (Object a)
 newLwwFrame fields = collectFrame $ do
     payloads <- for fields $ \(_, I value) -> newPayload value
     e <- lift getEventUuid
@@ -54,11 +56,12 @@ newLwwFrame fields = collectFrame $ do
     pure e
 
 getLwwField
-    :: ReplicatedAsPayload a => UUID -> StateChunk -> Frame' -> Either String a
-getLwwField name StateChunk{..} chunks = do
+    :: ReplicatedAsPayload b
+    => UUID -> StateChunk -> Object a -> Either String b
+getLwwField name StateChunk{..} Object{..} = do
     let ops = filter ((name ==) . opRef) stateBody
     Op'{..} <- case ops of
         []   -> Left "no such name in lww chunk"
         [op] -> pure op
         _    -> Left "unreduced state"
-    fromPayload opPayload chunks
+    fromPayload opPayload objectFrame
