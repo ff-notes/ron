@@ -21,6 +21,7 @@ import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload,
                            collectFrame, fromPayload, getObject,
                            getObjectStateChunk, newObject, newPayload)
 import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame)
+import           RON.Data.RGA (RgaList (..))
 import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..),
                             getEventUuid)
@@ -60,33 +61,6 @@ findObjects = fmap Map.fromList . traverse loadBody where
         when (opObject /= chunkObject) $
             Left "reduced op object id does not match chunk object id"
         pure op'
-
--- RGA -------------------------------------------------------------------------
-
-rgaType :: UUID
-rgaType = fromJust $ UUID.mkName "rga"
-
-newtype RGA a = RGA [a]
-
-instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a)
-
-instance ReplicatedAsPayload a => ReplicatedAsObject (RGA a) where
-    newObject (RGA items) = collectFrame $ do
-        ops <- for items $ \a -> do
-            vertexId <- lift getEventUuid
-            payload <- newPayload a
-            pure $ Op' vertexId zero payload
-        oid <- lift getEventUuid
-        let version = maximumDef oid $ map opEvent ops
-        tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
-        pure oid
-
-    getObject oid frame = do
-        StateChunk{..} <- getObjectStateChunk rgaType oid frame
-        items <- for stateBody $ \Op'{..} -> do
-            value <- fromPayload opPayload frame
-            pure (opRef, value)
-        pure $ RGA [value | (opRef, value) <- items, opRef == zero]
 
 -- ORSetHash -------------------------------------------------------------------
 
@@ -156,13 +130,13 @@ instance ReplicatedAsObject Example1 where
     newObject Example1{..} = newLwwFrame
         [ (int1Name, I int1)
         , (set4Name, I $ ORSetHash set4)
-        , (str2Name, I $ RGA str2)
+        , (str2Name, I $ RgaList str2)
         , (str3Name, I str3)
         ]
     getObject oid frame = do
         ops <- getObjectStateChunk lwwType oid frame
         int1           <- getLwwField int1Name ops frame
-        RGA str2       <- getLwwField str2Name ops frame
+        RgaList str2   <- getLwwField str2Name ops frame
         str3           <- getLwwField str3Name ops frame
         ORSetHash set4 <- getLwwField set4Name ops frame
         pure Example1{..}

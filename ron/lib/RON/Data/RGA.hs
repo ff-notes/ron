@@ -1,21 +1,32 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.RGA (RGA (..), vertexListFromOps, vertexListToOps) where
+module RON.Data.RGA
+    ( RGA (..)
+    , RgaList (..)
+    , vertexListFromOps
+    , vertexListToOps
+    ) where
 
 import           RON.Internal.Prelude
 
+import           Control.Monad.Writer.Strict (lift, tell)
 import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (RChunk' (..), Reducible (..), Unapplied)
+import           RON.Data.Internal (RChunk' (..), Reducible (..),
+                                    ReplicatedAsObject (..),
+                                    ReplicatedAsPayload (..), Unapplied,
+                                    collectFrame, getObjectStateChunk)
+import           RON.Event (getEventUuid)
 import           RON.Internal.Word (pattern B11)
-import           RON.Types (Op' (..), UUID)
+import           RON.Types (Op' (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
 import qualified RON.UUID as UUID
 
@@ -291,3 +302,28 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
         , opRef     = max tombstone1 tombstone2
         , opPayload = maxOn length p1 p2
         }
+
+rgaType :: UUID
+rgaType = fromJust $ UUID.mkName "rga"
+
+newtype RgaList a = RgaList [a]
+
+instance ReplicatedAsPayload a => ReplicatedAsPayload (RgaList a)
+
+instance ReplicatedAsPayload a => ReplicatedAsObject (RgaList a) where
+    newObject (RgaList items) = collectFrame $ do
+        ops <- for items $ \a -> do
+            vertexId <- lift getEventUuid
+            payload <- newPayload a
+            pure $ Op' vertexId Zero payload
+        oid <- lift getEventUuid
+        let version = maximumDef oid $ map opEvent ops
+        tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
+        pure oid
+
+    getObject oid frame = do
+        StateChunk{..} <- getObjectStateChunk rgaType oid frame
+        items <- for stateBody $ \Op'{..} -> do
+            value <- fromPayload opPayload frame
+            pure (opRef, value)
+        pure $ RgaList [value | (opRef, value) <- items, opRef == Zero]
