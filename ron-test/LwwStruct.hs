@@ -156,33 +156,39 @@ getRgaFromFrame oid frame = do
 {-
 Schema:
 
-    struct TestStruct
+    struct Example
         fields
-            int     SInt64
-            text    RGA Char
+            int1    SInt64
+            str2    RGA Char
+            str3    String
 -}
 
 {- GENERATED -}
-intName :: UUID
-intName  = fromJust $ UUID.mkName "int"
-textName :: UUID
-textName = fromJust $ UUID.mkName "text"
-data TestStruct = TestStruct{int :: Int64, text :: String} deriving (Eq, Show)
-newTestStruct :: Clock clock => TestStruct -> clock (Object Frame')
-newTestStruct TestStruct{..} = collectFrame $ do
-    int'  <- newPayload int
-    text' <- newPayload (RGA text)
-    lift $ newLwwFrame [(intName, int'), (textName, text')]
-getTestStruct :: UUID -> Frame' -> Either String TestStruct
+int1Name :: UUID
+int1Name = fromJust $ UUID.mkName "int1"
+str2Name :: UUID
+str2Name = fromJust $ UUID.mkName "str2"
+str3Name :: UUID
+str3Name = fromJust $ UUID.mkName "str3"
+data Example = Example{int1 :: Int64, str2 :: String, str3 :: Text}
+    deriving (Eq, Show)
+newExample :: Clock clock => Example -> clock (Object Frame')
+newExample Example{..} = collectFrame $ do
+    int1' <- newPayload int1
+    str2' <- newPayload (RGA str2)
+    str3' <- newPayload str3
+    lift $ newLwwFrame [(int1Name, int1'), (str2Name, str2'), (str3Name, str3')]
+getTestStruct :: UUID -> Frame' -> Either String Example
 getTestStruct oid frame = do
     ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
-    int      <- getLwwField intName  ops frame
-    RGA text <- getLwwField textName ops frame
-    pure TestStruct{..}
+    int1     <- getLwwField int1Name ops frame
+    RGA str2 <- getLwwField str2Name ops frame
+    str3     <- getLwwField str3Name ops frame
+    pure Example{..}
 {- /GENERATED -}
 
-testStruct0 :: TestStruct
-testStruct0 = TestStruct{int = 275, text = "275"}
+testStruct0 :: Example
+testStruct0 = Example{int1 = 275, str2 = "275", str3 = "190"}
 
 -- | "r3pl1c4"
 replica :: ReplicaId
@@ -192,8 +198,9 @@ testStruct2 :: ByteStringL
 -- TODO #B/]At+r3pl1c4
 testStruct2 = [i|
     *lww    #B/00000000At+r3pl1c4   @`                      !
-                                            :int    =275    ,
-                                            :text   >)s     ,
+                                            :int1   =275    ,
+                                            :str2   >)s     ,
+                                            :str3   '190'   ,
 
     *rga    #)s                     @`      :0              !
                                     @]2V            '2'     ,
@@ -206,7 +213,7 @@ prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
     Object ts1id ts1frame <-
         evalEitherS $ runNetworkSim $ runReplicaSim replica $
-        newTestStruct testStruct0
+        newExample testStruct0
     let ts2 = serializeFrame' ts1frame
     BSLC.words testStruct2 === BSLC.words ts2
     ts3frame <- evalEitherS $ parseFrame' ts2
