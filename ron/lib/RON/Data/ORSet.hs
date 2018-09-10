@@ -1,18 +1,25 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.ORSet (ORSet) where
-
-import qualified Data.Map.Strict as Map
+module RON.Data.ORSet (ORSet, ORSetHash (..)) where
 
 import           RON.Internal.Prelude
 
-import           RON.Data.Internal (Reducible (..), mkStateChunk)
-import           RON.Types (Op' (..), UUID)
+import           Control.Monad.Writer.Strict (lift, tell)
+import qualified Data.HashSet as HashSet
+import qualified Data.Map.Strict as Map
+
+import           RON.Data.Internal (Reducible (..), ReplicatedAsObject (..),
+                                    ReplicatedAsPayload (..), collectFrame,
+                                    getObjectStateChunk, mkStateChunk)
+import           RON.Event (getEventUuid)
+import           RON.Types (Op' (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
+import qualified RON.UUID as UUID
 
 data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op'}
     deriving (Eq, Show)
@@ -21,10 +28,10 @@ instance Semigroup SetItem where
     (<>) = minOn itemIsAlive
 
 itemFromOp :: Op' -> (UUID, SetItem)
-itemFromOp op@Op'{opEvent, opRef} = (itemId, item) where
+itemFromOp itemOriginalOp@Op'{..} = (itemId, item) where
     itemIsAlive = opRef == zero
     itemId = if itemIsAlive then opEvent else opRef
-    item = SetItem{itemIsAlive, itemOriginalOp = op}
+    item = SetItem{..}
 
 newtype ORSet = ORSet (Map UUID SetItem)
     deriving (Eq, Show)
@@ -42,3 +49,33 @@ instance Reducible ORSet where
 
     stateToChunk (ORSet set) =
         mkStateChunk . sortOn opEvent . map itemOriginalOp $ Map.elems set
+
+setType :: UUID
+setType = fromJust $ UUID.mkName "set"
+
+newtype ORSetHash a = ORSetHash (HashSet a)
+
+instance (Eq a, Hashable a, ReplicatedAsPayload a)
+    => ReplicatedAsPayload (ORSetHash a)
+
+instance (Eq a, Hashable a, ReplicatedAsPayload a)
+    => ReplicatedAsObject (ORSetHash a)
+    where
+
+    newObject (ORSetHash items) = collectFrame $ do
+        ops <- for (toList items) $ \a -> do
+            e <- lift getEventUuid
+            payload <- newPayload a
+            pure $ Op' e zero payload
+        oid <- lift getEventUuid
+        let version = maximumDef oid $ map opEvent ops
+        tell $ Map.singleton (setType, oid) $ StateChunk version ops
+        pure oid
+
+    getObject oid frame = do
+        StateChunk{..} <- getObjectStateChunk setType oid frame
+        items <- for stateBody $ \Op'{..} -> do
+            value <- fromPayload opPayload frame
+            pure (opRef, value)
+        pure $ ORSetHash $ HashSet.fromList
+            [value | (opRef, value) <- items, opRef == zero]

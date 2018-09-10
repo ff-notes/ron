@@ -8,23 +8,20 @@ module LwwStruct (prop_lwwStruct) where
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload,
-                           collectFrame, fromPayload, getObject,
-                           getObjectStateChunk, newObject, newPayload)
+import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
+                           getObjectStateChunk, newObject)
 import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame)
+import           RON.Data.ORSet (ORSetHash (..))
 import           RON.Data.RGA (RgaList (..))
 import           RON.Data.VersionVector (VersionVector (..))
-import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..),
-                            getEventUuid)
+import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
@@ -61,38 +58,6 @@ findObjects = fmap Map.fromList . traverse loadBody where
         when (opObject /= chunkObject) $
             Left "reduced op object id does not match chunk object id"
         pure op'
-
--- ORSetHash -------------------------------------------------------------------
-
-setType :: UUID
-setType = fromJust $ UUID.mkName "set"
-
-newtype ORSetHash a = ORSetHash (HashSet a)
-
-instance (Eq a, Hashable a, ReplicatedAsPayload a)
-    => ReplicatedAsPayload (ORSetHash a)
-
-instance (Eq a, Hashable a, ReplicatedAsPayload a)
-    => ReplicatedAsObject (ORSetHash a)
-    where
-
-    newObject (ORSetHash items) = collectFrame $ do
-        ops <- for (toList items) $ \a -> do
-            e <- lift getEventUuid
-            payload <- newPayload a
-            pure $ Op' e zero payload
-        oid <- lift getEventUuid
-        let version = maximumDef oid $ map opEvent ops
-        tell $ Map.singleton (setType, oid) $ StateChunk version ops
-        pure oid
-
-    getObject oid frame = do
-        StateChunk{..} <- getObjectStateChunk setType oid frame
-        items <- for stateBody $ \Op'{..} -> do
-            value <- fromPayload opPayload frame
-            pure (opRef, value)
-        pure $ ORSetHash $ HashSet.fromList
-            [value | (opRef, value) <- items, opRef == zero]
 
 -- Example ---------------------------------------------------------------------
 
