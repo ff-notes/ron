@@ -112,11 +112,13 @@ instance ReplicatedAsPayload Char where
 lwwType :: UUID
 lwwType = fromJust $ UUID.mkName "lww"
 
-newLwwFrame :: Clock clock => [(UUID, [Atom])] -> clock (Object Frame')
-newLwwFrame fields = do
-    e <- getEventUuid
-    pure $ Object e $ Map.singleton (lwwType, e) $
-        StateChunk e [Op' e name value | (name, value) <- fields]
+newLwwFrame
+    :: Clock clock => [(UUID, I ReplicatedAsPayload)] -> clock (Object Frame')
+newLwwFrame fields = collectFrame $ do
+    payloads <- for fields $ \(_, I value) -> newPayload value
+    e <- lift getEventUuid
+    pure $ Object e $ Map.singleton (lwwType, e) $ StateChunk e
+        [Op' e name p | ((name, _), p) <- zip fields payloads]
 
 getLwwField
     :: ReplicatedAsPayload a => UUID -> StateChunk -> Frame' -> Either String a
@@ -240,17 +242,12 @@ data Example1 = Example1
     {int1 :: Int64, str2 :: String, str3 :: Text, set4 :: HashSet Example2}
     deriving (Eq, Show)
 newExample1 :: Clock clock => Example1 -> clock (Object Frame')
-newExample1 Example1{..} = collectFrame $ do
-    int1' <- newPayload int1
-    set4' <- newPayload (ORSetHash set4)
-    str2' <- newPayload (RGA str2)
-    str3' <- newPayload str3
-    lift $ newLwwFrame
-        [ (int1Name, int1')
-        , (set4Name, set4')
-        , (str2Name, str2')
-        , (str3Name, str3')
-        ]
+newExample1 Example1{..} = newLwwFrame
+    [ (int1Name, I int1)
+    , (set4Name, I $ ORSetHash set4)
+    , (str2Name, I $ RGA str2)
+    , (str3Name, I str3)
+    ]
 getExample1 :: UUID -> Frame' -> Either String Example1
 getExample1 oid frame = do
     ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
@@ -267,9 +264,7 @@ instance ReplicatedAsPayload Example2 where
         [AUuid oid] -> getExample2 oid frame
         _ -> Left "Example2: bad payload"
 newExample2 :: Clock clock => Example2 -> clock (Object Frame')
-newExample2 Example2{..} = collectFrame $ do
-    vv5' <- newPayload vv5
-    lift $ newLwwFrame [(vv5Name, vv5')]
+newExample2 Example2{..} = newLwwFrame [(vv5Name, I vv5)]
 getExample2 :: UUID -> Frame' -> Either String Example2
 getExample2 oid frame = do
     ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame

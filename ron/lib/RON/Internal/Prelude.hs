@@ -1,3 +1,6 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
+
 module RON.Internal.Prelude
     ( module RON.Internal.Prelude
     , module X
@@ -51,3 +54,6 @@ instance Ord a => Semigroup (MaxOnFst a b) where
 
 listSingleton :: a -> [a]
 listSingleton a = [a]
+
+-- | Instance
+data I c = forall a . c a => I a
