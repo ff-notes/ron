@@ -222,6 +222,10 @@ prop_lwwStruct = property $ do
                 setSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
     BSLC.words ex4expect === BSLC.words (snd $ serializeObject ex4)
 
+    -- TODO collect garbage
+
+    -- TODO test we can parse this back
+
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
