@@ -145,6 +145,14 @@ getRgaFromFrame oid frame = do
         pure (opRef, value)
     pure [value | (opRef, value) <- vertices, opRef == zero]
 
+-- RgaText ---------------------------------------------------------------------
+
+newtype RgaText = RgaText Text
+
+instance ReplicatedAsPayload RgaText where
+    newPayload (RgaText text) = newRgaPayload $ Text.unpack text
+    fromPayload atoms = fmap (RgaText . Text.pack) . getRgaFromPayload atoms
+
 -- Example ---------------------------------------------------------------------
 
 {-
@@ -166,11 +174,6 @@ Schema:
 -}
 
 {- GENERATED -}
-newtype RgaText = RgaText Text
-instance ReplicatedAsPayload RgaText where
-    newPayload (RgaText text) = newRgaPayload $ Text.unpack text
-    fromPayload atoms = fmap (RgaText . Text.pack) . getRgaFromPayload atoms
-
 intName :: UUID
 intName  = fromJust $ UUID.mkName "int"
 textName :: UUID
@@ -183,8 +186,7 @@ newTestStruct TestStruct{..} = collectFrame $ do
     lift $ newLwwFrame [(intName, int'), (textName, text')]
 getTestStruct :: UUID -> Frame' -> Either String TestStruct
 getTestStruct oid frame = do
-    ops <-
-        note "no such object in chunk" $
+    ops <- note "no such object in chunk" $
         Map.lookup (typeName @LwwPerField, oid) frame
     int          <- getLwwField intName  ops frame
     RgaText text <- getLwwField textName ops frame
