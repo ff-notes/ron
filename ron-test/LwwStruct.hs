@@ -91,6 +91,9 @@ objectFromPayload name handler atoms frame = case atoms of
     [AUuid oid] -> handler oid frame
     _ -> Left $ name ++ ": bad payload"
 
+getObject :: UUID -> UUID -> Frame' -> Either String StateChunk
+getObject typ oid frame =
+    note "no such object in chunk" $ Map.lookup (typ, oid) frame
 
 -- ReplicatedAsPayload ---------------------------------------------------------
 
@@ -160,8 +163,7 @@ instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a) where
         pure [AUuid oid]
 
     fromPayload = objectFromPayload "RGA" $ \oid frame -> do
-        StateChunk{..} <-
-            note "no such object in chunk" $ Map.lookup (rgaType, oid) frame
+        StateChunk{..} <- getObject rgaType oid frame
         items <- for stateBody $ \Op'{..} -> do
             value <- fromPayload opPayload frame
             pure (opRef, value)
@@ -189,8 +191,7 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
         pure [AUuid oid]
 
     fromPayload = objectFromPayload "ORSet Hash" $ \oid frame -> do
-        StateChunk{..} <-
-            note "no such object in chunk" $ Map.lookup (setType, oid) frame
+        StateChunk{..} <- getObject setType oid frame
         items <- for stateBody $ \Op'{..} -> do
             value <- fromPayload opPayload frame
             pure (opRef, value)
@@ -211,8 +212,7 @@ instance ReplicatedAsPayload VersionVector where
         pure [AUuid oid]
 
     fromPayload = objectFromPayload "VersionVector" $ \oid frame -> do
-        StateChunk{..} <-
-            note "no such object in chunk" $ Map.lookup (vvType, oid) frame
+        StateChunk{..} <- getObject vvType oid frame
         pure $ stateFromChunk stateBody
 
 -- Example ---------------------------------------------------------------------
@@ -255,7 +255,7 @@ newExample1 Example1{..} = newLwwFrame
     ]
 getExample1 :: UUID -> Frame' -> Either String Example1
 getExample1 oid frame = do
-    ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
+    ops <- getObject lwwType oid frame
     int1           <- getLwwField int1Name ops frame
     RGA str2       <- getLwwField str2Name ops frame
     str3           <- getLwwField str3Name ops frame
@@ -270,7 +270,7 @@ newExample2 :: Clock clock => Example2 -> clock (Object Frame')
 newExample2 Example2{..} = newLwwFrame [(vv5Name, I vv5)]
 getExample2 :: UUID -> Frame' -> Either String Example2
 getExample2 oid frame = do
-    ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
+    ops <- getObject lwwType oid frame
     vv5 <- getLwwField int1Name ops frame
     pure Example2{..}
 {- /GENERATED -}
