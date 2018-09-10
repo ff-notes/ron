@@ -12,6 +12,7 @@ import           RON.Internal.Prelude
 
 import           RON.Data.Internal (Reducible (..), mkStateChunk)
 import           RON.Types (Op' (..), UUID)
+import           RON.UUID (zero)
 
 data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op'}
     deriving (Eq, Show)
@@ -20,8 +21,8 @@ instance Semigroup SetItem where
     (<>) = minOn itemIsAlive
 
 itemFromOp :: Op' -> (UUID, SetItem)
-itemFromOp op@Op'{opEvent, opRef, opPayload} = (itemId, item) where
-    itemIsAlive = not $ null opPayload
+itemFromOp op@Op'{opEvent, opRef} = (itemId, item) where
+    itemIsAlive = opRef == zero
     itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{itemIsAlive, itemOriginalOp = op}
 

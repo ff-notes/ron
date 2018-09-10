@@ -19,6 +19,7 @@ dependencies:
     - tasty-th
     - text
     - time
+    - unordered-containers
   # project
     - ron
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -10,6 +11,7 @@ import           RON.Internal.Prelude
 import           Control.Error (note)
 import           Control.Monad.Writer.Strict (WriterT, lift, runWriterT, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
+import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 import           Data.String.Interpolate.IsString (i)
 import qualified Data.Text as Text
@@ -17,6 +19,8 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
+import           RON.Data.Internal (stateFromChunk)
+import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..),
                             getEventUuid)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
@@ -74,6 +78,9 @@ collectFrame
     :: (Functor m, Semigroup f) => WriterT f m (Object f) -> m (Object f)
 collectFrame = fmap (\(Object oid f, f') -> Object oid $ f <> f') . runWriterT
 
+objectToPayload :: Object Frame' -> WriterT Frame' clock [Atom]
+objectToPayload = undefined
+
 -- ReplicatedAsPayload ---------------------------------------------------------
 
 class ReplicatedAsPayload a where
@@ -84,13 +91,13 @@ instance ReplicatedAsPayload Int64 where
     newPayload int = pure [AInteger int]
     fromPayload atoms _ = case atoms of
         [AInteger int] -> pure int
-        _ -> Left "bad payload"
+        _ -> Left "Int64: bad payload"
 
 instance ReplicatedAsPayload Text where
     newPayload t = pure [AString t]
     fromPayload atoms _ = case atoms of
         [AString t] -> pure t
-        _ -> Left "bad payload"
+        _ -> Left "String: bad payload"
 
 instance ReplicatedAsPayload Char where
     newPayload c = pure [AString $ Text.singleton c]
@@ -98,7 +105,7 @@ instance ReplicatedAsPayload Char where
         [AString s] -> case Text.uncons s of
             Just (c, "") -> pure c
             _ -> Left "too long string to encode a single character"
-        _ -> Left "bad payload"
+        _ -> Left "Char: bad payload"
 
 -- LWW -------------------------------------------------------------------------
 
@@ -131,36 +138,90 @@ newtype RGA a = RGA [a]
 instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a) where
     newPayload (RGA items) = do
         ops <- for items $ \a -> do
+            vertexId <- lift getEventUuid
+            payload <- newPayload a
+            pure $ Op' vertexId zero payload
+        oid <- lift getEventUuid
+        let version = maximumDef oid $ map opEvent ops
+        tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
+        pure [AUuid oid]
+
+    fromPayload atoms frame = case atoms of
+        [AUuid oid] -> do
+            StateChunk{..} <-
+                note "no such object in chunk" $ Map.lookup (rgaType, oid) frame
+            items <- for stateBody $ \Op'{..} -> do
+                value <- fromPayload opPayload frame
+                pure (opRef, value)
+            pure $ RGA [value | (opRef, value) <- items, opRef == zero]
+        _ -> Left "RGA: bad payload"
+
+-- ORSetHash -------------------------------------------------------------------
+
+setType :: UUID
+setType = fromJust $ UUID.mkName "set"
+
+newtype ORSetHash a = ORSetHash (HashSet a)
+
+instance (Eq a, Hashable a, ReplicatedAsPayload a)
+    => ReplicatedAsPayload (ORSetHash a)
+    where
+
+    newPayload (ORSetHash items) = do
+        ops <- for (toList items) $ \a -> do
             e <- lift getEventUuid
             payload <- newPayload a
             pure $ Op' e zero payload
         oid <- lift getEventUuid
-        tell $ Map.singleton (rgaType, oid) $ StateChunk oid ops
+        let version = maximumDef oid $ map opEvent ops
+        tell $ Map.singleton (setType, oid) $ StateChunk version ops
         pure [AUuid oid]
 
     fromPayload atoms frame = case atoms of
-        [AUuid oid] -> RGA <$> getRgaFromFrame oid frame
-        _ -> Left "bad payload"
+        [AUuid oid] -> do
+            StateChunk{..} <-
+                note "no such object in chunk" $ Map.lookup (setType, oid) frame
+            items <- for stateBody $ \Op'{..} -> do
+                value <- fromPayload opPayload frame
+                pure (opRef, value)
+            pure $ ORSetHash $ HashSet.fromList
+                [value | (opRef, value) <- items, opRef == zero]
+        _ -> Left $ "ORSet Hash: bad payload: " ++ show atoms
 
-getRgaFromFrame :: ReplicatedAsPayload a => UUID -> Frame' -> Either String [a]
-getRgaFromFrame oid frame = do
-    StateChunk{..} <-
-        note "no such object in chunk" $ Map.lookup (rgaType, oid) frame
-    vertices <- for stateBody $ \Op'{..} -> do
-        value <- fromPayload opPayload frame
-        pure (opRef, value)
-    pure [value | (opRef, value) <- vertices, opRef == zero]
+-- VersionVector ---------------------------------------------------------------
+
+vvType :: UUID
+vvType = fromJust $ UUID.mkName "vv"
+
+instance ReplicatedAsPayload VersionVector where
+    newPayload (VersionVector vv) = do
+        oid <- lift getEventUuid
+        let ops = Map.elems vv
+        let version = maximumDef oid $ map opEvent ops
+        tell $ Map.singleton (vvType, oid) $ StateChunk version ops
+        pure [AUuid oid]
+
+    fromPayload atoms frame = case atoms of
+        [AUuid oid] -> do
+            StateChunk{..} <-
+                note "no such object in chunk" $ Map.lookup (vvType, oid) frame
+            pure $ stateFromChunk stateBody
+        _ -> Left "VersionVector: bad payload"
 
 -- Example ---------------------------------------------------------------------
 
 {-
 Schema:
 
-    struct Example
-        fields
-            int1    SInt64
-            str2    RGA Char
-            str3    String
+    struct_lww Example1
+        fields  int1    SInt64
+                str2    RGA Char
+                str3    String
+                set4    ORSet Hash Example2
+
+    struct_lww Example2
+        fields vv5 VersionVector
+        Haskell deriving Hashable
 -}
 
 {- GENERATED -}
@@ -170,42 +231,73 @@ str2Name :: UUID
 str2Name = fromJust $ UUID.mkName "str2"
 str3Name :: UUID
 str3Name = fromJust $ UUID.mkName "str3"
-data Example = Example{int1 :: Int64, str2 :: String, str3 :: Text}
+set4Name :: UUID
+set4Name = fromJust $ UUID.mkName "set4"
+vv5Name :: UUID
+vv5Name = fromJust $ UUID.mkName "vv5"
+
+data Example1 = Example1
+    {int1 :: Int64, str2 :: String, str3 :: Text, set4 :: HashSet Example2}
     deriving (Eq, Show)
-newExample :: Clock clock => Example -> clock (Object Frame')
-newExample Example{..} = collectFrame $ do
+newExample1 :: Clock clock => Example1 -> clock (Object Frame')
+newExample1 Example1{..} = collectFrame $ do
     int1' <- newPayload int1
+    set4' <- newPayload (ORSetHash set4)
     str2' <- newPayload (RGA str2)
     str3' <- newPayload str3
-    lift $ newLwwFrame [(int1Name, int1'), (str2Name, str2'), (str3Name, str3')]
-getTestStruct :: UUID -> Frame' -> Either String Example
-getTestStruct oid frame = do
+    lift $ newLwwFrame
+        [ (int1Name, int1')
+        , (set4Name, set4')
+        , (str2Name, str2')
+        , (str3Name, str3')
+        ]
+getExample1 :: UUID -> Frame' -> Either String Example1
+getExample1 oid frame = do
     ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
-    int1     <- getLwwField int1Name ops frame
-    RGA str2 <- getLwwField str2Name ops frame
-    str3     <- getLwwField str3Name ops frame
-    pure Example{..}
+    int1           <- getLwwField int1Name ops frame
+    RGA str2       <- getLwwField str2Name ops frame
+    str3           <- getLwwField str3Name ops frame
+    ORSetHash set4 <- getLwwField set4Name ops frame
+    pure Example1{..}
+
+newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
+instance ReplicatedAsPayload Example2 where
+    newPayload = lift . newExample2 >=> objectToPayload
+    fromPayload atoms frame = case atoms of
+        [AUuid oid] -> getExample2 oid frame
+        _ -> Left "Example2: bad payload"
+newExample2 :: Clock clock => Example2 -> clock (Object Frame')
+newExample2 Example2{..} = collectFrame $ do
+    vv5' <- newPayload vv5
+    lift $ newLwwFrame [(vv5Name, vv5')]
+getExample2 :: UUID -> Frame' -> Either String Example2
+getExample2 oid frame = do
+    ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
+    vv5 <- getLwwField int1Name ops frame
+    pure Example2{..}
 {- /GENERATED -}
 
-testStruct0 :: Example
-testStruct0 = Example{int1 = 275, str2 = "275", str3 = "190"}
+testStruct0 :: Example1
+testStruct0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
 
 -- | "r3pl1c4"
 replica :: ReplicaId
 replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 testStruct2 :: ByteStringL
--- TODO #B/]At+r3pl1c4
 testStruct2 = [i|
-    *lww    #B/00000000At+r3pl1c4   @`                      !
+    *lww    #B/00000000B~+r3pl1c4   @`                      !
                                             :int1   =275    ,
-                                            :str2   >)s     ,
+                                            :set4   >]2V    ,
+                                            :str2   >]At    ,
                                             :str3   '190'   ,
 
-    *rga    #)s                     @`      :0              !
-                                    @]2V            '2'     ,
-                                    @]5s            '7'     ,
-                                    @]8s            '5'     ,
+    *rga    #]At                    @]As    :0              !
+                                    @]5s            '2'     ,
+                                    @]8s            '7'     ,
+                                    @]As            '5'     ,
+
+    *set    #]2V                    @`                      !
     .
     |]
 
@@ -213,12 +305,12 @@ prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
     Object ts1id ts1frame <-
         evalEitherS $ runNetworkSim $ runReplicaSim replica $
-        newExample testStruct0
+        newExample1 testStruct0
     let ts2 = serializeFrame' ts1frame
     BSLC.words testStruct2 === BSLC.words ts2
     ts3frame <- evalEitherS $ parseFrame' ts2
     ts1frame === ts3frame
-    testStruct3 <- evalEitherS $ getTestStruct ts1id ts3frame
+    testStruct3 <- evalEitherS $ getExample1 ts1id ts3frame
     testStruct0 === testStruct3
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a

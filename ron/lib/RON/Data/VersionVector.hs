@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.VersionVector
-    ( VersionVector
+    ( VersionVector (..)
     ) where
 
 import           RON.Internal.Prelude
@@ -26,6 +26,9 @@ latter = maxOn opTime
 
 newtype VersionVector = VersionVector (Map Origin Op')
     deriving (Eq, Show)
+
+instance Hashable VersionVector where
+    hashWithSalt s (VersionVector vv) = hashWithSalt s $ Map.assocs vv
 
 instance Semigroup VersionVector where
     (<>) = coerce $ Map.unionWith latter
