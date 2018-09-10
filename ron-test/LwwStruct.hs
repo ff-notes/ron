@@ -81,6 +81,17 @@ collectFrame = fmap (\(Object oid f, f') -> Object oid $ f <> f') . runWriterT
 objectToPayload :: Object Frame' -> WriterT Frame' clock [Atom]
 objectToPayload = undefined
 
+objectFromPayload
+    :: String
+    -> (UUID -> Frame' -> Either String b)
+    -> [Atom]
+    -> Frame'
+    -> Either String b
+objectFromPayload name handler atoms frame = case atoms of
+    [AUuid oid] -> handler oid frame
+    _ -> Left $ name ++ ": bad payload"
+
+
 -- ReplicatedAsPayload ---------------------------------------------------------
 
 class ReplicatedAsPayload a where
@@ -148,15 +159,13 @@ instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a) where
         tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
         pure [AUuid oid]
 
-    fromPayload atoms frame = case atoms of
-        [AUuid oid] -> do
-            StateChunk{..} <-
-                note "no such object in chunk" $ Map.lookup (rgaType, oid) frame
-            items <- for stateBody $ \Op'{..} -> do
-                value <- fromPayload opPayload frame
-                pure (opRef, value)
-            pure $ RGA [value | (opRef, value) <- items, opRef == zero]
-        _ -> Left "RGA: bad payload"
+    fromPayload = objectFromPayload "RGA" $ \oid frame -> do
+        StateChunk{..} <-
+            note "no such object in chunk" $ Map.lookup (rgaType, oid) frame
+        items <- for stateBody $ \Op'{..} -> do
+            value <- fromPayload opPayload frame
+            pure (opRef, value)
+        pure $ RGA [value | (opRef, value) <- items, opRef == zero]
 
 -- ORSetHash -------------------------------------------------------------------
 
@@ -179,16 +188,14 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
         tell $ Map.singleton (setType, oid) $ StateChunk version ops
         pure [AUuid oid]
 
-    fromPayload atoms frame = case atoms of
-        [AUuid oid] -> do
-            StateChunk{..} <-
-                note "no such object in chunk" $ Map.lookup (setType, oid) frame
-            items <- for stateBody $ \Op'{..} -> do
-                value <- fromPayload opPayload frame
-                pure (opRef, value)
-            pure $ ORSetHash $ HashSet.fromList
-                [value | (opRef, value) <- items, opRef == zero]
-        _ -> Left $ "ORSet Hash: bad payload: " ++ show atoms
+    fromPayload = objectFromPayload "ORSet Hash" $ \oid frame -> do
+        StateChunk{..} <-
+            note "no such object in chunk" $ Map.lookup (setType, oid) frame
+        items <- for stateBody $ \Op'{..} -> do
+            value <- fromPayload opPayload frame
+            pure (opRef, value)
+        pure $ ORSetHash $ HashSet.fromList
+            [value | (opRef, value) <- items, opRef == zero]
 
 -- VersionVector ---------------------------------------------------------------
 
@@ -203,12 +210,10 @@ instance ReplicatedAsPayload VersionVector where
         tell $ Map.singleton (vvType, oid) $ StateChunk version ops
         pure [AUuid oid]
 
-    fromPayload atoms frame = case atoms of
-        [AUuid oid] -> do
-            StateChunk{..} <-
-                note "no such object in chunk" $ Map.lookup (vvType, oid) frame
-            pure $ stateFromChunk stateBody
-        _ -> Left "VersionVector: bad payload"
+    fromPayload = objectFromPayload "VersionVector" $ \oid frame -> do
+        StateChunk{..} <-
+            note "no such object in chunk" $ Map.lookup (vvType, oid) frame
+        pure $ stateFromChunk stateBody
 
 -- Example ---------------------------------------------------------------------
 
@@ -260,9 +265,7 @@ getExample1 oid frame = do
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance ReplicatedAsPayload Example2 where
     newPayload = lift . newExample2 >=> objectToPayload
-    fromPayload atoms frame = case atoms of
-        [AUuid oid] -> getExample2 oid frame
-        _ -> Left "Example2: bad payload"
+    fromPayload = objectFromPayload "Example2" getExample2
 newExample2 :: Clock clock => Example2 -> clock (Object Frame')
 newExample2 Example2{..} = newLwwFrame [(vv5Name, I vv5)]
 getExample2 :: UUID -> Frame' -> Either String Example2
