@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 
 module LwwStruct (prop_lwwStruct) where
 
@@ -18,9 +17,6 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (typeName)
-import           RON.Data.LWW (LwwPerField)
-import           RON.Data.RGA (RGA)
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..),
                             getEventUuid)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
@@ -90,6 +86,12 @@ instance ReplicatedAsPayload Int64 where
         [AInteger int] -> pure int
         _ -> Left "bad payload"
 
+instance ReplicatedAsPayload Text where
+    newPayload t = pure [AString t]
+    fromPayload atoms _ = case atoms of
+        [AString t] -> pure t
+        _ -> Left "bad payload"
+
 instance ReplicatedAsPayload Char where
     newPayload c = pure [AString $ Text.singleton c]
     fromPayload atoms _ = case atoms of
@@ -100,10 +102,13 @@ instance ReplicatedAsPayload Char where
 
 -- LWW -------------------------------------------------------------------------
 
+lwwType :: UUID
+lwwType = fromJust $ UUID.mkName "lww"
+
 newLwwFrame :: Clock clock => [(UUID, [Atom])] -> clock (Object Frame')
 newLwwFrame fields = do
     e <- getEventUuid
-    pure $ Object e $ Map.singleton (typeName @LwwPerField, e) $
+    pure $ Object e $ Map.singleton (lwwType, e) $
         StateChunk e [Op' e name value | (name, value) <- fields]
 
 getLwwField
@@ -118,59 +123,43 @@ getLwwField name StateChunk{..} chunks = do
 
 -- RGA -------------------------------------------------------------------------
 
-newRgaPayload
-    :: (Foldable f, ReplicatedAsPayload a, Clock clock)
-    => f a -> WriterT Frame' clock [Atom]
-newRgaPayload vertices = do
-    ops <- for (toList vertices) $ \a -> do
-        e <- lift getEventUuid
-        payload <- newPayload a
-        pure $ Op' e zero payload
-    oid <- lift getEventUuid
-    tell $ Map.singleton (typeName @RGA, oid) $ StateChunk oid ops
-    pure [AUuid oid]
+rgaType :: UUID
+rgaType = fromJust $ UUID.mkName "rga"
 
-getRgaFromPayload
-    :: ReplicatedAsPayload a => [Atom] -> Frame' -> Either String [a]
-getRgaFromPayload atoms frame = case atoms of
-    [AUuid oid] -> getRgaFromFrame oid frame
-    _ -> Left "bad payload"
+newtype RGA a = RGA [a]
+
+instance ReplicatedAsPayload a => ReplicatedAsPayload (RGA a) where
+    newPayload (RGA items) = do
+        ops <- for items $ \a -> do
+            e <- lift getEventUuid
+            payload <- newPayload a
+            pure $ Op' e zero payload
+        oid <- lift getEventUuid
+        tell $ Map.singleton (rgaType, oid) $ StateChunk oid ops
+        pure [AUuid oid]
+
+    fromPayload atoms frame = case atoms of
+        [AUuid oid] -> RGA <$> getRgaFromFrame oid frame
+        _ -> Left "bad payload"
 
 getRgaFromFrame :: ReplicatedAsPayload a => UUID -> Frame' -> Either String [a]
 getRgaFromFrame oid frame = do
     StateChunk{..} <-
-        note "no such object in chunk" $ Map.lookup (typeName @RGA, oid) frame
+        note "no such object in chunk" $ Map.lookup (rgaType, oid) frame
     vertices <- for stateBody $ \Op'{..} -> do
         value <- fromPayload opPayload frame
         pure (opRef, value)
     pure [value | (opRef, value) <- vertices, opRef == zero]
-
--- RgaText ---------------------------------------------------------------------
-
-newtype RgaText = RgaText Text
-
-instance ReplicatedAsPayload RgaText where
-    newPayload (RgaText text) = newRgaPayload $ Text.unpack text
-    fromPayload atoms = fmap (RgaText . Text.pack) . getRgaFromPayload atoms
 
 -- Example ---------------------------------------------------------------------
 
 {-
 Schema:
 
-    type Char
-        RON     String
-        C++     wchar_t
-        Haskell Char
-
-    type RgaText
-        RON     RGA Char
-        Haskell Text
-
     struct TestStruct
         fields
             int     SInt64
-            text    RgaText
+            text    RGA Char
 -}
 
 {- GENERATED -}
@@ -178,18 +167,17 @@ intName :: UUID
 intName  = fromJust $ UUID.mkName "int"
 textName :: UUID
 textName = fromJust $ UUID.mkName "text"
-data TestStruct = TestStruct{int :: Int64, text :: Text} deriving (Eq, Show)
+data TestStruct = TestStruct{int :: Int64, text :: String} deriving (Eq, Show)
 newTestStruct :: Clock clock => TestStruct -> clock (Object Frame')
 newTestStruct TestStruct{..} = collectFrame $ do
     int'  <- newPayload int
-    text' <- newPayload $ RgaText text
+    text' <- newPayload (RGA text)
     lift $ newLwwFrame [(intName, int'), (textName, text')]
 getTestStruct :: UUID -> Frame' -> Either String TestStruct
 getTestStruct oid frame = do
-    ops <- note "no such object in chunk" $
-        Map.lookup (typeName @LwwPerField, oid) frame
-    int          <- getLwwField intName  ops frame
-    RgaText text <- getLwwField textName ops frame
+    ops <- note "no such object in chunk" $ Map.lookup (lwwType, oid) frame
+    int      <- getLwwField intName  ops frame
+    RGA text <- getLwwField textName ops frame
     pure TestStruct{..}
 {- /GENERATED -}
 
