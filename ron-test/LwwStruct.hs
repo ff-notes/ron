@@ -125,18 +125,18 @@ replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 example2 :: ByteStringL
 example2 = [i|
-    *lww    #B/00000000B~+r3pl1c4   @`                      !
-                                            :int1   =275    ,
-                                            :set4   >]2V    ,
-                                            :str2   >]At    ,
-                                            :str3   '190'   ,
+    *lww    #B/]B~+r3pl1c4  @`                      !
+                                    :int1   =275    ,
+                                    :set4   >]2V    ,
+                                    :str2   >]At    ,
+                                    :str3   '190'   ,
 
-    *rga    #]At                    @]As    :0              !
-                                    @]5s            '2'     ,
-                                    @]8s            '7'     ,
-                                    @]As            '5'     ,
+    *rga    #]At            @]As    :0              !
+                            @]5s            '2'     ,
+                            @]8s            '7'     ,
+                            @]As            '5'     ,
 
-    *set    #]2V                    @`                      !
+    *set    #]2V            @`                      !
     .
     |]
 

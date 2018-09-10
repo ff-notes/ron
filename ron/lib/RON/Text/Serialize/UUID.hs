@@ -40,16 +40,10 @@ serializeUuidKey prevKey prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
         B00 -> minimumByLength
             $   unzipped thisFields
-            :   [ z
-                | prevKey /= zero || this == zero
-                , uuidVariant (split prevKey) == B00
-                , Just z <- [zipUuid False (split prevKey) thisFields]
-                ]
-            ++  [ "`" <> z
-                | prev /= zero
-                , uuidVariant (split prev) == B00
-                , Just z <- [zipUuid True (split prev) thisFields]
-                ]
+            :   [ zipUuid False (split prevKey) thisFields
+                | uuidVariant (split prevKey) == B00 ]
+            ++  [ "`" <> zipUuid True (split prev) thisFields
+                | prev /= zero, uuidVariant (split prev) == B00 ]
         _   -> serializeUuidGeneric this
   where
     thisFields = split this
@@ -59,16 +53,8 @@ serializeUuidAtom prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
         B00 -> minimumByLength
             $   unzipped thisFields
-            :   [ z
-                | prev /= zero
-                , uuidVariant (split prev) == B00
-                , Just z <- [zipUuid False (split prev) thisFields]
-                ]
-            ++  [ BSC.cons '`' z
-                | prev /= zero
-                , uuidVariant (split prev) == B00
-                , Just z <- [zipUuid True (split prev) thisFields]
-                ]
+            :   [ zipUuid False (split prev) thisFields
+                | prev /= zero, uuidVariant (split prev) == B00 ]
         _   -> serializeUuidGeneric this
   where
     thisFields = split this
@@ -86,37 +72,35 @@ unzipped UuidFields{..} = x' <> y'
             serializeScheme uuidScheme
             `BSC.cons` Base64.encode60short uuidOrigin
 
-zipUuid :: Bool -> UuidFields -> UuidFields -> Maybe ByteString
+zipUuid :: Bool -> UuidFields -> UuidFields -> ByteString
 zipUuid changeZipBase prev this
-    | prev == this       = pure ""
-    | canReuseWholeParts = pure $ let
-        val = maybe value  (minByLength value)  valueZip
-        ori = maybe origin (minByLength origin) originZip
-        in mconcat [variety, val, scheme, ori]
-    | otherwise          = do
-        val <- valueZip
-        ori <- originZip
-        pure $ mconcat [variety, val, scheme, ori]
+    | prev == this = ""
+    | otherwise    = mconcat [variety, val, scheme, ori]
   where
+    val = fromMaybe value  valueZip
+    ori = fromMaybe origin originZip
     canReuseWholeParts
         =   changeZipBase
+        ||  isJust valueZip
+        ||  isJust originZip
         ||  (   uuidScheme prev /= uuidScheme this
             &&  uuidOrigin prev == uuidOrigin this
             )
     variety
-        | uuidVariety prev == uuidVariety this = ""
+        | canReuseWholeParts && uuidVariety prev == uuidVariety this = ""
         | otherwise = serializeVariety $ uuidVariety this
     value
-        | uuidValue prev == uuidValue this = ""
+        | canReuseWholeParts && uuidValue prev == uuidValue this = ""
         | otherwise = Base64.encode60short $ uuidValue this
     valueZip = zipPrefix (uuidValue prev) (uuidValue this)
     scheme
-        |       uuidScheme prev == uuidScheme this
+        |   canReuseWholeParts
+            &&  uuidScheme prev == uuidScheme this
             &&  uuidOrigin prev == uuidOrigin this
                 = ""
         | otherwise = BSC.singleton $ serializeScheme $ uuidScheme this
     origin
-        | uuidOrigin prev == uuidOrigin this = ""
+        | canReuseWholeParts && uuidOrigin prev == uuidOrigin this = ""
         | otherwise = Base64.encode60short $ uuidOrigin this
     originZip = zipPrefix (uuidOrigin prev) (uuidOrigin this)
 
@@ -155,6 +139,3 @@ serializeUuidGeneric (UUID x y) = Base64.encode64 x <> Base64.encode64 y
 
 minimumByLength :: Foldable f => f ByteString -> ByteString
 minimumByLength = minimumBy $ comparing BS.length
-
-minByLength :: ByteString -> ByteString -> ByteString
-minByLength = minOn BS.length
