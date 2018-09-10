@@ -18,7 +18,7 @@ import qualified Data.Text as Text
 
 import           RON.Event (Clock)
 import           RON.Types (Atom (..), Chunk, Frame', Object (..), Op' (..),
-                            StateChunk, UUID)
+                            StateChunk (..), UUID)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -34,8 +34,7 @@ class (Eq a, Semigroup a, KnownSymbol (OpType a)) => Reducible a where
 
     stateFromChunk :: [Op'] -> a
 
-    -- | Result is a state chunk
-    stateToChunk :: a -> ({- version -} UUID, [Op'])
+    stateToChunk :: a -> StateChunk
 
     applyPatches :: a -> Unapplied -> (a, Unapplied)
     default applyPatches :: Monoid a => a -> Unapplied -> (a, Unapplied)
@@ -71,8 +70,8 @@ mkRChunk' ref rchunk'Body = RChunk'
     , ..
     }
 
-mkStateChunk :: [Op'] -> (UUID, [Op'])
-mkStateChunk ops = (mkChunkVersion ops, ops)
+mkStateChunk :: [Op'] -> StateChunk
+mkStateChunk ops = StateChunk (mkChunkVersion ops) ops
 
 data Patch a = Patch{patchRef :: UUID, patchValue :: a}
 
@@ -92,7 +91,7 @@ patchFromChunk RChunk'{..} =
 patchToChunk :: Reducible a => Patch a -> RChunk'
 patchToChunk Patch{..} = RChunk'{..} where
     rchunk'Ref = patchRef
-    (rchunk'Version, rchunk'Body) = stateToChunk patchValue
+    StateChunk rchunk'Version rchunk'Body = stateToChunk patchValue
 
 class ReplicatedAsPayload a where
     newPayload :: Clock clock => a -> WriterT Frame' clock [Atom]

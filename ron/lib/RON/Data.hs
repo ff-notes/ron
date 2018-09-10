@@ -37,7 +37,7 @@ import           RON.Data.ORSet (ORSet)
 import           RON.Data.RGA (RGA)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
-                            RChunk (..), UUID)
+                            RChunk (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -93,7 +93,8 @@ reducer obj chunks = chunks' ++ leftovers where
         Just nStates -> let
             state = sconcat $ fmap snd nStates
             (reducedState, unapplied') = applyPatches state (patches, rawops)
-            (reducedStateVersion, reducedStateBody) = stateToChunk reducedState
+            StateChunk reducedStateVersion reducedStateBody =
+                stateToChunk reducedState
             MaxOnFst (seenStateVersion, seenState) =
                 sconcat $ fmap MaxOnFst nStates
             stateVersion = if

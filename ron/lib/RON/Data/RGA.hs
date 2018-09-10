@@ -152,7 +152,7 @@ instance Reducible RGA where
 
     stateFromChunk = RGA . vertexListFromOps
 
-    stateToChunk (RGA rga) = (chunkVersion ops, ops) where
+    stateToChunk (RGA rga) = StateChunk (chunkVersion ops) ops where
         ops = vertexListToOps rga
 
     applyPatches rga (patches, ops) =
