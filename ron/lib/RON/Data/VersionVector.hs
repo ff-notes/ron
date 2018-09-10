@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.VersionVector
@@ -8,10 +9,15 @@ module RON.Data.VersionVector
 
 import           RON.Internal.Prelude
 
+import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), mkStateChunk)
-import           RON.Types (Op' (..), UUID (UUID))
+import           RON.Data.Internal (Reducible (..), ReplicatedAsObject (..),
+                                    ReplicatedAsPayload, collectFrame,
+                                    getObjectStateChunk, mkStateChunk)
+import           RON.Event (getEventUuid)
+import           RON.Types (Op' (..), StateChunk (..), UUID (UUID))
+import qualified RON.UUID as UUID
 
 type Origin = Word64
 
@@ -43,3 +49,20 @@ instance Reducible VersionVector where
         VersionVector $ Map.fromListWith latter [(opOrigin op, op) | op <- ops]
 
     stateToChunk (VersionVector vv) = mkStateChunk $ Map.elems vv
+
+vvType :: UUID
+vvType = fromJust $ UUID.mkName "vv"
+
+instance ReplicatedAsPayload VersionVector
+
+instance ReplicatedAsObject VersionVector where
+    newObject (VersionVector vv) = collectFrame $ do
+        oid <- lift getEventUuid
+        let ops = Map.elems vv
+        let version = maximumDef oid $ map opEvent ops
+        tell $ Map.singleton (vvType, oid) $ StateChunk version ops
+        pure oid
+
+    getObject oid frame = do
+        StateChunk{..} <- getObjectStateChunk vvType oid frame
+        pure $ stateFromChunk stateBody

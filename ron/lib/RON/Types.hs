@@ -9,10 +9,13 @@ module RON.Types
     ( Atom (..)
     , Chunk (..)
     , Frame
+    , Frame'
+    , Object (..)
     , Op (..)
     , Op' (..)
     , OpTerm (..)
     , RChunk (..)
+    , StateChunk (..)
     , UUID (..)
     , valueChunk
     , valueFrame
@@ -78,3 +81,17 @@ valueChunk rchunkHeader rchunkBody = Value RChunk{rchunkHeader, rchunkBody}
 
 valueFrame :: Op -> [Op] -> Frame
 valueFrame rchunkHeader rchunkBody = [valueChunk rchunkHeader rchunkBody]
+
+-- | (type, object)
+type ObjectKey = (UUID, UUID)
+
+data StateChunk = StateChunk
+    { stateVersion :: UUID
+    , stateBody    :: [Op']
+    }
+    deriving (Eq, Show)
+
+type Frame' = Map ObjectKey StateChunk
+
+data Object a = Object {- object id -} UUID {- value -} a
+    deriving (Eq, Show)

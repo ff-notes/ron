@@ -1,4 +1,3 @@
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -9,44 +8,30 @@ module LwwStruct (prop_lwwStruct) where
 
 import           RON.Internal.Prelude
 
-import           Control.Error (note)
-import           Control.Monad.Writer.Strict (WriterT, lift, runWriterT, tell)
+import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 import           Data.String.Interpolate.IsString (i)
-import qualified Data.Text as Text
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data.Internal (stateFromChunk)
+import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, fromPayload,
+                           getObject, getObjectStateChunk, newObject,
+                           newPayload, collectFrame)
 import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..),
                             getEventUuid)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Atom (..), Chunk (Value), Frame, Op (..), Op' (..),
-                            RChunk (..), UUID)
+import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
+                            Op' (..), RChunk (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
 import qualified RON.UUID as UUID
 
 -- Common ----------------------------------------------------------------------
-
--- | (type, object)
-type ObjectKey = (UUID, UUID)
-
-data StateChunk = StateChunk
-    { stateVersion :: UUID
-    , stateBody    :: [Op']
-    }
-    deriving (Eq, Show)
-
-type Frame' = Map ObjectKey StateChunk
-
-data Object a = Object {- object id -} UUID {- value -} a
-    deriving (Eq, Show)
 
 parseFrame' :: ByteStringL -> Either String Frame'
 parseFrame' = parseFrame >=> findObjects
@@ -74,63 +59,6 @@ findObjects = fmap Map.fromList . traverse loadBody where
         when (opObject /= chunkObject) $
             Left "reduced op object id does not match chunk object id"
         pure op'
-
-collectFrame :: Functor m => WriterT frame m UUID -> m (Object frame)
-collectFrame = fmap (uncurry Object) . runWriterT
-
-objectFromPayload
-    :: (UUID -> Frame' -> Either String b)
-    -> [Atom]
-    -> Frame'
-    -> Either String b
-objectFromPayload handler atoms frame = case atoms of
-    [AUuid oid] -> handler oid frame
-    _ -> Left "bad payload"
-
-getObjectStateChunk :: UUID -> UUID -> Frame' -> Either String StateChunk
-getObjectStateChunk typ oid frame =
-    note "no such object in chunk" $ Map.lookup (typ, oid) frame
-
--- Replicated ------------------------------------------------------------------
-
-class ReplicatedAsPayload a where
-    newPayload :: Clock clock => a -> WriterT Frame' clock [Atom]
-    default newPayload
-        :: (Clock clock, ReplicatedAsObject a)
-        => a -> WriterT Frame' clock [Atom]
-    newPayload a = do
-        Object oid frame <- lift $ newObject a
-        tell frame
-        pure [AUuid oid]
-
-    fromPayload :: [Atom] -> Frame' -> Either String a
-    default fromPayload
-        :: ReplicatedAsObject a => [Atom] -> Frame' -> Either String a
-    fromPayload = objectFromPayload getObject
-
-instance ReplicatedAsPayload Int64 where
-    newPayload int = pure [AInteger int]
-    fromPayload atoms _ = case atoms of
-        [AInteger int] -> pure int
-        _ -> Left "Int64: bad payload"
-
-instance ReplicatedAsPayload Text where
-    newPayload t = pure [AString t]
-    fromPayload atoms _ = case atoms of
-        [AString t] -> pure t
-        _ -> Left "String: bad payload"
-
-instance ReplicatedAsPayload Char where
-    newPayload c = pure [AString $ Text.singleton c]
-    fromPayload atoms _ = case atoms of
-        [AString s] -> case Text.uncons s of
-            Just (c, "") -> pure c
-            _ -> Left "too long string to encode a single character"
-        _ -> Left "Char: bad payload"
-
-class ReplicatedAsObject a where
-    newObject :: Clock clock => a -> clock (Object Frame')
-    getObject :: UUID -> Frame' -> Either String a
 
 -- LWW -------------------------------------------------------------------------
 
@@ -214,25 +142,6 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
             pure (opRef, value)
         pure $ ORSetHash $ HashSet.fromList
             [value | (opRef, value) <- items, opRef == zero]
-
--- VersionVector ---------------------------------------------------------------
-
-vvType :: UUID
-vvType = fromJust $ UUID.mkName "vv"
-
-instance ReplicatedAsPayload VersionVector
-
-instance ReplicatedAsObject VersionVector where
-    newObject (VersionVector vv) = collectFrame $ do
-        oid <- lift getEventUuid
-        let ops = Map.elems vv
-        let version = maximumDef oid $ map opEvent ops
-        tell $ Map.singleton (vvType, oid) $ StateChunk version ops
-        pure oid
-
-    getObject oid frame = do
-        StateChunk{..} <- getObjectStateChunk vvType oid frame
-        pure $ stateFromChunk stateBody
 
 -- Example ---------------------------------------------------------------------
 

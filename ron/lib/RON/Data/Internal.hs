@@ -1,11 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -13,9 +12,13 @@ module RON.Data.Internal where
 
 import           RON.Internal.Prelude
 
-import           GHC.TypeLits (KnownSymbol, Symbol)
+import           Control.Monad.Writer.Strict (WriterT, lift, runWriterT, tell)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 
-import           RON.Types (Chunk, Op' (..), UUID)
+import           RON.Event (Clock)
+import           RON.Types (Atom (..), Chunk, Frame', Object (..), Op' (..),
+                            StateChunk, UUID)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -65,7 +68,7 @@ mkRChunk' :: UUID -> [Op'] -> RChunk'
 mkRChunk' ref rchunk'Body = RChunk'
     { rchunk'Version = mkChunkVersion rchunk'Body
     , rchunk'Ref = ref
-    , rchunk'Body
+    , ..
     }
 
 mkStateChunk :: [Op'] -> (UUID, [Op'])
@@ -77,7 +80,7 @@ instance Semigroup a => Semigroup (Patch a) where
     Patch ref1 a1 <> Patch ref2 a2 = Patch (min ref1 ref2) (a1 <> a2)
 
 patchFromRawOp :: Reducible a => Op' -> Patch a
-patchFromRawOp op@Op'{opEvent} = Patch
+patchFromRawOp op@Op'{..} = Patch
     { patchRef = opEvent
     , patchValue = stateFromChunk [op]
     }
@@ -90,3 +93,58 @@ patchToChunk :: Reducible a => Patch a -> RChunk'
 patchToChunk Patch{..} = RChunk'{..} where
     rchunk'Ref = patchRef
     (rchunk'Version, rchunk'Body) = stateToChunk patchValue
+
+class ReplicatedAsPayload a where
+    newPayload :: Clock clock => a -> WriterT Frame' clock [Atom]
+    default newPayload
+        :: (Clock clock, ReplicatedAsObject a)
+        => a -> WriterT Frame' clock [Atom]
+    newPayload a = do
+        Object oid frame <- lift $ newObject a
+        tell frame
+        pure [AUuid oid]
+
+    fromPayload :: [Atom] -> Frame' -> Either String a
+    default fromPayload
+        :: ReplicatedAsObject a => [Atom] -> Frame' -> Either String a
+    fromPayload = objectFromPayload getObject
+
+instance ReplicatedAsPayload Int64 where
+    newPayload int = pure [AInteger int]
+    fromPayload atoms _ = case atoms of
+        [AInteger int] -> pure int
+        _ -> Left "Int64: bad payload"
+
+instance ReplicatedAsPayload Text where
+    newPayload t = pure [AString t]
+    fromPayload atoms _ = case atoms of
+        [AString t] -> pure t
+        _ -> Left "String: bad payload"
+
+instance ReplicatedAsPayload Char where
+    newPayload c = pure [AString $ Text.singleton c]
+    fromPayload atoms _ = case atoms of
+        [AString s] -> case Text.uncons s of
+            Just (c, "") -> pure c
+            _ -> Left "too long string to encode a single character"
+        _ -> Left "Char: bad payload"
+
+class ReplicatedAsObject a where
+    newObject :: Clock clock => a -> clock (Object Frame')
+    getObject :: UUID -> Frame' -> Either String a
+
+objectFromPayload
+    :: (UUID -> Frame' -> Either String b)
+    -> [Atom]
+    -> Frame'
+    -> Either String b
+objectFromPayload handler atoms frame = case atoms of
+    [AUuid oid] -> handler oid frame
+    _ -> Left "bad payload"
+
+collectFrame :: Functor m => WriterT frame m UUID -> m (Object frame)
+collectFrame = fmap (uncurry Object) . runWriterT
+
+getObjectStateChunk :: UUID -> UUID -> Frame' -> Either String StateChunk
+getObjectStateChunk typ oid frame =
+    maybe (Left "no such object in chunk") Right $ Map.lookup (typ, oid) frame
