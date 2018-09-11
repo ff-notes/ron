@@ -24,8 +24,8 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
                            getObjectStateChunk, newObject, objectOpType)
-import           RON.Data.LWW (getLwwField, lwwType, modifyLwwField,
-                               newLwwFrame, writeLwwField)
+import           RON.Data.LWW (lwwType)
+import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSetHash (..))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RgaList (..))
@@ -110,7 +110,7 @@ data Example1 = Example1
 instance ReplicatedAsPayload Example1
 instance ReplicatedAsObject Example1 where
     objectOpType = lwwType
-    newObject Example1{..} = newLwwFrame
+    newObject Example1{..} = LWW.newFrame
         [ (int1Name, I int1)
         , (set4Name, I $ ORSetHash set4)
         , (str2Name, I $ RgaList str2)
@@ -118,37 +118,37 @@ instance ReplicatedAsObject Example1 where
         ]
     getObject obj@Object{..} = fmapL ("getObject @Example1:\n" <>) $ do
         ops <- getObjectStateChunk obj
-        int1           <- getLwwField int1Name ops objectFrame
-        RgaList str2   <- getLwwField str2Name ops objectFrame
-        str3           <- getLwwField str3Name ops objectFrame
-        ORSetHash set4 <- getLwwField set4Name ops objectFrame
+        int1           <- LWW.getField int1Name ops objectFrame
+        RgaList str2   <- LWW.getField str2Name ops objectFrame
+        str3           <- LWW.getField str3Name ops objectFrame
+        ORSetHash set4 <- LWW.getField set4Name ops objectFrame
         pure Example1{..}
 setInt1
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Int64 -> m ()
-setInt1 = writeLwwField int1Name . I
+setInt1 = LWW.writeField int1Name . I
 modifyStr2
     :: MonadError String m
     => StateT (Object (RgaList Char)) m () -> StateT (Object Example1) m ()
-modifyStr2 = modifyLwwField str2Name
+modifyStr2 = LWW.modifyField str2Name
 setStr3
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Text -> m ()
-setStr3 = writeLwwField str3Name . I
+setStr3 = LWW.writeField str3Name . I
 modifySet4
     :: MonadError String m
     => StateT (Object (ORSetHash Example2)) m ()
     -> StateT (Object Example1) m ()
-modifySet4 = modifyLwwField set4Name
+modifySet4 = LWW.modifyField set4Name
 
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance ReplicatedAsPayload Example2
 instance ReplicatedAsObject Example2 where
     objectOpType = lwwType
-    newObject Example2{..} = newLwwFrame [(vv5Name, I vv5)]
+    newObject Example2{..} = LWW.newFrame [(vv5Name, I vv5)]
     getObject obj@Object{..} = fmapL ("getObject @Example2:\n" <>) $ do
         ops <- getObjectStateChunk obj
-        vv5 <- getLwwField vv5Name ops objectFrame
+        vv5 <- LWW.getField vv5Name ops objectFrame
         pure Example2{..}
 {- /GENERATED -}
 

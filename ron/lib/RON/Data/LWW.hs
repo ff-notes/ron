@@ -9,11 +9,11 @@
 
 module RON.Data.LWW
     ( LwwPerField (..)
-    , getLwwField
+    , getField
     , lwwType
-    , modifyLwwField
-    , newLwwFrame
-    , writeLwwField
+    , modifyField
+    , newFrame
+    , writeField
     ) where
 
 import           RON.Internal.Prelude
@@ -56,20 +56,20 @@ instance Reducible LwwPerField where
 lwwType :: UUID
 lwwType = fromJust $ UUID.mkName "lww"
 
-newLwwFrame
+newFrame
     :: (Clock clock, ReplicatedAsObject a)
     => [(UUID, I ReplicatedAsPayload)] -> clock (Object a)
-newLwwFrame fields = collectFrame $ do
+newFrame fields = collectFrame $ do
     payloads <- for fields $ \(_, I value) -> newPayload value
     e <- lift getEventUuid
     tell $ Map.singleton (lwwType, e) $ StateChunk e
         [Op' e name p | ((name, _), p) <- zip fields payloads]
     pure e
 
-getLwwField
+getField
     :: ReplicatedAsPayload a
     => UUID -> StateChunk -> Frame' -> Either String a
-getLwwField field StateChunk{..} frame = fmapL ("getLwwField:\n" <>) $ do
+getField field StateChunk{..} frame = fmapL ("getField:\n" <>) $ do
     let ops = filter ((field ==) . opRef) stateBody
     Op'{..} <- case ops of
         []   -> Left $ unwords ["no field", show field, "in lww chunk"]
@@ -77,31 +77,31 @@ getLwwField field StateChunk{..} frame = fmapL ("getLwwField:\n" <>) $ do
         _    -> Left "unreduced state"
     fromPayload opPayload frame
 
-writeLwwField
+writeField
     :: (Clock m, MonadError String m, MonadState (Object a) m)
     => UUID
     -> I ReplicatedAsPayload
     -> m ()
-writeLwwField field (I value) = do
+writeField field (I value) = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     advanceToUuid stateVersion
     let chunk = filter ((field /=) . opRef) stateBody
     e <- getEventUuid
-    (p, newFrame) <- runWriterT $ newPayload value
+    (p, frame') <- runWriterT $ newPayload value
     let newOp = Op' e field p
     let chunk' = sortOn opRef $ newOp : chunk
     let state' = StateChunk e chunk'
     put Object
-        { objectFrame = Map.insert objectId state' objectFrame <> newFrame
+        { objectFrame = Map.insert objectId state' objectFrame <> frame'
         , ..
         }
 
-modifyLwwField
+modifyField
     :: forall inner outer m
     . (ReplicatedAsObject inner, MonadError String m)
     => UUID -> StateT (Object inner) m () -> StateT (Object outer) m ()
-modifyLwwField field innerModifier = do
+modifyField field innerModifier = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     let ops = filter ((field ==) . opRef) stateBody
