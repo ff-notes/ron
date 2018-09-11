@@ -13,7 +13,7 @@ import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError, runExceptT)
-import           Control.Monad.State.Strict (MonadState, execStateT)
+import           Control.Monad.State.Strict (MonadState, StateT, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
@@ -24,7 +24,8 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
                            getObjectStateChunk, newObject, objectOpType)
-import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame, writeLwwField)
+import           RON.Data.LWW (getLwwField, lwwType, modifyLwwField,
+                               newLwwFrame, writeLwwField)
 import           RON.Data.ORSet (ORSetHash (..))
 import           RON.Data.RGA (RgaList (..))
 import           RON.Data.VersionVector (VersionVector (..))
@@ -125,10 +126,10 @@ setInt1
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Int64 -> m ()
 setInt1 = writeLwwField int1Name . I
-replaceStr2
-    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
-    => String -> m ()
-replaceStr2 = writeLwwField str2Name . I . RgaList
+modifyStr2
+    :: MonadError String m
+    => StateT (Object (RgaList Char)) m () -> StateT (Object Example1) m ()
+modifyStr2 = modifyLwwField str2Name
 setStr3
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Text -> m ()
@@ -175,38 +176,33 @@ ex1expect = [i|
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/]B~+r3pl1c4  @`]Qs                   !
+    *lww    #B/]B~+r3pl1c4  @`]Is                   !
                             @]Fs    :int1   =166    ,
-                            @]Qs    :set4   >]Ws    ,
-                            @]Gs    :str2   >]Ns    ,
-                            @]Os    :str3   '206'   ,
+                            @]Is    :set4   >]Os    ,
+                            @`      :str2   >]At    ,
+                            @]Gs    :str3   '206'   ,
 
-            #]Vs            @`      :0              !
-                                    :vv5    >]R~    ,
+            #]Ns            @`      :0              !
+                                    :vv5    >]J~    ,
 
     *rga    #]At            @]As    :0              !
                             @]5s            '2'     ,
                             @]8s            '7'     ,
                             @]As            '5'     ,
 
-            #]Ns            @]J~                    !
-                            @]Is            '2'     ,
-                            @)t             '0'     ,
-                            @]J~            '8'     ,
-
     *set    #]2V            @`                      !
 
-            #]Ws            @]Qt                    !
-                                            >]Vs    ,
+            #]Os            @]It                    !
+                                            >]Ns    ,
 
-    *vv     #]R~            @`                      !
+    *vv     #]J~            @`                      !
     .
     |]
 
 example4expect :: Example1
 example4expect = Example1
     { int1 = 166
-    , str2 = "208"
+    , str2 = "275"
     , str3 = "206"
     , set4 = HashSet.fromList [Example2{vv5 = mempty}]
     }
@@ -227,12 +223,13 @@ prop_lwwStruct = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    let ex4 = runNetworkSim $ runReplicaSim replica $
-            (`execStateT` ex2) $ runExceptT $ do
-                setInt1 166
-                replaceStr2 "208"
-                setStr3 "206"
-                replaceSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
+    ex4 <- evalEitherS $
+        runNetworkSim $ runReplicaSim replica $
+        runExceptT $ (`execStateT` ex2) $ do
+            setInt1 166
+            modifyStr2 $ pure () -- edit "208"
+            setStr3 "206"
+            replaceSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
 
     -- serialize object after modification
     prep ex4expect === prep (snd $ serializeObject ex4)

@@ -3,12 +3,15 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.LWW
     ( LwwPerField (..)
     , getLwwField
     , lwwType
+    , modifyLwwField
     , newLwwFrame
     , writeLwwField
     ) where
@@ -17,16 +20,18 @@ import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError)
-import           Control.Monad.State.Strict (MonadState, get, put)
+import           Control.Monad.State.Strict (MonadState, StateT, evalStateT,
+                                             get, put)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducible (..), ReplicatedAsObject,
                                     ReplicatedAsPayload (..), collectFrame,
-                                    getObjectStateChunk, mkStateChunk)
+                                    getObjectStateChunk, mkStateChunk,
+                                    objectOpType)
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
-import           RON.Types (Frame', Object (..), Op' (..), StateChunk (..),
-                            UUID)
+import           RON.Types (Atom (AUuid), Frame', Object (..), Op' (..),
+                            StateChunk (..), UUID)
 import qualified RON.UUID as UUID
 
 lww :: Op' -> Op' -> Op'
@@ -64,10 +69,10 @@ newLwwFrame fields = collectFrame $ do
 getLwwField
     :: ReplicatedAsPayload a
     => UUID -> StateChunk -> Frame' -> Either String a
-getLwwField name StateChunk{..} frame = fmapL ("getLwwField:\n" <>) $ do
-    let ops = filter ((name ==) . opRef) stateBody
+getLwwField field StateChunk{..} frame = fmapL ("getLwwField:\n" <>) $ do
+    let ops = filter ((field ==) . opRef) stateBody
     Op'{..} <- case ops of
-        []   -> Left $ unwords ["no such name", show name, "in lww chunk", show stateBody, "in frame\n", show frame]
+        []   -> Left $ unwords ["no field", show field, "in lww chunk"]
         [op] -> pure op
         _    -> Left "unreduced state"
     fromPayload opPayload frame
@@ -91,3 +96,21 @@ writeLwwField field (I value) = do
         { objectFrame = Map.insert objectId state' objectFrame <> newFrame
         , ..
         }
+
+modifyLwwField
+    :: forall inner outer m
+    . (ReplicatedAsObject inner, MonadError String m)
+    => UUID -> StateT (Object inner) m () -> StateT (Object outer) m ()
+modifyLwwField field innerModifier = do
+    obj@Object{..} <- get
+    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    let ops = filter ((field ==) . opRef) stateBody
+    Op'{..} <- case ops of
+        []   -> throwError $ unwords ["no field", show field, "in lww chunk"]
+        [op] -> pure op
+        _    -> throwError "unreduced state"
+    innerObjectId <- case opPayload of
+        [AUuid oid] -> pure oid
+        _           -> throwError "bad payload"
+    let innerObject = Object (objectOpType @inner, innerObjectId) objectFrame
+    lift $ evalStateT innerModifier innerObject
