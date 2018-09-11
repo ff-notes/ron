@@ -11,6 +11,7 @@ module LwwStruct (prop_lwwStruct) where
 
 import           RON.Internal.Prelude
 
+import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError, runExceptT)
 import           Control.Monad.State.Strict (MonadState, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -23,7 +24,7 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
                            getObjectStateChunk, newObject, objectOpType)
-import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame, setLwwField)
+import           RON.Data.LWW (getLwwField, lwwType, newLwwFrame, writeLwwField)
 import           RON.Data.ORSet (ORSetHash (..))
 import           RON.Data.RGA (RgaList (..))
 import           RON.Data.VersionVector (VersionVector (..))
@@ -113,38 +114,38 @@ instance ReplicatedAsObject Example1 where
         , (str2Name, I $ RgaList str2)
         , (str3Name, I str3)
         ]
-    getObject obj = do
+    getObject obj@Object{..} = fmapL ("getObject @Example1:\n" <>) $ do
         ops <- getObjectStateChunk obj
-        int1           <- getLwwField int1Name ops obj
-        RgaList str2   <- getLwwField str2Name ops obj
-        str3           <- getLwwField str3Name ops obj
-        ORSetHash set4 <- getLwwField set4Name ops obj
+        int1           <- getLwwField int1Name ops objectFrame
+        RgaList str2   <- getLwwField str2Name ops objectFrame
+        str3           <- getLwwField str3Name ops objectFrame
+        ORSetHash set4 <- getLwwField set4Name ops objectFrame
         pure Example1{..}
 setInt1
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Int64 -> m ()
-setInt1 = setLwwField int1Name . I
-setStr2
+setInt1 = writeLwwField int1Name . I
+replaceStr2
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => String -> m ()
-setStr2 = setLwwField str2Name . I . RgaList
+replaceStr2 = writeLwwField str2Name . I . RgaList
 setStr3
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Text -> m ()
-setStr3 = setLwwField str3Name . I
-setSet4
+setStr3 = writeLwwField str3Name . I
+replaceSet4
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => HashSet Example2 -> m ()
-setSet4 = setLwwField set4Name . I . ORSetHash
+replaceSet4 = writeLwwField set4Name . I . ORSetHash
 
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance ReplicatedAsPayload Example2
 instance ReplicatedAsObject Example2 where
     objectOpType = lwwType
     newObject Example2{..} = newLwwFrame [(vv5Name, I vv5)]
-    getObject obj = do
+    getObject obj@Object{..} = fmapL ("getObject @Example2:\n" <>) $ do
         ops <- getObjectStateChunk obj
-        vv5 <- getLwwField int1Name ops obj
+        vv5 <- getLwwField vv5Name ops objectFrame
         pure Example2{..}
 {- /GENERATED -}
 
@@ -202,29 +203,51 @@ ex4expect = [i|
     .
     |]
 
+example4expect :: Example1
+example4expect = Example1
+    { int1 = 166
+    , str2 = "208"
+    , str3 = "206"
+    , set4 = HashSet.fromList [Example2{vv5 = mempty}]
+    }
+
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
+    -- create an object
     let ex1 = runNetworkSim $ runReplicaSim replica $ newObject example0
     let (oid, ex1s) = serializeObject ex1
-    BSLC.words ex1expect === BSLC.words ex1s
+    prep ex1expect === prep ex1s
 
+    -- parse newly created object
     ex2 <- evalEitherS $ parseObject oid ex1s
     ex1 === ex2
 
+    -- decode newly created object
     example3 <- evalEitherS $ getObject ex2
     example0 === example3
 
+    -- apply operations to the object (frame)
     let ex4 = runNetworkSim $ runReplicaSim replica $
             (`execStateT` ex2) $ runExceptT $ do
                 setInt1 166
-                setStr2 "208"
+                replaceStr2 "208"
                 setStr3 "206"
-                setSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
-    BSLC.words ex4expect === BSLC.words (snd $ serializeObject ex4)
+                replaceSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
+
+    -- serialize object after modification
+    prep ex4expect === prep (snd $ serializeObject ex4)
+
+    -- decode object after modification
+    when True $ do
+        example4 <- evalEitherS $ getObject ex4
+        example4expect === example4
 
     -- TODO collect garbage
 
-    -- TODO test we can parse this back
+    -- TODO modify.. $ add.. -- StateT (Object a) m -> StateT (Object b) m
+
+  where
+    prep = filter (not . null) . map BSLC.words . BSLC.lines
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case

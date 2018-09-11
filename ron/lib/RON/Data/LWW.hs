@@ -10,11 +10,12 @@ module RON.Data.LWW
     , getLwwField
     , lwwType
     , newLwwFrame
-    , setLwwField
+    , writeLwwField
     ) where
 
 import           RON.Internal.Prelude
 
+import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (MonadState, get, put)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
@@ -24,7 +25,8 @@ import           RON.Data.Internal (Reducible (..), ReplicatedAsObject,
                                     ReplicatedAsPayload (..), collectFrame,
                                     getObjectStateChunk, mkStateChunk)
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
-import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
+import           RON.Types (Frame', Object (..), Op' (..), StateChunk (..),
+                            UUID)
 import qualified RON.UUID as UUID
 
 lww :: Op' -> Op' -> Op'
@@ -60,22 +62,22 @@ newLwwFrame fields = collectFrame $ do
     pure e
 
 getLwwField
-    :: ReplicatedAsPayload b
-    => UUID -> StateChunk -> Object a -> Either String b
-getLwwField name StateChunk{..} Object{..} = do
+    :: ReplicatedAsPayload a
+    => UUID -> StateChunk -> Frame' -> Either String a
+getLwwField name StateChunk{..} frame = fmapL ("getLwwField:\n" <>) $ do
     let ops = filter ((name ==) . opRef) stateBody
     Op'{..} <- case ops of
-        []   -> Left "no such name in lww chunk"
+        []   -> Left $ unwords ["no such name", show name, "in lww chunk", show stateBody, "in frame\n", show frame]
         [op] -> pure op
         _    -> Left "unreduced state"
-    fromPayload opPayload objectFrame
+    fromPayload opPayload frame
 
-setLwwField
+writeLwwField
     :: (Clock m, MonadError String m, MonadState (Object a) m)
     => UUID
     -> I ReplicatedAsPayload
     -> m ()
-setLwwField field (I value) = do
+writeLwwField field (I value) = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     advanceToUuid stateVersion
