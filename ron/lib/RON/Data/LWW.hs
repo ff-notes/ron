@@ -20,7 +20,7 @@ import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError)
-import           Control.Monad.State.Strict (MonadState, StateT, evalStateT,
+import           Control.Monad.State.Strict (MonadState, StateT, execStateT,
                                              get, put)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
@@ -113,4 +113,6 @@ modifyLwwField field innerModifier = do
         [AUuid oid] -> pure oid
         _           -> throwError "bad payload"
     let innerObject = Object (objectOpType @inner, innerObjectId) objectFrame
-    lift $ evalStateT innerModifier innerObject
+    Object{objectFrame = objectFrame'} <-
+        lift $ execStateT innerModifier innerObject
+    put Object{objectFrame = objectFrame', ..}

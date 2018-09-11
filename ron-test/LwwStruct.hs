@@ -27,6 +27,7 @@ import           RON.Data (ReplicatedAsObject, ReplicatedAsPayload, getObject,
 import           RON.Data.LWW (getLwwField, lwwType, modifyLwwField,
                                newLwwFrame, writeLwwField)
 import           RON.Data.ORSet (ORSetHash (..))
+import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RgaList (..))
 import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
@@ -134,10 +135,11 @@ setStr3
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Text -> m ()
 setStr3 = writeLwwField str3Name . I
-replaceSet4
-    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
-    => HashSet Example2 -> m ()
-replaceSet4 = writeLwwField set4Name . I . ORSetHash
+modifySet4
+    :: MonadError String m
+    => StateT (Object (ORSetHash Example2)) m ()
+    -> StateT (Object Example1) m ()
+modifySet4 = modifyLwwField set4Name
 
 newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance ReplicatedAsPayload Example2
@@ -176,26 +178,24 @@ ex1expect = [i|
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/]B~+r3pl1c4  @`]Is                   !
+    *lww    #B/]B~+r3pl1c4  @`]Gs                   !
                             @]Fs    :int1   =166    ,
-                            @]Is    :set4   >]Os    ,
-                            @`      :str2   >]At    ,
+                            @`      :set4   >]2V    ,
+                                    :str2   >]At    ,
                             @]Gs    :str3   '206'   ,
 
-            #]Ns            @`      :0              !
-                                    :vv5    >]J~    ,
+            #]J~            @`      :0              !
+                                    :vv5    >]It    ,
 
     *rga    #]At            @]As    :0              !
                             @]5s            '2'     ,
                             @]8s            '7'     ,
                             @]As            '5'     ,
 
-    *set    #]2V            @`                      !
+    *set    #]2V            @]Is                    !
+                                            >]J~    ,
 
-            #]Os            @]It                    !
-                                            >]Ns    ,
-
-    *vv     #]J~            @`                      !
+    *vv     #]It            @`                      !
     .
     |]
 
@@ -227,21 +227,16 @@ prop_lwwStruct = property $ do
         runNetworkSim $ runReplicaSim replica $
         runExceptT $ (`execStateT` ex2) $ do
             setInt1 166
-            modifyStr2 $ pure () -- edit "208"
+            modifyStr2 $ pure () -- TODO edit
             setStr3 "206"
-            replaceSet4 $ HashSet.fromList [Example2{vv5 = mempty}]
+            modifySet4 $ ORSet.add Example2{vv5 = mempty}
+
+    -- decode object after modification
+    example4 <- evalEitherS $ getObject ex4
+    example4expect === example4
 
     -- serialize object after modification
     prep ex4expect === prep (snd $ serializeObject ex4)
-
-    -- decode object after modification
-    when True $ do
-        example4 <- evalEitherS $ getObject ex4
-        example4expect === example4
-
-    -- TODO collect garbage
-
-    -- TODO modify.. $ add.. -- StateT (Object a) m -> StateT (Object b) m
 
   where
     prep = filter (not . null) . map BSLC.words . BSLC.lines
