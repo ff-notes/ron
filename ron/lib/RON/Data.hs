@@ -10,8 +10,8 @@
 
 module RON.Data
     ( Reducible (..)
+    , Replicated (..)
     , ReplicatedAsObject (..)
-    , ReplicatedAsPayload (..)
     , collectFrame
     , getObjectStateChunk
     , reduce
@@ -29,9 +29,8 @@ import qualified Data.Map.Strict as Map
 import           GHC.TypeLits (symbolVal)
 
 import           RON.Data.Internal (RChunk' (..), Reducer, Reducible (..),
-                                    ReplicatedAsObject (..),
-                                    ReplicatedAsPayload (..), collectFrame,
-                                    getObjectStateChunk)
+                                    Replicated (..), ReplicatedAsObject (..),
+                                    collectFrame, getObjectStateChunk)
 import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSet)
 import           RON.Data.RGA (RGA)

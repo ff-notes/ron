@@ -93,36 +93,36 @@ patchToChunk Patch{..} = RChunk'{..} where
     rchunk'Ref = patchRef
     StateChunk rchunk'Version rchunk'Body = stateToChunk patchValue
 
-class ReplicatedAsPayload a where
-    newPayload :: Clock clock => a -> WriterT Frame' clock [Atom]
-    default newPayload
+class Replicated a where
+    newRon :: Clock clock => a -> WriterT Frame' clock [Atom]
+    default newRon
         :: (Clock clock, ReplicatedAsObject a)
         => a -> WriterT Frame' clock [Atom]
-    newPayload a = do
+    newRon a = do
         Object (_, oid) frame <- lift $ newObject a
         tell frame
         pure [AUuid oid]
 
-    fromPayload :: [Atom] -> Frame' -> Either String a
-    default fromPayload
+    fromRon :: [Atom] -> Frame' -> Either String a
+    default fromRon
         :: ReplicatedAsObject a => [Atom] -> Frame' -> Either String a
-    fromPayload = objectFromPayload (objectOpType @a) getObject
+    fromRon = objectFromPayload (objectOpType @a) getObject
 
-instance ReplicatedAsPayload Int64 where
-    newPayload int = pure [AInteger int]
-    fromPayload atoms _ = case atoms of
+instance Replicated Int64 where
+    newRon int = pure [AInteger int]
+    fromRon atoms _ = case atoms of
         [AInteger int] -> pure int
         _ -> Left "Int64: bad payload"
 
-instance ReplicatedAsPayload Text where
-    newPayload t = pure [AString t]
-    fromPayload atoms _ = case atoms of
+instance Replicated Text where
+    newRon t = pure [AString t]
+    fromRon atoms _ = case atoms of
         [AString t] -> pure t
         _ -> Left "String: bad payload"
 
-instance ReplicatedAsPayload Char where
-    newPayload c = pure [AString $ Text.singleton c]
-    fromPayload atoms _ = case atoms of
+instance Replicated Char where
+    newRon c = pure [AString $ Text.singleton c]
+    fromRon atoms _ = case atoms of
         [AString s] -> case Text.uncons s of
             Just (c, "") -> pure c
             _ -> Left "too long string to encode a single character"

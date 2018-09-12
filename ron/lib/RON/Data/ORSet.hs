@@ -16,8 +16,8 @@ import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), ReplicatedAsObject (..),
-                                    ReplicatedAsPayload (..), collectFrame,
+import           RON.Data.Internal (Reducible (..), Replicated (..),
+                                    ReplicatedAsObject (..), collectFrame,
                                     getObjectStateChunk, mkStateChunk)
 import           RON.Event (Clock, getEventUuid)
 import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
@@ -58,18 +58,17 @@ setType = fromJust $ UUID.mkName "set"
 
 newtype ORSetHash a = ORSetHash (HashSet a)
 
-instance (Eq a, Hashable a, ReplicatedAsPayload a)
-    => ReplicatedAsPayload (ORSetHash a)
+instance (Eq a, Hashable a, Replicated a) => Replicated (ORSetHash a)
 
-instance (Eq a, Hashable a, ReplicatedAsPayload a)
-    => ReplicatedAsObject (ORSetHash a) where
+instance (Eq a, Hashable a, Replicated a) => ReplicatedAsObject (ORSetHash a)
+    where
 
     objectOpType = setType
 
     newObject (ORSetHash items) = collectFrame $ do
         ops <- for (toList items) $ \a -> do
             e <- lift getEventUuid
-            payload <- newPayload a
+            payload <- newRon a
             pure $ Op' e zero payload
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
@@ -79,18 +78,18 @@ instance (Eq a, Hashable a, ReplicatedAsPayload a)
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
         items <- for stateBody $ \Op'{..} -> do
-            value <- fromPayload opPayload objectFrame
+            value <- fromRon opPayload objectFrame
             pure (opRef, value)
         pure $ ORSetHash $ HashSet.fromList
             [value | (opRef, value) <- items, opRef == zero]
 
-add :: (ReplicatedAsPayload a, Clock m, MonadError String m)
+add :: (Replicated a, Clock m, MonadError String m)
     => a -> StateT (Object (ORSetHash a)) m ()
 add value = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     e <- getEventUuid
-    (p, newFrame) <- runWriterT $ newPayload value
+    (p, newFrame) <- runWriterT $ newRon value
     let newOp = Op' e zero p
     let chunk' = stateBody ++ [newOp]
     let state' = StateChunk e chunk'

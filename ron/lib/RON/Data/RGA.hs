@@ -21,9 +21,9 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (RChunk' (..), Reducible (..),
-                                    ReplicatedAsObject (..),
-                                    ReplicatedAsPayload (..), Unapplied,
-                                    collectFrame, getObjectStateChunk)
+                                    Replicated (..), ReplicatedAsObject (..),
+                                    Unapplied, collectFrame,
+                                    getObjectStateChunk)
 import           RON.Event (getEventUuid)
 import           RON.Internal.Word (pattern B11)
 import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
@@ -308,15 +308,15 @@ rgaType = fromJust $ UUID.mkName "rga"
 
 newtype RgaList a = RgaList [a]
 
-instance ReplicatedAsPayload a => ReplicatedAsPayload (RgaList a)
+instance Replicated a => Replicated (RgaList a)
 
-instance ReplicatedAsPayload a => ReplicatedAsObject (RgaList a) where
+instance Replicated a => ReplicatedAsObject (RgaList a) where
     objectOpType = rgaType
 
     newObject (RgaList items) = collectFrame $ do
         ops <- for items $ \a -> do
             vertexId <- lift getEventUuid
-            payload <- newPayload a
+            payload <- newRon a
             pure $ Op' vertexId Zero payload
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
@@ -326,6 +326,6 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (RgaList a) where
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
         items <- for stateBody $ \Op'{..} -> do
-            value <- fromPayload opPayload objectFrame
+            value <- fromRon opPayload objectFrame
             pure (opRef, value)
         pure $ RgaList [value | (opRef, value) <- items, opRef == Zero]

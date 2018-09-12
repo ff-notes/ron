@@ -25,8 +25,8 @@ import           Control.Monad.State.Strict (MonadState, StateT, execStateT,
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), ReplicatedAsObject,
-                                    ReplicatedAsPayload (..), collectFrame,
+import           RON.Data.Internal (Reducible (..), Replicated (..),
+                                    ReplicatedAsObject, collectFrame,
                                     getObjectStateChunk, mkStateChunk,
                                     objectOpType)
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
@@ -58,37 +58,33 @@ lwwType = fromJust $ UUID.mkName "lww"
 
 newFrame
     :: (Clock clock, ReplicatedAsObject a)
-    => [(UUID, I ReplicatedAsPayload)] -> clock (Object a)
+    => [(UUID, I Replicated)] -> clock (Object a)
 newFrame fields = collectFrame $ do
-    payloads <- for fields $ \(_, I value) -> newPayload value
+    payloads <- for fields $ \(_, I value) -> newRon value
     e <- lift getEventUuid
     tell $ Map.singleton (lwwType, e) $ StateChunk e
         [Op' e name p | ((name, _), p) <- zip fields payloads]
     pure e
 
-getField
-    :: ReplicatedAsPayload a
-    => UUID -> StateChunk -> Frame' -> Either String a
+getField :: Replicated a => UUID -> StateChunk -> Frame' -> Either String a
 getField field StateChunk{..} frame = fmapL ("getField:\n" <>) $ do
     let ops = filter ((field ==) . opRef) stateBody
     Op'{..} <- case ops of
         []   -> Left $ unwords ["no field", show field, "in lww chunk"]
         [op] -> pure op
         _    -> Left "unreduced state"
-    fromPayload opPayload frame
+    fromRon opPayload frame
 
 writeField
     :: (Clock m, MonadError String m, MonadState (Object a) m)
-    => UUID
-    -> I ReplicatedAsPayload
-    -> m ()
+    => UUID -> I Replicated -> m ()
 writeField field (I value) = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     advanceToUuid stateVersion
     let chunk = filter ((field /=) . opRef) stateBody
     e <- getEventUuid
-    (p, frame') <- runWriterT $ newPayload value
+    (p, frame') <- runWriterT $ newRon value
     let newOp = Op' e field p
     let chunk' = sortOn opRef $ newOp : chunk
     let state' = StateChunk e chunk'
