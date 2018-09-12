@@ -20,10 +20,7 @@ import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (RChunk' (..), Reducible (..),
-                                    Replicated (..), ReplicatedAsObject (..),
-                                    Unapplied, collectFrame,
-                                    getObjectStateChunk)
+import           RON.Data.Internal
 import           RON.Event (getEventUuid)
 import           RON.Internal.Word (pattern B11)
 import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
@@ -308,7 +305,8 @@ rgaType = fromJust $ UUID.mkName "rga"
 
 newtype RgaList a = RgaList [a]
 
-instance Replicated a => Replicated (RgaList a)
+instance Replicated a => Replicated (RgaList a) where
+    encoding = objectEncoding
 
 instance Replicated a => ReplicatedAsObject (RgaList a) where
     objectOpType = rgaType

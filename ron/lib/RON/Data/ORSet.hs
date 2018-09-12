@@ -16,9 +16,7 @@ import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), Replicated (..),
-                                    ReplicatedAsObject (..), collectFrame,
-                                    getObjectStateChunk, mkStateChunk)
+import           RON.Data.Internal
 import           RON.Event (Clock, getEventUuid)
 import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
@@ -58,7 +56,8 @@ setType = fromJust $ UUID.mkName "set"
 
 newtype ORSetHash a = ORSetHash (HashSet a)
 
-instance (Eq a, Hashable a, Replicated a) => Replicated (ORSetHash a)
+instance (Eq a, Hashable a, Replicated a) => Replicated (ORSetHash a) where
+    encoding = objectEncoding
 
 instance (Eq a, Hashable a, Replicated a) => ReplicatedAsObject (ORSetHash a)
     where

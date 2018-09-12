@@ -12,9 +12,7 @@ import           RON.Internal.Prelude
 import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), Replicated,
-                                    ReplicatedAsObject (..), collectFrame,
-                                    getObjectStateChunk, mkStateChunk)
+import           RON.Data.Internal
 import           RON.Event (getEventUuid)
 import           RON.Types (Op' (..), StateChunk (..), UUID (UUID))
 import qualified RON.UUID as UUID
@@ -53,7 +51,8 @@ instance Reducible VersionVector where
 vvType :: UUID
 vvType = fromJust $ UUID.mkName "vv"
 
-instance Replicated VersionVector
+instance Replicated VersionVector where
+    encoding = objectEncoding
 
 instance ReplicatedAsObject VersionVector where
     objectOpType = vvType

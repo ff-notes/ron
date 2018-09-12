@@ -14,6 +14,7 @@ module RON.Data
     , ReplicatedAsObject (..)
     , collectFrame
     , getObjectStateChunk
+    , objectEncoding
     , reduce
     , typeName
     ) where
@@ -28,9 +29,7 @@ import           Data.Map.Strict (Map, (!?))
 import qualified Data.Map.Strict as Map
 import           GHC.TypeLits (symbolVal)
 
-import           RON.Data.Internal (RChunk' (..), Reducer, Reducible (..),
-                                    Replicated (..), ReplicatedAsObject (..),
-                                    collectFrame, getObjectStateChunk)
+import           RON.Data.Internal
 import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSet)
 import           RON.Data.RGA (RGA)

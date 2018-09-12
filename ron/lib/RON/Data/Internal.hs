@@ -3,6 +3,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -94,35 +95,60 @@ patchToChunk Patch{..} = RChunk'{..} where
     StateChunk rchunk'Version rchunk'Body = stateToChunk patchValue
 
 class Replicated a where
-    newRon :: Clock clock => a -> WriterT Frame' clock [Atom]
-    default newRon
-        :: (Clock clock, ReplicatedAsObject a)
-        => a -> WriterT Frame' clock [Atom]
-    newRon a = do
+    encoding :: Encoding a
+
+data Encoding a = Encoding
+    { encodingNewRon
+        :: forall clock . Clock clock => a -> WriterT Frame' clock [Atom]
+    , encodingFromRon :: [Atom] -> Frame' -> Either String a
+    }
+
+newRon :: (Replicated a, Clock clock) => a -> WriterT Frame' clock [Atom]
+newRon = encodingNewRon encoding
+
+fromRon :: Replicated a => [Atom] -> Frame' -> Either String a
+fromRon = encodingFromRon encoding
+
+objectEncoding :: forall a . ReplicatedAsObject a => Encoding a
+objectEncoding = Encoding
+    { encodingNewRon = \a -> do
         Object (_, oid) frame <- lift $ newObject a
         tell frame
         pure [AUuid oid]
+    , encodingFromRon = objectFromRon (objectOpType @a) getObject
+    }
 
-    fromRon :: [Atom] -> Frame' -> Either String a
-    default fromRon
-        :: ReplicatedAsObject a => [Atom] -> Frame' -> Either String a
-    fromRon = objectFromPayload (objectOpType @a) getObject
+payloadEncoding :: ReplicatedAsPayload a => Encoding a
+payloadEncoding = Encoding
+    { encodingNewRon  = pure . newPayload
+    , encodingFromRon = \atoms _ -> fromPayload atoms
+    }
 
-instance Replicated Int64 where
-    newRon int = pure [AInteger int]
-    fromRon atoms _ = case atoms of
+class ReplicatedAsPayload a where
+    newPayload :: a -> [Atom]
+    fromPayload :: [Atom] -> Either String a
+
+instance Replicated Int64 where encoding = payloadEncoding
+
+instance ReplicatedAsPayload Int64 where
+    newPayload int = [AInteger int]
+    fromPayload atoms = case atoms of
         [AInteger int] -> pure int
         _ -> Left "Int64: bad payload"
 
-instance Replicated Text where
-    newRon t = pure [AString t]
-    fromRon atoms _ = case atoms of
+instance Replicated Text where encoding = payloadEncoding
+
+instance ReplicatedAsPayload Text where
+    newPayload t = [AString t]
+    fromPayload atoms = case atoms of
         [AString t] -> pure t
         _ -> Left "String: bad payload"
 
-instance Replicated Char where
-    newRon c = pure [AString $ Text.singleton c]
-    fromRon atoms _ = case atoms of
+instance Replicated Char where encoding = payloadEncoding
+
+instance ReplicatedAsPayload Char where
+    newPayload c = [AString $ Text.singleton c]
+    fromPayload atoms = case atoms of
         [AString s] -> case Text.uncons s of
             Just (c, "") -> pure c
             _ -> Left "too long string to encode a single character"
@@ -133,13 +159,13 @@ class ReplicatedAsObject a where
     newObject :: Clock clock => a -> clock (Object a)
     getObject :: Object a -> Either String a
 
-objectFromPayload
+objectFromRon
     :: UUID
     -> (Object a -> Either String a)
     -> [Atom]
     -> Frame'
     -> Either String a
-objectFromPayload typ handler atoms frame = case atoms of
+objectFromRon typ handler atoms frame = case atoms of
     [AUuid oid] -> handler $ Object (typ, oid) frame
     _ -> Left "bad payload"
 

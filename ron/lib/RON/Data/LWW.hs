@@ -25,10 +25,7 @@ import           Control.Monad.State.Strict (MonadState, StateT, execStateT,
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible (..), Replicated (..),
-                                    ReplicatedAsObject, collectFrame,
-                                    getObjectStateChunk, mkStateChunk,
-                                    objectOpType)
+import           RON.Data.Internal
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Frame', Object (..), Op' (..),
                             StateChunk (..), UUID)
