@@ -94,5 +94,5 @@ data StateChunk = StateChunk
 
 type Frame' = Map ObjectId StateChunk
 
-data Object a = Object{objectId :: ObjectId, objectFrame :: Frame'}
+data Object a = Object{objectId :: UUID, objectFrame :: Frame'}
     deriving (Eq, Show)

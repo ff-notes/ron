@@ -53,9 +53,7 @@ instance Reducible LwwPerField where
 lwwType :: UUID
 lwwType = fromJust $ UUID.mkName "lww"
 
-newFrame
-    :: (Clock clock, ReplicatedAsObject a)
-    => [(UUID, I Replicated)] -> clock (Object a)
+newFrame :: Clock clock => [(UUID, I Replicated)] -> clock (Object a)
 newFrame fields = collectFrame $ do
     payloads <- for fields $ \(_, I value) -> newRon value
     e <- lift getEventUuid
@@ -73,7 +71,10 @@ getField field StateChunk{..} frame = fmapL ("getField:\n" <>) $ do
     fromRon opPayload frame
 
 writeField
-    :: (Clock m, MonadError String m, MonadState (Object a) m)
+    :: forall a m
+    .   ( ReplicatedAsObject a
+        , Clock m, MonadError String m, MonadState (Object a) m
+        )
     => UUID -> I Replicated -> m ()
 writeField field (I value) = do
     obj@Object{..} <- get
@@ -86,13 +87,13 @@ writeField field (I value) = do
     let chunk' = sortOn opRef $ newOp : chunk
     let state' = StateChunk e chunk'
     put Object
-        { objectFrame = Map.insert objectId state' objectFrame <> frame'
+        { objectFrame =
+            Map.insert (objectOpType @a, objectId) state' objectFrame <> frame'
         , ..
         }
 
 modifyField
-    :: forall inner outer m
-    . (ReplicatedAsObject inner, MonadError String m)
+    :: (ReplicatedAsObject outer, MonadError String m)
     => UUID -> StateT (Object inner) m () -> StateT (Object outer) m ()
 modifyField field innerModifier = do
     obj@Object{..} <- get
@@ -105,7 +106,7 @@ modifyField field innerModifier = do
     innerObjectId <- case opPayload of
         [AUuid oid] -> pure oid
         _           -> throwError "bad payload"
-    let innerObject = Object (objectOpType @inner, innerObjectId) objectFrame
+    let innerObject = Object innerObjectId objectFrame
     Object{objectFrame = objectFrame'} <-
         lift $ execStateT innerModifier innerObject
     put Object{objectFrame = objectFrame', ..}

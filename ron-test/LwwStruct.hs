@@ -5,7 +5,6 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module LwwStruct (prop_lwwStruct) where
 
@@ -45,10 +44,8 @@ import qualified RON.UUID as UUID
 parseFrame' :: ByteStringL -> Either String Frame'
 parseFrame' = parseFrame >=> findObjects
 
-parseObject
-    :: forall a
-    . ReplicatedAsObject a => UUID -> ByteStringL -> Either String (Object a)
-parseObject oid bytes = Object (objectOpType @a, oid) <$> parseFrame' bytes
+parseObject :: UUID -> ByteStringL -> Either String (Object a)
+parseObject oid bytes = Object oid <$> parseFrame' bytes
 
 serializeFrame' :: Frame' -> ByteStringL
 serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
@@ -58,7 +55,7 @@ serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
         opEvent = stateVersion
 
 serializeObject :: Object a -> (UUID, ByteStringL)
-serializeObject (Object (_, oid) frame) = (oid, serializeFrame' frame)
+serializeObject (Object oid frame) = (oid, serializeFrame' frame)
 
 findObjects :: Frame -> Either String Frame'
 findObjects = fmap Map.fromList . traverse loadBody where

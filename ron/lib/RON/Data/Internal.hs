@@ -109,13 +109,13 @@ newRon = encodingNewRon encoding
 fromRon :: Replicated a => [Atom] -> Frame' -> Either String a
 fromRon = encodingFromRon encoding
 
-objectEncoding :: forall a . ReplicatedAsObject a => Encoding a
+objectEncoding :: ReplicatedAsObject a => Encoding a
 objectEncoding = Encoding
     { encodingNewRon = \a -> do
-        Object (_, oid) frame <- lift $ newObject a
+        Object oid frame <- lift $ newObject a
         tell frame
         pure [AUuid oid]
-    , encodingFromRon = objectFromRon (objectOpType @a) getObject
+    , encodingFromRon = objectFromRon getObject
     }
 
 payloadEncoding :: ReplicatedAsPayload a => Encoding a
@@ -160,27 +160,22 @@ class ReplicatedAsObject a where
     getObject :: Object a -> Either String a
 
 objectFromRon
-    :: UUID
-    -> (Object a -> Either String a)
-    -> [Atom]
-    -> Frame'
-    -> Either String a
-objectFromRon typ handler atoms frame = case atoms of
-    [AUuid oid] -> handler $ Object (typ, oid) frame
+    :: (Object a -> Either String a) -> [Atom] -> Frame' -> Either String a
+objectFromRon handler atoms frame = case atoms of
+    [AUuid oid] -> handler $ Object oid frame
     _ -> Left "bad payload"
 
-collectFrame
-    :: forall a m
-    . (ReplicatedAsObject a, Functor m) => WriterT Frame' m UUID -> m (Object a)
-collectFrame =
-    fmap (\(oid, frame) -> Object (objectOpType @a, oid) frame) . runWriterT
+collectFrame :: Functor m => WriterT Frame' m UUID -> m (Object a)
+collectFrame = fmap (uncurry Object) . runWriterT
 
-getObjectStateChunk :: Object a -> Either String StateChunk
-getObjectStateChunk (Object (typ, oid) frame) =
-    maybe (Left "no such object in chunk") Right $ Map.lookup (typ, oid) frame
+getObjectStateChunk
+    :: forall a . ReplicatedAsObject a => Object a -> Either String StateChunk
+getObjectStateChunk (Object oid frame) =
+    maybe (Left "no such object in chunk") Right $
+    Map.lookup (objectOpType @a, oid) frame
 
 eqRef :: Object a -> [Atom] -> Bool
-eqRef (Object (_, oid) _) atoms = case atoms of
+eqRef (Object oid _) atoms = case atoms of
     [AUuid ref] -> oid == ref
     _           -> False
 

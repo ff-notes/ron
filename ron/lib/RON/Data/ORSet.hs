@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.ORSet
@@ -25,8 +26,7 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (Clock, getEventUuid)
-import           RON.Types (Atom, Object (..), Op' (..),
-                            StateChunk (..), UUID)
+import           RON.Types (Atom, Object (..), Op' (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
 import qualified RON.UUID as UUID
 
@@ -90,7 +90,7 @@ instance (Eq a, Hashable a, Replicated a) => ReplicatedAsObject (ORSetHash a)
         pure $ ORSetHash $ HashSet.fromList
             [value | (opRef, value) <- items, opRef == zero]
 
-add :: (Replicated a, Clock m, MonadError String m)
+add :: (Eq a, Hashable a, Replicated a, Clock m, MonadError String m)
     => a -> StateT (Object (ORSetHash a)) m ()
 add value = do
     obj@Object{..} <- get
@@ -101,7 +101,9 @@ add value = do
     let chunk' = stateBody ++ [newOp]
     let state' = StateChunk e chunk'
     put Object
-        { objectFrame = Map.insert objectId state' objectFrame <> newFrame
+        { objectFrame =
+            Map.insert (setType, objectId) state' objectFrame
+            <> newFrame
         , ..
         }
 
