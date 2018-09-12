@@ -26,9 +26,9 @@ import           RON.Data (Replicated (..), ReplicatedAsObject, getObject,
                            objectOpType)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (ORSetHash (..))
+import           RON.Data.ORSet (AsORSet (..))
 import qualified RON.Data.ORSet as ORSet
-import           RON.Data.RGA (RgaList (..))
+import           RON.Data.RGA (AsRga (..))
 import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
@@ -110,16 +110,16 @@ instance ReplicatedAsObject Example1 where
     objectOpType = lwwType
     newObject Example1{..} = LWW.newFrame
         [ (int1Name, I int1)
-        , (set4Name, I $ ORSetHash set4)
-        , (str2Name, I $ RgaList str2)
+        , (set4Name, I $ AsORSet set4)
+        , (str2Name, I $ AsRga str2)
         , (str3Name, I str3)
         ]
     getObject obj@Object{..} = fmapL ("getObject @Example1:\n" <>) $ do
         ops <- getObjectStateChunk obj
-        int1           <- LWW.getField int1Name ops objectFrame
-        RgaList str2   <- LWW.getField str2Name ops objectFrame
-        str3           <- LWW.getField str3Name ops objectFrame
-        ORSetHash set4 <- LWW.getField set4Name ops objectFrame
+        int1         <- LWW.getField int1Name ops objectFrame
+        AsRga str2   <- LWW.getField str2Name ops objectFrame
+        str3         <- LWW.getField str3Name ops objectFrame
+        AsORSet set4 <- LWW.getField set4Name ops objectFrame
         pure Example1{..}
 setInt1
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
@@ -127,7 +127,7 @@ setInt1
 setInt1 = LWW.writeField int1Name . I
 modifyStr2
     :: MonadError String m
-    => StateT (Object (RgaList Char)) m () -> StateT (Object Example1) m ()
+    => StateT (Object (AsRga String)) m () -> StateT (Object Example1) m ()
 modifyStr2 = LWW.modifyField str2Name
 setStr3
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
@@ -135,7 +135,7 @@ setStr3
 setStr3 = LWW.writeField str3Name . I
 modifySet4
     :: MonadError String m
-    => StateT (Object (ORSetHash Example2)) m ()
+    => StateT (Object (AsORSet (HashSet Example2))) m ()
     -> StateT (Object Example1) m ()
 modifySet4 = LWW.modifyField set4Name
 

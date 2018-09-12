@@ -1,16 +1,16 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module RON.Data.RGA
-    ( RGA (..)
-    , RgaList (..)
-    , vertexListFromOps
-    , vertexListToOps
+    ( AsRga (..)
+    , RGA (..)
     ) where
 
 import           RON.Internal.Prelude
@@ -19,6 +19,8 @@ import           Control.Monad.Writer.Strict (lift, tell)
 import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
+import           GHC.Exts (IsList, Item)
+import qualified GHC.Exts as Exts
 
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
@@ -303,17 +305,21 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
 rgaType :: UUID
 rgaType = fromJust $ UUID.mkName "rga"
 
-newtype RgaList a = RgaList [a]
+newtype AsRga array = AsRga array
     deriving (Eq)
 
-instance Replicated a => Replicated (RgaList a) where
+instance (IsList array, Replicated (Item array)) => Replicated (AsRga array)
+    where
+
     encoding = objectEncoding
 
-instance Replicated a => ReplicatedAsObject (RgaList a) where
+instance (IsList array, Replicated (Item array))
+    => ReplicatedAsObject (AsRga array) where
+
     objectOpType = rgaType
 
-    newObject (RgaList items) = collectFrame $ do
-        ops <- for items $ \a -> do
+    newObject (AsRga items) = collectFrame $ do
+        ops <- for (Exts.toList items) $ \a -> do
             vertexId <- lift getEventUuid
             payload <- newRon a
             pure $ Op' vertexId Zero payload
@@ -327,4 +333,5 @@ instance Replicated a => ReplicatedAsObject (RgaList a) where
         items <- for stateBody $ \Op'{..} -> do
             value <- fromRon opPayload objectFrame
             pure (opRef, value)
-        pure $ RgaList [value | (opRef, value) <- items, opRef == Zero]
+        pure $ AsRga $
+            Exts.fromList [value | (opRef, value) <- items, opRef == Zero]

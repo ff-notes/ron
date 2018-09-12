@@ -1,15 +1,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module RON.Data.ORSet
-    ( ORSet
-    , ORSetHash (..)
+    ( AsORSet (..)
+    , ORSet
     , add
     , removeBy
     , removeRef
@@ -21,8 +20,9 @@ import           RON.Internal.Prelude
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (StateT, get, put)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
-import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
+import           GHC.Exts (IsList, Item)
+import qualified GHC.Exts as Exts
 
 import           RON.Data.Internal
 import           RON.Event (Clock, getEventUuid)
@@ -62,18 +62,18 @@ instance Reducible ORSet where
 setType :: UUID
 setType = fromJust $ UUID.mkName "set"
 
-newtype ORSetHash a = ORSetHash (HashSet a)
+newtype AsORSet set = AsORSet set
 
-instance (Eq a, Hashable a, Replicated a) => Replicated (ORSetHash a) where
+instance (IsList set, Replicated (Item set)) => Replicated (AsORSet set) where
     encoding = objectEncoding
 
-instance (Eq a, Hashable a, Replicated a) => ReplicatedAsObject (ORSetHash a)
+instance (IsList set, Replicated (Item set)) => ReplicatedAsObject (AsORSet set)
     where
 
     objectOpType = setType
 
-    newObject (ORSetHash items) = collectFrame $ do
-        ops <- for (toList items) $ \a -> do
+    newObject (AsORSet items) = collectFrame $ do
+        ops <- for (Exts.toList items) $ \a -> do
             e <- lift getEventUuid
             payload <- newRon a
             pure $ Op' e zero payload
@@ -87,11 +87,11 @@ instance (Eq a, Hashable a, Replicated a) => ReplicatedAsObject (ORSetHash a)
         items <- for stateBody $ \Op'{..} -> do
             value <- fromRon opPayload objectFrame
             pure (opRef, value)
-        pure $ ORSetHash $ HashSet.fromList
-            [value | (opRef, value) <- items, opRef == zero]
+        pure $ AsORSet $
+            Exts.fromList [value | (opRef, value) <- items, opRef == zero]
 
-add :: (Eq a, Hashable a, Replicated a, Clock m, MonadError String m)
-    => a -> StateT (Object (ORSetHash a)) m ()
+add :: (IsList set, Replicated (Item set), Clock m, MonadError String m)
+    => Item set -> StateT (Object (AsORSet set)) m ()
 add value = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
@@ -107,11 +107,14 @@ add value = do
         , ..
         }
 
-removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSetHash a)) m ()
+removeBy :: ([Atom] -> Bool) -> StateT (Object (AsORSet set)) m ()
 removeBy = undefined
 
-removeValue :: ReplicatedAsPayload a => a -> StateT (Object (ORSetHash a)) m ()
+removeValue
+    :: ReplicatedAsPayload (Item set)
+    => Item set -> StateT (Object (AsORSet set)) m ()
 removeValue = removeBy . eqPayload
 
-removeRef :: Object a -> StateT (Object (ORSetHash (Object a))) m ()
+-- TODO Item set ~ Object a =>
+removeRef :: Object a -> StateT (Object (AsORSet set)) m ()
 removeRef = removeBy . eqRef
