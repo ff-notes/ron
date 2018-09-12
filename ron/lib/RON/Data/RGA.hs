@@ -304,6 +304,7 @@ rgaType :: UUID
 rgaType = fromJust $ UUID.mkName "rga"
 
 newtype RgaList a = RgaList [a]
+    deriving (Eq)
 
 instance Replicated a => Replicated (RgaList a) where
     encoding = objectEncoding

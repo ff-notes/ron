@@ -6,7 +6,14 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.ORSet (ORSet, ORSetHash (..), add) where
+module RON.Data.ORSet
+    ( ORSet
+    , ORSetHash (..)
+    , add
+    , removeBy
+    , removeRef
+    , removeValue
+    ) where
 
 import           RON.Internal.Prelude
 
@@ -18,7 +25,8 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (Clock, getEventUuid)
-import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
+import           RON.Types (Atom, Object (..), Op' (..),
+                            StateChunk (..), UUID)
 import           RON.UUID (zero)
 import qualified RON.UUID as UUID
 
@@ -96,3 +104,12 @@ add value = do
         { objectFrame = Map.insert objectId state' objectFrame <> newFrame
         , ..
         }
+
+removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSetHash a)) m ()
+removeBy = undefined
+
+removeValue :: ReplicatedAsPayload a => a -> StateT (Object (ORSetHash a)) m ()
+removeValue = removeBy . eqPayload
+
+removeRef :: Object a -> StateT (Object (ORSetHash (Object a))) m ()
+removeRef = removeBy . eqRef

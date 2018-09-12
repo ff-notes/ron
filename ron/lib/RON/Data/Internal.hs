@@ -120,18 +120,18 @@ objectEncoding = Encoding
 
 payloadEncoding :: ReplicatedAsPayload a => Encoding a
 payloadEncoding = Encoding
-    { encodingNewRon  = pure . newPayload
+    { encodingNewRon  = pure . toPayload
     , encodingFromRon = \atoms _ -> fromPayload atoms
     }
 
 class ReplicatedAsPayload a where
-    newPayload :: a -> [Atom]
+    toPayload :: a -> [Atom]
     fromPayload :: [Atom] -> Either String a
 
 instance Replicated Int64 where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Int64 where
-    newPayload int = [AInteger int]
+    toPayload int = [AInteger int]
     fromPayload atoms = case atoms of
         [AInteger int] -> pure int
         _ -> Left "Int64: bad payload"
@@ -139,19 +139,19 @@ instance ReplicatedAsPayload Int64 where
 instance Replicated Text where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Text where
-    newPayload t = [AString t]
+    toPayload t = [AString t]
     fromPayload atoms = case atoms of
         [AString t] -> pure t
-        _ -> Left "String: bad payload"
+        _           -> Left "String: bad payload"
 
 instance Replicated Char where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Char where
-    newPayload c = [AString $ Text.singleton c]
+    toPayload c = [AString $ Text.singleton c]
     fromPayload atoms = case atoms of
         [AString s] -> case Text.uncons s of
             Just (c, "") -> pure c
-            _ -> Left "too long string to encode a single character"
+            _            -> Left "too long string to encode a single character"
         _ -> Left "Char: bad payload"
 
 class ReplicatedAsObject a where
@@ -178,3 +178,11 @@ collectFrame =
 getObjectStateChunk :: Object a -> Either String StateChunk
 getObjectStateChunk (Object (typ, oid) frame) =
     maybe (Left "no such object in chunk") Right $ Map.lookup (typ, oid) frame
+
+eqRef :: Object a -> [Atom] -> Bool
+eqRef (Object (_, oid) _) atoms = case atoms of
+    [AUuid ref] -> oid == ref
+    _           -> False
+
+eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
+eqPayload a atoms = toPayload a == atoms
