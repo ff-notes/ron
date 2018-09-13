@@ -35,10 +35,9 @@ import           RON.Data.RGA (AsRga (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
-import           RON.Schema (Annotation (..), Declaration (..),
-                             HaskellType1 (..), RonType (..), StructLww (..),
-                             TAtom (..), TBuiltin (..), char, mkReplicated,
-                             (//))
+import           RON.Schema (Annotation (..), Declaration (..), RonType (..),
+                             StructLww (..), TAtom (..), TBuiltin (..), char,
+                             mkReplicated, (//))
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
@@ -89,9 +88,9 @@ $(let
             [ ("int1", TAtom TAInteger // [])
             ,   ( "set4"
                 , TBuiltin (TORSet $ TStructLww tExample2 // []) //
-                    [AnnHaskellType1 HaskellHashSet]
+                    [AnnHaskellType1 "HashSet"]
                 )
-            , ("str2", TBuiltin (TRga char) // [AnnHaskellType1 HaskellList])
+            , ("str2", TBuiltin (TRga char) // [])
             , ("str3", TAtom TAString // [])
             ]
         }

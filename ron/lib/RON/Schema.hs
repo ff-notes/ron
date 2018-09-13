@@ -6,8 +6,6 @@
 module RON.Schema
     ( Annotation (..)
     , Declaration (..)
-    , HaskellType (..)
-    , HaskellType1 (..)
     , RonType (..)
     , StructLww (..)
     , TAtom (..)
@@ -22,9 +20,8 @@ import           RON.Internal.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Language.Haskell.TH (DecsQ, TypeQ, appT, bang, bangType, conT,
-                                      cxt, dataD, derivClause, listT, mkName,
-                                      recC, sourceNoUnpack, sourceStrict,
-                                      varBangType)
+                                      cxt, dataD, derivClause, mkName, recC,
+                                      sourceNoUnpack, sourceStrict, varBangType)
 import qualified Language.Haskell.TH as TH
 
 import           RON.Data.VersionVector (VersionVector)
@@ -55,7 +52,7 @@ newtype Declaration = DStructLww StructLww
 type Schema = [Annotated Declaration]
 
 char :: Annotated RonType
-char = TAtom TAString // [AnnHaskellType HaskellChar]
+char = TAtom TAString // [AnnHaskellType "Char"]
 
 data Annotated t = Ann t [Annotation]
     deriving (Show)
@@ -65,14 +62,8 @@ data Annotated t = Ann t [Annotation]
 
 data Annotation
     = AnnHaskellDeriving Text
-    | AnnHaskellType     HaskellType
-    | AnnHaskellType1    HaskellType1
-    deriving (Show)
-
-data HaskellType = HaskellChar
-    deriving (Show)
-
-data HaskellType1 = HaskellHashSet | HaskellList
+    | AnnHaskellType     Text
+    | AnnHaskellType1    Text
     deriving (Show)
 
 mkReplicated :: Schema -> DecsQ
@@ -110,30 +101,25 @@ mkViewType (Ann typ annotations) = case typ of
         Nothing -> case a of
             TAInteger -> conT ''Int64
             TAString  -> conT ''Text
-        Just hsType -> case hsType of
-            HaskellChar -> conT ''Char
+        Just hsType -> conT $ mkNameT hsType
     TBuiltin b -> case b of
-        TORSet itemType -> do
-            let container = case fromMaybe HaskellList mHsType1 of
-                    HaskellList    -> listT
-                    HaskellHashSet -> conT ''HashSet
-            appT container $ mkViewType itemType
-        TRga   itemType -> case fromMaybe HaskellList mHsType1 of
-            HaskellList -> appT listT $ mkViewType itemType
-            t           -> fail $ "Type is not compatible with RGA: " ++ show t
+        TORSet item ->
+            appT (conT . mkNameT $ fromMaybe "[]" mHsType1) (mkViewType item)
+        TRga   item ->
+            appT (conT . mkNameT $ fromMaybe "[]" mHsType1) (mkViewType item)
         TVersionVector -> conT ''VersionVector
     TStructLww StructLww{..} -> conT $ mkNameT slName
   where
     mHsType  = lookupHaskellType  annotations
     mHsType1 = lookupHaskellType1 annotations
 
-lookupHaskellType :: [Annotation] -> Maybe HaskellType
+lookupHaskellType :: [Annotation] -> Maybe Text
 lookupHaskellType = asum . map go where
     go = \case
         AnnHaskellType t -> Just t
         _                -> Nothing
 
-lookupHaskellType1 :: [Annotation] -> Maybe HaskellType1
+lookupHaskellType1 :: [Annotation] -> Maybe Text
 lookupHaskellType1 = asum . map go where
     go = \case
         AnnHaskellType1 t -> Just t
