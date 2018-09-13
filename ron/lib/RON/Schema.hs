@@ -21,13 +21,10 @@ import           Control.Error (fmapL)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Language.Haskell.TH (DecsQ, Exp (VarE), TypeQ, appE, appT,
-                                      bang, bangType, bindS, clause, conE, conP,
-                                      conT, cxt, dataD, derivClause, doE, funD,
-                                      instanceD, letS, listE, mkName, newName,
-                                      noBindS, normalB, recC, recConE,
-                                      sourceNoUnpack, sourceStrict, tupE, valD,
-                                      varBangType, varE, varP)
+import           Language.Haskell.TH (Exp (VarE), appE, appT, bindS, conE, conP,
+                                      conT, dataD, doE, funD, instanceD, letS,
+                                      listE, noBindS, recC, recConE, tupE, varE,
+                                      varP)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
@@ -81,7 +78,7 @@ data Annotation
     | HaskellType1    Text
     deriving (Show)
 
-mkReplicated :: Schema -> DecsQ
+mkReplicated :: Schema -> TH.DecsQ
 mkReplicated = fmap fold . traverse fromDecl where
     fromDecl (Ann decl annotations) = case decl of
         DStructLww s -> mkReplicatedStructLww (s // annotations)
@@ -95,7 +92,7 @@ fieldWrapper (Ann typ _) = case typ of
         TVersionVector -> Nothing
     TStructLww _ -> Nothing
 
-mkReplicatedStructLww :: Annotated StructLww -> DecsQ
+mkReplicatedStructLww :: Annotated StructLww -> TH.DecsQ
 mkReplicatedStructLww (Ann StructLww{..} annotations) = do
     fields <-
         for (Map.assocs slFields) $ \(fieldName, fieldType) ->
@@ -103,62 +100,54 @@ mkReplicatedStructLww (Ann StructLww{..} annotations) = do
                 Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
                 Nothing -> fail $
                     "Field name is not representable in RON: " ++ show fieldName
+    let fieldsToPack = listE
+            [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
+            | (fieldNameUuid, fieldName, fieldType) <- fields
+            , let var = maybe id (appE . conE) (fieldWrapper fieldType) $
+                    varE $ mkNameT fieldName
+            ]
     sequence
         [ dataD
-            (cxt [])
+            (TH.cxt [])
             name
             []
             Nothing
             [ recC name
-                [ varBangType (mkNameT fieldName) $
-                    bangType (bang sourceNoUnpack sourceStrict) $
+                [ TH.varBangType (mkNameT fieldName) $
+                    TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
                     mkViewType fieldType
                 | (fieldName, fieldType) <- Map.assocs slFields
                 ]
             ]
-            [ derivClause Nothing $
+            [ TH.derivClause Nothing $
                 map (conT . mkNameT) $ lookupHaskellDeriving annotations
             ]
         , instanceD
-            (cxt [])
-            (appT (conT ''Replicated) (conT name))
-            [valD (varP 'encoding) (normalB [| objectEncoding |]) []]
+            (TH.cxt [])
+            (conT ''Replicated `appT` conT name)
+            [valD' 'encoding [| objectEncoding |]]
         , instanceD
-            (cxt [])
-            (appT (conT ''ReplicatedAsObject) (conT name))
-            [ valD (varP 'objectOpType) (normalB [| lwwType |]) []
-            , let
-                fieldsToPack = listE
-                    [ tupE
-                        [ liftData fieldNameUuid
-                        , appE [| I |] $
-                            maybe id (appE . conE) (fieldWrapper fieldType) $
-                            varE $ mkNameT fieldName
-                        ]
-                    | (fieldNameUuid, fieldName, fieldType) <- fields
-                    ]
-                in
-                funD
-                    'newObject
-                    [ clause
-                        [conP name . map (varP . mkNameT) $ Map.keys slFields]
-                        (normalB $ appE [| LWW.newFrame |] fieldsToPack)
-                        []
-                    ]
+            (TH.cxt [])
+            (conT ''ReplicatedAsObject `appT` conT name)
+            [ valD' 'objectOpType [| lwwType |]
+            , funD
+                'newObject
+                [ clause'
+                    [conP name . map (varP . mkNameT) $ Map.keys slFields] $
+                    [| LWW.newFrame |] `appE` fieldsToPack
+                ]
             , do
-                obj   <- newName "obj";   let objE   = varE obj
-                frame <- newName "frame"; let frameE = varE frame
-                ops   <- newName "ops";   let opsE   = varE ops
+                obj   <- TH.newName "obj";   let objE   = varE obj
+                frame <- TH.newName "frame"; let frameE = varE frame
+                ops   <- TH.newName "ops";   let opsE   = varE ops
                 let fieldsToUnpack =
                         [ bindS
                             (maybe fieldP (\w -> conP w [fieldP]) $
                                 fieldWrapper fieldType) $
-                            appE
-                                (appE
-                                    (appE [| LWW.getField |] $
-                                        liftData fieldNameUuid)
-                                    opsE)
-                                frameE
+                            [| LWW.getField |]
+                            `appE` liftData fieldNameUuid
+                            `appE` opsE
+                            `appE` frameE
                         | (fieldNameUuid, fieldName, fieldType) <- fields
                         , let fieldP = varP $ mkNameT fieldName
                         ]
@@ -171,27 +160,19 @@ mkReplicatedStructLww (Ann StructLww{..} annotations) = do
                             ]
                 funD
                     'getObject
-                    [ clause
-                        [varP obj]
-                        ( normalB $
-                            appE
-                                [|
-                                    fmapL $
-                                    (++) $("getObject @" ++ slName' ++ ": ")
-                                |] $
-                            doE $ letS
-                                    [ valD
-                                        (varP frame)
-                                        (normalB $ appE [| objectFrame |] objE)
-                                        []
-                                    ]
-                                : bindS
-                                    (varP ops)
-                                    (appE [| getObjectStateChunk |] objE)
-                                : fieldsToUnpack
-                                ++ [noBindS $ appE [| pure |] construct]
-                        )
-                        []
+                    [ clause' [varP obj] $
+                        appE
+                            [|
+                                fmapL $
+                                (++) $("getObject @" ++ slName' ++ ": ")
+                            |] $
+                        doE $ letS
+                                [valD' frame $ [| objectFrame |] `appE` objE]
+                            : bindS
+                                (varP ops)
+                                ([| getObjectStateChunk |] `appE` objE)
+                            : fieldsToUnpack
+                            ++ [noBindS $ [| pure |] `appE` construct]
                     ]
             ]
         ]
@@ -200,9 +181,9 @@ mkReplicatedStructLww (Ann StructLww{..} annotations) = do
     slName' = Text.unpack slName
 
 mkNameT :: Text -> TH.Name
-mkNameT = mkName . Text.unpack
+mkNameT = TH.mkName . Text.unpack
 
-mkViewType :: Annotated RonType -> TypeQ
+mkViewType :: Annotated RonType -> TH.TypeQ
 mkViewType (Ann typ annotations) = case typ of
     TAtom a -> case mHsType of
         Nothing -> case a of
@@ -210,15 +191,14 @@ mkViewType (Ann typ annotations) = case typ of
             TAString  -> conT ''Text
         Just hsType -> conT $ mkNameT hsType
     TBuiltin b -> case b of
-        TORSet item ->
-            appT (conT . mkNameT $ fromMaybe "[]" mHsType1) (mkViewType item)
-        TRga   item ->
-            appT (conT . mkNameT $ fromMaybe "[]" mHsType1) (mkViewType item)
+        TORSet item -> wrap item
+        TRga   item -> wrap item
         TVersionVector -> conT ''VersionVector
     TStructLww StructLww{..} -> conT $ mkNameT slName
   where
     mHsType  = lookupHaskellType  annotations
     mHsType1 = lookupHaskellType1 annotations
+    wrap it = conT (mkNameT $ fromMaybe "[]" mHsType1) `appT` mkViewType it
 
 lookupHaskellType :: [Annotation] -> Maybe Text
 lookupHaskellType = asum . map go where
@@ -236,3 +216,9 @@ lookupHaskellDeriving :: [Annotation] -> [Text]
 lookupHaskellDeriving = mapMaybe $ \case
     HaskellDeriving d -> Just d
     _                 -> Nothing
+
+valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
+valD' name body = TH.valD (varP name) (TH.normalB body) []
+
+clause' :: [TH.PatQ] -> TH.ExpQ -> TH.ClauseQ
+clause' pat body = TH.clause pat (TH.normalB body) []
