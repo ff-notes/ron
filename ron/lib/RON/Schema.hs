@@ -32,7 +32,7 @@ import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
 import           RON.Data (Replicated (..), ReplicatedAsObject (..),
-                           getObjectStateChunk)
+                           getObjectStateChunk, objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..))

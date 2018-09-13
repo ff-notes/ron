@@ -23,7 +23,7 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (getObject, newObject, objectEncoding)
+import           RON.Data (getObject, newObject)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..))
 import qualified RON.Data.ORSet as ORSet
