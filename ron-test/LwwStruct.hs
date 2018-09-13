@@ -88,7 +88,7 @@ $(let
             [ ("int1", TAtom TAInteger // [])
             ,   ( "set4"
                 , TBuiltin (TORSet $ TStructLww tExample2 // []) //
-                    [AnnHaskellType1 "HashSet"]
+                    [HaskellType1 "HashSet"]
                 )
             , ("str2", TBuiltin (TRga char) // [])
             , ("str3", TAtom TAString // [])
@@ -99,13 +99,12 @@ $(let
         , slFields = Map.fromList [("vv5", TBuiltin TVersionVector // [])]
         }
     in mkReplicated
-        [ DStructLww tExample1 //
-            [AnnHaskellDeriving "Eq", AnnHaskellDeriving "Show"]
+        [ DStructLww tExample1 // [HaskellDeriving "Eq", HaskellDeriving "Show"]
         , DStructLww tExample2 //
-            [ AnnHaskellDeriving "Eq"
-            , AnnHaskellDeriving "Generic"
-            , AnnHaskellDeriving "Hashable"
-            , AnnHaskellDeriving "Show"
+            [ HaskellDeriving "Eq"
+            , HaskellDeriving "Generic"
+            , HaskellDeriving "Hashable"
+            , HaskellDeriving "Show"
             ]
         ])
 

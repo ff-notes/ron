@@ -52,7 +52,7 @@ newtype Declaration = DStructLww StructLww
 type Schema = [Annotated Declaration]
 
 char :: Annotated RonType
-char = TAtom TAString // [AnnHaskellType "Char"]
+char = TAtom TAString // [HaskellType "Char"]
 
 data Annotated t = Ann t [Annotation]
     deriving (Show)
@@ -61,9 +61,9 @@ data Annotated t = Ann t [Annotation]
 (//) = Ann
 
 data Annotation
-    = AnnHaskellDeriving Text
-    | AnnHaskellType     Text
-    | AnnHaskellType1    Text
+    = HaskellDeriving Text
+    | HaskellType     Text
+    | HaskellType1    Text
     deriving (Show)
 
 mkReplicated :: Schema -> DecsQ
@@ -116,16 +116,16 @@ mkViewType (Ann typ annotations) = case typ of
 lookupHaskellType :: [Annotation] -> Maybe Text
 lookupHaskellType = asum . map go where
     go = \case
-        AnnHaskellType t -> Just t
-        _                -> Nothing
+        HaskellType t -> Just t
+        _             -> Nothing
 
 lookupHaskellType1 :: [Annotation] -> Maybe Text
 lookupHaskellType1 = asum . map go where
     go = \case
-        AnnHaskellType1 t -> Just t
-        _                 -> Nothing
+        HaskellType1 t -> Just t
+        _              -> Nothing
 
 lookupHaskellDeriving :: [Annotation] -> [Text]
 lookupHaskellDeriving = mapMaybe $ \case
-    AnnHaskellDeriving d -> Just d
-    _                    -> Nothing
+    HaskellDeriving d -> Just d
+    _                 -> Nothing
