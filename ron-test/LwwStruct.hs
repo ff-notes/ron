@@ -79,29 +79,28 @@ findObjects = fmap Map.fromList . traverse loadBody where
 -- Schema ----------------------------------------------------------------------
 
 $(let
-    tExample1 =
-        StructLww
-            { slName = "Example1"
-            , slFields = Map.fromList
-                [ ("int1", TAtom TAInteger // mempty)
-                ,   ( "set4"
-                    , TORSet (TStructLww tExample2 // mempty) //
-                        mempty{annHaskellType1 = Just "HashSet"}
-                    )
-                , ("str2", TRga char // mempty)
-                , ("str3", TAtom TAString // mempty)
-                ]
-            }
-        // mempty {annHaskellDeriving = Set.fromList ["Eq", "Show"]}
-    tExample2 =
-        StructLww
-            { slName = "Example2"
-            , slFields = Map.fromList [("vv5", TVersionVector // mempty)]
-            }
-        // mempty
+    tExample1 = StructLww
+        { slName = "Example1"
+        , slFields = Map.fromList
+            [ ("int1", TAtom TAInteger // mempty)
+            ,   ( "set4"
+                , TORSet (TStructLww tExample2 // mempty) //
+                    mempty{annHaskellType1 = Just "HashSet"}
+                )
+            , ("str2", TRga char // mempty)
+            , ("str3", TAtom TAString // mempty)
+            ]
+        , slAnnotations =
+            mempty{annHaskellDeriving = Set.fromList ["Eq", "Show"]}
+        }
+    tExample2 = StructLww
+        { slName = "Example2"
+        , slFields = Map.fromList [("vv5", TVersionVector // mempty)]
+        , slAnnotations = mempty
             { annHaskellDeriving =
                 Set.fromList ["Eq", "Generic", "Hashable", "Show"]
             }
+        }
     in mkReplicated [DStructLww tExample1, DStructLww tExample2])
 
 -- GENERATED -------------------------------------------------------------------

@@ -44,17 +44,18 @@ data RonType
     = TAtom      TAtom
     | TORSet     (Annotated RonType)
     | TRga       (Annotated RonType)
-    | TStructLww (Annotated StructLww)
+    | TStructLww StructLww
     | TVersionVector
     deriving (Show)
 
 data StructLww = StructLww
-    { slName    :: Text
-    , slFields  :: Map Text (Annotated RonType)
+    { slName        :: Text
+    , slFields      :: Map Text (Annotated RonType)
+    , slAnnotations :: Annotations
     }
     deriving (Show)
 
-newtype Declaration = DStructLww (Annotated StructLww)
+newtype Declaration = DStructLww StructLww
 
 type Schema = [Declaration]
 
@@ -98,8 +99,8 @@ fieldWrapper (Ann typ _) = case typ of
     TStructLww _   -> Nothing
     TVersionVector -> Nothing
 
-mkReplicatedStructLww :: Annotated StructLww -> TH.DecsQ
-mkReplicatedStructLww (Ann StructLww{..} Annotations{..}) = do
+mkReplicatedStructLww :: StructLww -> TH.DecsQ
+mkReplicatedStructLww StructLww{..} = do
     fields <- for (Map.assocs slFields) $ \(fieldName, fieldType) ->
         case UUID.mkName . BSC.pack $ Text.unpack fieldName of
             Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
@@ -155,6 +156,7 @@ mkReplicatedStructLww (Ann StructLww{..} Annotations{..}) = do
             ]
         ]
   where
+    Annotations{..} = slAnnotations
     name = mkNameT slName
     slName' = Text.unpack slName
     cons = recConE
@@ -176,7 +178,7 @@ mkViewType (Ann typ Annotations{..}) = case typ of
         Just hsType -> conT $ mkNameT hsType
     TORSet item -> wrap item
     TRga   item -> wrap item
-    TStructLww (Ann StructLww{..} _) -> conT $ mkNameT slName
+    TStructLww StructLww{..} -> conT $ mkNameT slName
     TVersionVector -> conT ''VersionVector
   where
     wrap = appT (conT . mkNameT $ fromMaybe "[]" annHaskellType1) . mkViewType
