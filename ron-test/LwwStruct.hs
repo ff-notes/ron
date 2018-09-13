@@ -13,7 +13,6 @@ module LwwStruct (prop_lwwStruct) where
 
 import           RON.Internal.Prelude
 
-import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError, runExceptT)
 import           Control.Monad.State.Strict (MonadState, StateT, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -24,9 +23,7 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (ReplicatedAsObject, getObject, getObjectStateChunk,
-                           newObject, objectEncoding, objectOpType)
-import           RON.Data.LWW (lwwType)
+import           RON.Data (getObject, newObject, objectEncoding)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..))
 import qualified RON.Data.ORSet as ORSet
@@ -117,24 +114,7 @@ str3Name :: UUID
 str3Name = fromJust $ UUID.mkName "str3"
 set4Name :: UUID
 set4Name = fromJust $ UUID.mkName "set4"
-vv5Name :: UUID
-vv5Name = fromJust $ UUID.mkName "vv5"
 
-instance ReplicatedAsObject Example1 where
-    objectOpType = lwwType
-    newObject Example1{..} = LWW.newFrame
-        [ (int1Name, I int1)
-        , (set4Name, I $ AsORSet set4)
-        , (str2Name, I $ AsRga str2)
-        , (str3Name, I str3)
-        ]
-    getObject obj@Object{..} = fmapL ("getObject @Example1:\n" <>) $ do
-        ops <- getObjectStateChunk obj
-        int1         <- LWW.getField int1Name ops objectFrame
-        AsRga str2   <- LWW.getField str2Name ops objectFrame
-        str3         <- LWW.getField str3Name ops objectFrame
-        AsORSet set4 <- LWW.getField set4Name ops objectFrame
-        pure Example1{..}
 setInt1
     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
     => Int64 -> m ()
@@ -152,14 +132,6 @@ modifySet4
     => StateT (Object (AsORSet (HashSet Example2))) m ()
     -> StateT (Object Example1) m ()
 modifySet4 = LWW.modifyField set4Name
-
-instance ReplicatedAsObject Example2 where
-    objectOpType = lwwType
-    newObject Example2{..} = LWW.newFrame [(vv5Name, I vv5)]
-    getObject obj@Object{..} = fmapL ("getObject @Example2:\n" <>) $ do
-        ops <- getObjectStateChunk obj
-        vv5 <- LWW.getField vv5Name ops objectFrame
-        pure Example2{..}
 
 -- /GENERATED ------------------------------------------------------------------
 
