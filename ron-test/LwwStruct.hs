@@ -5,6 +5,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module LwwStruct (prop_lwwStruct) where
 
@@ -33,6 +34,9 @@ import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
+import           RON.Schema (Annotation (..), HaskellType (..), StructLww (..),
+                             TAtom (..), TBuiltin (..), Type (..), mkReplicated,
+                             tChar, (//))
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
@@ -74,23 +78,29 @@ findObjects = fmap Map.fromList . traverse loadBody where
             Left "reduced op object id does not match chunk object id"
         pure op'
 
--- Example ---------------------------------------------------------------------
+-- Schema ----------------------------------------------------------------------
 
-{-
-Schema:
+$(let
+    tExample1 = TStructLww StructLww
+        { slName = "Example1"
+        , slFields = Map.fromList
+            [ ("int1", TAtom TAInteger // [])
+            , ("set4", TBuiltin (TRga tChar) // [AnnHaskellType THaskellList])
+            , ("str2", TAtom TAString // [])
+            ,   ( "str3"
+                , TBuiltin (TORSet tExample2)
+                    // [AnnHaskellType THaskellHashSet]
+                )
+            ]
+        }
+    tExample2 = TStructLww StructLww
+        { slName = "Example2"
+        , slFields = Map.fromList [("vv5", TBuiltin TVersionVector // [])]
+        }
+    in mkReplicated [tExample1, tExample2])
 
-    struct_lww Example1
-        fields  int1    SInt64
-                str2    RGA Char
-                str3    String
-                set4    ORSet Hash Example2
+-- GENERATED -------------------------------------------------------------------
 
-    struct_lww Example2
-        fields vv5 VersionVector
-        Haskell deriving Hashable
--}
-
-{- GENERATED -}
 int1Name :: UUID
 int1Name = fromJust $ UUID.mkName "int1"
 str2Name :: UUID
@@ -148,7 +158,8 @@ instance ReplicatedAsObject Example2 where
         ops <- getObjectStateChunk obj
         vv5 <- LWW.getField vv5Name ops objectFrame
         pure Example2{..}
-{- /GENERATED -}
+
+-- /GENERATED ------------------------------------------------------------------
 
 example0 :: Example1
 example0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}

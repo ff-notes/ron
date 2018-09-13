@@ -24,6 +24,7 @@ library:
     - safe
     - stringsearch
     - syb
+    - template-haskell
     - text
     - time
     - unordered-containers
@@ -44,6 +45,7 @@ library:
     - RON.Event.Simulation
     - RON.Internal.Prelude
     - RON.Internal.Word
+    - RON.Schema
     - RON.Text
     - RON.Text.Common
     - RON.Text.Parse
