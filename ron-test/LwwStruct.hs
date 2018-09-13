@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -30,13 +32,13 @@ import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (AsRga (..))
-import           RON.Data.VersionVector (VersionVector (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
-import           RON.Schema (Annotation (..), HaskellType (..), StructLww (..),
-                             TAtom (..), TBuiltin (..), Type (..), mkReplicated,
-                             tChar, (//))
+import           RON.Schema (Annotation (..), Declaration (..),
+                             HaskellType1 (..), RonType (..), StructLww (..),
+                             TAtom (..), TBuiltin (..), char, mkReplicated,
+                             (//))
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
@@ -81,23 +83,32 @@ findObjects = fmap Map.fromList . traverse loadBody where
 -- Schema ----------------------------------------------------------------------
 
 $(let
-    tExample1 = TStructLww StructLww
+    tExample1 = StructLww
         { slName = "Example1"
         , slFields = Map.fromList
             [ ("int1", TAtom TAInteger // [])
-            , ("set4", TBuiltin (TRga tChar) // [AnnHaskellType THaskellList])
-            , ("str2", TAtom TAString // [])
-            ,   ( "str3"
-                , TBuiltin (TORSet tExample2)
-                    // [AnnHaskellType THaskellHashSet]
+            ,   ( "set4"
+                , TBuiltin (TORSet $ TStructLww tExample2 // []) //
+                    [AnnHaskellType1 HaskellHashSet]
                 )
+            , ("str2", TBuiltin (TRga char) // [AnnHaskellType1 HaskellList])
+            , ("str3", TAtom TAString // [])
             ]
         }
-    tExample2 = TStructLww StructLww
+    tExample2 = StructLww
         { slName = "Example2"
         , slFields = Map.fromList [("vv5", TBuiltin TVersionVector // [])]
         }
-    in mkReplicated [tExample1, tExample2])
+    in mkReplicated
+        [ DStructLww tExample1 //
+            [AnnHaskellDeriving "Eq", AnnHaskellDeriving "Show"]
+        , DStructLww tExample2 //
+            [ AnnHaskellDeriving "Eq"
+            , AnnHaskellDeriving "Generic"
+            , AnnHaskellDeriving "Hashable"
+            , AnnHaskellDeriving "Show"
+            ]
+        ])
 
 -- GENERATED -------------------------------------------------------------------
 
@@ -112,9 +123,6 @@ set4Name = fromJust $ UUID.mkName "set4"
 vv5Name :: UUID
 vv5Name = fromJust $ UUID.mkName "vv5"
 
-data Example1 = Example1
-    {int1 :: Int64, str2 :: String, str3 :: Text, set4 :: HashSet Example2}
-    deriving (Eq, Show)
 instance Replicated Example1 where encoding = objectEncoding
 instance ReplicatedAsObject Example1 where
     objectOpType = lwwType
@@ -149,7 +157,6 @@ modifySet4
     -> StateT (Object Example1) m ()
 modifySet4 = LWW.modifyField set4Name
 
-newtype Example2 = Example2{vv5 :: VersionVector} deriving (Eq, Hashable, Show)
 instance Replicated Example2 where encoding = objectEncoding
 instance ReplicatedAsObject Example2 where
     objectOpType = lwwType
@@ -162,7 +169,7 @@ instance ReplicatedAsObject Example2 where
 -- /GENERATED ------------------------------------------------------------------
 
 example0 :: Example1
-example0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
+example0 = Example1{int1 = 275, str2 = "275" :: String, str3 = "190", set4 = mempty}
 
 -- | "r3pl1c4"
 replica :: ReplicaId
@@ -211,7 +218,7 @@ ex4expect = [i|
 example4expect :: Example1
 example4expect = Example1
     { int1 = 166
-    , str2 = "275"
+    , str2 = "275" :: String
     , str3 = "206"
     , set4 = HashSet.fromList [Example2{vv5 = mempty}]
     }

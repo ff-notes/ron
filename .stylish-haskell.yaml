@@ -6,14 +6,7 @@ steps:
   - trailing_whitespace: {}
 language_extensions:
   - ExplicitNamespaces
-    # TODO(Syrovetsky, 2017-01-26) workaround for
-    # https://github.com/haskell-suite/haskell-src-exts/issues/349
   - FlexibleContexts
-    # TODO(Syrovetsky, 2017-01-26) workaround for
-    # https://github.com/haskell-suite/haskell-src-exts/issues/350
   - MultiParamTypeClasses
-    # TODO(Syrovetsky, 2017-01-26) workaround for
-    # https://github.com/jaspervdj/stylish-haskell/issues/103,
-    # https://github.com/haskell-suite/haskell-src-exts/issues/304
+  - TemplateHaskell
   - TypeOperators
-    # yet another workaround
