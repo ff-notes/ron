@@ -94,91 +94,69 @@ fieldWrapper (Ann typ _) = case typ of
 
 mkReplicatedStructLww :: Annotated StructLww -> TH.DecsQ
 mkReplicatedStructLww (Ann StructLww{..} annotations) = do
-    fields <-
-        for (Map.assocs slFields) $ \(fieldName, fieldType) ->
-            case UUID.mkName . BSC.pack $ Text.unpack fieldName of
-                Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
-                Nothing -> fail $
-                    "Field name is not representable in RON: " ++ show fieldName
+    fields <- for (Map.assocs slFields) $ \(fieldName, fieldType) ->
+        case UUID.mkName . BSC.pack $ Text.unpack fieldName of
+            Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
+            Nothing -> fail $
+                "Field name is not representable in RON: " ++ show fieldName
     let fieldsToPack = listE
             [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
             | (fieldNameUuid, fieldName, fieldType) <- fields
             , let var = maybe id (appE . conE) (fieldWrapper fieldType) $
                     varE $ mkNameT fieldName
             ]
+    obj   <- TH.newName "obj";   let objE   = varE obj
+    frame <- TH.newName "frame"; let frameE = varE frame
+    ops   <- TH.newName "ops";   let opsE   = varE ops
+    let fieldsToUnpack =
+            [ bindS var $
+                [| LWW.getField |] `appE` liftData fieldNameUuid
+                `appE` opsE `appE` frameE
+            | (fieldNameUuid, fieldName, fieldType) <- fields
+            , let
+                fieldP = varP $ mkNameT fieldName
+                var = maybe fieldP (\w -> conP w [fieldP]) $
+                    fieldWrapper fieldType
+            ]
     sequence
-        [ dataD
-            (TH.cxt [])
-            name
-            []
-            Nothing
-            [ recC name
+        [ dataD (TH.cxt []) name [] Nothing
+            [recC name
                 [ TH.varBangType (mkNameT fieldName) $
                     TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
                     mkViewType fieldType
                 | (fieldName, fieldType) <- Map.assocs slFields
-                ]
-            ]
-            [ TH.derivClause Nothing $
-                map (conT . mkNameT) $ lookupHaskellDeriving annotations
-            ]
-        , instanceD
-            (TH.cxt [])
-            (conT ''Replicated `appT` conT name)
+                ]]
+            [TH.derivClause Nothing $
+                map (conT . mkNameT) $ lookupHaskellDeriving annotations]
+        , instanceD (TH.cxt []) (conT ''Replicated `appT` conT name)
             [valD' 'encoding [| objectEncoding |]]
         , instanceD
             (TH.cxt [])
             (conT ''ReplicatedAsObject `appT` conT name)
             [ valD' 'objectOpType [| lwwType |]
-            , funD
-                'newObject
-                [ clause'
+            , funD 'newObject
+                [clause'
                     [conP name . map (varP . mkNameT) $ Map.keys slFields] $
-                    [| LWW.newFrame |] `appE` fieldsToPack
-                ]
-            , do
-                obj   <- TH.newName "obj";   let objE   = varE obj
-                frame <- TH.newName "frame"; let frameE = varE frame
-                ops   <- TH.newName "ops";   let opsE   = varE ops
-                let fieldsToUnpack =
-                        [ bindS
-                            (maybe fieldP (\w -> conP w [fieldP]) $
-                                fieldWrapper fieldType) $
-                            [| LWW.getField |]
-                            `appE` liftData fieldNameUuid
-                            `appE` opsE
-                            `appE` frameE
-                        | (fieldNameUuid, fieldName, fieldType) <- fields
-                        , let fieldP = varP $ mkNameT fieldName
-                        ]
-                let construct =
-                        recConE
-                            name
-                            [ pure (fieldName, VarE fieldName)
-                            | field <- Map.keys slFields
-                            , let fieldName = mkNameT field
-                            ]
-                funD
-                    'getObject
-                    [ clause' [varP obj] $
-                        appE
-                            [|
-                                fmapL $
-                                (++) $("getObject @" ++ slName' ++ ": ")
-                            |] $
-                        doE $ letS
-                                [valD' frame $ [| objectFrame |] `appE` objE]
-                            : bindS
-                                (varP ops)
-                                ([| getObjectStateChunk |] `appE` objE)
-                            : fieldsToUnpack
-                            ++ [noBindS $ [| pure |] `appE` construct]
-                    ]
+                    [| LWW.newFrame |] `appE` fieldsToPack]
+            , funD 'getObject
+                [clause' [varP obj] $
+                    appE [| fmapL $ (++) $("getObject @" ++ slName' ++ ": ") |]
+                    $ doE
+                    $ letS [valD' frame $ [| objectFrame |] `appE` objE]
+                    : bindS (varP ops) ([| getObjectStateChunk |] `appE` objE)
+                    : fieldsToUnpack
+                    ++ [noBindS $ [| pure |] `appE` cons]]
             ]
         ]
   where
     name = mkNameT slName
     slName' = Text.unpack slName
+    cons = recConE
+        name
+        [ pure (fieldName, VarE fieldName)
+        | field <- Map.keys slFields, let fieldName = mkNameT field
+        ]
+
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
