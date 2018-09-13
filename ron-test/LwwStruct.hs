@@ -24,9 +24,8 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (Replicated (..), ReplicatedAsObject, getObject,
-                           getObjectStateChunk, newObject, objectEncoding,
-                           objectOpType)
+import           RON.Data (ReplicatedAsObject, getObject, getObjectStateChunk,
+                           newObject, objectEncoding, objectOpType)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..))
@@ -121,7 +120,6 @@ set4Name = fromJust $ UUID.mkName "set4"
 vv5Name :: UUID
 vv5Name = fromJust $ UUID.mkName "vv5"
 
-instance Replicated Example1 where encoding = objectEncoding
 instance ReplicatedAsObject Example1 where
     objectOpType = lwwType
     newObject Example1{..} = LWW.newFrame
@@ -155,7 +153,6 @@ modifySet4
     -> StateT (Object Example1) m ()
 modifySet4 = LWW.modifyField set4Name
 
-instance Replicated Example2 where encoding = objectEncoding
 instance ReplicatedAsObject Example2 where
     objectOpType = lwwType
     newObject Example2{..} = LWW.newFrame [(vv5Name, I vv5)]

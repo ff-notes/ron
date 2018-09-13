@@ -20,10 +20,12 @@ import           RON.Internal.Prelude
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Language.Haskell.TH (DecsQ, TypeQ, appT, bang, bangType, conT,
-                                      cxt, dataD, derivClause, mkName, recC,
-                                      sourceNoUnpack, sourceStrict, varBangType)
+                                      cxt, dataD, derivClause, instanceD,
+                                      mkName, normalB, recC, sourceNoUnpack,
+                                      sourceStrict, valD, varBangType, varP)
 import qualified Language.Haskell.TH as TH
 
+import           RON.Data (Replicated (..))
 import           RON.Data.VersionVector (VersionVector)
 
 data TAtom = TAInteger | TAString
@@ -88,6 +90,10 @@ mkReplicatedStructLww (Ann StructLww{..} annotations) = sequence
         [ derivClause Nothing $
             map (conT . mkNameT) $ lookupHaskellDeriving annotations
         ]
+    , instanceD
+        (cxt [])
+        (appT (conT ''Replicated) (conT name))
+        [valD (varP 'encoding) (normalB [| objectEncoding |]) []]
     ]
   where
     name = mkNameT slName
