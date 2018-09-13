@@ -4,7 +4,7 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
 module RON.Schema
-    ( Annotation (..)
+    ( Annotations (..)
     , Declaration (..)
     , RonType (..)
     , StructLww (..)
@@ -64,19 +64,31 @@ newtype Declaration = DStructLww StructLww
 type Schema = [Annotated Declaration]
 
 char :: Annotated RonType
-char = TAtom TAString // [HaskellType "Char"]
+char = TAtom TAString // mempty{annHaskellType = Just "Char"}
 
-data Annotated t = Ann t [Annotation]
+data Annotated t = Ann t Annotations
     deriving (Show)
 
-(//) :: t -> [Annotation] -> Annotated t
+(//) :: t -> Annotations -> Annotated t
 (//) = Ann
 
-data Annotation
-    = HaskellDeriving Text
-    | HaskellType     Text
-    | HaskellType1    Text
+data Annotations = Annotations
+    { annHaskellDeriving :: Set Text
+    , annHaskellType     :: Maybe Text
+    , annHaskellType1    :: Maybe Text
+    }
     deriving (Show)
+
+instance Semigroup Annotations where
+    Annotations a1 a2 a3 <> Annotations b1 b2 b3 =
+        Annotations (a1 <> b1) (a2 <> b2) (a3 <> b3)
+
+instance Monoid Annotations where
+    mempty = Annotations
+        { annHaskellDeriving = mempty
+        , annHaskellType     = mempty
+        , annHaskellType1    = mempty
+        }
 
 mkReplicated :: Schema -> TH.DecsQ
 mkReplicated = fmap fold . traverse fromDecl where
@@ -93,7 +105,7 @@ fieldWrapper (Ann typ _) = case typ of
     TStructLww _ -> Nothing
 
 mkReplicatedStructLww :: Annotated StructLww -> TH.DecsQ
-mkReplicatedStructLww (Ann StructLww{..} annotations) = do
+mkReplicatedStructLww (Ann StructLww{..} Annotations{..}) = do
     fields <- for (Map.assocs slFields) $ \(fieldName, fieldType) ->
         case UUID.mkName . BSC.pack $ Text.unpack fieldName of
             Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
@@ -126,8 +138,8 @@ mkReplicatedStructLww (Ann StructLww{..} annotations) = do
                     mkViewType fieldType
                 | (fieldName, fieldType) <- Map.assocs slFields
                 ]]
-            [TH.derivClause Nothing $
-                map (conT . mkNameT) $ lookupHaskellDeriving annotations]
+            [TH.derivClause Nothing . map (conT . mkNameT) $
+                toList annHaskellDeriving]
         , instanceD (TH.cxt []) (conT ''Replicated `appT` conT name)
             [valD' 'encoding [| objectEncoding |]]
         , instanceD
@@ -162,8 +174,8 @@ mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
 
 mkViewType :: Annotated RonType -> TH.TypeQ
-mkViewType (Ann typ annotations) = case typ of
-    TAtom a -> case mHsType of
+mkViewType (Ann typ Annotations{..}) = case typ of
+    TAtom a -> case annHaskellType of
         Nothing -> case a of
             TAInteger -> conT ''Int64
             TAString  -> conT ''Text
@@ -174,26 +186,7 @@ mkViewType (Ann typ annotations) = case typ of
         TVersionVector -> conT ''VersionVector
     TStructLww StructLww{..} -> conT $ mkNameT slName
   where
-    mHsType  = lookupHaskellType  annotations
-    mHsType1 = lookupHaskellType1 annotations
-    wrap it = conT (mkNameT $ fromMaybe "[]" mHsType1) `appT` mkViewType it
-
-lookupHaskellType :: [Annotation] -> Maybe Text
-lookupHaskellType = asum . map go where
-    go = \case
-        HaskellType t -> Just t
-        _             -> Nothing
-
-lookupHaskellType1 :: [Annotation] -> Maybe Text
-lookupHaskellType1 = asum . map go where
-    go = \case
-        HaskellType1 t -> Just t
-        _              -> Nothing
-
-lookupHaskellDeriving :: [Annotation] -> [Text]
-lookupHaskellDeriving = mapMaybe $ \case
-    HaskellDeriving d -> Just d
-    _                 -> Nothing
+    wrap = appT (conT . mkNameT $ fromMaybe "[]" annHaskellType1) . mkViewType
 
 valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
 valD' name body = TH.valD (varP name) (TH.normalB body) []

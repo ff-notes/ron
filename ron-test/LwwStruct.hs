@@ -18,6 +18,7 @@ import           Control.Monad.State.Strict (MonadState, StateT, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
@@ -31,7 +32,7 @@ import           RON.Data.RGA (AsRga (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
-import           RON.Schema (Annotation (..), Declaration (..), RonType (..),
+import           RON.Schema (Annotations (..), Declaration (..), RonType (..),
                              StructLww (..), TAtom (..), TBuiltin (..), char,
                              mkReplicated, (//))
 import           RON.Text (parseFrame, serializeFrame)
@@ -81,27 +82,26 @@ $(let
     tExample1 = StructLww
         { slName = "Example1"
         , slFields = Map.fromList
-            [ ("int1", TAtom TAInteger // [])
+            [ ("int1", TAtom TAInteger // mempty)
             ,   ( "set4"
-                , TBuiltin (TORSet $ TStructLww tExample2 // []) //
-                    [HaskellType1 "HashSet"]
+                , TBuiltin (TORSet $ TStructLww tExample2 // mempty) //
+                    mempty{annHaskellType1 = Just "HashSet"}
                 )
-            , ("str2", TBuiltin (TRga char) // [])
-            , ("str3", TAtom TAString // [])
+            , ("str2", TBuiltin (TRga char) // mempty)
+            , ("str3", TAtom TAString // mempty)
             ]
         }
     tExample2 = StructLww
         { slName = "Example2"
-        , slFields = Map.fromList [("vv5", TBuiltin TVersionVector // [])]
+        , slFields = Map.fromList [("vv5", TBuiltin TVersionVector // mempty)]
         }
     in mkReplicated
-        [ DStructLww tExample1 // [HaskellDeriving "Eq", HaskellDeriving "Show"]
-        , DStructLww tExample2 //
-            [ HaskellDeriving "Eq"
-            , HaskellDeriving "Generic"
-            , HaskellDeriving "Hashable"
-            , HaskellDeriving "Show"
-            ]
+        [ DStructLww tExample1 //
+            mempty {annHaskellDeriving = Set.fromList ["Eq", "Show"]}
+        , DStructLww tExample2 // mempty
+            { annHaskellDeriving =
+                Set.fromList ["Eq", "Generic", "Hashable", "Show"]
+            }
         ])
 
 -- GENERATED -------------------------------------------------------------------
