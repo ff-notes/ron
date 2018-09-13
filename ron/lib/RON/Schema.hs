@@ -41,10 +41,10 @@ data TAtom = TAInteger | TAString
     deriving (Show)
 
 data RonType
-    = TAtom TAtom
-    | TORSet (Annotated RonType)
-    | TRga (Annotated RonType)
-    | TStructLww StructLww
+    = TAtom      TAtom
+    | TORSet     (Annotated RonType)
+    | TRga       (Annotated RonType)
+    | TStructLww (Annotated StructLww)
     | TVersionVector
     deriving (Show)
 
@@ -54,9 +54,9 @@ data StructLww = StructLww
     }
     deriving (Show)
 
-newtype Declaration = DStructLww StructLww
+newtype Declaration = DStructLww (Annotated StructLww)
 
-type Schema = [Annotated Declaration]
+type Schema = [Declaration]
 
 char :: Annotated RonType
 char = TAtom TAString // mempty{annHaskellType = Just "Char"}
@@ -87,8 +87,8 @@ instance Monoid Annotations where
 
 mkReplicated :: Schema -> TH.DecsQ
 mkReplicated = fmap fold . traverse fromDecl where
-    fromDecl (Ann decl annotations) = case decl of
-        DStructLww s -> mkReplicatedStructLww (s // annotations)
+    fromDecl decl = case decl of
+        DStructLww s -> mkReplicatedStructLww s
 
 fieldWrapper :: Annotated RonType -> Maybe TH.Name
 fieldWrapper (Ann typ _) = case typ of
@@ -176,7 +176,7 @@ mkViewType (Ann typ Annotations{..}) = case typ of
         Just hsType -> conT $ mkNameT hsType
     TORSet item -> wrap item
     TRga   item -> wrap item
-    TStructLww StructLww{..} -> conT $ mkNameT slName
+    TStructLww (Ann StructLww{..} _) -> conT $ mkNameT slName
     TVersionVector -> conT ''VersionVector
   where
     wrap = appT (conT . mkNameT $ fromMaybe "[]" annHaskellType1) . mkViewType
