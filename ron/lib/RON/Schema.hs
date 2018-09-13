@@ -9,7 +9,6 @@ module RON.Schema
     , RonType (..)
     , StructLww (..)
     , TAtom (..)
-    , TBuiltin (..)
     , mkReplicated
     , char
     , (//)
@@ -41,16 +40,12 @@ import qualified RON.UUID as UUID
 data TAtom = TAInteger | TAString
     deriving (Show)
 
-data TBuiltin
-    = TORSet (Annotated RonType)
-    | TRga (Annotated RonType)
-    | TVersionVector
-    deriving (Show)
-
 data RonType
-    = TAtom      TAtom
-    | TBuiltin   TBuiltin
+    = TAtom TAtom
+    | TORSet (Annotated RonType)
+    | TRga (Annotated RonType)
     | TStructLww StructLww
+    | TVersionVector
     deriving (Show)
 
 data StructLww = StructLww
@@ -97,12 +92,11 @@ mkReplicated = fmap fold . traverse fromDecl where
 
 fieldWrapper :: Annotated RonType -> Maybe TH.Name
 fieldWrapper (Ann typ _) = case typ of
-    TAtom      _ -> Nothing
-    TBuiltin   b -> case b of
-        TORSet _       -> Just 'AsORSet
-        TRga   _       -> Just 'AsRga
-        TVersionVector -> Nothing
-    TStructLww _ -> Nothing
+    TAtom      _   -> Nothing
+    TORSet     _   -> Just 'AsORSet
+    TRga       _   -> Just 'AsRga
+    TStructLww _   -> Nothing
+    TVersionVector -> Nothing
 
 mkReplicatedStructLww :: Annotated StructLww -> TH.DecsQ
 mkReplicatedStructLww (Ann StructLww{..} Annotations{..}) = do
@@ -180,11 +174,10 @@ mkViewType (Ann typ Annotations{..}) = case typ of
             TAInteger -> conT ''Int64
             TAString  -> conT ''Text
         Just hsType -> conT $ mkNameT hsType
-    TBuiltin b -> case b of
-        TORSet item -> wrap item
-        TRga   item -> wrap item
-        TVersionVector -> conT ''VersionVector
+    TORSet item -> wrap item
+    TRga   item -> wrap item
     TStructLww StructLww{..} -> conT $ mkNameT slName
+    TVersionVector -> conT ''VersionVector
   where
     wrap = appT (conT . mkNameT $ fromMaybe "[]" annHaskellType1) . mkViewType
 

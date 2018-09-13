@@ -33,8 +33,8 @@ import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Schema (Annotations (..), Declaration (..), RonType (..),
-                             StructLww (..), TAtom (..), TBuiltin (..), char,
-                             mkReplicated, (//))
+                             StructLww (..), TAtom (..), char, mkReplicated,
+                             (//))
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
@@ -84,16 +84,16 @@ $(let
         , slFields = Map.fromList
             [ ("int1", TAtom TAInteger // mempty)
             ,   ( "set4"
-                , TBuiltin (TORSet $ TStructLww tExample2 // mempty) //
+                , TORSet (TStructLww tExample2 // mempty) //
                     mempty{annHaskellType1 = Just "HashSet"}
                 )
-            , ("str2", TBuiltin (TRga char) // mempty)
+            , ("str2", TRga char // mempty)
             , ("str3", TAtom TAString // mempty)
             ]
         }
     tExample2 = StructLww
         { slName = "Example2"
-        , slFields = Map.fromList [("vv5", TBuiltin TVersionVector // mempty)]
+        , slFields = Map.fromList [("vv5", TVersionVector // mempty)]
         }
     in mkReplicated
         [ DStructLww tExample1 //
