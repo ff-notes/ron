@@ -46,6 +46,7 @@ library:
     - RON.Internal.Prelude
     - RON.Internal.Word
     - RON.Schema
+    - RON.Schema.TH
     - RON.Text
     - RON.Text.Common
     - RON.Text.Parse

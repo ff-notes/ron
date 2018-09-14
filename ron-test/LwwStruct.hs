@@ -33,7 +33,8 @@ import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Schema (Declaration (..), Field (..), RonType (..),
                              StructAnnotations (..), StructLww (..), TAtom (..),
-                             char, mkReplicated)
+                             char)
+import           RON.Schema.TH (mkReplicated)
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
