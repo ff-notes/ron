@@ -57,3 +57,7 @@ listSingleton a = [a]
 
 -- | Instance
 data I c = forall a . c a => I a
+
+(-:) :: a -> b -> (a, b)
+a -: b = (a, b)
+infixr 0 -:
