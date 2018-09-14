@@ -51,45 +51,53 @@ fieldWrapper typ = case typ of
     TVersionVector          -> Nothing
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
-mkReplicatedStructLww StructLww{..} = do
-    fields <- for (Map.assocs structFields) $ \(fieldName, fieldType) ->
-        case UUID.mkName . BSC.pack $ Text.unpack fieldName of
-            Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
-            Nothing -> fail $
-                "Field name is not representable in RON: " ++ show fieldName
-    let fieldsToPack = listE
-            [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
-            | (fieldNameUuid, fieldName, Field fieldType _) <- fields
-            , let var = maybe id (appE . conE) (fieldWrapper fieldType) $
-                    varE $ mkNameT fieldName
-            ]
-    obj   <- TH.newName "obj";   let objE   = varE obj
-    frame <- TH.newName "frame"; let frameE = varE frame
-    ops   <- TH.newName "ops";   let opsE   = varE ops
-    let fieldsToUnpack =
-            [ bindS var $
-                [| LWW.getField |] `appE` liftData fieldNameUuid
-                `appE` opsE `appE` frameE
-            | (fieldNameUuid, fieldName, Field fieldType _) <- fields
-            , let
-                fieldP = varP $ mkNameT fieldName
-                var = maybe fieldP (\w -> conP w [fieldP]) $
-                    fieldWrapper fieldType
-            ]
-    sequence
-        [ dataD (TH.cxt []) name [] Nothing
-            [recC name
-                [ TH.varBangType (mkNameT fieldName) $
-                    TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
-                    mkViewType fieldType
-                | (fieldName, Field fieldType _) <- Map.assocs structFields
-                ]]
-            [TH.derivClause Nothing . map (conT . mkNameT) $
-                toList saHaskellDeriving]
-        , instanceD (TH.cxt []) (conT ''Replicated `appT` conT name)
-            [valD' 'encoding [| objectEncoding |]]
-        , instanceD
-            (TH.cxt [])
+mkReplicatedStructLww StructLww{..} =
+    sequence [mkData, mkInstanceReplicated, mkInstanceReplicatedAsObject]
+  where
+
+    StructAnnotations{..} = structAnnotations
+    name = mkNameT structName
+
+    mkData = dataD (TH.cxt []) name [] Nothing
+        [recC name
+            [ TH.varBangType (mkNameT fieldName) $
+                TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
+                mkViewType fieldType
+            | (fieldName, Field fieldType _) <- Map.assocs structFields
+            ]]
+        [TH.derivClause Nothing . map (conT . mkNameT) $
+            toList saHaskellDeriving]
+
+    mkInstanceReplicated = instanceD (TH.cxt [])
+        (conT ''Replicated `appT` conT name)
+        [valD' 'encoding [| objectEncoding |]]
+
+    mkInstanceReplicatedAsObject = do
+        fields <- for (Map.assocs structFields) $ \(fieldName, fieldType) ->
+            case UUID.mkName . BSC.pack $ Text.unpack fieldName of
+                Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
+                Nothing -> fail $
+                    "Field name is not representable in RON: " ++ show fieldName
+        let fieldsToPack = listE
+                [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
+                | (fieldNameUuid, fieldName, Field fieldType _) <- fields
+                , let var = maybe id (appE . conE) (fieldWrapper fieldType) $
+                        varE $ mkNameT fieldName
+                ]
+        obj   <- TH.newName "obj";   let objE   = varE obj
+        frame <- TH.newName "frame"; let frameE = varE frame
+        ops   <- TH.newName "ops";   let opsE   = varE ops
+        let fieldsToUnpack =
+                [ bindS var $
+                    [| LWW.getField |] `appE` liftData fieldNameUuid
+                    `appE` opsE `appE` frameE
+                | (fieldNameUuid, fieldName, Field fieldType _) <- fields
+                , let
+                    fieldP = varP $ mkNameT fieldName
+                    var = maybe fieldP (\w -> conP w [fieldP]) $
+                        fieldWrapper fieldType
+                ]
+        instanceD (TH.cxt [])
             (conT ''ReplicatedAsObject `appT` conT name)
             [ valD' 'objectOpType [| lwwType |]
             , funD 'newObject
@@ -108,17 +116,13 @@ mkReplicatedStructLww StructLww{..} = do
                     : fieldsToUnpack
                     ++ [noBindS $ [| pure |] `appE` cons]]
             ]
-        ]
-  where
-    StructAnnotations{..} = structAnnotations
-    name = mkNameT structName
-    structName' = Text.unpack structName
-    cons = recConE
-        name
-        [ pure (fieldName, VarE fieldName)
-        | field <- Map.keys structFields, let fieldName = mkNameT field
-        ]
-
+      where
+        structName' = Text.unpack structName
+        cons = recConE
+            name
+            [ pure (fieldName, VarE fieldName)
+            | field <- Map.keys structFields, let fieldName = mkNameT field
+            ]
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
