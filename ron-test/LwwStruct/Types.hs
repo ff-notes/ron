@@ -1,5 +1,3 @@
-{-# OPTIONS -Wno-name-shadowing #-}
-
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}

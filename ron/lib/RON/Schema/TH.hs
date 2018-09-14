@@ -72,7 +72,9 @@ mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww StructLww{..} = do
     fields <- for (Map.assocs structFields) $ \(fieldName, fieldType) ->
         case UUID.mkName . BSC.pack $ Text.unpack fieldName of
-            Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
+            Just fieldNameUuid -> do
+                fieldVar <- TH.newName $ Text.unpack fieldName
+                pure (fieldNameUuid, fieldName, fieldType, fieldVar)
             Nothing -> fail $
                 "Field name is not representable in RON: " ++ show fieldName
     sequence
@@ -102,9 +104,10 @@ mkReplicatedStructLww StructLww{..} = do
     mkInstanceReplicatedAsObject fields = do
         let fieldsToPack = listE
                 [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
-                | (fieldNameUuid, fieldName, Field fieldType _) <- fields
+                | (fieldNameUuid, _, Field fieldType _, fieldVar) <-
+                    fields
                 , let var = maybe id (appE . conE) (fieldWrapperC fieldType) $
-                        varE $ mkNameT fieldName
+                        varE fieldVar
                 ]
         obj   <- TH.newName "obj";   let objE   = varE obj
         frame <- TH.newName "frame"; let frameE = varE frame
@@ -113,9 +116,10 @@ mkReplicatedStructLww StructLww{..} = do
                 [ bindS var $
                     [| LWW.getField |] `appE` liftData fieldNameUuid
                     `appE` opsE `appE` frameE
-                | (fieldNameUuid, fieldName, Field fieldType _) <- fields
+                | (fieldNameUuid, _, Field fieldType _, fieldVar) <-
+                    fields
                 , let
-                    fieldP = varP $ mkNameT fieldName
+                    fieldP = varP fieldVar
                     var = maybe fieldP (\w -> conP w [fieldP]) $
                         fieldWrapperC fieldType
                 ]
@@ -124,8 +128,8 @@ mkReplicatedStructLww StructLww{..} = do
             [ valD' 'objectOpType [| lwwType |]
             , funD 'newObject
                 [clause'
-                    [conP name . map (varP . mkNameT) $ Map.keys structFields] $
-                    [| LWW.newFrame |] `appE` fieldsToPack]
+                    [conP name [varP fieldVar | (_, _, _, fieldVar) <- fields]]
+                    $ [| LWW.newFrame |] `appE` fieldsToPack]
             , funD 'getObject
                 [clause' [varP obj] $
                     appE
@@ -142,12 +146,11 @@ mkReplicatedStructLww StructLww{..} = do
         structName' = Text.unpack structName
         cons = recConE
             name
-            [ pure (fieldName, VarE fieldName)
-            | field <- Map.keys structFields, let fieldName = mkNameT field
+            [ pure (fieldName, VarE fieldVar)
+            | (_, field, _, fieldVar) <- fields, let fieldName = mkNameT field
             ]
 
-    mkAccessors :: (UUID.UUID, Text, Field) -> [TH.DecQ]
-    mkAccessors (nameUuid, fname, Field typ _)
+    mkAccessors (nameUuid, fname, Field typ _, _)
         | isObjectType typ =
             [ sigD with $
                 forallT [] (TH.cxt [[t| MonadError String |] `appT` m]) $
