@@ -2,15 +2,19 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module RON.Data.ORSet
     ( AsORSet (..)
+    , AsObjectMap (..)
     , ORSet
-    , add
-    , removeBy
+    , addNewRef
+    , addRef
+    , addValue
     , removeRef
     , removeValue
     ) where
@@ -18,16 +22,14 @@ module RON.Data.ORSet
 import           RON.Internal.Prelude
 
 import           Control.Monad.Except (MonadError)
-import           Control.Monad.State.Strict (StateT, get, put)
-import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
+import           Control.Monad.State.Strict (StateT, get, modify, put)
+import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.Map.Strict as Map
-import           GHC.Exts (IsList, Item)
-import qualified GHC.Exts as Exts
 
 import           RON.Data.Internal
 import           RON.Event (Clock, getEventUuid)
 import           RON.Types (Atom, Object (..), Op' (..), StateChunk (..), UUID)
-import           RON.UUID (zero)
+import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
 data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op'}
@@ -38,7 +40,7 @@ instance Semigroup SetItem where
 
 itemFromOp :: Op' -> (UUID, SetItem)
 itemFromOp itemOriginalOp@Op'{..} = (itemId, item) where
-    itemIsAlive = opRef == zero
+    itemIsAlive = opRef == Zero
     itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{..}
 
@@ -62,21 +64,20 @@ instance Reducible ORSet where
 setType :: UUID
 setType = fromJust $ UUID.mkName "set"
 
-newtype AsORSet set = AsORSet set
+newtype AsORSet a = AsORSet [a]
 
-instance (IsList set, Replicated (Item set)) => Replicated (AsORSet set) where
+newtype AsObjectMap a = AsObjectMap [a]
+
+instance ReplicatedAsPayload a => Replicated (AsORSet a) where
     encoding = objectEncoding
 
-instance (IsList set, Replicated (Item set)) => ReplicatedAsObject (AsORSet set)
-    where
-
+instance ReplicatedAsPayload a => ReplicatedAsObject (AsORSet a) where
     objectOpType = setType
 
     newObject (AsORSet items) = collectFrame $ do
-        ops <- for (Exts.toList items) $ \a -> do
+        ops <- for items $ \item -> do
             e <- lift getEventUuid
-            payload <- newRon a
-            pure $ Op' e zero payload
+            pure $ Op' e Zero $ toPayload item
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (setType, oid) $ StateChunk version ops
@@ -84,37 +85,77 @@ instance (IsList set, Replicated (Item set)) => ReplicatedAsObject (AsORSet set)
 
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
-        items <- for stateBody $ \Op'{..} -> do
-            value <- fromRon opPayload objectFrame
-            pure (opRef, value)
-        pure $ AsORSet $
-            Exts.fromList [value | (opRef, value) <- items, opRef == zero]
+        mItems <- for stateBody $ \Op'{..} -> case opRef of
+            Zero -> Just <$> fromPayload opPayload
+            _    -> pure Nothing
+        pure . AsORSet $ catMaybes mItems
 
-add :: (IsList set, Replicated (Item set), Clock m, MonadError String m)
-    => Item set -> StateT (Object (AsORSet set)) m ()
-add value = do
+instance ReplicatedAsObject a => Replicated (AsObjectMap a) where
+    encoding = objectEncoding
+
+instance ReplicatedAsObject a => ReplicatedAsObject (AsObjectMap a) where
+    objectOpType = setType
+
+    newObject (AsObjectMap items) = collectFrame $ do
+        ops <- for items $ \item -> do
+            e <- lift getEventUuid
+            Object{objectId = itemId} <- lift $ newObject item
+            pure . Op' e Zero $ toPayload itemId
+        oid <- lift getEventUuid
+        let version = maximumDef oid $ map opEvent ops
+        tell . Map.singleton (setType, oid) $ StateChunk version ops
+        pure oid
+
+    getObject obj@Object{..} = do
+        StateChunk{..} <- getObjectStateChunk obj
+        mItems <- for stateBody $ \Op'{..} -> case opRef of
+            Zero -> do
+                oid <- fromPayload opPayload
+                Just <$> getObject (Object oid objectFrame)
+            _    -> pure Nothing
+        pure . AsObjectMap $ catMaybes mItems
+
+-- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
+add ::  ( ReplicatedAsObject a
+        , ReplicatedAsPayload b
+        , Clock m, MonadError String m
+        )
+    => b -> StateT (Object a) m ()
+add item = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     e <- getEventUuid
-    (p, newFrame) <- runWriterT $ newRon value
-    let newOp = Op' e zero p
+    let p = toPayload item
+    let newOp = Op' e Zero p
     let chunk' = stateBody ++ [newOp]
     let state' = StateChunk e chunk'
     put Object
-        { objectFrame =
-            Map.insert (setType, objectId) state' objectFrame
-            <> newFrame
-        , ..
-        }
+        {objectFrame = Map.insert (setType, objectId) state' objectFrame, ..}
 
-removeBy :: ([Atom] -> Bool) -> StateT (Object (AsORSet set)) m ()
+addValue
+    :: (ReplicatedAsPayload a, Clock m, MonadError String m)
+    => a -> StateT (Object (AsORSet a)) m ()
+addValue = add
+
+addRef
+    :: (ReplicatedAsObject a, Clock m, MonadError String m)
+    => Object a -> StateT (Object (AsObjectMap a)) m ()
+addRef = add . objectId
+
+addNewRef
+    :: forall a m
+    . (ReplicatedAsObject a, Clock m, MonadError String m)
+    => a -> StateT (Object (AsObjectMap a)) m ()
+addNewRef item = do
+    itemObj@(Object _ itemFrame) <- lift $ newObject item
+    modify $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
+    addRef itemObj
+
+removeBy :: ([Atom] -> Bool) -> StateT (Object (AsORSet a)) m ()
 removeBy = undefined
 
-removeValue
-    :: ReplicatedAsPayload (Item set)
-    => Item set -> StateT (Object (AsORSet set)) m ()
+removeValue :: ReplicatedAsPayload a => a -> StateT (Object (AsORSet a)) m ()
 removeValue = removeBy . eqPayload
 
--- TODO Item set ~ Object a =>
-removeRef :: Object a -> StateT (Object (AsORSet set)) m ()
+removeRef :: Object a -> StateT (Object (AsORSet a)) m ()
 removeRef = removeBy . eqRef

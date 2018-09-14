@@ -16,7 +16,6 @@ import           RON.Internal.Prelude
 import           Control.Monad.Except (MonadError, runExceptT)
 import           Control.Monad.State.Strict (MonadState, StateT, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.String.Interpolate.IsString (i)
@@ -26,7 +25,7 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (getObject, newObject)
 import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (AsORSet (..))
+import           RON.Data.ORSet (AsObjectMap (..))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (AsRga (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
@@ -84,8 +83,7 @@ $(let
         , slFields = Map.fromList
             [ ("int1", TAtom TAInteger // mempty)
             ,   ( "set4"
-                , TORSet (TStructLww tExample2 // mempty) //
-                    mempty{annHaskellType1 = Just "HashSet"}
+                , TORSet (TStructLww tExample2 // mempty) // mempty
                 )
             , ("str2", TRga char // mempty)
             , ("str3", TAtom TAString // mempty)
@@ -128,7 +126,7 @@ setStr3
 setStr3 = LWW.writeField str3Name . I
 modifySet4
     :: MonadError String m
-    => StateT (Object (AsORSet (HashSet Example2))) m ()
+    => StateT (Object (AsObjectMap Example2)) m ()
     -> StateT (Object Example1) m ()
 modifySet4 = LWW.modifyField set4Name
 
@@ -166,18 +164,18 @@ ex4expect = [i|
                                     :str2   >]At    ,
                             @]Gs    :str3   '206'   ,
 
-            #]J~            @`      :0              !
-                                    :vv5    >]It    ,
+            #]It            @`      :0              !
+                                    :vv5    >)s     ,
 
     *rga    #]At            @]As    :0              !
                             @]5s            '2'     ,
                             @]8s            '7'     ,
                             @]As            '5'     ,
 
-    *set    #]2V            @]Is                    !
-                                            >]J~    ,
+    *set    #]2V            @]J~                    !
+                                            >]It    ,
 
-    *vv     #]It            @`                      !
+    *vv     #]Is            @`                      !
     .
     |]
 
@@ -186,7 +184,7 @@ example4expect = Example1
     { int1 = 166
     , str2 = "275" :: String
     , str3 = "206"
-    , set4 = HashSet.fromList [Example2{vv5 = mempty}]
+    , set4 = [Example2{vv5 = mempty}]
     }
 
 prop_lwwStruct :: Property
@@ -211,7 +209,7 @@ prop_lwwStruct = property $ do
             setInt1 166
             modifyStr2 $ pure () -- TODO edit
             setStr3 "206"
-            modifySet4 $ ORSet.add Example2{vv5 = mempty}
+            modifySet4 $ ORSet.addNewRef Example2{vv5 = mempty}
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4

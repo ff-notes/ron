@@ -62,13 +62,14 @@ newFrame fields = collectFrame $ do
     pure e
 
 getField :: Replicated a => UUID -> StateChunk -> Frame' -> Either String a
-getField field StateChunk{..} frame = fmapL ("getField:\n" <>) $ do
-    let ops = filter ((field ==) . opRef) stateBody
-    Op'{..} <- case ops of
-        []   -> Left $ unwords ["no field", show field, "in lww chunk"]
-        [op] -> pure op
-        _    -> Left "unreduced state"
-    fromRon opPayload frame
+getField field StateChunk{..} frame =
+    fmapL (("LWW.getField " <> show field <> ":\n") <>) $ do
+        let ops = filter ((field ==) . opRef) stateBody
+        Op'{..} <- case ops of
+            []   -> Left $ unwords ["no field", show field, "in lww chunk"]
+            [op] -> pure op
+            _    -> Left "unreduced state"
+        fromRon opPayload frame
 
 writeField
     :: forall a m

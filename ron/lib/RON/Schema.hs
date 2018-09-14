@@ -31,7 +31,7 @@ import           RON.Data (Replicated (..), ReplicatedAsObject (..),
                            getObjectStateChunk, objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (AsORSet (..))
+import           RON.Data.ORSet (AsORSet (..), AsObjectMap (..))
 import           RON.Data.RGA (AsRga (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Types (objectFrame)
@@ -71,19 +71,16 @@ data Annotated t = Ann t Annotations
 data Annotations = Annotations
     { annHaskellDeriving :: Set Text
     , annHaskellType     :: Maybe Text
-    , annHaskellType1    :: Maybe Text
     }
     deriving (Show)
 
 instance Semigroup Annotations where
-    Annotations a1 a2 a3 <> Annotations b1 b2 b3 =
-        Annotations (a1 <> b1) (a2 <> b2) (a3 <> b3)
+    Annotations a1 a2 <> Annotations b1 b2 = Annotations (a1 <> b1) (a2 <> b2)
 
 instance Monoid Annotations where
     mempty = Annotations
         { annHaskellDeriving = mempty
         , annHaskellType     = mempty
-        , annHaskellType1    = mempty
         }
 
 mkReplicated :: Schema -> TH.DecsQ
@@ -93,11 +90,13 @@ mkReplicated = fmap fold . traverse fromDecl where
 
 fieldWrapper :: Annotated RonType -> Maybe TH.Name
 fieldWrapper (Ann typ _) = case typ of
-    TAtom      _   -> Nothing
-    TORSet     _   -> Just 'AsORSet
-    TRga       _   -> Just 'AsRga
-    TStructLww _   -> Nothing
-    TVersionVector -> Nothing
+    TAtom      _            -> Nothing
+    TORSet     (Ann item _)
+        | isObjectType item -> Just 'AsObjectMap
+        | otherwise         -> Just 'AsORSet
+    TRga       _            -> Just 'AsRga
+    TStructLww _            -> Nothing
+    TVersionVector          -> Nothing
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww StructLww{..} = do
@@ -147,7 +146,7 @@ mkReplicatedStructLww StructLww{..} = do
                     [| LWW.newFrame |] `appE` fieldsToPack]
             , funD 'getObject
                 [clause' [varP obj] $
-                    appE [| fmapL $ (++) $("getObject @" ++ slName' ++ ": ") |]
+                    appE [| fmapL $ (++) $("getObject @" ++ slName' ++ ":\n") |]
                     $ doE
                     $ letS [valD' frame $ [| objectFrame |] `appE` objE]
                     : bindS (varP ops) ([| getObjectStateChunk |] `appE` objE)
@@ -181,10 +180,18 @@ mkViewType (Ann typ Annotations{..}) = case typ of
     TStructLww StructLww{..} -> conT $ mkNameT slName
     TVersionVector -> conT ''VersionVector
   where
-    wrap = appT (conT . mkNameT $ fromMaybe "[]" annHaskellType1) . mkViewType
+    wrap = appT (conT . mkNameT $ fromMaybe "[]" annHaskellType) . mkViewType
 
 valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
 valD' name body = TH.valD (varP name) (TH.normalB body) []
 
 clause' :: [TH.PatQ] -> TH.ExpQ -> TH.ClauseQ
 clause' pat body = TH.clause pat (TH.normalB body) []
+
+isObjectType :: RonType -> Bool
+isObjectType = \case
+    TAtom      _   -> False
+    TORSet     _   -> True
+    TRga       _   -> True
+    TStructLww _   -> True
+    TVersionVector -> True

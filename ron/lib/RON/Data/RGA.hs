@@ -19,8 +19,6 @@ import           Control.Monad.Writer.Strict (lift, tell)
 import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
-import           GHC.Exts (IsList, Item)
-import qualified GHC.Exts as Exts
 
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
@@ -305,23 +303,18 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
 rgaType :: UUID
 rgaType = fromJust $ UUID.mkName "rga"
 
-newtype AsRga array = AsRga array
+newtype AsRga a = AsRga [a]
     deriving (Eq)
 
-instance (IsList array, Replicated (Item array)) => Replicated (AsRga array)
-    where
+instance Replicated a => Replicated (AsRga a) where encoding = objectEncoding
 
-    encoding = objectEncoding
-
-instance (IsList array, Replicated (Item array))
-    => ReplicatedAsObject (AsRga array) where
-
+instance Replicated a => ReplicatedAsObject (AsRga a) where
     objectOpType = rgaType
 
     newObject (AsRga items) = collectFrame $ do
-        ops <- for (Exts.toList items) $ \a -> do
+        ops <- for items $ \item -> do
             vertexId <- lift getEventUuid
-            payload <- newRon a
+            payload <- newRon item
             pure $ Op' vertexId Zero payload
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
@@ -330,8 +323,7 @@ instance (IsList array, Replicated (Item array))
 
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
-        items <- for stateBody $ \Op'{..} -> do
-            value <- fromRon opPayload objectFrame
-            pure (opRef, value)
-        pure $ AsRga $
-            Exts.fromList [value | (opRef, value) <- items, opRef == Zero]
+        mItems <- for stateBody $ \Op'{..} -> case opRef of
+            Zero -> Just <$> fromRon opPayload objectFrame
+            _    -> pure Nothing
+        pure . AsRga $ catMaybes mItems

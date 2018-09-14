@@ -136,6 +136,14 @@ instance ReplicatedAsPayload Int64 where
         [AInteger int] -> pure int
         _ -> Left "Int64: bad payload"
 
+instance Replicated UUID where encoding = payloadEncoding
+
+instance ReplicatedAsPayload UUID where
+    toPayload u = [AUuid u]
+    fromPayload atoms = case atoms of
+        [AUuid u] -> pure u
+        _ -> Left "UUID: bad payload"
+
 instance Replicated Text where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Text where
