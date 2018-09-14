@@ -12,7 +12,7 @@ import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError)
-import           Control.Monad.State.Strict (MonadState)
+import           Control.Monad.State.Strict (MonadState, StateT)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -43,8 +43,8 @@ mkReplicated = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
         DStructLww s -> mkReplicatedStructLww s
 
-fieldWrapper :: RonType -> Maybe TH.Name
-fieldWrapper typ = case typ of
+fieldWrapperC :: RonType -> Maybe TH.Name
+fieldWrapperC typ = case typ of
     TAlias     _            -> Nothing
     TAtom      _            -> Nothing
     TORSet     item
@@ -53,6 +53,20 @@ fieldWrapper typ = case typ of
     TRga       _            -> Just 'AsRga
     TStructLww _            -> Nothing
     TVersionVector          -> Nothing
+
+mkGuideType :: RonType -> TH.TypeQ
+mkGuideType typ = case typ of
+    TAlias     _            -> view
+    TAtom      _            -> view
+    TORSet     item
+        | isObjectType item -> wrap item ''AsObjectMap
+        | otherwise         -> wrap item ''AsORSet
+    TRga       item         -> wrap item ''AsRga
+    TStructLww _            -> view
+    TVersionVector          -> view
+  where
+    view = mkViewType typ
+    wrap item w = conT w `appT` mkViewType item
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww StructLww{..} = do
@@ -89,7 +103,7 @@ mkReplicatedStructLww StructLww{..} = do
         let fieldsToPack = listE
                 [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
                 | (fieldNameUuid, fieldName, Field fieldType _) <- fields
-                , let var = maybe id (appE . conE) (fieldWrapper fieldType) $
+                , let var = maybe id (appE . conE) (fieldWrapperC fieldType) $
                         varE $ mkNameT fieldName
                 ]
         obj   <- TH.newName "obj";   let objE   = varE obj
@@ -103,7 +117,7 @@ mkReplicatedStructLww StructLww{..} = do
                 , let
                     fieldP = varP $ mkNameT fieldName
                     var = maybe fieldP (\w -> conP w [fieldP]) $
-                        fieldWrapper fieldType
+                        fieldWrapperC fieldType
                 ]
         instanceD (TH.cxt [])
             (conT ''ReplicatedAsObject `appT` conT name)
@@ -134,7 +148,20 @@ mkReplicatedStructLww StructLww{..} = do
 
     mkAccessors :: (UUID.UUID, Text, Field) -> [TH.DecQ]
     mkAccessors (nameUuid, fname, Field typ _)
-        | isObjectType typ = []
+        | isObjectType typ =
+            [ sigD with $
+                forallT [] (TH.cxt [[t| MonadError String |] `appT` m]) $
+                arrowT `appT`
+                    ([t| StateT |] `appT`
+                        ([t| Object |] `appT` mkGuideType typ) `appT`
+                        m `appT`
+                        unitT) `appT`
+                    ([t| StateT |] `appT`
+                        ([t| Object |] `appT` conT name) `appT`
+                        m `appT`
+                        unitT)
+            , valD' with [| LWW.withField $(liftData nameUuid) |]
+            ]
         | otherwise =
             [ sigD set $
                 forallT []
@@ -149,7 +176,8 @@ mkReplicatedStructLww StructLww{..} = do
             , valD' set [| LWW.writeField $(liftData nameUuid) . I |]
             ]
       where
-        set = mkNameT $ "set_" <> fname
+        set  = mkNameT $ "set_"  <> fname
+        with = mkNameT $ "with_" <> fname
         m = varT (TH.mkName "m")
         unitT = TH.tupleT 0
 
@@ -157,7 +185,7 @@ mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
 
 mkViewType :: RonType -> TH.TypeQ
-mkViewType typ = case typ of
+mkViewType = \case
     TAlias Alias{aliasAnnotations = AliasAnnotations{..}, ..} ->
         case aaHaskellType of
             Nothing     -> mkViewType aliasType

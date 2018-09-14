@@ -11,8 +11,8 @@ module RON.Data.LWW
     ( LwwPerField (..)
     , getField
     , lwwType
-    , modifyField
     , newFrame
+    , withField
     , writeField
     ) where
 
@@ -93,10 +93,10 @@ writeField field (I value) = do
         , ..
         }
 
-modifyField
+withField
     :: (ReplicatedAsObject outer, MonadError String m)
     => UUID -> StateT (Object inner) m () -> StateT (Object outer) m ()
-modifyField field innerModifier = do
+withField field innerModifier = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     let ops = filter ((field ==) . opRef) stateBody

@@ -1,45 +1,33 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module LwwStruct (prop_lwwStruct) where
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.Except (MonadError, runExceptT)
-import           Control.Monad.State.Strict (StateT, execStateT)
+import           Control.Monad.Except (runExceptT)
+import           Control.Monad.State.Strict (execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (getObject, newObject)
-import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (AsObjectMap (..))
 import qualified RON.Data.ORSet as ORSet
-import           RON.Data.RGA (AsRga (..))
 import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
-import           RON.Schema (Declaration (..), Field (..), RonType (..),
-                             StructAnnotations (..), StructLww (..), TAtom (..),
-                             char)
-import           RON.Schema.TH (mkReplicated)
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
-import qualified RON.UUID as UUID
+
+import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
+                                  set_str3, with_set4, with_str2)
 
 -- Common ----------------------------------------------------------------------
 
@@ -76,50 +64,7 @@ findObjects = fmap Map.fromList . traverse loadBody where
             Left "reduced op object id does not match chunk object id"
         pure op'
 
--- Schema ----------------------------------------------------------------------
-
-$(let
-    tExample1 = StructLww
-        { structName = "Example1"
-        , structFields = Map.fromList
-            [ ("int1", Field (TAtom TAInteger) mempty)
-            , ("set4", Field (TORSet (TStructLww tExample2)) mempty)
-            , ("str2", Field (TRga char) mempty)
-            , ("str3", Field (TAtom TAString) mempty)
-            ]
-        , structAnnotations =
-            mempty{saHaskellDeriving = Set.fromList ["Eq", "Show"]}
-        }
-    tExample2 = StructLww
-        { structName = "Example2"
-        , structFields = Map.fromList [("vv5", Field TVersionVector mempty)]
-        , structAnnotations = mempty
-            { saHaskellDeriving =
-                Set.fromList ["Eq", "Generic", "Hashable", "Show"]
-            }
-        }
-    in mkReplicated [DStructLww tExample1, DStructLww tExample2])
-
--- GENERATED -------------------------------------------------------------------
-
-str2Name :: UUID
-str2Name = fromJust $ UUID.mkName "str2"
-
-set4Name :: UUID
-set4Name = fromJust $ UUID.mkName "set4"
-
-modifyStr2
-    :: MonadError String m
-    => StateT (Object (AsRga String)) m () -> StateT (Object Example1) m ()
-modifyStr2 = LWW.modifyField str2Name
-
-modifySet4
-    :: MonadError String m
-    => StateT (Object (AsObjectMap Example2)) m ()
-    -> StateT (Object Example1) m ()
-modifySet4 = LWW.modifyField set4Name
-
--- /GENERATED ------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 example0 :: Example1
 example0 = Example1{int1 = 275, str2 = "275" :: String, str3 = "190", set4 = mempty}
@@ -196,9 +141,9 @@ prop_lwwStruct = property $ do
         runNetworkSim $ runReplicaSim replica $
         runExceptT $ (`execStateT` ex2) $ do
             set_int1 166
-            modifyStr2 $ pure () -- TODO edit
+            with_str2 $ pure () -- TODO edit
             set_str3 "206"
-            modifySet4 $ ORSet.addNewRef Example2{vv5 = mempty}
+            with_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4

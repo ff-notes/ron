@@ -34,3 +34,4 @@ tests:
       - Gen
       - HexDump
       - LwwStruct
+      - LwwStruct.Types
