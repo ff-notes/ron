@@ -31,9 +31,9 @@ import           RON.Data.RGA (AsRga (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
-import           RON.Schema (Annotations (..), Declaration (..), RonType (..),
-                             StructLww (..), TAtom (..), char, mkReplicated,
-                             (//))
+import           RON.Schema (Annotations (..), Declaration (..), Field (..),
+                             RonType (..), StructLww (..), TAtom (..), char,
+                             mkReplicated)
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
@@ -81,19 +81,17 @@ $(let
     tExample1 = StructLww
         { slName = "Example1"
         , slFields = Map.fromList
-            [ ("int1", TAtom TAInteger // mempty)
-            ,   ( "set4"
-                , TORSet (TStructLww tExample2 // mempty) // mempty
-                )
-            , ("str2", TRga char // mempty)
-            , ("str3", TAtom TAString // mempty)
+            [ ("int1", Field (TAtom TAInteger) mempty)
+            , ("set4", Field (TORSet (TStructLww tExample2)) mempty)
+            , ("str2", Field (TRga char) mempty)
+            , ("str3", Field (TAtom TAString) mempty)
             ]
         , slAnnotations =
             mempty{annHaskellDeriving = Set.fromList ["Eq", "Show"]}
         }
     tExample2 = StructLww
         { slName = "Example2"
-        , slFields = Map.fromList [("vv5", TVersionVector // mempty)]
+        , slFields = Map.fromList [("vv5", Field TVersionVector mempty)]
         , slAnnotations = mempty
             { annHaskellDeriving =
                 Set.fromList ["Eq", "Generic", "Hashable", "Show"]
