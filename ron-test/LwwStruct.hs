@@ -18,6 +18,7 @@ import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (getObject, newObject)
 import qualified RON.Data.ORSet as ORSet
+import qualified RON.Data.RGA as RGA
 import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
@@ -67,7 +68,7 @@ findObjects = fmap Map.fromList . traverse loadBody where
 --------------------------------------------------------------------------------
 
 example0 :: Example1
-example0 = Example1{int1 = 275, str2 = "275" :: String, str3 = "190", set4 = mempty}
+example0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
 
 -- | "r3pl1c4"
 replica :: ReplicaId
@@ -92,31 +93,33 @@ ex1expect = [i|
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/]B~+r3pl1c4  @`]Gs                   !
+    *lww    #B/]B~+r3pl1c4  @`]Ns                   !
                             @]Fs    :int1   =166    ,
                             @`      :set4   >]2V    ,
                                     :str2   >]At    ,
-                            @]Gs    :str3   '206'   ,
+                            @]Ns    :str3   '206'   ,
 
-            #]It            @`      :0              !
-                                    :vv5    >)s     ,
+            #]Qs            @`      :0              !
+                                    :vv5    >]Os    ,
 
-    *rga    #]At            @]As    :0              !
-                            @]5s            '2'     ,
-                            @]8s            '7'     ,
+    *rga    #]At            @]J~    :0              !
+                            @]5s    :`]Gs   '2'     ,
+                            @]8s    :]Is    '7'     ,
+                            @]It    :0      '1'     ,
+                            @]J~            '4'     ,
                             @]As            '5'     ,
 
-    *set    #]2V            @]J~                    !
-                                            >]It    ,
+    *set    #]2V            @]Qt                    !
+                                            >]Qs    ,
 
-    *vv     #]Is            @`                      !
+    *vv     #]Os            @`                      !
     .
     |]
 
 example4expect :: Example1
 example4expect = Example1
     { int1 = 166
-    , str2 = "275" :: String
+    , str2 = "145"
     , str3 = "206"
     , set4 = [Example2{vv5 = mempty}]
     }
@@ -141,7 +144,7 @@ prop_lwwStruct = property $ do
         runNetworkSim $ runReplicaSim replica $
         runExceptT $ (`execStateT` ex2) $ do
             set_int1 166
-            with_str2 $ pure () -- TODO edit
+            with_str2 $ RGA.edit "145"
             set_str3 "206"
             with_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
 

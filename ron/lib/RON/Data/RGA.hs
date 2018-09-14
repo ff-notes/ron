@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -11,17 +12,23 @@
 module RON.Data.RGA
     ( AsRga (..)
     , RGA (..)
+    , edit
     ) where
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.Writer.Strict (lift, tell)
+import           Control.Monad.Except (MonadError)
+import           Control.Monad.State.Strict (MonadState, get, put)
+import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
+import           Data.Algorithm.Diff (Diff (Both, First, Second),
+                                      getGroupedDiffBy)
 import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
+import           Data.Monoid (Last (..))
 
 import           RON.Data.Internal
-import           RON.Event (getEventUuid)
+import           RON.Event (Clock, advanceToUuid, getEventUuid)
 import           RON.Internal.Word (pattern B11)
 import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
@@ -327,3 +334,36 @@ instance Replicated a => ReplicatedAsObject (AsRga a) where
             Zero -> Just <$> fromRon opPayload objectFrame
             _    -> pure Nothing
         pure . AsRga $ catMaybes mItems
+
+edit
+    ::  ( Replicated a, ReplicatedAsPayload a
+        , Clock m, MonadError String m, MonadState (Object (AsRga a)) m
+        )
+    => [a] -> m ()
+edit newItems = do
+    obj@Object{..} <- get
+    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    advanceToUuid stateVersion
+
+    let newItems' = [Op' Zero Zero $ toPayload item | item <- newItems]
+    let diff = getGroupedDiffBy ((==) `on` opPayload) stateBody newItems'
+    (stateBody', Last lastEvent) <- runWriterT . fmap concat . for diff $ \case
+        First removed -> for removed $ \op -> do
+            tombstone <- lift getEventUuid
+            tell . Last $ Just tombstone
+            pure op{opRef = tombstone}
+        Both v _      -> pure v
+        Second added  -> for added $ \op -> do
+            opEvent <- lift getEventUuid
+            tell . Last $ Just opEvent
+            pure op{opEvent}
+
+    case lastEvent of
+        Nothing -> pure ()
+        Just stateVersion' -> do
+            let state' = StateChunk stateVersion' stateBody'
+            put Object
+                { objectFrame =
+                    Map.insert (rgaType, objectId) state' objectFrame
+                , ..
+                }
