@@ -14,7 +14,7 @@ module LwwStruct (prop_lwwStruct) where
 import           RON.Internal.Prelude
 
 import           Control.Monad.Except (MonadError, runExceptT)
-import           Control.Monad.State.Strict (MonadState, StateT, execStateT)
+import           Control.Monad.State.Strict (StateT, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -28,7 +28,7 @@ import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsObjectMap (..))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (AsRga (..))
-import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
+import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Schema (Declaration (..), Field (..), RonType (..),
@@ -102,27 +102,17 @@ $(let
 
 -- GENERATED -------------------------------------------------------------------
 
-int1Name :: UUID
-int1Name = fromJust $ UUID.mkName "int1"
 str2Name :: UUID
 str2Name = fromJust $ UUID.mkName "str2"
-str3Name :: UUID
-str3Name = fromJust $ UUID.mkName "str3"
+
 set4Name :: UUID
 set4Name = fromJust $ UUID.mkName "set4"
 
-setInt1
-    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
-    => Int64 -> m ()
-setInt1 = LWW.writeField int1Name . I
 modifyStr2
     :: MonadError String m
     => StateT (Object (AsRga String)) m () -> StateT (Object Example1) m ()
 modifyStr2 = LWW.modifyField str2Name
-setStr3
-    :: (Clock m, MonadError String m, MonadState (Object Example1) m)
-    => Text -> m ()
-setStr3 = LWW.writeField str3Name . I
+
 modifySet4
     :: MonadError String m
     => StateT (Object (AsObjectMap Example2)) m ()
@@ -205,9 +195,9 @@ prop_lwwStruct = property $ do
     ex4 <- evalEitherS $
         runNetworkSim $ runReplicaSim replica $
         runExceptT $ (`execStateT` ex2) $ do
-            setInt1 166
+            set_int1 166
             modifyStr2 $ pure () -- TODO edit
-            setStr3 "206"
+            set_str3 "206"
             modifySet4 $ ORSet.addNewRef Example2{vv5 = mempty}
 
     -- decode object after modification

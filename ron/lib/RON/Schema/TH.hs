@@ -1,8 +1,8 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
-{-# LANGUAGE QuasiQuotes #-}
 
 module RON.Schema.TH
     ( mkReplicated
@@ -11,13 +11,16 @@ module RON.Schema.TH
 import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
+import           Control.Monad.Except (MonadError)
+import           Control.Monad.State.Strict (MonadState)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Language.Haskell.TH (Exp (VarE), appE, appT, bindS, conE, conP,
-                                      conT, dataD, doE, funD, instanceD, letS,
-                                      listE, listT, noBindS, recC, recConE,
-                                      tupE, varE, varP)
+import           Language.Haskell.TH (Exp (VarE), appE, appT, arrowT, bindS,
+                                      conE, conP, conT, dataD, doE, forallT,
+                                      funD, instanceD, letS, listE, listT,
+                                      noBindS, recC, recConE, sigD, tupE, varE,
+                                      varP, varT)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData, liftString)
 
@@ -28,10 +31,11 @@ import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..), AsObjectMap (..))
 import           RON.Data.RGA (AsRga (..))
 import           RON.Data.VersionVector (VersionVector)
+import           RON.Event (Clock)
 import           RON.Schema (Alias (..), AliasAnnotations (..),
                              Declaration (..), Field (..), RonType (..), Schema,
                              StructAnnotations (..), StructLww (..), TAtom (..))
-import           RON.Types (objectFrame)
+import           RON.Types (Object (..))
 import qualified RON.UUID as UUID
 
 mkReplicated :: Schema -> TH.DecsQ
@@ -51,8 +55,17 @@ fieldWrapper typ = case typ of
     TVersionVector          -> Nothing
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
-mkReplicatedStructLww StructLww{..} =
-    sequence [mkData, mkInstanceReplicated, mkInstanceReplicatedAsObject]
+mkReplicatedStructLww StructLww{..} = do
+    fields <- for (Map.assocs structFields) $ \(fieldName, fieldType) ->
+        case UUID.mkName . BSC.pack $ Text.unpack fieldName of
+            Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
+            Nothing -> fail $
+                "Field name is not representable in RON: " ++ show fieldName
+    sequence
+        $ mkData
+        : mkInstanceReplicated
+        : mkInstanceReplicatedAsObject fields
+        : concatMap mkAccessors fields
   where
 
     StructAnnotations{..} = structAnnotations
@@ -72,12 +85,7 @@ mkReplicatedStructLww StructLww{..} =
         (conT ''Replicated `appT` conT name)
         [valD' 'encoding [| objectEncoding |]]
 
-    mkInstanceReplicatedAsObject = do
-        fields <- for (Map.assocs structFields) $ \(fieldName, fieldType) ->
-            case UUID.mkName . BSC.pack $ Text.unpack fieldName of
-                Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
-                Nothing -> fail $
-                    "Field name is not representable in RON: " ++ show fieldName
+    mkInstanceReplicatedAsObject fields = do
         let fieldsToPack = listE
                 [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
                 | (fieldNameUuid, fieldName, Field fieldType _) <- fields
@@ -123,6 +131,35 @@ mkReplicatedStructLww StructLww{..} =
             [ pure (fieldName, VarE fieldName)
             | field <- Map.keys structFields, let fieldName = mkNameT field
             ]
+
+    mkAccessors :: (UUID.UUID, Text, Field) -> [TH.DecQ]
+    mkAccessors (nameUuid, fname, Field typ _) = case typ of
+        TAtom atom ->
+            [ sigD set $
+                forallT []
+                    (TH.cxt
+                        [ [t| Clock |] `appT` m
+                        , [t| MonadError String |] `appT` m
+                        , [t| MonadState |]
+                            `appT` ([t| Object |] `appT` conT name)
+                            `appT` m
+                        ]) $
+                arrowT `appT` mkViewType (TAtom atom) `appT` (m `appT` unitT)
+            , valD' set [| LWW.writeField $(liftData nameUuid) . I |]
+            ]
+            -- setInt1
+            --     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
+            --     => Int64 -> m ()
+            -- setInt1 = LWW.writeField int1Name . I
+            -- ForallT
+            --     []
+            --     [AppT (ConT GHC.Classes.Eq) (VarT a_7),AppT (ConT GHC.Classes.Ord) (VarT b_8)]
+            --     (AppT (AppT ArrowT (VarT a_7)) (VarT b_8))
+        _ -> []
+      where
+        set = mkNameT $ "set_" <> fname
+        m = varT (TH.mkName "m")
+        unitT = TH.tupleT 0
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
