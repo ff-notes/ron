@@ -133,8 +133,9 @@ mkReplicatedStructLww StructLww{..} = do
             ]
 
     mkAccessors :: (UUID.UUID, Text, Field) -> [TH.DecQ]
-    mkAccessors (nameUuid, fname, Field typ _) = case typ of
-        TAtom atom ->
+    mkAccessors (nameUuid, fname, Field typ _)
+        | isObjectType typ = []
+        | otherwise =
             [ sigD set $
                 forallT []
                     (TH.cxt
@@ -144,18 +145,9 @@ mkReplicatedStructLww StructLww{..} = do
                             `appT` ([t| Object |] `appT` conT name)
                             `appT` m
                         ]) $
-                arrowT `appT` mkViewType (TAtom atom) `appT` (m `appT` unitT)
+                arrowT `appT` mkViewType typ `appT` (m `appT` unitT)
             , valD' set [| LWW.writeField $(liftData nameUuid) . I |]
             ]
-            -- setInt1
-            --     :: (Clock m, MonadError String m, MonadState (Object Example1) m)
-            --     => Int64 -> m ()
-            -- setInt1 = LWW.writeField int1Name . I
-            -- ForallT
-            --     []
-            --     [AppT (ConT GHC.Classes.Eq) (VarT a_7),AppT (ConT GHC.Classes.Ord) (VarT b_8)]
-            --     (AppT (AppT ArrowT (VarT a_7)) (VarT b_8))
-        _ -> []
       where
         set = mkNameT $ "set_" <> fname
         m = varT (TH.mkName "m")
