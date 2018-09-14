@@ -31,9 +31,9 @@ import           RON.Data.RGA (AsRga (..))
 import           RON.Event (Clock, Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
-import           RON.Schema (Annotations (..), Declaration (..), Field (..),
-                             RonType (..), StructLww (..), TAtom (..), char,
-                             mkReplicated)
+import           RON.Schema (Declaration (..), Field (..), RonType (..),
+                             StructAnnotations (..), StructLww (..), TAtom (..),
+                             char, mkReplicated)
 import           RON.Text (parseFrame, serializeFrame)
 import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             Op' (..), RChunk (..), StateChunk (..), UUID)
@@ -79,21 +79,21 @@ findObjects = fmap Map.fromList . traverse loadBody where
 
 $(let
     tExample1 = StructLww
-        { slName = "Example1"
-        , slFields = Map.fromList
+        { structName = "Example1"
+        , structFields = Map.fromList
             [ ("int1", Field (TAtom TAInteger) mempty)
             , ("set4", Field (TORSet (TStructLww tExample2)) mempty)
             , ("str2", Field (TRga char) mempty)
             , ("str3", Field (TAtom TAString) mempty)
             ]
-        , slAnnotations =
-            mempty{annHaskellDeriving = Set.fromList ["Eq", "Show"]}
+        , structAnnotations =
+            mempty{saHaskellDeriving = Set.fromList ["Eq", "Show"]}
         }
     tExample2 = StructLww
-        { slName = "Example2"
-        , slFields = Map.fromList [("vv5", Field TVersionVector mempty)]
-        , slAnnotations = mempty
-            { annHaskellDeriving =
+        { structName = "Example2"
+        , structFields = Map.fromList [("vv5", Field TVersionVector mempty)]
+        , structAnnotations = mempty
+            { saHaskellDeriving =
                 Set.fromList ["Eq", "Generic", "Hashable", "Show"]
             }
         }

@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -5,10 +8,10 @@
 
 module RON.Schema
     ( Alias (..)
-    , Annotations (..)
     , Declaration (..)
     , Field (..)
     , RonType (..)
+    , StructAnnotations (..)
     , StructLww (..)
     , TAtom (..)
     , mkReplicated
@@ -51,42 +54,39 @@ data RonType
     deriving (Show)
 
 data StructLww = StructLww
-    { slName        :: Text
-    , slFields      :: Map Text Field
-    , slAnnotations :: Annotations
+    { structName        :: Text
+    , structFields      :: Map Text Field
+    , structAnnotations :: StructAnnotations
     }
     deriving (Show)
 
-data Field = Field{fieldType :: RonType, fieldAnnotations :: Annotations}
+newtype StructAnnotations = StructAnnotations{saHaskellDeriving :: Set Text}
+    deriving newtype (Monoid, Semigroup)
+    deriving stock (Show)
+
+data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
     deriving (Show)
+
+newtype FieldAnnotations = FieldAnnotations ()
+    deriving newtype (Monoid, Semigroup)
+    deriving stock (Show)
 
 newtype Declaration = DStructLww StructLww
 
 type Schema = [Declaration]
 
-data Alias = Alias{aliasType :: RonType, aliasAnnotations :: Annotations}
+data Alias = Alias{aliasType :: RonType, aliasAnnotations :: AliasAnnotations}
     deriving (Show)
+
+newtype AliasAnnotations = AliasAnnotations{aaHaskellType :: Maybe Text}
+    deriving newtype (Monoid, Semigroup)
+    deriving stock (Show)
 
 char :: RonType
 char = TAlias Alias
     { aliasType = TAtom TAString
-    , aliasAnnotations = mempty{annHaskellType = Just "Char"}
+    , aliasAnnotations = mempty{aaHaskellType = Just "Char"}
     }
-
-data Annotations = Annotations
-    { annHaskellDeriving :: Set Text
-    , annHaskellType     :: Maybe Text
-    }
-    deriving (Show)
-
-instance Semigroup Annotations where
-    Annotations a1 a2 <> Annotations b1 b2 = Annotations (a1 <> b1) (a2 <> b2)
-
-instance Monoid Annotations where
-    mempty = Annotations
-        { annHaskellDeriving = mempty
-        , annHaskellType     = mempty
-        }
 
 mkReplicated :: Schema -> TH.DecsQ
 mkReplicated = fmap fold . traverse fromDecl where
@@ -106,7 +106,7 @@ fieldWrapper typ = case typ of
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww StructLww{..} = do
-    fields <- for (Map.assocs slFields) $ \(fieldName, fieldType) ->
+    fields <- for (Map.assocs structFields) $ \(fieldName, fieldType) ->
         case UUID.mkName . BSC.pack $ Text.unpack fieldName of
             Just fieldNameUuid -> pure (fieldNameUuid, fieldName, fieldType)
             Nothing -> fail $
@@ -136,10 +136,10 @@ mkReplicatedStructLww StructLww{..} = do
                 [ TH.varBangType (mkNameT fieldName) $
                     TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
                     mkViewType fieldType
-                | (fieldName, Field fieldType _) <- Map.assocs slFields
+                | (fieldName, Field fieldType _) <- Map.assocs structFields
                 ]]
             [TH.derivClause Nothing . map (conT . mkNameT) $
-                toList annHaskellDeriving]
+                toList saHaskellDeriving]
         , instanceD (TH.cxt []) (conT ''Replicated `appT` conT name)
             [valD' 'encoding [| objectEncoding |]]
         , instanceD
@@ -148,11 +148,13 @@ mkReplicatedStructLww StructLww{..} = do
             [ valD' 'objectOpType [| lwwType |]
             , funD 'newObject
                 [clause'
-                    [conP name . map (varP . mkNameT) $ Map.keys slFields] $
+                    [conP name . map (varP . mkNameT) $ Map.keys structFields] $
                     [| LWW.newFrame |] `appE` fieldsToPack]
             , funD 'getObject
                 [clause' [varP obj] $
-                    appE [| fmapL $ (++) $("getObject @" ++ slName' ++ ":\n") |]
+                    appE
+                        [| fmapL $
+                            (++) $("getObject @" ++ structName' ++ ":\n") |]
                     $ doE
                     $ letS [valD' frame $ [| objectFrame |] `appE` objE]
                     : bindS (varP ops) ([| getObjectStateChunk |] `appE` objE)
@@ -161,13 +163,13 @@ mkReplicatedStructLww StructLww{..} = do
             ]
         ]
   where
-    Annotations{..} = slAnnotations
-    name = mkNameT slName
-    slName' = Text.unpack slName
+    StructAnnotations{..} = structAnnotations
+    name = mkNameT structName
+    structName' = Text.unpack structName
     cons = recConE
         name
         [ pure (fieldName, VarE fieldName)
-        | field <- Map.keys slFields, let fieldName = mkNameT field
+        | field <- Map.keys structFields, let fieldName = mkNameT field
         ]
 
 
@@ -176,8 +178,8 @@ mkNameT = TH.mkName . Text.unpack
 
 mkViewType :: RonType -> TH.TypeQ
 mkViewType typ = case typ of
-    TAlias Alias{aliasAnnotations = Annotations{..}, ..} ->
-        case annHaskellType of
+    TAlias Alias{aliasAnnotations = AliasAnnotations{..}, ..} ->
+        case aaHaskellType of
             Nothing     -> mkViewType aliasType
             Just hsType -> conT $ mkNameT hsType
     TAtom atom -> case atom of
@@ -185,7 +187,7 @@ mkViewType typ = case typ of
         TAString  -> conT ''Text
     TORSet item -> wrapList item
     TRga   item -> wrapList item
-    TStructLww StructLww{..} -> conT $ mkNameT slName
+    TStructLww StructLww{..} -> conT $ mkNameT structName
     TVersionVector -> conT ''VersionVector
   where
     wrapList = appT listT . mkViewType
