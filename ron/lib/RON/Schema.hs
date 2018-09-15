@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module RON.Schema
@@ -13,6 +14,7 @@ module RON.Schema
     , StructLww (..)
     , TAtom (..)
     , char
+    , field
     ) where
 
 import           RON.Internal.Prelude
@@ -42,6 +44,9 @@ newtype StructAnnotations = StructAnnotations{saHaskellDeriving :: Set Text}
 
 data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
     deriving (Show)
+
+field :: RonType -> Field
+field fieldType = Field{fieldType, fieldAnnotations = mempty}
 
 newtype FieldAnnotations = FieldAnnotations ()
     deriving newtype (Monoid, Semigroup)
