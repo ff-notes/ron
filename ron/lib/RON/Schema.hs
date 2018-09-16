@@ -15,6 +15,7 @@ module RON.Schema
     , TAtom (..)
     , char
     , field
+    , rgaString
     ) where
 
 import           RON.Internal.Prelude
@@ -68,3 +69,6 @@ char = TAlias Alias
     { aliasType = TAtom TAString
     , aliasAnnotations = mempty{aaHaskellType = Just "Char"}
     }
+
+rgaString :: RonType
+rgaString = TRga char
