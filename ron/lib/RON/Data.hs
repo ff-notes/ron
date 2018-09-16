@@ -12,9 +12,11 @@ module RON.Data
     ( Reducible (..)
     , Replicated (..)
     , ReplicatedAsObject (..)
+    , ReplicatedAsPayload (..)
     , collectFrame
     , getObjectStateChunk
     , objectEncoding
+    , payloadEncoding
     , reduce
     , typeName
     ) where
