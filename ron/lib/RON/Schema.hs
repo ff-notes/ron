@@ -15,17 +15,13 @@ module RON.Schema
     , char
     , def
     , field
-    , optionE
-    , optionZ
+    , option
     , rgaString
     ) where
 
 import           RON.Internal.Prelude
 
 import           Data.Default (Default, def)
-
-import           RON.Types (Atom (..))
-import           RON.UUID (zero)
 
 data TAtom = TAInteger | TAString
     deriving (Show)
@@ -71,10 +67,10 @@ data Alias = Alias{aliasType :: RonType, aliasAnnotations :: AliasAnnotations}
     deriving (Show)
 
 data AliasAnnotations =
-    AliasAnnotations{aaHaskellType :: Maybe Text, aaNoneEncoding :: [Atom]}
+    AliasAnnotations{aaHaskellType :: Maybe Text, aaOption :: Bool}
     deriving (Show)
 
-instance Default AliasAnnotations where def = AliasAnnotations def def
+instance Default AliasAnnotations where def = AliasAnnotations def False
 
 char :: RonType
 char = alias (TAtom TAString) def{aaHaskellType = Just "Char"}
@@ -85,11 +81,5 @@ rgaString = TRga char
 alias :: RonType -> AliasAnnotations -> RonType
 alias t a = TAlias $ Alias t a
 
-optionE :: RonType -> RonType
-optionE = option []
-
-optionZ :: RonType -> RonType
-optionZ = option [AUuid zero]
-
-option :: [Atom] -> RonType -> RonType
-option noneEncoding typ = alias typ def{aaNoneEncoding = noneEncoding}
+option :: RonType -> RonType
+option typ = alias typ def{aaOption = True}
