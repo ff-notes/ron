@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -13,12 +11,21 @@ module RON.Schema
     , StructAnnotations (..)
     , StructLww (..)
     , TAtom (..)
+    , alias
     , char
+    , def
     , field
+    , optionE
+    , optionZ
     , rgaString
     ) where
 
 import           RON.Internal.Prelude
+
+import           Data.Default (Default, def)
+
+import           RON.Types (Atom (..))
+import           RON.UUID (zero)
 
 data TAtom = TAInteger | TAString
     deriving (Show)
@@ -26,6 +33,7 @@ data TAtom = TAInteger | TAString
 data RonType
     = TAlias     Alias
     | TAtom      TAtom
+    | TAtomTuple [TAtom]
     | TORSet     RonType
     | TRga       RonType
     | TStructLww StructLww
@@ -40,18 +48,20 @@ data StructLww = StructLww
     deriving (Show)
 
 newtype StructAnnotations = StructAnnotations{saHaskellDeriving :: Set Text}
-    deriving newtype (Monoid, Semigroup)
-    deriving stock (Show)
+    deriving (Show)
+
+instance Default StructAnnotations where def = StructAnnotations def
 
 data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
     deriving (Show)
 
 field :: RonType -> Field
-field fieldType = Field{fieldType, fieldAnnotations = mempty}
+field fieldType = Field{fieldType, fieldAnnotations = def}
 
-newtype FieldAnnotations = FieldAnnotations ()
-    deriving newtype (Monoid, Semigroup)
-    deriving stock (Show)
+data FieldAnnotations = FieldAnnotations
+    deriving (Show)
+
+instance Default FieldAnnotations where def = FieldAnnotations
 
 newtype Declaration = DStructLww StructLww
 
@@ -60,15 +70,26 @@ type Schema = [Declaration]
 data Alias = Alias{aliasType :: RonType, aliasAnnotations :: AliasAnnotations}
     deriving (Show)
 
-newtype AliasAnnotations = AliasAnnotations{aaHaskellType :: Maybe Text}
-    deriving newtype (Monoid, Semigroup)
-    deriving stock (Show)
+data AliasAnnotations =
+    AliasAnnotations{aaHaskellType :: Maybe Text, aaNoneEncoding :: [Atom]}
+    deriving (Show)
+
+instance Default AliasAnnotations where def = AliasAnnotations def def
 
 char :: RonType
-char = TAlias Alias
-    { aliasType = TAtom TAString
-    , aliasAnnotations = mempty{aaHaskellType = Just "Char"}
-    }
+char = alias (TAtom TAString) def{aaHaskellType = Just "Char"}
 
 rgaString :: RonType
 rgaString = TRga char
+
+alias :: RonType -> AliasAnnotations -> RonType
+alias t a = TAlias $ Alias t a
+
+optionE :: RonType -> RonType
+optionE = option []
+
+optionZ :: RonType -> RonType
+optionZ = option [AUuid zero]
+
+option :: [Atom] -> RonType -> RonType
+option noneEncoding typ = alias typ def{aaNoneEncoding = noneEncoding}

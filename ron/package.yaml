@@ -14,6 +14,7 @@ library:
     - binary
     - bytestring
     - containers
+    - data-default
     - deepseq
     - Diff
     - errors

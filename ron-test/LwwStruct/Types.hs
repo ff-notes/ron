@@ -16,8 +16,8 @@ $(let
         , "str2" -: field (TRga char)
         , "str3" -: field (TAtom TAString)
         ]
-        mempty{saHaskellDeriving = ["Eq", "Show"]}
+        def{saHaskellDeriving = ["Eq", "Show"]}
     example2 = StructLww "Example2"
         ["vv5" -: field TVersionVector]
-        mempty{saHaskellDeriving = ["Eq", "Show"]}
+        def{saHaskellDeriving = ["Eq", "Show"]}
     in mkReplicated [DStructLww example1, DStructLww example2])

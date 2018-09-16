@@ -47,6 +47,7 @@ fieldWrapperC :: RonType -> Maybe TH.Name
 fieldWrapperC typ = case typ of
     TAlias     _            -> Nothing
     TAtom      _            -> Nothing
+    TAtomTuple _            -> Nothing
     TORSet     item
         | isObjectType item -> Just 'AsObjectMap
         | otherwise         -> Just 'AsORSet
@@ -58,6 +59,7 @@ mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
     TAlias     _            -> view
     TAtom      _            -> view
+    TAtomTuple _            -> view
     TORSet     item
         | isObjectType item -> wrap item ''AsObjectMap
         | otherwise         -> wrap item ''AsORSet
@@ -66,7 +68,7 @@ mkGuideType typ = case typ of
     TVersionVector          -> view
   where
     view = mkViewType typ
-    wrap item w = conT w `appT` mkViewType item
+    wrap item w = conT w `appT` mkGuideType item
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww StructLww{..} = do
@@ -196,6 +198,7 @@ mkViewType = \case
     TAtom atom -> case atom of
         TAInteger -> conT ''Int64
         TAString  -> conT ''Text
+    TAtomTuple _ -> undefined
     TORSet item -> wrapList item
     TRga   item -> wrapList item
     TStructLww StructLww{..} -> conT $ mkNameT structName
@@ -213,6 +216,7 @@ isObjectType :: RonType -> Bool
 isObjectType = \case
     TAlias     a   -> isObjectType $ aliasType a
     TAtom      _   -> False
+    TAtomTuple _   -> False
     TORSet     _   -> True
     TRga       _   -> True
     TStructLww _   -> True
