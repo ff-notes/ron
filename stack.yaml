@@ -4,6 +4,3 @@ packages:
   - ron
   - ron-test
   - swarm
-
-extra-deps:
-  - flat-0.3.2
