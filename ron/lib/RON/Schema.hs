@@ -43,10 +43,11 @@ data StructLww = StructLww
     }
     deriving (Show)
 
-newtype StructAnnotations = StructAnnotations{saHaskellDeriving :: Set Text}
+data StructAnnotations = StructAnnotations
+    {saHaskellDeriving :: Set Text, saHaskellFieldPrefix :: Text}
     deriving (Show)
 
-instance Default StructAnnotations where def = StructAnnotations def
+instance Default StructAnnotations where def = StructAnnotations def ""
 
 data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
     deriving (Show)

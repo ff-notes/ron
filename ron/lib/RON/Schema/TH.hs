@@ -91,7 +91,7 @@ mkReplicatedStructLww StructLww{..} = do
 
     mkData = dataD (TH.cxt []) name [] Nothing
         [recC name
-            [ TH.varBangType (mkNameT fieldName) $
+            [ TH.varBangType (mkNameT $ mkHaskellFieldName fieldName) $
                 TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
                 mkViewType fieldType
             | (fieldName, Field fieldType _) <- Map.assocs structFields
@@ -149,8 +149,11 @@ mkReplicatedStructLww StructLww{..} = do
         cons = recConE
             name
             [ pure (fieldName, VarE fieldVar)
-            | (_, field, _, fieldVar) <- fields, let fieldName = mkNameT field
+            | (_, field, _, fieldVar) <- fields
+            , let fieldName = mkNameT $ mkHaskellFieldName field
             ]
+
+    mkHaskellFieldName = (saHaskellFieldPrefix <>)
 
     mkAccessors (nameUuid, fname, Field typ _, _)
         | isObjectType typ =
@@ -181,8 +184,8 @@ mkReplicatedStructLww StructLww{..} = do
             , valD' set [| LWW.writeField $(liftData nameUuid) . I |]
             ]
       where
-        set  = mkNameT $ "set_"  <> fname
-        with = mkNameT $ "with_" <> fname
+        set  = mkNameT $ "set_"  <> mkHaskellFieldName fname
+        with = mkNameT $ "with_" <> mkHaskellFieldName fname
         m = varT (TH.mkName "m")
         unitT = TH.tupleT 0
 
