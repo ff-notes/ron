@@ -1,21 +1,22 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module RON.Schema
-    ( Alias (..)
-    , AliasAnnotations (..)
-    , Declaration (..)
+    ( Declaration (..)
     , Field (..)
+    , Opaque (..)
+    , OpaqueAnnotations (..)
     , RonType (..)
     , Schema
     , StructAnnotations (..)
     , StructLww (..)
     , TAtom (..)
-    , alias
     , char
     , def
     , field
-    , option
+    , opaqueAtoms
+    , opaqueObject
     , rgaString
     ) where
 
@@ -27,9 +28,9 @@ data TAtom = TAInteger | TAString
     deriving (Show)
 
 data RonType
-    = TAlias     Alias
-    | TAtom      TAtom
-    | TAtomTuple [TAtom]
+    = TAtom      TAtom
+    | TOpaque    Opaque
+    | TOption    RonType
     | TORSet     RonType
     | TRga       RonType
     | TStructLww StructLww
@@ -64,23 +65,21 @@ newtype Declaration = DStructLww StructLww
 
 type Schema = [Declaration]
 
-data Alias = Alias{aliasType :: RonType, aliasAnnotations :: AliasAnnotations}
-    deriving (Show)
-
-data AliasAnnotations =
-    AliasAnnotations{aaHaskellType :: Maybe Text, aaOption :: Bool}
-    deriving (Show)
-
-instance Default AliasAnnotations where def = AliasAnnotations def False
+newtype OpaqueAnnotations = OpaqueAnnotations{oaHaskellType :: Maybe Text}
+    deriving (Default, Show)
 
 char :: RonType
-char = alias (TAtom TAString) def{aaHaskellType = Just "Char"}
+char = opaqueAtoms def{oaHaskellType = Just "Char"}
 
 rgaString :: RonType
 rgaString = TRga char
 
-alias :: RonType -> AliasAnnotations -> RonType
-alias t a = TAlias $ Alias t a
+data Opaque =
+    Opaque{opaqueIsObject :: Bool, opaqueAnnotations :: OpaqueAnnotations}
+    deriving (Show)
 
-option :: RonType -> RonType
-option typ = alias typ def{aaOption = True}
+opaqueObject :: OpaqueAnnotations -> RonType
+opaqueObject = TOpaque . Opaque True
+
+opaqueAtoms :: OpaqueAnnotations -> RonType
+opaqueAtoms = TOpaque . Opaque False

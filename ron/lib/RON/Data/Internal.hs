@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -189,3 +190,13 @@ eqRef (Object oid _) atoms = case atoms of
 
 eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
 eqPayload a atoms = toPayload a == atoms
+
+instance Replicated a => Replicated (Maybe a) where
+    encoding = Encoding
+        { encodingNewRon = \case
+            Just a  -> newRon a
+            Nothing -> pure []
+        , encodingFromRon = \atoms frame -> case atoms of
+            [] -> pure Nothing
+            _  -> Just <$> fromRon atoms frame
+        }

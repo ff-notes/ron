@@ -32,8 +32,8 @@ import           RON.Data.ORSet (AsORSet (..), AsObjectMap (..))
 import           RON.Data.RGA (AsRga (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Event (Clock)
-import           RON.Schema (Alias (..), AliasAnnotations (..),
-                             Declaration (..), Field (..), RonType (..), Schema,
+import           RON.Schema (Declaration (..), Field (..), Opaque (..),
+                             OpaqueAnnotations (..), RonType (..), Schema,
                              StructAnnotations (..), StructLww (..), TAtom (..))
 import           RON.Types (Object (..))
 import qualified RON.UUID as UUID
@@ -45,9 +45,9 @@ mkReplicated = fmap fold . traverse fromDecl where
 
 fieldWrapperC :: RonType -> Maybe TH.Name
 fieldWrapperC typ = case typ of
-    TAlias     _            -> Nothing
     TAtom      _            -> Nothing
-    TAtomTuple _            -> Nothing
+    TOpaque    _            -> Nothing
+    TOption    _            -> Nothing
     TORSet     item
         | isObjectType item -> Just 'AsObjectMap
         | otherwise         -> Just 'AsORSet
@@ -57,9 +57,9 @@ fieldWrapperC typ = case typ of
 
 mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
-    TAlias     _            -> view
     TAtom      _            -> view
-    TAtomTuple _            -> view
+    TOpaque    _            -> view
+    TOption    t            -> [t| Maybe |] `appT` mkGuideType t
     TORSet     item
         | isObjectType item -> wrap item ''AsObjectMap
         | otherwise         -> wrap item ''AsORSet
@@ -194,14 +194,15 @@ mkNameT = TH.mkName . Text.unpack
 
 mkViewType :: RonType -> TH.TypeQ
 mkViewType = \case
-    TAlias Alias{aliasAnnotations = AliasAnnotations{..}, ..} ->
-        case aaHaskellType of
-            Nothing     -> mkViewType aliasType
-            Just hsType -> conT $ mkNameT hsType
     TAtom atom -> case atom of
         TAInteger -> conT ''Int64
         TAString  -> conT ''Text
-    TAtomTuple _ -> undefined
+    TOpaque Opaque{..} -> let
+        OpaqueAnnotations{..} = opaqueAnnotations
+        in case oaHaskellType of
+            Just name -> conT $ mkNameT name
+            Nothing   -> fail "Opaque type must define a Haskell type"
+    TOption t -> [t| Maybe |] `appT` mkViewType t
     TORSet item -> wrapList item
     TRga   item -> wrapList item
     TStructLww StructLww{..} -> conT $ mkNameT structName
@@ -217,10 +218,10 @@ clause' pat body = TH.clause pat (TH.normalB body) []
 
 isObjectType :: RonType -> Bool
 isObjectType = \case
-    TAlias     a   -> isObjectType $ aliasType a
-    TAtom      _   -> False
-    TAtomTuple _   -> False
-    TORSet     _   -> True
-    TRga       _   -> True
-    TStructLww _   -> True
-    TVersionVector -> True
+    TAtom      _          -> False
+    TOpaque    Opaque{..} -> opaqueIsObject
+    TOption    t          -> isObjectType t
+    TORSet     _          -> True
+    TRga       _          -> True
+    TStructLww _          -> True
+    TVersionVector        -> True
