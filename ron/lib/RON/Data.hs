@@ -32,7 +32,7 @@ import           GHC.TypeLits (symbolVal)
 
 import           RON.Data.Internal
 import           RON.Data.LWW (LwwPerField)
-import           RON.Data.ORSet (ORSet)
+import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
@@ -44,7 +44,7 @@ reducers :: Map UUID Reducer
 reducers = Map.fromList
     [ mkReducer @LwwPerField
     , mkReducer @RgaRaw
-    , mkReducer @ORSet
+    , mkReducer @ORSetRaw
     , mkReducer @VersionVector
     ]
 

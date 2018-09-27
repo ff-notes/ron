@@ -1,17 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module RON.Data.ORSet
     ( AsORSet (..)
     , AsObjectMap (..)
-    , ORSet
+    , ORSetRaw
     , addNewRef
     , addRef
     , addValue
@@ -44,21 +42,21 @@ itemFromOp itemOriginalOp@Op'{..} = (itemId, item) where
     itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{..}
 
-newtype ORSet = ORSet (Map UUID SetItem)
+newtype ORSetRaw = ORSetRaw (Map UUID SetItem)
     deriving (Eq, Show)
 
-instance Semigroup ORSet where
-    ORSet set1 <> ORSet set2 = ORSet $ Map.unionWith (<>) set1 set2
+instance Semigroup ORSetRaw where
+    ORSetRaw set1 <> ORSetRaw set2 = ORSetRaw $ Map.unionWith (<>) set1 set2
 
-instance Monoid ORSet where
-    mempty = ORSet mempty
+instance Monoid ORSetRaw where
+    mempty = ORSetRaw mempty
 
-instance Reducible ORSet where
-    type OpType ORSet = "set"
+instance Reducible ORSetRaw where
+    type OpType ORSetRaw = "set"
 
-    stateFromChunk = ORSet . Map.fromListWith (<>) . map itemFromOp
+    stateFromChunk = ORSetRaw . Map.fromListWith (<>) . map itemFromOp
 
-    stateToChunk (ORSet set) =
+    stateToChunk (ORSetRaw set) =
         mkStateChunk . sortOn opEvent . map itemOriginalOp $ Map.elems set
 
 setType :: UUID
