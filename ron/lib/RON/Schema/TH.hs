@@ -27,7 +27,7 @@ import           RON.Data (Replicated (..), ReplicatedAsObject (..),
                            getObjectStateChunk, objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (AsORSet (..), AsObjectMap (..))
+import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
 import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Event (Clock)
@@ -48,8 +48,8 @@ fieldWrapperC typ = case typ of
     TOpaque    _            -> Nothing
     TOption    _            -> Nothing
     TORSet     item
-        | isObjectType item -> Just 'AsObjectMap
-        | otherwise         -> Just 'AsORSet
+        | isObjectType item -> Just 'ObjectORSet
+        | otherwise         -> Just 'ORSet
     TRga       _            -> Just 'RGA
     TStructLww _            -> Nothing
     TVersionVector          -> Nothing
@@ -60,8 +60,8 @@ mkGuideType typ = case typ of
     TOpaque    _            -> view
     TOption    t            -> [t| Maybe |] `appT` mkGuideType t
     TORSet     item
-        | isObjectType item -> wrap item ''AsObjectMap
-        | otherwise         -> wrap item ''AsORSet
+        | isObjectType item -> wrap item ''ObjectORSet
+        | otherwise         -> wrap item ''ORSet
     TRga       item         -> wrap item ''RGA
     TStructLww _            -> view
     TVersionVector          -> view

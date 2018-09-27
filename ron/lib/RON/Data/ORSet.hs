@@ -7,8 +7,8 @@
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.ORSet
-    ( AsORSet (..)
-    , AsObjectMap (..)
+    ( ORSet (..)
+    , ObjectORSet (..)
     , ORSetRaw
     , addNewRef
     , addRef
@@ -62,17 +62,17 @@ instance Reducible ORSetRaw where
 setType :: UUID
 setType = fromJust $ UUID.mkName "set"
 
-newtype AsORSet a = AsORSet [a]
+newtype ORSet a = ORSet [a]
 
-newtype AsObjectMap a = AsObjectMap [a]
+newtype ObjectORSet a = ObjectORSet [a]
 
-instance ReplicatedAsPayload a => Replicated (AsORSet a) where
+instance ReplicatedAsPayload a => Replicated (ORSet a) where
     encoding = objectEncoding
 
-instance ReplicatedAsPayload a => ReplicatedAsObject (AsORSet a) where
+instance ReplicatedAsPayload a => ReplicatedAsObject (ORSet a) where
     objectOpType = setType
 
-    newObject (AsORSet items) = collectFrame $ do
+    newObject (ORSet items) = collectFrame $ do
         ops <- for items $ \item -> do
             e <- lift getEventUuid
             pure $ Op' e Zero $ toPayload item
@@ -86,15 +86,15 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (AsORSet a) where
         mItems <- for stateBody $ \Op'{..} -> case opRef of
             Zero -> Just <$> fromPayload opPayload
             _    -> pure Nothing
-        pure . AsORSet $ catMaybes mItems
+        pure . ORSet $ catMaybes mItems
 
-instance ReplicatedAsObject a => Replicated (AsObjectMap a) where
+instance ReplicatedAsObject a => Replicated (ObjectORSet a) where
     encoding = objectEncoding
 
-instance ReplicatedAsObject a => ReplicatedAsObject (AsObjectMap a) where
+instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
     objectOpType = setType
 
-    newObject (AsObjectMap items) = collectFrame $ do
+    newObject (ObjectORSet items) = collectFrame $ do
         ops <- for items $ \item -> do
             e <- lift getEventUuid
             Object{objectId = itemId} <- lift $ newObject item
@@ -111,7 +111,7 @@ instance ReplicatedAsObject a => ReplicatedAsObject (AsObjectMap a) where
                 oid <- fromPayload opPayload
                 Just <$> getObject (Object oid objectFrame)
             _    -> pure Nothing
-        pure . AsObjectMap $ catMaybes mItems
+        pure . ObjectORSet $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 add ::  ( ReplicatedAsObject a
@@ -132,28 +132,28 @@ add item = do
 
 addValue
     :: (ReplicatedAsPayload a, Clock m, MonadError String m)
-    => a -> StateT (Object (AsORSet a)) m ()
+    => a -> StateT (Object (ORSet a)) m ()
 addValue = add
 
 addRef
     :: (ReplicatedAsObject a, Clock m, MonadError String m)
-    => Object a -> StateT (Object (AsObjectMap a)) m ()
+    => Object a -> StateT (Object (ObjectORSet a)) m ()
 addRef = add . objectId
 
 addNewRef
     :: forall a m
     . (ReplicatedAsObject a, Clock m, MonadError String m)
-    => a -> StateT (Object (AsObjectMap a)) m ()
+    => a -> StateT (Object (ObjectORSet a)) m ()
 addNewRef item = do
     itemObj@(Object _ itemFrame) <- lift $ newObject item
     modify $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
     addRef itemObj
 
-removeBy :: ([Atom] -> Bool) -> StateT (Object (AsORSet a)) m ()
+removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSet a)) m ()
 removeBy = undefined
 
-removeValue :: ReplicatedAsPayload a => a -> StateT (Object (AsORSet a)) m ()
+removeValue :: ReplicatedAsPayload a => a -> StateT (Object (ORSet a)) m ()
 removeValue = removeBy . eqPayload
 
-removeRef :: Object a -> StateT (Object (AsORSet a)) m ()
+removeRef :: Object a -> StateT (Object (ORSet a)) m ()
 removeRef = removeBy . eqRef
