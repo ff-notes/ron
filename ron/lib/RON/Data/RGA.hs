@@ -11,7 +11,7 @@
 
 module RON.Data.RGA
     ( AsRga (..)
-    , RGA (..)
+    , RgaRaw (..)
     , edit
     ) where
 
@@ -98,7 +98,7 @@ vertexListFromList = foldr go mempty where
 vertexListFromOps :: [Op'] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
 
-newtype RGA = RGA (Maybe VertexList)
+newtype RgaRaw = RgaRaw (Maybe VertexList)
     deriving (Eq, Semigroup, Show)
 
 data PatchSet = PatchSet
@@ -151,12 +151,12 @@ patchSetFromChunk RChunk'{rchunk'Ref, rchunk'Body} =
                 Just patch -> mempty{psPatches = Map.singleton rchunk'Ref patch}
                 Nothing -> mempty
 
-instance Reducible RGA where
-    type OpType RGA = "rga"
+instance Reducible RgaRaw where
+    type OpType RgaRaw = "rga"
 
-    stateFromChunk = RGA . vertexListFromOps
+    stateFromChunk = RgaRaw . vertexListFromOps
 
-    stateToChunk (RGA rga) = StateChunk (chunkVersion ops) ops where
+    stateToChunk (RgaRaw rga) = StateChunk (chunkVersion ops) ops where
         ops = vertexListToOps rga
 
     applyPatches rga (patches, ops) =
@@ -188,7 +188,7 @@ reapplyPatchSet :: PatchSet -> PatchSet
 reapplyPatchSet ps =
     continue ps [reapplyPatchesToOtherPatches, reapplyRemovalsToPatches]
 
-reapplyPatchSetToState :: RGA -> PatchSet -> (RGA, PatchSet)
+reapplyPatchSetToState :: RgaRaw -> PatchSet -> (RgaRaw, PatchSet)
 reapplyPatchSetToState rga ps =
     continue (rga, ps) [reapplyPatchesToState, reapplyRemovalsToState]
 
@@ -197,13 +197,13 @@ continue x fs = case asum $ map ($ x) fs of
     Nothing -> x
     Just x' -> continue x' fs
 
-reapplyPatchesToState :: (RGA, PatchSet) -> Maybe (RGA, PatchSet)
-reapplyPatchesToState (RGA state, ps@PatchSet{..}) = case state of
+reapplyPatchesToState :: (RgaRaw, PatchSet) -> Maybe (RgaRaw, PatchSet)
+reapplyPatchesToState (RgaRaw state, ps@PatchSet{..}) = case state of
     Just VertexList{listHead = targetHead, listItems = targetItems} -> asum
         [ do
             targetItems' <- applyPatch parent patch targetItems
             pure
-                ( RGA . Just $ VertexList targetHead targetItems'
+                ( RgaRaw . Just $ VertexList targetHead targetItems'
                 , ps{psPatches = Map.delete parent psPatches}
                 )
         | (parent, patch) <- Map.assocs psPatches
@@ -212,7 +212,7 @@ reapplyPatchesToState (RGA state, ps@PatchSet{..}) = case state of
         -- state is empty => only virtual 0 node exists
         -- => we can apply only 0 patch
         patch <- Map.lookup Zero psPatches
-        pure (RGA $ Just patch, ps{psPatches = Map.delete Zero psPatches})
+        pure (RgaRaw $ Just patch, ps{psPatches = Map.delete Zero psPatches})
 
 reapplyPatchesToOtherPatches :: PatchSet -> Maybe PatchSet
 reapplyPatchesToOtherPatches ps@PatchSet{..} = asum
@@ -244,14 +244,14 @@ applyPatch parent patch targetItems = case parent of
         let item' = item{itemNext = Just next'}
         pure $ HashMap.insert parent item' targetItems <> newItems
 
-reapplyRemovalsToState :: (RGA, PatchSet) -> Maybe (RGA, PatchSet)
-reapplyRemovalsToState (RGA state, ps@PatchSet{..}) = do
+reapplyRemovalsToState :: (RgaRaw, PatchSet) -> Maybe (RgaRaw, PatchSet)
+reapplyRemovalsToState (RgaRaw state, ps@PatchSet{..}) = do
     VertexList{listHead = targetHead, listItems = targetItems} <- state
     asum
         [ do
             targetItems' <- applyRemoval parent tombstone targetItems
             pure
-                ( RGA . Just $ VertexList targetHead targetItems'
+                ( RgaRaw . Just $ VertexList targetHead targetItems'
                 , ps{psRemovals = Map.delete parent psRemovals}
                 )
         | (parent, tombstone) <- Map.assocs psRemovals
