@@ -1,5 +1,4 @@
 {-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
