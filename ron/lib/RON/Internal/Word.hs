@@ -18,7 +18,7 @@ module RON.Internal.Word
     , pattern B0000
     , leastSignificant4
     -- * Word6
-    , Word6
+    , Word6 (..)
     , leastSignificant6
     , ls6
     -- * Word8

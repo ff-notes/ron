@@ -6,13 +6,16 @@
 module RON.Base64
     ( decode
     , decode60
+    , decode60base32
     , decode64
+    , decode64base32
     , decodeLetter
     , decodeLetter4
     , encode
     , encode60
     , encode60short
     , encode64
+    , encode64base32short
     , encodeLetter
     , encodeLetter4
     , isLetter
@@ -25,9 +28,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Char (isAlphaNum, ord)
 
-import           RON.Internal.Word (Word4, Word6, Word60, leastSignificant4,
-                                    leastSignificant6, leastSignificant60,
-                                    safeCast)
+import           RON.Internal.Word (Word4, Word6 (W6), Word60,
+                                    leastSignificant4, leastSignificant6,
+                                    leastSignificant60, safeCast)
 
 alphabet :: ByteString
 alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
@@ -117,15 +120,48 @@ decode60 =
         (safeCast c `shiftL` 42) .|.
         (safeCast d `shiftL` 36)
 
+decode60base32 :: ByteString -> Maybe Word60
+decode60base32 =
+    fmap leastSignificant60 . go12
+    <=< traverse (fmap safeCast . decodeLetter) . BS.unpack
+  where
+    go12 :: [Word8] -> Maybe Word64
+    go12 letters = do
+        let (letters8, letters4) = splitAt 8 letters
+            w8 = decodeBase32 8 letters8
+        w4 <- go4 letters4
+        pure $ (w8 `shiftL` 20) .|. w4
+    go4 :: [Word8] -> Maybe Word64
+    go4 letters = case splitAt 4 letters of
+        (letters4, []) -> pure $ decodeBase32 4 letters4
+        _ -> Nothing  -- extra input
+    decodeBase32 :: Int -> [Word8] -> Word64
+    decodeBase32 len
+        = foldl' (\acc b -> (acc `shiftL` 5) .|. safeCast b) 0
+        . take len
+        . (++ repeat 0)
+
 decode64 :: ByteString -> Maybe Word64
 decode64 s = do
     (s0, s1) <- BS.uncons s
-    v <- decodeLetter4 s0
-    w <- decode60 s1
-    pure $ cons v w
-  where
-    cons :: Word4 -> Word60 -> Word64
-    cons v w = (safeCast v `shiftL` 60) .|. safeCast w
+    cons64 <$> decodeLetter4 s0 <*> decode60 s1
+
+{-
+    796640 -> 000000000O9V ?
+    24,9,31,0
+    O9V0
+    000000000O9V0
+    000000000O9V
+    0 00000000O9V
+-}
+
+decode64base32 :: ByteString -> Maybe Word64
+decode64base32 s = do
+    (s0, s1) <- BS.uncons s
+    cons64 <$> decodeLetter4 s0 <*> decode60base32 s1
+
+cons64 :: Word4 -> Word60 -> Word64
+cons64 v w = (safeCast v `shiftL` 60) .|. safeCast w
 
 encode :: ByteStringL -> ByteStringL
 encode = BSL.pack . go . BSL.unpack
@@ -173,6 +209,18 @@ encode60short v = case safeCast v :: Word64 of
     go i w =
         (w `shiftR` (6 * i)) .&. 0b111111 :
         go (i - 1) (w .&. complement (0b111111 `shiftL` (6 * i)))
+
+encode64base32short :: Word64 -> ByteString
+encode64base32short = \case
+    0 -> "0"
+    x -> BS.pack . map (encodeLetter . leastSignificant5) $ go 12 x
+  where
+    go _ 0 = []
+    go i w =
+        (w `shiftR` (5 * i)) .&. 0b11111 :
+        go (i - 1) (w .&. complement (0b11111 `shiftL` (5 * i)))
+
+    leastSignificant5 w = W6 $ fromIntegral w .&. 0b11111
 
 encode64 :: Word64 -> ByteString
 encode64 w =

@@ -15,11 +15,12 @@ import           RON.Internal.Prelude
 
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import           Data.Char (toLower, toUpper)
 import           Data.Foldable (for_)
 import           Data.Maybe (fromJust)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
-import           Hedgehog (Gen, MonadTest, Property, annotate, annotateShow,
-                           forAll, property, (===))
+import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
+                           annotateShow, forAll, property, (===))
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -100,12 +101,12 @@ prop_binary_roundtrip_frame =
     binaryRoundtrip (Gen.frame 10) RB.serialize RB.parse
 
 textRoundtrip
-    :: (Eq a, Show a)
+    :: (Eq a, Show a, Monad m)
     => Gen a
     -> (a -> ByteStringL)
     -> (ByteStringL -> Either String a)
-    -> Property
-textRoundtrip gen serialize parse = property $ do
+    -> PropertyT m ()
+textRoundtrip gen serialize parse = do
     x <- forAll gen
     let bytes = serialize x
     annotate $ BSL.unpack bytes
@@ -114,28 +115,47 @@ textRoundtrip gen serialize parse = property $ do
     x === x'
 
 prop_text_roundtrip_uuid =
-    textRoundtrip Gen.uuid RT.serializeUuid RT.parseUuid
+    property $ textRoundtrip Gen.uuid RT.serializeUuid RT.parseUuid
 
-prop_text_roundtrip_string =
+prop_text_roundtrip_string = property $
     textRoundtrip
         (Gen.text (Range.exponential 0 10000) Gen.unicode)
         RT.serializeString
         RT.parseString
 
 prop_text_roundtrip_atom =
-    textRoundtrip (Gen.atom 10000) RT.serializeAtom RT.parseAtom
+    property $ textRoundtrip (Gen.atom 10000) RT.serializeAtom RT.parseAtom
 
 prop_text_roundtrip_op =
     -- TODO increase limits
-    textRoundtrip (Gen.op 100) RT.serializeOp RT.parseOp
+    property $ textRoundtrip (Gen.op 100) RT.serializeOp RT.parseOp
 
 prop_text_roundtrip_frame =
     -- TODO increase limits
-    textRoundtrip (Gen.frame 10) RT.serializeFrame RT.parseFrame
+    property $ textRoundtrip (Gen.frame 10) RT.serializeFrame RT.parseFrame
 
 prop_text_roundtrip_frames =
     -- TODO increase limits
-    textRoundtrip (Gen.frames 10) RT.serializeFrames RT.parseFrames
+    property $ textRoundtrip (Gen.frames 10) RT.serializeFrames RT.parseFrames
+
+prop_filename_roundtrip = property $ do
+    ShowAs caseTransform _ <- forAll $ Gen.element
+        [ id          `ShowAs` "id"
+        , map toUpper `ShowAs` "map toUpper"
+        , map toLower `ShowAs` "map toLower"
+        ]
+    textRoundtrip
+        Gen.uuid
+        (BSL.pack . caseTransform . UUID.encodeBase32)
+        (maybe (Left "Filename decoding error") Right .
+            UUID.decodeBase32 . BSL.unpack)
+
+prop_word64base32_roundtrip = property $
+    textRoundtrip
+        Gen.word64'
+        (fromStrict . Base64.encode64base32short)
+        (maybe (Left "Decoding error") Right .
+            Base64.decode64base32 . BSL.toStrict)
 
 prop_base64_roundtrip = property $ do
     bytes <- forAll $ fromStrict <$> Gen.bytes (Range.exponential 0 1000)
@@ -143,7 +163,7 @@ prop_base64_roundtrip = property $ do
     let bytes' = Base64.decode text
     Just bytes === bytes'
 
-prop_base64x60_roundtrip = property $ do
+prop_word60base64_roundtrip = property $ do
     w <- forAll Gen.word60
     Base64.decode60 (Base64.encode60 w) === Just w
 
@@ -222,3 +242,8 @@ prop_ron_json_example = let
 lwwType = fromJust $ UUID.mkName "lww"
 
 prop_lwwStruct = LwwStruct.prop_lwwStruct
+
+data ShowAs a = ShowAs a String
+
+instance Show (ShowAs a) where
+    show (ShowAs _ s) = s

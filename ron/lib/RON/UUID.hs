@@ -23,6 +23,9 @@ module RON.UUID
     , getName
     , mkName
     , mkScopedName
+    -- * Base32 encoding, suitable for file names
+    , decodeBase32
+    , encodeBase32
     ) where
 
 import           RON.Internal.Prelude
@@ -30,7 +33,7 @@ import           RON.Internal.Prelude
 import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
-import           Data.Char (chr)
+import           Data.Char (chr, toUpper)
 import           Data.Data (Data)
 import           Data.Hashable (Hashable)
 import           GHC.Generics (Generic)
@@ -153,3 +156,16 @@ succValue :: UUID -> UUID
 succValue = build . go . split where
     go u@UuidFields{uuidValue} = u
         {uuidValue = if uuidValue < maxBound then succ uuidValue else uuidValue}
+
+encodeBase32 :: UUID -> FilePath
+encodeBase32 (UUID x y) =
+    BSC.unpack $
+    Base64.encode64base32short x <> "-" <> Base64.encode64base32short y
+
+decodeBase32 :: FilePath -> Maybe UUID
+decodeBase32 fp = do
+    let (x, dashy) = span (/= '-') $ map toUpper fp
+    ("-", y) <- pure $ splitAt 1 dashy
+    UUID
+        <$> Base64.decode64base32 (BSC.pack x)
+        <*> Base64.decode64base32 (BSC.pack y)
