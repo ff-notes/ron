@@ -29,7 +29,7 @@ import           RON.Data (Replicated (..), ReplicatedAsObject (..),
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (AsORSet (..), AsObjectMap (..))
-import           RON.Data.RGA (AsRga (..))
+import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Event (Clock)
 import           RON.Schema (Declaration (..), Field (..), Opaque (..),
@@ -51,7 +51,7 @@ fieldWrapperC typ = case typ of
     TORSet     item
         | isObjectType item -> Just 'AsObjectMap
         | otherwise         -> Just 'AsORSet
-    TRga       _            -> Just 'AsRga
+    TRga       _            -> Just 'RGA
     TStructLww _            -> Nothing
     TVersionVector          -> Nothing
 
@@ -63,7 +63,7 @@ mkGuideType typ = case typ of
     TORSet     item
         | isObjectType item -> wrap item ''AsObjectMap
         | otherwise         -> wrap item ''AsORSet
-    TRga       item         -> wrap item ''AsRga
+    TRga       item         -> wrap item ''RGA
     TStructLww _            -> view
     TVersionVector          -> view
   where

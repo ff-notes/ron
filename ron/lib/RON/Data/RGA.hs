@@ -10,7 +10,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module RON.Data.RGA
-    ( AsRga (..)
+    ( RGA (..)
     , RgaRaw (..)
     , edit
     ) where
@@ -310,15 +310,15 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
 rgaType :: UUID
 rgaType = fromJust $ UUID.mkName "rga"
 
-newtype AsRga a = AsRga [a]
+newtype RGA a = RGA [a]
     deriving (Eq)
 
-instance Replicated a => Replicated (AsRga a) where encoding = objectEncoding
+instance Replicated a => Replicated (RGA a) where encoding = objectEncoding
 
-instance Replicated a => ReplicatedAsObject (AsRga a) where
+instance Replicated a => ReplicatedAsObject (RGA a) where
     objectOpType = rgaType
 
-    newObject (AsRga items) = collectFrame $ do
+    newObject (RGA items) = collectFrame $ do
         ops <- for items $ \item -> do
             vertexId <- lift getEventUuid
             payload <- newRon item
@@ -333,11 +333,11 @@ instance Replicated a => ReplicatedAsObject (AsRga a) where
         mItems <- for stateBody $ \Op'{..} -> case opRef of
             Zero -> Just <$> fromRon opPayload objectFrame
             _    -> pure Nothing
-        pure . AsRga $ catMaybes mItems
+        pure . RGA $ catMaybes mItems
 
 edit
     ::  ( Replicated a, ReplicatedAsPayload a
-        , Clock m, MonadError String m, MonadState (Object (AsRga a)) m
+        , Clock m, MonadError String m, MonadState (Object (RGA a)) m
         )
     => [a] -> m ()
 edit newItems = do
