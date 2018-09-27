@@ -1,11 +1,9 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.LWW
     ( LwwPerField (..)
@@ -43,7 +41,7 @@ instance Semigroup LwwPerField where
         LwwPerField $ Map.unionWith lww fields1 fields2
 
 instance Reducible LwwPerField where
-    type OpType LwwPerField = "lww"
+    reducibleOpType = lwwType
 
     stateFromChunk ops =
         LwwPerField $ Map.fromListWith lww [(opRef op, op) | op <- ops]

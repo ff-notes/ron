@@ -1,14 +1,11 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.Internal where
 
@@ -30,9 +27,8 @@ type Reducer = UUID -> NonEmpty Chunk -> [Chunk]
 type Unapplied = ([RChunk'], [Op'])
 
 -- TODO(2018-08-24, cblp) Semilattice a
-class (Eq a, Semigroup a, KnownSymbol (OpType a)) => Reducible a where
-
-    type OpType a :: Symbol
+class (Eq a, Semigroup a) => Reducible a where
+    reducibleOpType :: UUID
 
     stateFromChunk :: [Op'] -> a
 

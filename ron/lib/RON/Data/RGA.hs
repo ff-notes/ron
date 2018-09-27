@@ -1,4 +1,3 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -6,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.RGA
     ( RGA (..)
@@ -151,7 +149,7 @@ patchSetFromChunk RChunk'{rchunk'Ref, rchunk'Body} =
                 Nothing -> mempty
 
 instance Reducible RgaRaw where
-    type OpType RgaRaw = "rga"
+    reducibleOpType = rgaType
 
     stateFromChunk = RgaRaw . vertexListFromOps
 

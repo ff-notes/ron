@@ -1,7 +1,5 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.VersionVector
     ( VersionVector (..)
@@ -41,7 +39,7 @@ instance Monoid VersionVector where
     mempty = VersionVector mempty
 
 instance Reducible VersionVector where
-    type OpType VersionVector = "vv"
+    reducibleOpType = vvType
 
     stateFromChunk ops =
         VersionVector $ Map.fromListWith latter [(opOrigin op, op) | op <- ops]

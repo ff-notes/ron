@@ -17,18 +17,15 @@ module RON.Data
     , objectEncoding
     , payloadEncoding
     , reduce
-    , typeName
     ) where
 
 import           RON.Internal.Prelude
 
-import qualified Data.ByteString.Char8 as BSC
 import           Data.Foldable (fold)
 import           Data.List (partition)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map, (!?))
 import qualified Data.Map.Strict as Map
-import           GHC.TypeLits (symbolVal)
 
 import           RON.Data.Internal
 import           RON.Data.LWW (LwwPerField)
@@ -73,12 +70,8 @@ isQuery = \case
     Query _ -> True
     _       -> False
 
-typeName :: forall a . Reducible a => UUID
-typeName =
-    fromJust . UUID.mkName . BSC.pack $ symbolVal (Proxy :: Proxy (OpType a))
-
 mkReducer :: forall a . Reducible a => (UUID, Reducer)
-mkReducer = (typeName @a, reducer @a)
+mkReducer = (reducibleOpType @a, reducer @a)
 
 reducer :: forall a . Reducible a => Reducer
 reducer obj chunks = chunks' ++ leftovers where
@@ -108,7 +101,7 @@ reducer obj chunks = chunks' ++ leftovers where
             in  ( Just $ Value $ wrapRChunk rc
                 , reduceUnappliedPatches @a unapplied'
                 )
-    typ = typeName @a
+    typ = reducibleOpType @a
     wrapOp = Op typ obj
     (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op'], leftovers :: [Chunk])
         = foldMap load chunks

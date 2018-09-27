@@ -1,10 +1,8 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.ORSet
     ( ORSet (..)
@@ -52,7 +50,7 @@ instance Monoid ORSetRaw where
     mempty = ORSetRaw mempty
 
 instance Reducible ORSetRaw where
-    type OpType ORSetRaw = "set"
+    reducibleOpType = setType
 
     stateFromChunk = ORSetRaw . Map.fromListWith (<>) . map itemFromOp
 
