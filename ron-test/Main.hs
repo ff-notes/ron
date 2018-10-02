@@ -13,7 +13,7 @@ import           Data.Foldable (for_)
 import           Data.Maybe (fromJust)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
-                           annotateShow, forAll, property, (===))
+                           annotateShow, forAll, property, tripping, (===))
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -94,18 +94,11 @@ prop_binary_roundtrip_atom =
 --     binaryRoundtrip (Gen.frame 10) RB.serialize RB.parse
 
 textRoundtrip
-    :: (Eq a, Show a, Monad m)
-    => Gen a
-    -> (a -> ByteStringL)
-    -> (ByteStringL -> Either String a)
-    -> PropertyT m ()
+    :: (Show a, Show b, Applicative f, Eq (f a), Show (f a), Monad m)
+    => Gen a -> (a -> b) -> (b -> f a) -> PropertyT m ()
 textRoundtrip gen serialize parse = do
     x <- forAll gen
-    let bytes = serialize x
-    annotate $ BSL.unpack bytes
-    annotateShow bytes
-    x' <- evalEitherS $ parse bytes
-    x === x'
+    tripping x serialize parse
 
 prop_text_roundtrip_uuid =
     property $ textRoundtrip Gen.uuid RT.serializeUuid RT.parseUuid
@@ -140,14 +133,14 @@ prop_filename_roundtrip = property $ do
     textRoundtrip
         Gen.uuid
         (BSL.pack . caseTransform . UUID.encodeBase32)
-        (maybe (Left "Filename decoding error") Right .
+        (maybe (Left ("Filename decoding error" :: String)) Right .
             UUID.decodeBase32 . BSL.unpack)
 
 prop_word64base32_roundtrip = property $
     textRoundtrip
         Gen.word64'
         (fromStrict . Base64.encode64base32short)
-        (maybe (Left "Decoding error") Right .
+        (maybe (Left ("Decoding error" :: String)) Right .
             Base64.decode64base32 . BSL.toStrict)
 
 prop_base64_roundtrip = property $ do
