@@ -12,7 +12,7 @@ module RON.Types
     , Frame'
     , Object (..)
     , ObjectId
-    , Op' (..)
+    , Op (..)
     , OpTerm (..)
     , RawOp (..)
     , RChunk (..)
@@ -37,11 +37,11 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
 data RawOp = RawOp
     { opType   :: UUID
     , opObject :: UUID
-    , op'      :: Op'
+    , op       :: Op
     }
     deriving (Data, Eq, Generic, NFData)
 
-data Op' = Op'
+data Op = Op
     { opEvent   :: UUID
     , opRef     :: UUID
     , opPayload :: [Atom]
@@ -49,7 +49,7 @@ data Op' = Op'
     deriving (Data, Eq, Generic, Hashable, NFData, Show)
 
 instance Show RawOp where
-    show RawOp{opType, opObject, op' = Op'{opEvent, opRef, opPayload}} =
+    show RawOp{opType, opObject, op = Op{opEvent, opRef, opPayload}} =
         unwords
             [ "RawOp"
             , insert '*' $ show opType
@@ -88,7 +88,7 @@ type ObjectId = (UUID, UUID)
 
 data StateChunk = StateChunk
     { stateVersion :: UUID
-    , stateBody    :: [Op']
+    , stateBody    :: [Op]
     }
     deriving (Eq, Show)
 

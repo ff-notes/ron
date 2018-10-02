@@ -27,7 +27,7 @@ import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            Chunk (Query, Raw, Value), Frame, Op (..),
                             RChunk (..), RawOp (..))
 import           RON.UUID (UUID, zero)
 
@@ -63,7 +63,7 @@ serializeOp op = evalState (serializeOpZip op) opZero
 
 serializeOpZip :: RawOp -> State RawOp ByteStringL
 serializeOpZip this = state $ \prev -> let
-    prev' = op' prev
+    prev' = op prev
     typ = serializeUuidKey (opType   prev)  zero             (opType   this)
     obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
     evt = serializeUuidKey (opEvent  prev') (opObject this)  (opEvent  this')
@@ -79,7 +79,7 @@ serializeOpZip this = state $ \prev -> let
     , this
     )
   where
-    this' = op' this
+    this' = op this
     key c u = [BSLC.cons c u | not $ BSL.null u]
 
 serializeAtom :: Atom -> ByteStringL

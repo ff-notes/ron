@@ -12,21 +12,21 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
-import           RON.Types (Op' (..), StateChunk (..), UUID (UUID))
+import           RON.Types (Op (..), StateChunk (..), UUID (UUID))
 import qualified RON.UUID as UUID
 
 type Origin = Word64
 
-opTime :: Op' -> Word64
-opTime Op'{opEvent = UUID time _} = time
+opTime :: Op -> Word64
+opTime Op{opEvent = UUID time _} = time
 
-opOrigin :: Op' -> Word64
-opOrigin Op'{opEvent = UUID _ origin} = origin
+opOrigin :: Op -> Word64
+opOrigin Op{opEvent = UUID _ origin} = origin
 
-latter :: Op' -> Op' -> Op'
+latter :: Op -> Op -> Op
 latter = maxOn opTime
 
-newtype VersionVector = VersionVector (Map Origin Op')
+newtype VersionVector = VersionVector (Map Origin Op)
     deriving (Eq, Show)
 
 instance Hashable VersionVector where

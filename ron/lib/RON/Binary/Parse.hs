@@ -25,7 +25,7 @@ import           Data.ZigZag (zzDecode64)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            Chunk (Query, Raw, Value), Frame, Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
                             RChunk (..), RawOp (..), UUID (UUID))
 
@@ -123,7 +123,7 @@ parseOp = label "RawOp" $ do
     opEvent   <- parseOpKey DUuidEvent
     opRef     <- parseOpKey DUuidRef
     opPayload <- parsePayload
-    pure RawOp{op' = Op'{..}, ..}
+    pure RawOp{op = Op{..}, ..}
 
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do

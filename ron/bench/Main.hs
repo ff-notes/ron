@@ -9,7 +9,7 @@ import           Criterion.Main (defaultConfig, defaultMainWith)
 import           Criterion.Types (timeLimit)
 
 import           RON.Text (parseFrames, serializeFrames)
-import           RON.Types (Chunk (Raw), Op' (..), RawOp (..))
+import           RON.Types (Chunk (Raw), Op (..), RawOp (..))
 import qualified RON.UUID as UUID
 
 main :: IO ()
@@ -19,9 +19,9 @@ main = do
         defaultConfig{timeLimit = 1}
         [bench (show n) $ nf parseFrames batch | (n, batch) <- serialized]
   where
-    op = RawOp{opType = UUID.zero, opObject = UUID.zero, op'}
-    op' = Op'{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
-    frame n = replicate n $ Raw op
+    rawop = RawOp{opType = UUID.zero, opObject = UUID.zero, op}
+    op = Op{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
+    frame n = replicate n $ Raw rawop
 
     serialized =
         [ (n :: Int, serializeFrames $ replicate 100 $ frame n)

@@ -25,15 +25,15 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
-import           RON.Types (Atom (AUuid), Frame', Object (..), Op' (..),
+import           RON.Types (Atom (AUuid), Frame', Object (..), Op (..),
                             StateChunk (..), UUID)
 import qualified RON.UUID as UUID
 
-lww :: Op' -> Op' -> Op'
+lww :: Op -> Op -> Op
 lww = maxOn opEvent
 
 -- | Key is 'opRef', value is the original op
-newtype LwwPerField = LwwPerField (Map UUID Op')
+newtype LwwPerField = LwwPerField (Map UUID Op)
     deriving (Eq, Monoid, Show)
 
 instance Semigroup LwwPerField where
@@ -56,14 +56,14 @@ newFrame fields = collectFrame $ do
     payloads <- for fields $ \(_, I value) -> newRon value
     e <- lift getEventUuid
     tell $ Map.singleton (lwwType, e) $ StateChunk e
-        [Op' e name p | ((name, _), p) <- zip fields payloads]
+        [Op e name p | ((name, _), p) <- zip fields payloads]
     pure e
 
 getField :: Replicated a => UUID -> StateChunk -> Frame' -> Either String a
 getField field StateChunk{..} frame =
     fmapL (("LWW.getField " <> show field <> ":\n") <>) $ do
         let ops = filter ((field ==) . opRef) stateBody
-        Op'{..} <- case ops of
+        Op{..} <- case ops of
             []   -> Left $ unwords ["no field", show field, "in lww chunk"]
             [op] -> pure op
             _    -> Left "unreduced state"
@@ -82,7 +82,7 @@ writeField field (I value) = do
     let chunk = filter ((field /=) . opRef) stateBody
     e <- getEventUuid
     (p, frame') <- runWriterT $ newRon value
-    let newOp = Op' e field p
+    let newOp = Op e field p
     let chunk' = sortOn opRef $ newOp : chunk
     let state' = StateChunk e chunk'
     put Object
@@ -98,7 +98,7 @@ withField field innerModifier = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     let ops = filter ((field ==) . opRef) stateBody
-    Op'{..} <- case ops of
+    Op{..} <- case ops of
         []   -> throwError $ unwords ["no field", show field, "in lww chunk"]
         [op] -> pure op
         _    -> throwError "unreduced state"

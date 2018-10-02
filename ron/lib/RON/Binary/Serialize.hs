@@ -20,7 +20,7 @@ import           Data.ZigZag (zzEncode)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            Chunk (Query, Raw, Value), Frame, Op (..),
                             RChunk (..), RawOp (..), UUID (UUID))
 
 serialize :: Frame -> Either String ByteStringL
@@ -62,7 +62,7 @@ serializeOp desc RawOp{..} = do
     payload <- traverse serializeAtom opPayload
     serializeWithDesc desc $ mconcat $ keys ++ payload
   where
-    Op'{..} = op'
+    Op{..} = op
     serializeUuidType   = serializeWithDesc DUuidType   . serializeUuid
     serializeUuidObject = serializeWithDesc DUuidObject . serializeUuid
     serializeUuidEvent  = serializeWithDesc DUuidEvent  . serializeUuid

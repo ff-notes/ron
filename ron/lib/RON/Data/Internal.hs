@@ -16,7 +16,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           RON.Event (Clock)
-import           RON.Types (Atom (..), Chunk, Frame', Object (..), Op' (..),
+import           RON.Types (Atom (..), Chunk, Frame', Object (..), Op (..),
                             StateChunk (..), UUID)
 import           RON.UUID (zero)
 
@@ -24,13 +24,13 @@ import           RON.UUID (zero)
 type Reducer = UUID -> NonEmpty Chunk -> [Chunk]
 
 -- | Unapplied patches and ops
-type Unapplied = ([RChunk'], [Op'])
+type Unapplied = ([RChunk'], [Op])
 
 -- TODO(2018-08-24, cblp) Semilattice a
 class (Eq a, Semigroup a) => Reducible a where
     reducibleOpType :: UUID
 
-    stateFromChunk :: [Op'] -> a
+    stateFromChunk :: [Op] -> a
 
     stateToChunk :: a -> StateChunk
 
@@ -54,21 +54,21 @@ class (Eq a, Semigroup a) => Reducible a where
 data RChunk' = RChunk'
     { rchunk'Version :: UUID
     , rchunk'Ref     :: UUID
-    , rchunk'Body    :: [Op']
+    , rchunk'Body    :: [Op]
     }
     deriving (Show)
 
-mkChunkVersion :: [Op'] -> UUID
+mkChunkVersion :: [Op] -> UUID
 mkChunkVersion = maximumDef zero . map opEvent
 
-mkRChunk' :: UUID -> [Op'] -> RChunk'
+mkRChunk' :: UUID -> [Op] -> RChunk'
 mkRChunk' ref rchunk'Body = RChunk'
     { rchunk'Version = mkChunkVersion rchunk'Body
     , rchunk'Ref = ref
     , ..
     }
 
-mkStateChunk :: [Op'] -> StateChunk
+mkStateChunk :: [Op] -> StateChunk
 mkStateChunk ops = StateChunk (mkChunkVersion ops) ops
 
 data Patch a = Patch{patchRef :: UUID, patchValue :: a}
@@ -76,8 +76,8 @@ data Patch a = Patch{patchRef :: UUID, patchValue :: a}
 instance Semigroup a => Semigroup (Patch a) where
     Patch ref1 a1 <> Patch ref2 a2 = Patch (min ref1 ref2) (a1 <> a2)
 
-patchFromRawOp :: Reducible a => Op' -> Patch a
-patchFromRawOp op@Op'{..} = Patch
+patchFromRawOp :: Reducible a => Op -> Patch a
+patchFromRawOp op@Op{..} = Patch
     { patchRef = opEvent
     , patchValue = stateFromChunk [op]
     }

@@ -32,7 +32,7 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Chunk (Query, Raw, Value), Frame, Op' (..),
+import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..),
                             RChunk (..), RawOp (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
@@ -103,24 +103,24 @@ reducer obj chunks = chunks' ++ leftovers where
                 )
     typ = reducibleOpType @a
     wrapOp = RawOp typ obj
-    (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op'], leftovers :: [Chunk])
+    (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op], leftovers :: [Chunk])
         = foldMap load chunks
     load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of
-        Raw op@RawOp{op'} -> do
-            guardSameObject op
-            pure ([], [], [op'], [])
+        Raw rawop@RawOp{op} -> do
+            guardSameObject rawop
+            pure ([], [], [op], [])
         Value RChunk{rchunkHeader, rchunkBody} -> do
             guardSameObject rchunkHeader
-            body <- for rchunkBody $ \op -> do
-                guardSameObject op
-                pure $ op' op
-            let ref = opRef $ op' rchunkHeader
+            body <- for rchunkBody $ \rawop -> do
+                guardSameObject rawop
+                pure $ op rawop
+            let ref = opRef $ op rchunkHeader
             case ref of
                 Zero ->  -- state
                     -- let state = fromChunk @a ref body
                     pure
-                        ( [(opEvent $ op' rchunkHeader, stateFromChunk body)]
+                        ( [(opEvent $ op rchunkHeader, stateFromChunk body)]
                         , []
                         , []
                         , []
@@ -129,7 +129,7 @@ reducer obj chunks = chunks' ++ leftovers where
                     pure
                         ( []
                         ,   [ RChunk'
-                                { rchunk'Version = opEvent $ op' rchunkHeader
+                                { rchunk'Version = opEvent $ op rchunkHeader
                                 , rchunk'Ref = ref
                                 , rchunk'Body = body
                                 }
@@ -142,6 +142,6 @@ reducer obj chunks = chunks' ++ leftovers where
         guard $ opType == typ && opObject == obj
     wrapRChunk RChunk'{..} = RChunk
         { rchunkHeader = wrapOp
-            Op'{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
+            Op{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
         , rchunkBody = map wrapOp rchunk'Body
         }

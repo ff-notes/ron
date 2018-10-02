@@ -23,7 +23,7 @@ import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op' (..),
+import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
                             RChunk (..), RawOp (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
 
@@ -41,8 +41,8 @@ parseObject oid bytes = Object oid <$> parseFrame' bytes
 serializeFrame' :: Frame' -> ByteStringL
 serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value RChunk{..} where
-        rchunkHeader = RawOp{op' = Op'{opRef = zero, opPayload = [], ..}, ..}
-        rchunkBody = [RawOp{..} | op' <- stateBody]
+        rchunkHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
+        rchunkBody = [RawOp{..} | op <- stateBody]
         opEvent = stateVersion
 
 serializeObject :: Object a -> (UUID, ByteStringL)
@@ -53,7 +53,7 @@ findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value RChunk{..} -> do
             let RawOp{..} = rchunkHeader
-            let Op'{..} = op'
+            let Op{..} = op
             let stateVersion = opEvent
             stateBody <- for rchunkBody $ loadOp opType opObject
             pure ((opType, opObject), StateChunk{..})
@@ -63,7 +63,7 @@ findObjects = fmap Map.fromList . traverse loadBody where
             Left "reduced op type does not match chunk type"
         when (opObject /= chunkObject) $
             Left "reduced op object id does not match chunk object id"
-        pure op'
+        pure op
 
 --------------------------------------------------------------------------------
 

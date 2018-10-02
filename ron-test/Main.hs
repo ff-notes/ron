@@ -33,7 +33,7 @@ import           RON.Event (CalendarEvent (..), Naming (TrieForked),
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (Atom (..), Chunk (Raw), Op' (..), RawOp (..),
+import           RON.Types (Atom (..), Chunk (Raw), Op (..), RawOp (..),
                             UUID (..))
 import qualified RON.UUID as UUID
 
@@ -121,7 +121,7 @@ prop_text_roundtrip_atom =
 
 prop_text_roundtrip_op =
     -- TODO increase limits
-    property $ textRoundtrip (Gen.op 100) RT.serializeOp RT.parseOp
+    property $ textRoundtrip (Gen.rawop 100) RT.serializeOp RT.parseOp
 
 prop_text_roundtrip_frame =
     -- TODO increase limits
@@ -208,13 +208,12 @@ prop_ron_json_example = let
         [ Raw RawOp
             { opType = lwwType
             , opObject = bar
-            , op' =
-                Op'{opEvent = bar, opRef = barName, opPayload = [AInteger 1]}
+            , op = Op{opEvent = bar, opRef = barName, opPayload = [AInteger 1]}
             }
         , Raw RawOp
             { opType = lwwType
             , opObject = foo
-            , op' = Op'{opEvent = foo, opRef = fooName, opPayload = [AUuid bar]}
+            , op = Op{opEvent = foo, opRef = fooName, opPayload = [AUuid bar]}
             }
         ]
     barName = fromJust $ UUID.mkName "bar"

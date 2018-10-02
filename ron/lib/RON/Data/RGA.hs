@@ -27,7 +27,7 @@ import           Data.Monoid (Last (..))
 import           RON.Data.Internal
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
 import           RON.Internal.Word (pattern B11)
-import           RON.Types (Object (..), Op' (..), StateChunk (..), UUID)
+import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
 import qualified RON.UUID as UUID
 
@@ -37,10 +37,10 @@ import qualified RON.UUID as UUID
 --      _ = tombstone event, value is backup for undo
 --   opPayload: the value
 -- TODO record pattern synonyms
-newtype Vertex = Vertex Op'
+newtype Vertex = Vertex Op
     deriving (Eq, Show)
 
-unVertex :: Vertex -> Op'
+unVertex :: Vertex -> Op
 unVertex (Vertex op) = op
 
 data VertexListItem = VertexListItem
@@ -78,12 +78,12 @@ vertexListToList mv = case mv of
             Nothing -> []
         in itemValue : rest
 
-vertexListToOps :: Maybe VertexList -> [Op']
+vertexListToOps :: Maybe VertexList -> [Op]
 vertexListToOps = map unVertex . vertexListToList
 
 vertexListFromList :: [Vertex] -> Maybe VertexList
 vertexListFromList = foldr go mempty where
-    go v@(Vertex Op'{opEvent = vid}) vlist =
+    go v@(Vertex Op{opEvent = vid}) vlist =
         Just $ VertexList{listHead = vid, listItems = vlist'}
       where
         item itemNext = VertexListItem{itemValue = v, itemNext}
@@ -92,7 +92,7 @@ vertexListFromList = foldr go mempty where
             Just VertexList{listHead, listItems} ->
                 HashMap.insert vid (item $ Just listHead) listItems
 
-vertexListFromOps :: [Op'] -> Maybe VertexList
+vertexListFromOps :: [Op] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
 
 newtype RgaRaw = RgaRaw (Maybe VertexList)
@@ -116,8 +116,8 @@ preMerge (PatchSet p1 r1) (PatchSet p2 r2) = PatchSet
 instance Monoid PatchSet where
     mempty = PatchSet{psPatches = mempty, psRemovals = mempty}
 
-patchSetFromRawOp :: Op' -> PatchSet
-patchSetFromRawOp op@Op'{opEvent, opRef, opPayload} = case opPayload of
+patchSetFromRawOp :: Op -> PatchSet
+patchSetFromRawOp op@Op{opEvent, opRef, opPayload} = case opPayload of
     [] ->  -- remove op
         mempty{psRemovals = Map.singleton opRef opEvent}
     _:_ ->  -- append op
@@ -170,15 +170,15 @@ patchSetToChunks PatchSet{..} =
         | (rchunk'Ref, vertices) <- Map.assocs psPatches
         , let rchunk'Body = vertexListToOps $ Just vertices
         ]
-    ,   [ Op'{opEvent = tombstone, opRef = vid, opPayload = []}
+    ,   [ Op{opEvent = tombstone, opRef = vid, opPayload = []}
         | (vid, tombstone) <- Map.assocs psRemovals
         ]
     )
 
-chunkVersion :: [Op'] -> UUID
+chunkVersion :: [Op] -> UUID
 chunkVersion ops = maximumDef Zero
     [ max vertexId tombstone
-    | Op'{opEvent = vertexId, opRef = tombstone} <- ops
+    | Op{opEvent = vertexId, opRef = tombstone} <- ops
     ]
 
 reapplyPatchSet :: PatchSet -> PatchSet
@@ -275,7 +275,7 @@ applyRemoval
     -> HashMap UUID VertexListItem
     -> Maybe (HashMap UUID VertexListItem)
 applyRemoval parent tombstone targetItems = do
-    item@VertexListItem{itemValue = Vertex v@Op'{opRef}} <-
+    item@VertexListItem{itemValue = Vertex v@Op{opRef}} <-
         HashMap.lookup parent targetItems
     let item' = item{itemValue = Vertex v{opRef = max opRef tombstone}}
     pure $ HashMap.insert parent item' targetItems
@@ -294,11 +294,11 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
         GT -> v1 : merge' vs1 w2
         EQ -> mergeVertices : merge' vs1 vs2
   where
-    Vertex Op'{opEvent = e1, opRef = tombstone1, opPayload = p1} = v1
-    Vertex Op'{opEvent = e2, opRef = tombstone2, opPayload = p2} = v2
+    Vertex Op{opEvent = e1, opRef = tombstone1, opPayload = p1} = v1
+    Vertex Op{opEvent = e2, opRef = tombstone2, opPayload = p2} = v2
 
     -- priority of deletion
-    mergeVertices = Vertex Op'
+    mergeVertices = Vertex Op
         { opEvent   = e1
         , opRef     = max tombstone1 tombstone2
         , opPayload = maxOn length p1 p2
@@ -319,7 +319,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
         ops <- for items $ \item -> do
             vertexId <- lift getEventUuid
             payload <- newRon item
-            pure $ Op' vertexId Zero payload
+            pure $ Op vertexId Zero payload
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
@@ -327,7 +327,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
 
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op'{..} -> case opRef of
+        mItems <- for stateBody $ \Op{..} -> case opRef of
             Zero -> Just <$> fromRon opPayload objectFrame
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems
@@ -342,7 +342,7 @@ edit newItems = do
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     advanceToUuid stateVersion
 
-    let newItems' = [Op' Zero Zero $ toPayload item | item <- newItems]
+    let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
     let diff = getGroupedDiffBy ((==) `on` opPayload) stateBody newItems'
     (stateBody', Last lastEvent) <- runWriterT . fmap concat . for diff $ \case
         First removed -> for removed $ \op -> do

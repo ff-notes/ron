@@ -24,18 +24,18 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (Clock, getEventUuid)
-import           RON.Types (Atom, Object (..), Op' (..), StateChunk (..), UUID)
+import           RON.Types (Atom, Object (..), Op (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
-data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op'}
+data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op}
     deriving (Eq, Show)
 
 instance Semigroup SetItem where
     (<>) = minOn itemIsAlive
 
-itemFromOp :: Op' -> (UUID, SetItem)
-itemFromOp itemOriginalOp@Op'{..} = (itemId, item) where
+itemFromOp :: Op -> (UUID, SetItem)
+itemFromOp itemOriginalOp@Op{..} = (itemId, item) where
     itemIsAlive = opRef == Zero
     itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{..}
@@ -73,7 +73,7 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (ORSet a) where
     newObject (ORSet items) = collectFrame $ do
         ops <- for items $ \item -> do
             e <- lift getEventUuid
-            pure $ Op' e Zero $ toPayload item
+            pure $ Op e Zero $ toPayload item
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (setType, oid) $ StateChunk version ops
@@ -81,7 +81,7 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (ORSet a) where
 
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op'{..} -> case opRef of
+        mItems <- for stateBody $ \Op{..} -> case opRef of
             Zero -> Just <$> fromPayload opPayload
             _    -> pure Nothing
         pure . ORSet $ catMaybes mItems
@@ -96,7 +96,7 @@ instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
         ops <- for items $ \item -> do
             e <- lift getEventUuid
             Object{objectId = itemId} <- lift $ newObject item
-            pure . Op' e Zero $ toPayload itemId
+            pure . Op e Zero $ toPayload itemId
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell . Map.singleton (setType, oid) $ StateChunk version ops
@@ -104,7 +104,7 @@ instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
 
     getObject obj@Object{..} = do
         StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op'{..} -> case opRef of
+        mItems <- for stateBody $ \Op{..} -> case opRef of
             Zero -> do
                 oid <- fromPayload opPayload
                 Just <$> getObject (Object oid objectFrame)
@@ -122,7 +122,7 @@ add item = do
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     e <- getEventUuid
     let p = toPayload item
-    let newOp = Op' e Zero p
+    let newOp = Op e Zero p
     let chunk' = stateBody ++ [newOp]
     let state' = StateChunk e chunk'
     put Object

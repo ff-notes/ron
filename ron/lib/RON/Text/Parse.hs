@@ -35,7 +35,7 @@ import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            Chunk (Query, Raw, Value), Frame, Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
                             RChunk (..), RawOp (..), UUID (UUID))
 import           RON.UUID (UuidFields (..))
@@ -63,7 +63,7 @@ pChunk prev = label "Chunk" $ rchunk prev <+> chunkRaw prev
 chunkRaw :: RawOp -> Parser (Chunk, RawOp)
 chunkRaw prev = label "Chunk-raw" $ do
     skipSpace
-    (_, x) <- op prev
+    (_, x) <- rawOp prev
     skipSpace
     void $ char ';'
     pure (Raw x, x)
@@ -80,7 +80,7 @@ rchunk prev = label "Chunk-reduced" $ do
   where
     reducedOps y = do
         skipSpace
-        (isNotEmpty, x) <- op y
+        (isNotEmpty, x) <- reducedOp y
         t <- optional term
         unless (t == Just TReduced || isNothing t) $
             fail "reduced op may end with `,` only"
@@ -100,7 +100,7 @@ frameInStream = label "Frame-stream" $ chunksTill endOfFrame
 
 parseOp :: ByteStringL -> Either String RawOp
 parseOp = parseOnlyL $ do
-    (_, x) <- op opZero <* skipSpace <* endOfInputEx
+    (_, x) <- rawOp opZero <* skipSpace <* endOfInputEx
     pure x
 
 parseUuid :: ByteStringL -> Either String UUID
@@ -110,17 +110,17 @@ parseUuid = parseOnlyL $
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
-op :: RawOp -> Parser (Bool, RawOp)
-op prev = label "RawOp-cont" $ do
+rawOp :: RawOp -> Parser (Bool, RawOp)
+rawOp prev = label "RawOp-cont" $ do
     (hasTyp, opType)   <- key "type"   '*' (opType   prev)  UUID.zero
     (hasObj, opObject) <- key "object" '#' (opObject prev)  opType
     (hasEvt, opEvent)  <- key "event"  '@' (opEvent  prev') opObject
     (hasLoc, opRef)    <- key "ref"    ':' (opRef    prev') opEvent
     opPayload <- payload opObject
-    let op' = Op'{..}
+    let op = Op{..}
     pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), RawOp{..})
   where
-    prev' = op' prev
+    prev' = op prev
     key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
         skipSpace
         isKeyPresent <- isSuccessful $ char keyChar
@@ -130,6 +130,9 @@ op prev = label "RawOp-cont" $ do
         else
             -- no key => use previous key
             pure (False, prevOpSameKey)
+
+reducedOp :: RawOp -> Parser (Bool, RawOp)
+reducedOp = rawOp
 
 uuid :: UUID -> UUID -> UuidZipBase -> Parser UUID
 uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $
@@ -309,7 +312,7 @@ parseString = parseOnlyL $ string <* endOfInputEx
 -- | Return 'RawOp' and 'chunkIsQuery'
 header :: RawOp -> Parser (RawOp, Bool)
 header prev = do
-    (_, x) <- op prev
+    (_, x) <- rawOp prev
     t <- term
     case t of
         THeader -> pure (x, False)
