@@ -21,7 +21,7 @@ import           Test.Tasty.HUnit (assertFailure, testCase)
 import           RON.Data (reduce)
 import qualified RON.Text as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (Chunk (Query, Raw, Value), Op (..), RChunk (..),
+import           RON.Types (Chunk (Query, Raw, Value), RChunk (..), RawOp (..),
                             UUID)
 import qualified RON.UUID as UUID
 
@@ -86,7 +86,7 @@ chunkObject = opObject . \case
 isRelevant :: Chunk -> Bool
 isRelevant = \case
     Query _ -> False
-    Value RChunk{rchunkHeader = Op{opType}} ->
+    Value RChunk{rchunkHeader = RawOp{opType}} ->
         opType /= fromJust (UUID.mkName "~")
     _       -> True
 

@@ -23,8 +23,8 @@ import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
-                            Op' (..), RChunk (..), StateChunk (..), UUID)
+import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op' (..),
+                            RChunk (..), RawOp (..), StateChunk (..), UUID)
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
@@ -41,8 +41,8 @@ parseObject oid bytes = Object oid <$> parseFrame' bytes
 serializeFrame' :: Frame' -> ByteStringL
 serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value RChunk{..} where
-        rchunkHeader = Op{op' = Op'{opRef = zero, opPayload = [], ..}, ..}
-        rchunkBody = [Op{..} | op' <- stateBody]
+        rchunkHeader = RawOp{op' = Op'{opRef = zero, opPayload = [], ..}, ..}
+        rchunkBody = [RawOp{..} | op' <- stateBody]
         opEvent = stateVersion
 
 serializeObject :: Object a -> (UUID, ByteStringL)
@@ -52,13 +52,13 @@ findObjects :: Frame -> Either String Frame'
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value RChunk{..} -> do
-            let Op{..} = rchunkHeader
+            let RawOp{..} = rchunkHeader
             let Op'{..} = op'
             let stateVersion = opEvent
             stateBody <- for rchunkBody $ loadOp opType opObject
             pure ((opType, opObject), StateChunk{..})
         _ -> Left "expected reduced chunk"
-    loadOp chunkType chunkObject Op{..} = do
+    loadOp chunkType chunkObject RawOp{..} = do
         when (opType /= chunkType) $
             Left "reduced op type does not match chunk type"
         when (opObject /= chunkObject) $

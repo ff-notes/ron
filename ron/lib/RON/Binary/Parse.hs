@@ -25,9 +25,9 @@ import           Data.ZigZag (zzDecode64)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..),
-                            Op' (..), OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), UUID (UUID))
+                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            OpTerm (THeader, TQuery, TRaw, TReduced),
+                            RChunk (..), RawOp (..), UUID (UUID))
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -92,8 +92,8 @@ assertSize expected consumed =
     fail $
     "size mismatch: expected " ++ show expected ++ ", got " ++ show consumed
 
-parseReducedOps :: Int -> Parser [Op]
-parseReducedOps = label "[Op]" . go
+parseReducedOps :: Int -> Parser [RawOp]
+parseReducedOps = label "[RawOp]" . go
   where
     go = \case
         0        -> pure []
@@ -104,8 +104,8 @@ parseReducedOps = label "[Op]" . go
                 EQ -> pure [op]
                 GT -> fail "impossible"
 
-parseDescAndOp :: Parser (OpTerm, Op)
-parseDescAndOp = label "d+Op" $ do
+parseDescAndOp :: Parser (OpTerm, RawOp)
+parseDescAndOp = label "d+RawOp" $ do
     (desc, size) <- parseDesc
     unless (size == 0) $
         fail $ "desc = " ++ show desc ++ ", size = " ++ show size
@@ -116,14 +116,14 @@ parseDescAndOp = label "d+Op" $ do
         DOpQueryHeader  -> (TQuery,)    <$> parseOp
         _               -> fail $ "unimplemented " ++ show desc
 
-parseOp :: Parser Op
-parseOp = label "Op" $ do
+parseOp :: Parser RawOp
+parseOp = label "RawOp" $ do
     opType    <- parseOpKey DUuidType
     opObject  <- parseOpKey DUuidObject
     opEvent   <- parseOpKey DUuidEvent
     opRef     <- parseOpKey DUuidRef
     opPayload <- parsePayload
-    pure Op{op' = Op'{..}, ..}
+    pure RawOp{op' = Op'{..}, ..}
 
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do

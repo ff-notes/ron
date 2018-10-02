@@ -32,8 +32,8 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
-                            RChunk (..), StateChunk (..), UUID)
+import           RON.Types (Chunk (Query, Raw, Value), Frame, Op' (..),
+                            RChunk (..), RawOp (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -51,7 +51,7 @@ reduce chunks = values' ++ queries where
         Raw                         op  -> op
         Value RChunk{rchunkHeader = op} -> op
         Query RChunk{rchunkHeader = op} -> op
-    opObjectAndType Op{..} = (opObject, opType)
+    opObjectAndType RawOp{..} = (opObject, opType)
     (queries, values) = partition isQuery chunks
     values' =
         fold $
@@ -102,12 +102,12 @@ reducer obj chunks = chunks' ++ leftovers where
                 , reduceUnappliedPatches @a unapplied'
                 )
     typ = reducibleOpType @a
-    wrapOp = Op typ obj
+    wrapOp = RawOp typ obj
     (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op'], leftovers :: [Chunk])
         = foldMap load chunks
     load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of
-        Raw op@Op{op'} -> do
+        Raw op@RawOp{op'} -> do
             guardSameObject op
             pure ([], [], [op'], [])
         Value RChunk{rchunkHeader, rchunkBody} -> do
@@ -138,7 +138,7 @@ reducer obj chunks = chunks' ++ leftovers where
                         , []
                         )
         _ -> Nothing
-    guardSameObject Op{opType, opObject} =
+    guardSameObject RawOp{opType, opObject} =
         guard $ opType == typ && opObject == obj
     wrapRChunk RChunk'{..} = RChunk
         { rchunkHeader = wrapOp

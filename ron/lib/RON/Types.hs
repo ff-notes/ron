@@ -12,9 +12,9 @@ module RON.Types
     , Frame'
     , Object (..)
     , ObjectId
-    , Op (..)
     , Op' (..)
     , OpTerm (..)
+    , RawOp (..)
     , RChunk (..)
     , StateChunk (..)
     , UUID (..)
@@ -34,7 +34,7 @@ import           RON.UUID (UUID (..))
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Data, Eq, Generic, Hashable, NFData, Show)
 
-data Op = Op
+data RawOp = RawOp
     { opType   :: UUID
     , opObject :: UUID
     , op'      :: Op'
@@ -48,10 +48,10 @@ data Op' = Op'
     }
     deriving (Data, Eq, Generic, Hashable, NFData, Show)
 
-instance Show Op where
-    show Op{opType, opObject, op' = Op'{opEvent, opRef, opPayload}} =
+instance Show RawOp where
+    show RawOp{opType, opObject, op' = Op'{opEvent, opRef, opPayload}} =
         unwords
-            [ "Op"
+            [ "RawOp"
             , insert '*' $ show opType
             , insert '#' $ show opObject
             , insert '@' $ show opEvent
@@ -64,12 +64,12 @@ instance Show Op where
             c:cs -> c:k:cs
 
 data RChunk = RChunk
-    { rchunkHeader :: Op
-    , rchunkBody   :: [Op]
+    { rchunkHeader :: RawOp
+    , rchunkBody   :: [RawOp]
     }
     deriving (Data, Eq, Generic, NFData, Show)
 
-data Chunk = Raw Op | Value RChunk | Query RChunk
+data Chunk = Raw RawOp | Value RChunk | Query RChunk
     deriving (Data, Eq, Generic, NFData, Show)
 
 type Frame = [Chunk]
@@ -77,10 +77,10 @@ type Frame = [Chunk]
 data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
-valueChunk :: Op -> [Op] -> Chunk
+valueChunk :: RawOp -> [RawOp] -> Chunk
 valueChunk rchunkHeader rchunkBody = Value RChunk{rchunkHeader, rchunkBody}
 
-valueFrame :: Op -> [Op] -> Frame
+valueFrame :: RawOp -> [RawOp] -> Frame
 valueFrame rchunkHeader rchunkBody = [valueChunk rchunkHeader rchunkBody]
 
 -- | (type, object)

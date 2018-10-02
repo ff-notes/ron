@@ -35,9 +35,9 @@ import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
+                            Chunk (Query, Raw, Value), Frame, Op' (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), UUID (UUID))
+                            RChunk (..), RawOp (..), UUID (UUID))
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
@@ -57,10 +57,10 @@ chunksTill end = label "[Chunk]" $ go opZero
             (ch :) <$> go lastOp
 
 -- | Returns a chunk and the last op in it
-pChunk :: Op -> Parser (Chunk, Op)
+pChunk :: RawOp -> Parser (Chunk, RawOp)
 pChunk prev = label "Chunk" $ rchunk prev <+> chunkRaw prev
 
-chunkRaw :: Op -> Parser (Chunk, Op)
+chunkRaw :: RawOp -> Parser (Chunk, RawOp)
 chunkRaw prev = label "Chunk-raw" $ do
     skipSpace
     (_, x) <- op prev
@@ -69,7 +69,7 @@ chunkRaw prev = label "Chunk-raw" $ do
     pure (Raw x, x)
 
 -- | Returns a chunk and the last op in it
-rchunk :: Op -> Parser (Chunk, Op)
+rchunk :: RawOp -> Parser (Chunk, RawOp)
 rchunk prev = label "Chunk-reduced" $ do
     (rchunkHeader, isQuery) <- header prev
     rchunkBody <- reducedOps rchunkHeader <|> stop
@@ -98,7 +98,7 @@ parseFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
 frameInStream :: Parser Frame
 frameInStream = label "Frame-stream" $ chunksTill endOfFrame
 
-parseOp :: ByteStringL -> Either String Op
+parseOp :: ByteStringL -> Either String RawOp
 parseOp = parseOnlyL $ do
     (_, x) <- op opZero <* skipSpace <* endOfInputEx
     pure x
@@ -110,15 +110,15 @@ parseUuid = parseOnlyL $
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
-op :: Op -> Parser (Bool, Op)
-op prev = label "Op-cont" $ do
+op :: RawOp -> Parser (Bool, RawOp)
+op prev = label "RawOp-cont" $ do
     (hasTyp, opType)   <- key "type"   '*' (opType   prev)  UUID.zero
     (hasObj, opObject) <- key "object" '#' (opObject prev)  opType
     (hasEvt, opEvent)  <- key "event"  '@' (opEvent  prev') opObject
     (hasLoc, opRef)    <- key "ref"    ':' (opRef    prev') opEvent
     opPayload <- payload opObject
     let op' = Op'{..}
-    pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), Op{..})
+    pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), RawOp{..})
   where
     prev' = op' prev
     key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
@@ -306,8 +306,8 @@ string = do
 parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
 
--- | Return 'Op' and 'chunkIsQuery'
-header :: Op -> Parser (Op, Bool)
+-- | Return 'RawOp' and 'chunkIsQuery'
+header :: RawOp -> Parser (RawOp, Bool)
 header prev = do
     (_, x) <- op prev
     t <- term

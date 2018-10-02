@@ -20,8 +20,8 @@ import           Data.ZigZag (zzEncode)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
-                            RChunk (..), UUID (UUID))
+                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            RChunk (..), RawOp (..), UUID (UUID))
 
 serialize :: Frame -> Either String ByteStringL
 serialize frame = ("RON2" <>) <$> serializeBody
@@ -51,8 +51,8 @@ serializeChunk = \case
     Value rchunk -> serializeReducedChunk False rchunk
     Query rchunk -> serializeReducedChunk True  rchunk
 
-serializeOp :: Desc -> Op -> Either String ByteStringL
-serializeOp desc Op{..} = do
+serializeOp :: Desc -> RawOp -> Either String ByteStringL
+serializeOp desc RawOp{..} = do
     keys <- sequenceA
         [ serializeUuidType   opType
         , serializeUuidObject opObject

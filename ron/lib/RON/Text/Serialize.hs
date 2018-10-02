@@ -27,8 +27,8 @@ import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..), Op' (..),
-                            RChunk (..))
+                            Chunk (Query, Raw, Value), Frame, Op' (..),
+                            RChunk (..), RawOp (..))
 import           RON.UUID (UUID, zero)
 
 serializeFrame :: Frame -> ByteStringL
@@ -41,13 +41,13 @@ serializeFrame chunks
 serializeFrames :: [Frame] -> ByteStringL
 serializeFrames = foldMap serializeFrame
 
-serializeChunk :: Chunk -> State Op ByteStringL
+serializeChunk :: Chunk -> State RawOp ByteStringL
 serializeChunk = \case
     Raw op      -> (<> " ;\n") <$> serializeOpZip op
     Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
-serializeReducedChunk :: Bool -> RChunk -> State Op ByteStringL
+serializeReducedChunk :: Bool -> RChunk -> State RawOp ByteStringL
 serializeReducedChunk isQuery RChunk{rchunkHeader, rchunkBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
@@ -58,10 +58,10 @@ serializeReducedChunk isQuery RChunk{rchunkHeader, rchunkBody} =
         o <- serializeOpZip op
         pure $ "\t" <> BSLC.unwords [o, ","]
 
-serializeOp :: Op -> ByteStringL
+serializeOp :: RawOp -> ByteStringL
 serializeOp op = evalState (serializeOpZip op) opZero
 
-serializeOpZip :: Op -> State Op ByteStringL
+serializeOpZip :: RawOp -> State RawOp ByteStringL
 serializeOpZip this = state $ \prev -> let
     prev' = op' prev
     typ = serializeUuidKey (opType   prev)  zero             (opType   this)

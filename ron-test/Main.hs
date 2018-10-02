@@ -33,7 +33,7 @@ import           RON.Event (CalendarEvent (..), Naming (TrieForked),
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (Atom (..), Chunk (Raw), Op (..), Op' (..),
+import           RON.Types (Atom (..), Chunk (Raw), Op' (..), RawOp (..),
                             UUID (..))
 import qualified RON.UUID as UUID
 
@@ -205,13 +205,13 @@ prop_ron_json_example = let
         "*lww #1TUAQ+gritzko @`   :bar = 1  ;\n\
         \     #(R            @`   :foo > (Q ;"
     output =
-        [ Raw Op
+        [ Raw RawOp
             { opType = lwwType
             , opObject = bar
             , op' =
                 Op'{opEvent = bar, opRef = barName, opPayload = [AInteger 1]}
             }
-        , Raw Op
+        , Raw RawOp
             { opType = lwwType
             , opObject = foo
             , op' = Op'{opEvent = foo, opRef = fooName, opPayload = [AUuid bar]}
