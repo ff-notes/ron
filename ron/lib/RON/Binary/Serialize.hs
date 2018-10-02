@@ -47,12 +47,12 @@ serialize frame = ("RON2" <>) <$> serializeBody
 
 serializeChunk :: Chunk -> Either String ByteStringL
 serializeChunk = \case
-    Raw op       -> serializeOp DOpRaw op
+    Raw op       -> serializeRawOp DOpRaw op
     Value rchunk -> serializeReducedChunk False rchunk
     Query rchunk -> serializeReducedChunk True  rchunk
 
-serializeOp :: Desc -> RawOp -> Either String ByteStringL
-serializeOp desc RawOp{..} = do
+serializeRawOp :: Desc -> RawOp -> Either String ByteStringL
+serializeRawOp desc RawOp{..} = do
     keys <- sequenceA
         [ serializeUuidType   opType
         , serializeUuidObject opObject
@@ -67,6 +67,9 @@ serializeOp desc RawOp{..} = do
     serializeUuidObject = serializeWithDesc DUuidObject . serializeUuid
     serializeUuidEvent  = serializeWithDesc DUuidEvent  . serializeUuid
     serializeUuidRef    = serializeWithDesc DUuidRef    . serializeUuid
+
+serializeReducedOp :: Desc -> UUID -> UUID -> Op -> Either String ByteStringL
+serializeReducedOp d opType opObject op = serializeRawOp d RawOp{..}
 
 serializeUuid :: UUID -> ByteStringL
 serializeUuid (UUID x y) = Binary.encode x <> Binary.encode y
@@ -116,9 +119,16 @@ serializeFloat = runPut . putDoublebe
 serializeReducedChunk :: Bool -> RChunk -> Either String ByteStringL
 serializeReducedChunk isQuery RChunk{..} = do
     header <-
-        serializeOp (if isQuery then DOpQueryHeader else DOpHeader) rchunkHeader
-    body <- mconcat <$> traverse (serializeOp DOpReduced) rchunkBody
+        serializeRawOp
+            (if isQuery then DOpQueryHeader else DOpHeader)
+            rchunkHeader
+    body <- foldMapA (serializeReducedOp DOpReduced opType opObject) rchunkBody
     pure $ header <> body
+  where
+    RawOp{..} = rchunkHeader
 
 serializeString :: Text -> ByteStringL
 serializeString = fromStrict . encodeUtf8
+
+foldMapA :: (Monoid b, Applicative f, Foldable t) => (a -> f b) -> t a -> f b
+foldMapA f = fmap fold . traverse f . toList

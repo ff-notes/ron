@@ -76,7 +76,7 @@ leastSignificant31 x = x .&. 0x7FFFFFFF
 
 parseChunk :: Size -> Parser Chunk
 parseChunk size = label "Chunk" $ do
-    (consumed0, (term, op)) <- withInputSize parseDescAndOp
+    (consumed0, (term, op)) <- withInputSize parseDescAndRawOp
     let parseReducedChunk rchunkHeader isQuery = do
             rchunkBody <- parseReducedOps $ fromIntegral size - consumed0
             pure $ (if isQuery then Query else Value) RChunk{..}
@@ -92,38 +92,51 @@ assertSize expected consumed =
     fail $
     "size mismatch: expected " ++ show expected ++ ", got " ++ show consumed
 
-parseReducedOps :: Int -> Parser [RawOp]
-parseReducedOps = label "[RawOp]" . go
+parseReducedOps :: Int -> Parser [Op]
+parseReducedOps = label "[Op]" . go
   where
     go = \case
         0        -> pure []
         expected -> do
-            (consumed, (TReduced, op)) <- withInputSize parseDescAndOp
+            (consumed, (TReduced, op)) <- withInputSize parseDescAndReducedOp
             case compare consumed expected of
                 LT -> (op :) <$> go (expected - consumed)
                 EQ -> pure [op]
                 GT -> fail "impossible"
 
-parseDescAndOp :: Parser (OpTerm, RawOp)
-parseDescAndOp = label "d+RawOp" $ do
+parseDescAndRawOp :: Parser (OpTerm, RawOp)
+parseDescAndRawOp = label "d+RawOp" $ do
     (desc, size) <- parseDesc
     unless (size == 0) $
         fail $ "desc = " ++ show desc ++ ", size = " ++ show size
     case desc of
-        DOpRaw          -> (TRaw,)      <$> parseOp
-        DOpReduced      -> (TReduced,)  <$> parseOp
-        DOpHeader       -> (THeader,)   <$> parseOp
-        DOpQueryHeader  -> (TQuery,)    <$> parseOp
+        DOpRaw          -> (TRaw,)      <$> parseRawOp
+        DOpHeader       -> (THeader,)   <$> parseRawOp
+        DOpQueryHeader  -> (TQuery,)    <$> parseRawOp
         _               -> fail $ "unimplemented " ++ show desc
 
-parseOp :: Parser RawOp
-parseOp = label "RawOp" $ do
-    opType    <- parseOpKey DUuidType
-    opObject  <- parseOpKey DUuidObject
+parseDescAndReducedOp :: Parser (OpTerm, Op)
+parseDescAndReducedOp = label "d+RawOp" $ do
+    (desc, size) <- parseDesc
+    unless (size == 0) $
+        fail $ "desc = " ++ show desc ++ ", size = " ++ show size
+    case desc of
+        DOpReduced      -> (TReduced,)  <$> parseReducedOp
+        _               -> fail $ "unimplemented " ++ show desc
+
+parseRawOp :: Parser RawOp
+parseRawOp = label "RawOp" $ do
+    opType   <- parseOpKey DUuidType
+    opObject <- parseOpKey DUuidObject
+    op       <- parseReducedOp
+    pure RawOp{..}
+
+parseReducedOp :: Parser Op
+parseReducedOp = label "Op" $ do
     opEvent   <- parseOpKey DUuidEvent
     opRef     <- parseOpKey DUuidRef
     opPayload <- parsePayload
-    pure RawOp{op = Op{..}, ..}
+    pure Op{..}
 
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do

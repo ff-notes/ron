@@ -42,7 +42,7 @@ serializeFrame' :: Frame' -> ByteStringL
 serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value RChunk{..} where
         rchunkHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
-        rchunkBody = [RawOp{..} | op <- stateBody]
+        rchunkBody = stateBody
         opEvent = stateVersion
 
 serializeObject :: Object a -> (UUID, ByteStringL)
@@ -55,15 +55,9 @@ findObjects = fmap Map.fromList . traverse loadBody where
             let RawOp{..} = rchunkHeader
             let Op{..} = op
             let stateVersion = opEvent
-            stateBody <- for rchunkBody $ loadOp opType opObject
+            let stateBody = rchunkBody
             pure ((opType, opObject), StateChunk{..})
         _ -> Left "expected reduced chunk"
-    loadOp chunkType chunkObject RawOp{..} = do
-        when (opType /= chunkType) $
-            Left "reduced op type does not match chunk type"
-        when (opObject /= chunkObject) $
-            Left "reduced op object id does not match chunk object id"
-        pure op
 
 --------------------------------------------------------------------------------
 

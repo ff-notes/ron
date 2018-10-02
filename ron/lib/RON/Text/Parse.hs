@@ -68,25 +68,27 @@ chunkRaw prev = label "Chunk-raw" $ do
     void $ char ';'
     pure (Raw x, x)
 
--- | Returns a chunk and the last op in it
+-- | Returns a chunk and the last op (converted to raw) in it
 rchunk :: RawOp -> Parser (Chunk, RawOp)
 rchunk prev = label "Chunk-reduced" $ do
     (rchunkHeader, isQuery) <- header prev
-    rchunkBody <- reducedOps rchunkHeader <|> stop
+    let reducedOps y = do
+            skipSpace
+            (isNotEmpty, x) <- reducedOp (opObject rchunkHeader) y
+            t <- optional term
+            unless (t == Just TReduced || isNothing t) $
+                fail "reduced op may end with `,` only"
+            unless (isNotEmpty || t == Just TReduced) $ fail "Empty reduced op"
+            xs <- reducedOps x <|> stop
+            pure $ x : xs
+    rchunkBody <- reducedOps (op rchunkHeader) <|> stop
     let lastOp = case rchunkBody of
-            [] -> rchunkHeader
+            [] -> op rchunkHeader
             _  -> last rchunkBody
-    pure ((if isQuery then Query else Value) RChunk{..}, lastOp)
+        wrap op = RawOp
+            {opType = opType rchunkHeader, opObject = opObject rchunkHeader, op}
+    pure ((if isQuery then Query else Value) RChunk{..}, wrap lastOp)
   where
-    reducedOps y = do
-        skipSpace
-        (isNotEmpty, x) <- reducedOp y
-        t <- optional term
-        unless (t == Just TReduced || isNothing t) $
-            fail "reduced op may end with `,` only"
-        unless (isNotEmpty || t == Just TReduced) $ fail "Empty reduced op"
-        xs <- reducedOps x <|> stop
-        pure $ x : xs
     stop = pure []
 
 frame :: Parser Frame
@@ -118,21 +120,31 @@ rawOp prev = label "RawOp-cont" $ do
     (hasLoc, opRef)    <- key "ref"    ':' (opRef    prev') opEvent
     opPayload <- payload opObject
     let op = Op{..}
-    pure (hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload), RawOp{..})
+    pure
+        ( hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload)
+        , RawOp{..}
+        )
   where
     prev' = op prev
-    key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
-        skipSpace
-        isKeyPresent <- isSuccessful $ char keyChar
-        if isKeyPresent then do
-            u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
-            pure (True, u)
-        else
-            -- no key => use previous key
-            pure (False, prevOpSameKey)
 
-reducedOp :: RawOp -> Parser (Bool, RawOp)
-reducedOp = rawOp
+reducedOp :: UUID -> Op -> Parser (Bool, Op)
+reducedOp opObject prev = label "Op-cont" $ do
+    (hasEvt, opEvent) <- key "event" '@' (opEvent prev) opObject
+    (hasLoc, opRef)   <- key "ref"   ':' (opRef   prev) opEvent
+    opPayload <- payload opObject
+    let op = Op{..}
+    pure (hasEvt || hasLoc || not (null opPayload), op)
+
+key :: String -> Char -> UUID -> UUID -> Parser (Bool, UUID)
+key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
+    skipSpace
+    isKeyPresent <- isSuccessful $ char keyChar
+    if isKeyPresent then do
+        u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
+        pure (True, u)
+    else
+        -- no key => use previous key
+        pure (False, prevOpSameKey)
 
 uuid :: UUID -> UUID -> UuidZipBase -> Parser UUID
 uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $

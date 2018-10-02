@@ -3,19 +3,20 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module RON.Text.Serialize
     ( serializeAtom
     , serializeFrame
     , serializeFrames
-    , serializeOp
+    , serializeRawOp
     , serializeString
     , serializeUuid
     ) where
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.State.Strict (State, evalState, state)
+import           Control.Monad.State.Strict (State, evalState, runState, state)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -43,7 +44,7 @@ serializeFrames = foldMap serializeFrame
 
 serializeChunk :: Chunk -> State RawOp ByteStringL
 serializeChunk = \case
-    Raw op      -> (<> " ;\n") <$> serializeOpZip op
+    Raw op      -> (<> " ;\n") <$> serializeRawOpZip op
     Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
@@ -52,23 +53,30 @@ serializeReducedChunk isQuery RChunk{rchunkHeader, rchunkBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
     serializeHeader = do
-        h <- serializeOpZip rchunkHeader
+        h <- serializeRawOpZip rchunkHeader
         pure $ BSLC.unwords [h, if isQuery then "?" else "!"]
-    serializeBody = for rchunkBody $ \op -> do
-        o <- serializeOpZip op
-        pure $ "\t" <> BSLC.unwords [o, ","]
+    serializeBody = state $ \RawOp{op = opBefore, ..} -> let
+        (body, opAfter) =
+            (`runState` opBefore) $
+            for rchunkBody $ \op -> do
+                o <- serializeReducedOpZip opObject op
+                pure $ "\t" <> BSLC.unwords [o, ","]
+        in
+        ( body
+        , RawOp{op = opAfter, ..}
+        )
 
-serializeOp :: RawOp -> ByteStringL
-serializeOp op = evalState (serializeOpZip op) opZero
+serializeRawOp :: RawOp -> ByteStringL
+serializeRawOp op = evalState (serializeRawOpZip op) opZero
 
-serializeOpZip :: RawOp -> State RawOp ByteStringL
-serializeOpZip this = state $ \prev -> let
+serializeRawOpZip :: RawOp -> State RawOp ByteStringL
+serializeRawOpZip this = state $ \prev -> let
     prev' = op prev
     typ = serializeUuidKey (opType   prev)  zero             (opType   this)
     obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
     evt = serializeUuidKey (opEvent  prev') (opObject this)  (opEvent  this')
     loc = serializeUuidKey (opRef    prev') (opEvent  this') (opRef    this')
-    payload  = serializePayload (opObject this) (opPayload this')
+    payload = serializePayload (opObject this) (opPayload this')
     in
     ( BSLC.unwords
         $   key '*' typ
@@ -80,6 +88,19 @@ serializeOpZip this = state $ \prev -> let
     )
   where
     this' = op this
+    key c u = [BSLC.cons c u | not $ BSL.null u]
+
+serializeReducedOpZip :: UUID -> Op -> State Op ByteStringL
+serializeReducedOpZip opObject this = state $ \prev -> let
+    evt = serializeUuidKey (opEvent  prev) opObject       (opEvent this)
+    loc = serializeUuidKey (opRef    prev) (opEvent this) (opRef   this)
+    payload = serializePayload opObject (opPayload this)
+    in
+    ( BSLC.unwords $
+        key '@' evt ++ key ':' loc ++ [payload | not $ BSL.null payload]
+    , this
+    )
+  where
     key c u = [BSLC.cons c u | not $ BSL.null u]
 
 serializeAtom :: Atom -> ByteStringL

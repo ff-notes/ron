@@ -65,7 +65,7 @@ instance Show RawOp where
 
 data RChunk = RChunk
     { rchunkHeader :: RawOp
-    , rchunkBody   :: [RawOp]
+    , rchunkBody   :: [Op]
     }
     deriving (Data, Eq, Generic, NFData, Show)
 
@@ -77,10 +77,10 @@ type Frame = [Chunk]
 data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
-valueChunk :: RawOp -> [RawOp] -> Chunk
+valueChunk :: RawOp -> [Op] -> Chunk
 valueChunk rchunkHeader rchunkBody = Value RChunk{rchunkHeader, rchunkBody}
 
-valueFrame :: RawOp -> [RawOp] -> Frame
+valueFrame :: RawOp -> [Op] -> Frame
 valueFrame rchunkHeader rchunkBody = [valueChunk rchunkHeader rchunkBody]
 
 -- | (type, object)

@@ -26,20 +26,20 @@ word60 = leastSignificant60 <$> word64'
 uuid :: MonadGen gen => gen UUID
 uuid = UUID <$> word64' <*> word64'
 
-rawop :: MonadGen gen => Int -> gen RawOp
-rawop size = RawOp <$> uuid <*> uuid <*> rop size
+rawOp :: MonadGen gen => Int -> gen RawOp
+rawOp size = RawOp <$> uuid <*> uuid <*> reducedOp size
 
-rop :: MonadGen gen => Int -> gen Op
-rop size = Op <$> uuid <*> uuid <*> payload size
+reducedOp :: MonadGen gen => Int -> gen Op
+reducedOp size = Op <$> uuid <*> uuid <*> payload size
 
 chunk :: MonadGen gen => Int -> gen Chunk
 chunk size =
-    choice [Raw <$> rawop size, Value <$> rchunk size, Query <$> rchunk size]
+    choice [Raw <$> rawOp size, Value <$> rchunk size, Query <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen RChunk
 rchunk size = RChunk
-    <$> rawop size
-    <*> list (Range.exponential 0 size) (rawop size)
+    <$> rawOp size
+    <*> list (Range.exponential 0 size) (reducedOp size)
 
 frame :: MonadGen gen => Int -> gen Frame
 frame size = list (Range.exponential 0 size) (chunk size)

@@ -112,15 +112,13 @@ reducer obj chunks = chunks' ++ leftovers where
             pure ([], [], [op], [])
         Value RChunk{rchunkHeader, rchunkBody} -> do
             guardSameObject rchunkHeader
-            body <- for rchunkBody $ \rawop -> do
-                guardSameObject rawop
-                pure $ op rawop
             let ref = opRef $ op rchunkHeader
             case ref of
                 Zero ->  -- state
-                    -- let state = fromChunk @a ref body
                     pure
-                        ( [(opEvent $ op rchunkHeader, stateFromChunk body)]
+                        ( [ ( opEvent $ op rchunkHeader
+                            , stateFromChunk rchunkBody
+                            ) ]
                         , []
                         , []
                         , []
@@ -131,7 +129,7 @@ reducer obj chunks = chunks' ++ leftovers where
                         ,   [ RChunk'
                                 { rchunk'Version = opEvent $ op rchunkHeader
                                 , rchunk'Ref = ref
-                                , rchunk'Body = body
+                                , rchunk'Body = rchunkBody
                                 }
                             ]
                         , []
@@ -143,5 +141,5 @@ reducer obj chunks = chunks' ++ leftovers where
     wrapRChunk RChunk'{..} = RChunk
         { rchunkHeader = wrapOp
             Op{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
-        , rchunkBody = map wrapOp rchunk'Body
+        , rchunkBody = rchunk'Body
         }
