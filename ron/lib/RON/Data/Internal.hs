@@ -16,8 +16,8 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           RON.Event (Clock)
-import           RON.Types (Atom (..), Chunk, Frame', Object (..), Op (..),
-                            StateChunk (..), UUID)
+import           RON.Types (Atom (..), Chunk, Object (..), Op (..),
+                            StateChunk (..), StateFrame, UUID)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -96,14 +96,14 @@ class Replicated a where
 
 data Encoding a = Encoding
     { encodingNewRon
-        :: forall clock . Clock clock => a -> WriterT Frame' clock [Atom]
-    , encodingFromRon :: [Atom] -> Frame' -> Either String a
+        :: forall clock . Clock clock => a -> WriterT StateFrame clock [Atom]
+    , encodingFromRon :: [Atom] -> StateFrame -> Either String a
     }
 
-newRon :: (Replicated a, Clock clock) => a -> WriterT Frame' clock [Atom]
+newRon :: (Replicated a, Clock clock) => a -> WriterT StateFrame clock [Atom]
 newRon = encodingNewRon encoding
 
-fromRon :: Replicated a => [Atom] -> Frame' -> Either String a
+fromRon :: Replicated a => [Atom] -> StateFrame -> Either String a
 fromRon = encodingFromRon encoding
 
 objectEncoding :: ReplicatedAsObject a => Encoding a
@@ -165,12 +165,12 @@ class ReplicatedAsObject a where
     getObject :: Object a -> Either String a
 
 objectFromRon
-    :: (Object a -> Either String a) -> [Atom] -> Frame' -> Either String a
+    :: (Object a -> Either String a) -> [Atom] -> StateFrame -> Either String a
 objectFromRon handler atoms frame = case atoms of
     [AUuid oid] -> handler $ Object oid frame
     _ -> Left "bad payload"
 
-collectFrame :: Functor m => WriterT Frame' m UUID -> m (Object a)
+collectFrame :: Functor m => WriterT StateFrame m UUID -> m (Object a)
 collectFrame = fmap (uncurry Object) . runWriterT
 
 getObjectStateChunk

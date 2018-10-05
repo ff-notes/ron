@@ -9,7 +9,7 @@ module RON.Types
     ( Atom (..)
     , Chunk (..)
     , Frame
-    , Frame'
+    , StateFrame
     , Object (..)
     , ObjectId
     , Op (..)
@@ -92,7 +92,7 @@ data StateChunk = StateChunk
     }
     deriving (Eq, Show)
 
-type Frame' = Map ObjectId StateChunk
+type StateFrame = Map ObjectId StateChunk
 
-data Object a = Object{objectId :: UUID, objectFrame :: Frame'}
+data Object a = Object{objectId :: UUID, objectFrame :: StateFrame}
     deriving (Eq, Show)

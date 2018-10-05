@@ -23,8 +23,9 @@ import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Chunk (Value), Frame, Frame', Object (..), Op (..),
-                            RChunk (..), RawOp (..), StateChunk (..), UUID)
+import           RON.Types (Chunk (Value), Frame, Object (..), Op (..),
+                            RChunk (..), RawOp (..), StateChunk (..),
+                            StateFrame, UUID)
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
@@ -32,23 +33,23 @@ import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
 
 -- Common ----------------------------------------------------------------------
 
-parseFrame' :: ByteStringL -> Either String Frame'
-parseFrame' = parseFrame >=> findObjects
+parseStateFrame :: ByteStringL -> Either String StateFrame
+parseStateFrame = parseFrame >=> findObjects
 
 parseObject :: UUID -> ByteStringL -> Either String (Object a)
-parseObject oid bytes = Object oid <$> parseFrame' bytes
+parseObject oid bytes = Object oid <$> parseStateFrame bytes
 
-serializeFrame' :: Frame' -> ByteStringL
-serializeFrame' = serializeFrame . map wrapChunk . Map.assocs where
+serializeStateFrame :: StateFrame -> ByteStringL
+serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value RChunk{..} where
         rchunkHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
         rchunkBody = stateBody
         opEvent = stateVersion
 
 serializeObject :: Object a -> (UUID, ByteStringL)
-serializeObject (Object oid frame) = (oid, serializeFrame' frame)
+serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
 
-findObjects :: Frame -> Either String Frame'
+findObjects :: Frame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value RChunk{..} -> do
@@ -112,11 +113,7 @@ ex4expect = [i|
 
 example4expect :: Example1
 example4expect = Example1
-    { int1 = 166
-    , str2 = "145"
-    , str3 = "206"
-    , set4 = [Example2{vv5 = mempty}]
-    }
+    {int1 = 166, str2 = "145", str3 = "206", set4 = [Example2{vv5 = mempty}]}
 
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do

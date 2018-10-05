@@ -25,8 +25,8 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
-import           RON.Types (Atom (AUuid), Frame', Object (..), Op (..),
-                            StateChunk (..), UUID)
+import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
+                            StateFrame, UUID)
 import qualified RON.UUID as UUID
 
 lww :: Op -> Op -> Op
@@ -59,7 +59,7 @@ newFrame fields = collectFrame $ do
         [Op e name p | ((name, _), p) <- zip fields payloads]
     pure e
 
-getField :: Replicated a => UUID -> StateChunk -> Frame' -> Either String a
+getField :: Replicated a => UUID -> StateChunk -> StateFrame -> Either String a
 getField field StateChunk{..} frame =
     fmapL (("LWW.getField " <> show field <> ":\n") <>) $ do
         let ops = filter ((field ==) . opRef) stateBody
