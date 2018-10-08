@@ -20,13 +20,13 @@ import           Data.ZigZag (zzEncode)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..),
-                            RChunk (..), RawOp (..), UUID (UUID))
+                            Chunk (Query, Raw, Value), Op (..), RChunk (..),
+                            RawFrame, RawOp (..), UUID (UUID))
 
-serialize :: Frame -> Either String ByteStringL
-serialize frame = ("RON2" <>) <$> serializeBody
+serialize :: RawFrame -> Either String ByteStringL
+serialize chunks = ("RON2" <>) <$> serializeBody
   where
-    serializeBody = foldChunks =<< traverse serializeChunk frame
+    serializeBody = foldChunks =<< traverse serializeChunk chunks
 
     chunkSize :: Bool -> Int64 -> Either String ByteStringL
     chunkSize continue x

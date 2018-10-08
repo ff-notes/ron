@@ -28,18 +28,18 @@ import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..),
-                            RChunk (..), RawOp (..))
+                            Chunk (Query, Raw, Value), Op (..), RChunk (..),
+                            RawFrame, RawOp (..))
 import           RON.UUID (UUID, zero)
 
-serializeFrame :: Frame -> ByteStringL
+serializeFrame :: RawFrame -> ByteStringL
 serializeFrame chunks
     = (`BSLC.snoc` '.')
     . mconcat
     . (`evalState` opZero)
     $ traverse serializeChunk chunks
 
-serializeFrames :: [Frame] -> ByteStringL
+serializeFrames :: [RawFrame] -> ByteStringL
 serializeFrames = foldMap serializeFrame
 
 serializeChunk :: Chunk -> State RawOp ByteStringL

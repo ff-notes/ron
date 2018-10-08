@@ -8,7 +8,7 @@
 module RON.Types
     ( Atom (..)
     , Chunk (..)
-    , Frame
+    , RawFrame
     , StateFrame
     , Object (..)
     , ObjectId
@@ -72,7 +72,7 @@ data RChunk = RChunk
 data Chunk = Raw RawOp | Value RChunk | Query RChunk
     deriving (Data, Eq, Generic, NFData, Show)
 
-type Frame = [Chunk]
+type RawFrame = [Chunk]
 
 data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
@@ -80,7 +80,7 @@ data OpTerm = TRaw | TReduced | THeader | TQuery
 valueChunk :: RawOp -> [Op] -> Chunk
 valueChunk rchunkHeader rchunkBody = Value RChunk{rchunkHeader, rchunkBody}
 
-valueFrame :: RawOp -> [Op] -> Frame
+valueFrame :: RawOp -> [Op] -> RawFrame
 valueFrame rchunkHeader rchunkBody = [valueChunk rchunkHeader rchunkBody]
 
 -- | (type, object)

@@ -35,13 +35,13 @@ import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..),
+                            Chunk (Query, Raw, Value), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), RawOp (..), UUID (UUID))
+                            RChunk (..), RawFrame, RawOp (..), UUID (UUID))
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
-parseFrame :: ByteStringL -> Either String Frame
+parseFrame :: ByteStringL -> Either String RawFrame
 parseFrame = parseOnlyL frame
 
 chunksTill :: Parser () -> Parser [Chunk]
@@ -91,14 +91,14 @@ rchunk prev = label "Chunk-reduced" $ do
   where
     stop = pure []
 
-frame :: Parser Frame
-frame = label "Frame" $ chunksTill (endOfFrame <|> endOfInputEx)
+frame :: Parser RawFrame
+frame = label "RawFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
-parseFrames :: ByteStringL -> Either String [Frame]
+parseFrames :: ByteStringL -> Either String [RawFrame]
 parseFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
 
-frameInStream :: Parser Frame
-frameInStream = label "Frame-stream" $ chunksTill endOfFrame
+frameInStream :: Parser RawFrame
+frameInStream = label "RawFrame-stream" $ chunksTill endOfFrame
 
 parseOp :: ByteStringL -> Either String RawOp
 parseOp = parseOnlyL $ do

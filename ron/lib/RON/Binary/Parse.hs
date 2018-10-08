@@ -25,9 +25,9 @@ import           Data.ZigZag (zzDecode64)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Frame, Op (..),
+                            Chunk (Query, Raw, Value), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), RawOp (..), UUID (UUID))
+                            RChunk (..), RawFrame, RawOp (..), UUID (UUID))
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -51,11 +51,11 @@ extendedLength = do
     else
         pure $ safeCast b
 
-parse :: ByteStringL -> Either String Frame
+parse :: ByteStringL -> Either String RawFrame
 parse = parseOnlyL $ parseFrame <* endOfInputEx
 
-parseFrame :: Parser Frame
-parseFrame = label "Frame" $ do
+parseFrame :: Parser RawFrame
+parseFrame = label "RawFrame" $ do
     _ <- Atto.string "RON2" <|> do
         magic <- takeL 4
         fail $ "unsupported magic sequence " ++ show magic

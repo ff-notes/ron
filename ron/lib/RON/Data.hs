@@ -32,7 +32,7 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Chunk (Query, Raw, Value), Frame, Op (..),
+import           RON.Types (Chunk (Query, Raw, Value), RawFrame, Op (..),
                             RChunk (..), RawOp (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
@@ -45,7 +45,7 @@ reducers = Map.fromList
     , mkReducer @VersionVector
     ]
 
-reduce :: Frame -> Frame
+reduce :: RawFrame -> RawFrame
 reduce chunks = values' ++ queries where
     chunkObjectAndType = opObjectAndType . \case
         Raw                         op  -> op
