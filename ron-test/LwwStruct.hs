@@ -41,7 +41,8 @@ parseObject oid bytes = Object oid <$> parseStateFrame bytes
 
 serializeStateFrame :: StateFrame -> ByteStringL
 serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
-    wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..} where
+    wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..}
+      where
         wrcHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
         wrcBody = stateBody
         opEvent = stateVersion
