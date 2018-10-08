@@ -26,8 +26,9 @@ import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), RawOp (..), UUID (UUID),
-                            WireChunk (Query, Raw, Value), WireFrame)
+                            RawOp (..), UUID (UUID),
+                            WireChunk (Query, Raw, Value), WireFrame,
+                            WireReducedChunk (..))
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -77,9 +78,9 @@ leastSignificant31 x = x .&. 0x7FFFFFFF
 parseChunk :: Size -> Parser WireChunk
 parseChunk size = label "WireChunk" $ do
     (consumed0, (term, op)) <- withInputSize parseDescAndRawOp
-    let parseReducedChunk rchunkHeader isQuery = do
-            rchunkBody <- parseReducedOps $ fromIntegral size - consumed0
-            pure $ (if isQuery then Query else Value) RChunk{..}
+    let parseReducedChunk wrcHeader isQuery = do
+            wrcBody <- parseReducedOps $ fromIntegral size - consumed0
+            pure $ (if isQuery then Query else Value) WireReducedChunk{..}
     case term of
         THeader  -> parseReducedChunk op False
         TQuery   -> parseReducedChunk op True

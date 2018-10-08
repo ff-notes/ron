@@ -36,8 +36,9 @@ import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
 import           RON.Text.Common (opZero)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), RawOp (..), UUID (UUID),
-                            WireChunk (Query, Raw, Value), WireFrame)
+                            RawOp (..), UUID (UUID),
+                            WireChunk (Query, Raw, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
@@ -58,7 +59,7 @@ chunksTill end = label "[WireChunk]" $ go opZero
 
 -- | Returns a chunk and the last op in it
 pChunk :: RawOp -> Parser (WireChunk, RawOp)
-pChunk prev = label "WireChunk" $ rchunk prev <+> chunkRaw prev
+pChunk prev = label "WireChunk" $ wireStateChunk prev <+> chunkRaw prev
 
 chunkRaw :: RawOp -> Parser (WireChunk, RawOp)
 chunkRaw prev = label "WireChunk-raw" $ do
@@ -69,25 +70,25 @@ chunkRaw prev = label "WireChunk-raw" $ do
     pure (Raw x, x)
 
 -- | Returns a chunk and the last op (converted to raw) in it
-rchunk :: RawOp -> Parser (WireChunk, RawOp)
-rchunk prev = label "WireChunk-reduced" $ do
-    (rchunkHeader, isQuery) <- header prev
+wireStateChunk :: RawOp -> Parser (WireChunk, RawOp)
+wireStateChunk prev = label "WireChunk-reduced" $ do
+    (wrcHeader, isQuery) <- header prev
     let reducedOps y = do
             skipSpace
-            (isNotEmpty, x) <- reducedOp (opObject rchunkHeader) y
+            (isNotEmpty, x) <- reducedOp (opObject wrcHeader) y
             t <- optional term
             unless (t == Just TReduced || isNothing t) $
                 fail "reduced op may end with `,` only"
             unless (isNotEmpty || t == Just TReduced) $ fail "Empty reduced op"
             xs <- reducedOps x <|> stop
             pure $ x : xs
-    rchunkBody <- reducedOps (op rchunkHeader) <|> stop
-    let lastOp = case rchunkBody of
-            [] -> op rchunkHeader
-            _  -> last rchunkBody
+    wrcBody <- reducedOps (op wrcHeader) <|> stop
+    let lastOp = case wrcBody of
+            [] -> op wrcHeader
+            _  -> last wrcBody
         wrap op = RawOp
-            {opType = opType rchunkHeader, opObject = opObject rchunkHeader, op}
-    pure ((if isQuery then Query else Value) RChunk{..}, wrap lastOp)
+            {opType = opType wrcHeader, opObject = opObject wrcHeader, op}
+    pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
   where
     stop = pure []
 

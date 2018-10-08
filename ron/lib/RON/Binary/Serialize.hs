@@ -20,8 +20,9 @@ import           Data.ZigZag (zzEncode)
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
-                            RChunk (..), RawOp (..), UUID (UUID),
-                            WireChunk (Query, Raw, Value), WireFrame)
+                            RawOp (..), UUID (UUID),
+                            WireChunk (Query, Raw, Value), WireFrame,
+                            WireReducedChunk (..))
 
 serialize :: WireFrame -> Either String ByteStringL
 serialize chunks = ("RON2" <>) <$> serializeBody
@@ -116,16 +117,14 @@ serializeAtom = \case
 serializeFloat :: Double -> ByteStringL
 serializeFloat = runPut . putDoublebe
 
-serializeReducedChunk :: Bool -> RChunk -> Either String ByteStringL
-serializeReducedChunk isQuery RChunk{..} = do
+serializeReducedChunk :: Bool -> WireReducedChunk -> Either String ByteStringL
+serializeReducedChunk isQuery WireReducedChunk{..} = do
     header <-
-        serializeRawOp
-            (if isQuery then DOpQueryHeader else DOpHeader)
-            rchunkHeader
-    body <- foldMapA (serializeReducedOp DOpReduced opType opObject) rchunkBody
+        serializeRawOp (if isQuery then DOpQueryHeader else DOpHeader) wrcHeader
+    body <- foldMapA (serializeReducedOp DOpReduced opType opObject) wrcBody
     pure $ header <> body
   where
-    RawOp{..} = rchunkHeader
+    RawOp{..} = wrcHeader
 
 serializeString :: Text -> ByteStringL
 serializeString = fromStrict . encodeUtf8

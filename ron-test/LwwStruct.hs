@@ -23,9 +23,9 @@ import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Object (..), Op (..), RChunk (..), RawOp (..),
-                            StateChunk (..), StateFrame, UUID,
-                            WireChunk (Value), WireFrame)
+import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
+                            StateFrame, UUID, WireChunk (Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
@@ -41,9 +41,9 @@ parseObject oid bytes = Object oid <$> parseStateFrame bytes
 
 serializeStateFrame :: StateFrame -> ByteStringL
 serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
-    wrapChunk ((opType, opObject), StateChunk{..}) = Value RChunk{..} where
-        rchunkHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
-        rchunkBody = stateBody
+    wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..} where
+        wrcHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
+        wrcBody = stateBody
         opEvent = stateVersion
 
 serializeObject :: Object a -> (UUID, ByteStringL)
@@ -52,11 +52,11 @@ serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
 findObjects :: WireFrame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
-        Value RChunk{..} -> do
-            let RawOp{..} = rchunkHeader
+        Value WireReducedChunk{..} -> do
+            let RawOp{..} = wrcHeader
             let Op{..} = op
             let stateVersion = opEvent
-            let stateBody = rchunkBody
+            let stateBody = wrcBody
             pure ((opType, opObject), StateChunk{..})
         _ -> Left "expected reduced chunk"
 

@@ -24,7 +24,7 @@ import           RON.UUID (zero)
 type Reducer = UUID -> NonEmpty WireChunk -> [WireChunk]
 
 -- | Unapplied patches and ops
-type Unapplied = ([RChunk'], [Op])
+type Unapplied = ([ReducedChunk], [Op])
 
 -- TODO(2018-08-24, cblp) Semilattice a
 class (Eq a, Semigroup a) => Reducible a where
@@ -51,22 +51,19 @@ class (Eq a, Semigroup a) => Reducible a where
         , []
         )
 
-data RChunk' = RChunk'
-    { rchunk'Version :: UUID
-    , rchunk'Ref     :: UUID
-    , rchunk'Body    :: [Op]
+data ReducedChunk = ReducedChunk
+    { rcVersion :: UUID
+    , rcRef     :: UUID
+    , rcBody    :: [Op]
     }
     deriving (Show)
 
 mkChunkVersion :: [Op] -> UUID
 mkChunkVersion = maximumDef zero . map opEvent
 
-mkRChunk' :: UUID -> [Op] -> RChunk'
-mkRChunk' ref rchunk'Body = RChunk'
-    { rchunk'Version = mkChunkVersion rchunk'Body
-    , rchunk'Ref = ref
-    , ..
-    }
+mkRC :: UUID -> [Op] -> ReducedChunk
+mkRC ref rcBody =
+    ReducedChunk{rcVersion = mkChunkVersion rcBody, rcRef = ref, ..}
 
 mkStateChunk :: [Op] -> StateChunk
 mkStateChunk ops = StateChunk (mkChunkVersion ops) ops
@@ -82,14 +79,14 @@ patchFromRawOp op@Op{..} = Patch
     , patchValue = stateFromChunk [op]
     }
 
-patchFromChunk :: Reducible a => RChunk' -> Patch a
-patchFromChunk RChunk'{..} =
-    Patch{patchRef = rchunk'Ref, patchValue = stateFromChunk rchunk'Body}
+patchFromChunk :: Reducible a => ReducedChunk -> Patch a
+patchFromChunk ReducedChunk{..} =
+    Patch{patchRef = rcRef, patchValue = stateFromChunk rcBody}
 
-patchToChunk :: Reducible a => Patch a -> RChunk'
-patchToChunk Patch{..} = RChunk'{..} where
-    rchunk'Ref = patchRef
-    StateChunk rchunk'Version rchunk'Body = stateToChunk patchValue
+patchToChunk :: Reducible a => Patch a -> ReducedChunk
+patchToChunk Patch{..} = ReducedChunk{..} where
+    rcRef = patchRef
+    StateChunk rcVersion rcBody = stateToChunk patchValue
 
 class Replicated a where
     encoding :: Encoding a

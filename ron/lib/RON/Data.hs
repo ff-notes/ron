@@ -32,8 +32,9 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Op (..), RChunk (..), RawOp (..), StateChunk (..),
-                            UUID, WireChunk (Query, Raw, Value), WireFrame)
+import           RON.Types (Op (..), RawOp (..), StateChunk (..), UUID,
+                            WireChunk (Query, Raw, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -49,8 +50,8 @@ reduce :: WireFrame -> WireFrame
 reduce chunks = values' ++ queries where
     chunkObjectAndType = opObjectAndType . \case
         Raw                         op  -> op
-        Value RChunk{rchunkHeader = op} -> op
-        Query RChunk{rchunkHeader = op} -> op
+        Value WireReducedChunk{wrcHeader = op} -> op
+        Query WireReducedChunk{wrcHeader = op} -> op
     opObjectAndType RawOp{..} = (opObject, opType)
     (queries, values) = partition isQuery chunks
     values' =
@@ -93,31 +94,31 @@ reducer obj chunks = chunks' ++ leftovers where
                 | reducedStateVersion > seenStateVersion -> reducedStateVersion
                 | reducedState == seenState -> seenStateVersion
                 | otherwise -> UUID.succValue seenStateVersion
-            rc = RChunk'
-                { rchunk'Version = stateVersion
-                , rchunk'Ref = Zero
-                , rchunk'Body = reducedStateBody
+            rc = ReducedChunk
+                { rcVersion = stateVersion
+                , rcRef = Zero
+                , rcBody = reducedStateBody
                 }
             in  ( Just $ Value $ wrapRChunk rc
                 , reduceUnappliedPatches @a unapplied'
                 )
     typ = reducibleOpType @a
     wrapOp = RawOp typ obj
-    (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op], leftovers :: [WireChunk])
+    (states :: [(UUID, a)], patches :: [ReducedChunk], rawops :: [Op], leftovers :: [WireChunk])
         = foldMap load chunks
     load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of
         Raw rawop@RawOp{op} -> do
             guardSameObject rawop
             pure ([], [], [op], [])
-        Value RChunk{rchunkHeader, rchunkBody} -> do
-            guardSameObject rchunkHeader
-            let ref = opRef $ op rchunkHeader
+        Value WireReducedChunk{wrcHeader, wrcBody} -> do
+            guardSameObject wrcHeader
+            let ref = opRef $ op wrcHeader
             case ref of
                 Zero ->  -- state
                     pure
-                        ( [ ( opEvent $ op rchunkHeader
-                            , stateFromChunk rchunkBody
+                        ( [ ( opEvent $ op wrcHeader
+                            , stateFromChunk wrcBody
                             ) ]
                         , []
                         , []
@@ -126,10 +127,10 @@ reducer obj chunks = chunks' ++ leftovers where
                 _ ->  -- patch
                     pure
                         ( []
-                        ,   [ RChunk'
-                                { rchunk'Version = opEvent $ op rchunkHeader
-                                , rchunk'Ref = ref
-                                , rchunk'Body = rchunkBody
+                        ,   [ ReducedChunk
+                                { rcVersion = opEvent $ op wrcHeader
+                                , rcRef = ref
+                                , rcBody = wrcBody
                                 }
                             ]
                         , []
@@ -138,8 +139,8 @@ reducer obj chunks = chunks' ++ leftovers where
         _ -> Nothing
     guardSameObject RawOp{opType, opObject} =
         guard $ opType == typ && opObject == obj
-    wrapRChunk RChunk'{..} = RChunk
-        { rchunkHeader = wrapOp
-            Op{opEvent = rchunk'Version, opRef = rchunk'Ref, opPayload = []}
-        , rchunkBody = rchunk'Body
+    wrapRChunk ReducedChunk{..} = WireReducedChunk
+        { wrcHeader = wrapOp
+            Op{opEvent = rcVersion, opRef = rcRef, opPayload = []}
+        , wrcBody = rcBody
         }

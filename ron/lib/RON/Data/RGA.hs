@@ -137,15 +137,15 @@ patchSetFromRawOp op@Op{opEvent, opRef, opPayload} = case opPayload of
                         }
             }
 
-patchSetFromChunk :: RChunk' -> PatchSet
-patchSetFromChunk RChunk'{rchunk'Ref, rchunk'Body} =
-    case uuidScheme $ UUID.split rchunk'Ref of
+patchSetFromChunk :: ReducedChunk -> PatchSet
+patchSetFromChunk ReducedChunk{rcRef, rcBody} =
+    case uuidScheme $ UUID.split rcRef of
         B11 ->
             -- derived event -- rm-patch compatibility
-            foldMap patchSetFromRawOp rchunk'Body
+            foldMap patchSetFromRawOp rcBody
         _ ->  -- patch
-            case vertexListFromOps rchunk'Body of
-                Just patch -> mempty{psPatches = Map.singleton rchunk'Ref patch}
+            case vertexListFromOps rcBody of
+                Just patch -> mempty{psPatches = Map.singleton rcRef patch}
                 Nothing -> mempty
 
 instance Reducible RgaRaw where
@@ -166,9 +166,9 @@ instance Reducible RgaRaw where
 
 patchSetToChunks :: PatchSet -> Unapplied
 patchSetToChunks PatchSet{..} =
-    (   [ RChunk'{rchunk'Version = chunkVersion rchunk'Body, ..}
-        | (rchunk'Ref, vertices) <- Map.assocs psPatches
-        , let rchunk'Body = vertexListToOps $ Just vertices
+    (   [ ReducedChunk{rcVersion = chunkVersion rcBody, ..}
+        | (rcRef, vertices) <- Map.assocs psPatches
+        , let rcBody = vertexListToOps $ Just vertices
         ]
     ,   [ Op{opEvent = tombstone, opRef = vid, opPayload = []}
         | (vid, tombstone) <- Map.assocs psRemovals

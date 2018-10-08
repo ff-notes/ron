@@ -28,8 +28,8 @@ import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
-                            RChunk (..), RawOp (..),
-                            WireChunk (Query, Raw, Value), WireFrame)
+                            RawOp (..), WireChunk (Query, Raw, Value),
+                            WireFrame, WireReducedChunk (..))
 import           RON.UUID (UUID, zero)
 
 serializeFrame :: WireFrame -> ByteStringL
@@ -48,17 +48,17 @@ serializeChunk = \case
     Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
-serializeReducedChunk :: Bool -> RChunk -> State RawOp ByteStringL
-serializeReducedChunk isQuery RChunk{rchunkHeader, rchunkBody} =
+serializeReducedChunk :: Bool -> WireReducedChunk -> State RawOp ByteStringL
+serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
     serializeHeader = do
-        h <- serializeRawOpZip rchunkHeader
+        h <- serializeRawOpZip wrcHeader
         pure $ BSLC.unwords [h, if isQuery then "?" else "!"]
     serializeBody = state $ \RawOp{op = opBefore, ..} -> let
         (body, opAfter) =
             (`runState` opBefore) $
-            for rchunkBody $ \op -> do
+            for wrcBody $ \op -> do
                 o <- serializeReducedOpZip opObject op
                 pure $ "\t" <> BSLC.unwords [o, ","]
         in

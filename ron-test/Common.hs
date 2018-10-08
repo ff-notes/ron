@@ -21,7 +21,7 @@ import           Test.Tasty.HUnit (assertFailure, testCase)
 import           RON.Data (reduce)
 import qualified RON.Text as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (RChunk (..), RawOp (..), UUID,
+import           RON.Types (RawOp (..), WireReducedChunk (..), UUID,
                             WireChunk (Query, Raw, Value))
 import qualified RON.UUID as UUID
 
@@ -73,20 +73,20 @@ prepareChunks = map sortChunkOps . sortBy gcompare
 
 sortChunkOps :: WireChunk -> WireChunk
 sortChunkOps chunk = case chunk of
-    Value rc@RChunk{rchunkBody} ->
-        Value rc{rchunkBody = sortBy gcompare rchunkBody}
+    Value rc@WireReducedChunk{wrcBody} ->
+        Value rc{wrcBody = sortBy gcompare wrcBody}
     _ -> chunk
 
 chunkObject :: WireChunk -> UUID
 chunkObject = opObject . \case
     Raw op                    -> op
-    Value RChunk{rchunkHeader} -> rchunkHeader
-    Query RChunk{rchunkHeader} -> rchunkHeader
+    Value WireReducedChunk{wrcHeader} -> wrcHeader
+    Query WireReducedChunk{wrcHeader} -> wrcHeader
 
 isRelevant :: WireChunk -> Bool
 isRelevant = \case
     Query _ -> False
-    Value RChunk{rchunkHeader = RawOp{opType}} ->
+    Value WireReducedChunk{wrcHeader = RawOp{opType}} ->
         opType /= fromJust (UUID.mkName "~")
     _       -> True
 

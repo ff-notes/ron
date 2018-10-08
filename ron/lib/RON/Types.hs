@@ -7,12 +7,13 @@
 
 module RON.Types
     ( Atom (..)
+    , Chunk (..)
+    , Frame (..)
     , Object (..)
     , ObjectId
     , Op (..)
     , OpTerm (..)
     , RawOp (..)
-    , RChunk (..)
     , StateChunk (..)
     , StateFrame
     , UUID (..)
@@ -20,6 +21,7 @@ module RON.Types
     , valueFrame
     , WireChunk (..)
     , WireFrame
+    , WireReducedChunk (..)
     ) where
 
 import           RON.Internal.Prelude
@@ -63,13 +65,13 @@ instance Show RawOp where
             []   -> [k]
             c:cs -> c:k:cs
 
-data RChunk = RChunk
-    { rchunkHeader :: RawOp
-    , rchunkBody   :: [Op]
+data WireReducedChunk = WireReducedChunk
+    { wrcHeader :: RawOp
+    , wrcBody   :: [Op]
     }
     deriving (Data, Eq, Generic, NFData, Show)
 
-data WireChunk = Raw RawOp | Value RChunk | Query RChunk
+data WireChunk = Raw RawOp | Value WireReducedChunk | Query WireReducedChunk
     deriving (Data, Eq, Generic, NFData, Show)
 
 type WireFrame = [WireChunk]
@@ -78,10 +80,10 @@ data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
 valueChunk :: RawOp -> [Op] -> WireChunk
-valueChunk rchunkHeader rchunkBody = Value RChunk{rchunkHeader, rchunkBody}
+valueChunk wrcHeader wrcBody = Value WireReducedChunk{wrcHeader, wrcBody}
 
 valueFrame :: RawOp -> [Op] -> WireFrame
-valueFrame rchunkHeader rchunkBody = [valueChunk rchunkHeader rchunkBody]
+valueFrame wrcHeader wrcBody = [valueChunk wrcHeader wrcBody]
 
 -- | (type, object)
 type ObjectId = (UUID, UUID)
@@ -93,6 +95,13 @@ data StateChunk = StateChunk
     deriving (Eq, Show)
 
 type StateFrame = Map ObjectId StateChunk
+
+data Chunk
+    = State         WireReducedChunk
+    | UnmergedPatch WireReducedChunk
+    | UnmergedOp    RawOp
+
+data Frame = Map ObjectId Chunk
 
 data Object a = Object{objectId :: UUID, objectFrame :: StateFrame}
     deriving (Eq, Show)
