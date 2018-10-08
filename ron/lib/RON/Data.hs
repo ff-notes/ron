@@ -87,7 +87,7 @@ reducer obj chunks = chunks' ++ leftovers where
             state = sconcat $ fmap snd nStates
             (reducedState, unapplied') = applyPatches state (patches, rawops)
             StateChunk reducedStateVersion reducedStateBody =
-                stateToChunk reducedState
+                stateToChunk @a reducedState
             MaxOnFst (seenStateVersion, seenState) =
                 sconcat $ fmap MaxOnFst nStates
             stateVersion = if
@@ -104,8 +104,7 @@ reducer obj chunks = chunks' ++ leftovers where
                 )
     typ = reducibleOpType @a
     wrapOp = RawOp typ obj
-    (states :: [(UUID, a)], patches :: [ReducedChunk], rawops :: [Op], leftovers :: [WireChunk])
-        = foldMap load chunks
+    (states, patches, rawops, leftovers) = foldMap load chunks
     load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of
         Raw rawop@RawOp{op} -> do
