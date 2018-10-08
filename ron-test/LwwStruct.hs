@@ -23,9 +23,9 @@ import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Internal.Word (ls60)
 import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Chunk (Value), Object (..), Op (..), RChunk (..),
-                            RawFrame, RawOp (..), StateChunk (..), StateFrame,
-                            UUID)
+import           RON.Types (Object (..), Op (..), RChunk (..), RawOp (..),
+                            StateChunk (..), StateFrame, UUID,
+                            WireChunk (Value), WireFrame)
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
@@ -49,7 +49,7 @@ serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
 serializeObject :: Object a -> (UUID, ByteStringL)
 serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
 
-findObjects :: RawFrame -> Either String StateFrame
+findObjects :: WireFrame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value RChunk{..} -> do

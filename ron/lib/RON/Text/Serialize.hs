@@ -27,22 +27,22 @@ import           Data.Traversable (for)
 import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Op (..), RChunk (..),
-                            RawFrame, RawOp (..))
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
+                            RChunk (..), RawOp (..),
+                            WireChunk (Query, Raw, Value), WireFrame)
 import           RON.UUID (UUID, zero)
 
-serializeFrame :: RawFrame -> ByteStringL
+serializeFrame :: WireFrame -> ByteStringL
 serializeFrame chunks
     = (`BSLC.snoc` '.')
     . mconcat
     . (`evalState` opZero)
     $ traverse serializeChunk chunks
 
-serializeFrames :: [RawFrame] -> ByteStringL
+serializeFrames :: [WireFrame] -> ByteStringL
 serializeFrames = foldMap serializeFrame
 
-serializeChunk :: Chunk -> State RawOp ByteStringL
+serializeChunk :: WireChunk -> State RawOp ByteStringL
 serializeChunk = \case
     Raw op      -> (<> " ;\n") <$> serializeRawOpZip op
     Value chunk -> serializeReducedChunk False chunk

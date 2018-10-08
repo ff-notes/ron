@@ -32,8 +32,8 @@ import           RON.Event (CalendarEvent (..), Naming (TrieForked),
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (Atom (..), Chunk (Raw), Op (..), RawOp (..),
-                            UUID (..))
+import           RON.Types (Atom (..), Op (..), RawOp (..), UUID (..),
+                            WireChunk (Raw))
 import qualified RON.UUID as UUID
 
 import qualified Gen
@@ -118,11 +118,11 @@ prop_text_roundtrip_op =
 
 prop_text_roundtrip_frame =
     -- TODO increase limits
-    property $ textRoundtrip (Gen.frame 10) RT.serializeFrame RT.parseFrame
+    property $ textRoundtrip (Gen.wireFrame 10) RT.serializeFrame RT.parseFrame
 
-prop_text_roundtrip_frames =
+prop_text_roundtrip_frames = property $
     -- TODO increase limits
-    property $ textRoundtrip (Gen.frames 10) RT.serializeFrames RT.parseFrames
+    textRoundtrip (Gen.wireFrames 10) RT.serializeFrames RT.parseFrames
 
 prop_filename_roundtrip = property $ do
     ShowAs caseTransform _ <- forAll $ Gen.element

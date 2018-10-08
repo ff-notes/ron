@@ -19,11 +19,11 @@ import           Data.ZigZag (zzEncode)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Op (..), RChunk (..),
-                            RawFrame, RawOp (..), UUID (UUID))
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
+                            RChunk (..), RawOp (..), UUID (UUID),
+                            WireChunk (Query, Raw, Value), WireFrame)
 
-serialize :: RawFrame -> Either String ByteStringL
+serialize :: WireFrame -> Either String ByteStringL
 serialize chunks = ("RON2" <>) <$> serializeBody
   where
     serializeBody = foldChunks =<< traverse serializeChunk chunks
@@ -45,7 +45,7 @@ serialize chunks = ("RON2" <>) <$> serializeBody
             mconcat <$>
             sequence [chunkSize True (BSL.length c), pure c, foldChunks cs]
 
-serializeChunk :: Chunk -> Either String ByteStringL
+serializeChunk :: WireChunk -> Either String ByteStringL
 serializeChunk = \case
     Raw op       -> serializeRawOp DOpRaw op
     Value rchunk -> serializeReducedChunk False rchunk

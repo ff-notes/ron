@@ -9,7 +9,7 @@ import           Criterion.Main (defaultConfig, defaultMainWith)
 import           Criterion.Types (timeLimit)
 
 import           RON.Text (parseFrames, serializeFrames)
-import           RON.Types (Chunk (Raw), Op (..), RawOp (..))
+import           RON.Types (WireChunk (Raw), Op (..), RawOp (..))
 import qualified RON.UUID as UUID
 
 main :: IO ()

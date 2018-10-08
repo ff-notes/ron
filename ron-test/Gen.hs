@@ -14,8 +14,8 @@ import           RON.Event (Calendar (..), Event (..),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
                             ReplicaId (..))
 import           RON.Internal.Word (Word60, leastSignificant60, ls12, ls24, ls6)
-import           RON.Types (Atom (..), Chunk (..), Op (..), RChunk (..),
-                            RawFrame, RawOp (..), UUID (..))
+import           RON.Types (Atom (..), WireChunk (..), Op (..), RChunk (..),
+                            WireFrame, RawOp (..), UUID (..))
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
@@ -32,8 +32,8 @@ rawOp size = RawOp <$> uuid <*> uuid <*> reducedOp size
 reducedOp :: MonadGen gen => Int -> gen Op
 reducedOp size = Op <$> uuid <*> uuid <*> payload size
 
-chunk :: MonadGen gen => Int -> gen Chunk
-chunk size =
+wireChunk :: MonadGen gen => Int -> gen WireChunk
+wireChunk size =
     choice [Raw <$> rawOp size, Value <$> rchunk size, Query <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen RChunk
@@ -41,11 +41,11 @@ rchunk size = RChunk
     <$> rawOp size
     <*> list (Range.exponential 0 size) (reducedOp size)
 
-frame :: MonadGen gen => Int -> gen RawFrame
-frame size = list (Range.exponential 0 size) (chunk size)
+wireFrame :: MonadGen gen => Int -> gen WireFrame
+wireFrame size = list (Range.exponential 0 size) (wireChunk size)
 
-frames :: MonadGen gen => Int -> gen [RawFrame]
-frames size = list (Range.exponential 0 size) (frame size)
+wireFrames :: MonadGen gen => Int -> gen [WireFrame]
+wireFrames size = list (Range.exponential 0 size) (wireFrame size)
 
 calendar :: MonadGen gen => gen Calendar
 calendar = do

@@ -34,18 +34,18 @@ import qualified RON.Base64 as Base64
 import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Op (..),
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), RawFrame, RawOp (..), UUID (UUID))
+                            RChunk (..), RawOp (..), UUID (UUID),
+                            WireChunk (Query, Raw, Value), WireFrame)
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
-parseFrame :: ByteStringL -> Either String RawFrame
+parseFrame :: ByteStringL -> Either String WireFrame
 parseFrame = parseOnlyL frame
 
-chunksTill :: Parser () -> Parser [Chunk]
-chunksTill end = label "[Chunk]" $ go opZero
+chunksTill :: Parser () -> Parser [WireChunk]
+chunksTill end = label "[WireChunk]" $ go opZero
   where
     go prev = do
         skipSpace
@@ -57,11 +57,11 @@ chunksTill end = label "[Chunk]" $ go opZero
             (ch :) <$> go lastOp
 
 -- | Returns a chunk and the last op in it
-pChunk :: RawOp -> Parser (Chunk, RawOp)
-pChunk prev = label "Chunk" $ rchunk prev <+> chunkRaw prev
+pChunk :: RawOp -> Parser (WireChunk, RawOp)
+pChunk prev = label "WireChunk" $ rchunk prev <+> chunkRaw prev
 
-chunkRaw :: RawOp -> Parser (Chunk, RawOp)
-chunkRaw prev = label "Chunk-raw" $ do
+chunkRaw :: RawOp -> Parser (WireChunk, RawOp)
+chunkRaw prev = label "WireChunk-raw" $ do
     skipSpace
     (_, x) <- rawOp prev
     skipSpace
@@ -69,8 +69,8 @@ chunkRaw prev = label "Chunk-raw" $ do
     pure (Raw x, x)
 
 -- | Returns a chunk and the last op (converted to raw) in it
-rchunk :: RawOp -> Parser (Chunk, RawOp)
-rchunk prev = label "Chunk-reduced" $ do
+rchunk :: RawOp -> Parser (WireChunk, RawOp)
+rchunk prev = label "WireChunk-reduced" $ do
     (rchunkHeader, isQuery) <- header prev
     let reducedOps y = do
             skipSpace
@@ -91,14 +91,14 @@ rchunk prev = label "Chunk-reduced" $ do
   where
     stop = pure []
 
-frame :: Parser RawFrame
-frame = label "RawFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
+frame :: Parser WireFrame
+frame = label "WireFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
-parseFrames :: ByteStringL -> Either String [RawFrame]
+parseFrames :: ByteStringL -> Either String [WireFrame]
 parseFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
 
-frameInStream :: Parser RawFrame
-frameInStream = label "RawFrame-stream" $ chunksTill endOfFrame
+frameInStream :: Parser WireFrame
+frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
 
 parseOp :: ByteStringL -> Either String RawOp
 parseOp = parseOnlyL $ do

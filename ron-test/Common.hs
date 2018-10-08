@@ -21,8 +21,8 @@ import           Test.Tasty.HUnit (assertFailure, testCase)
 import           RON.Data (reduce)
 import qualified RON.Text as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (Chunk (Query, Raw, Value), RChunk (..), RawOp (..),
-                            UUID)
+import           RON.Types (RChunk (..), RawOp (..), UUID,
+                            WireChunk (Query, Raw, Value))
 import qualified RON.UUID as UUID
 
 main :: IO ()
@@ -60,30 +60,30 @@ loadCases = do
         (Map.mapMissing $ const (a,))
         (Map.zipWithMatched $ const (,))
 
-groupObjects :: [Chunk] -> Map UUID [Chunk]
+groupObjects :: [WireChunk] -> Map UUID [WireChunk]
 groupObjects chunks =
     Map.fromListWith (++) [(chunkObject chunk, [chunk])| chunk <- chunks]
 
-reduceAndCompareChunks :: [Chunk] -> [Chunk] -> Property
+reduceAndCompareChunks :: [WireChunk] -> [WireChunk] -> Property
 reduceAndCompareChunks chunksIn chunksOut =
     property $ ((===) `on` prepareChunks) chunksOut (reduce chunksIn)
 
-prepareChunks :: [Chunk] -> [Chunk]
+prepareChunks :: [WireChunk] -> [WireChunk]
 prepareChunks = map sortChunkOps . sortBy gcompare
 
-sortChunkOps :: Chunk -> Chunk
+sortChunkOps :: WireChunk -> WireChunk
 sortChunkOps chunk = case chunk of
     Value rc@RChunk{rchunkBody} ->
         Value rc{rchunkBody = sortBy gcompare rchunkBody}
     _ -> chunk
 
-chunkObject :: Chunk -> UUID
+chunkObject :: WireChunk -> UUID
 chunkObject = opObject . \case
     Raw op                    -> op
     Value RChunk{rchunkHeader} -> rchunkHeader
     Query RChunk{rchunkHeader} -> rchunkHeader
 
-isRelevant :: Chunk -> Bool
+isRelevant :: WireChunk -> Bool
 isRelevant = \case
     Query _ -> False
     Value RChunk{rchunkHeader = RawOp{opType}} ->

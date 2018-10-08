@@ -32,8 +32,8 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Chunk (Query, Raw, Value), RawFrame, Op (..),
-                            RChunk (..), RawOp (..), StateChunk (..), UUID)
+import           RON.Types (Op (..), RChunk (..), RawOp (..), StateChunk (..),
+                            UUID, WireChunk (Query, Raw, Value), WireFrame)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -45,7 +45,7 @@ reducers = Map.fromList
     , mkReducer @VersionVector
     ]
 
-reduce :: RawFrame -> RawFrame
+reduce :: WireFrame -> WireFrame
 reduce chunks = values' ++ queries where
     chunkObjectAndType = opObjectAndType . \case
         Raw                         op  -> op
@@ -60,12 +60,12 @@ reduce chunks = values' ++ queries where
         Map.fromListWith (++)
             [(chunkObjectAndType value, [value]) | value <- values]
 
-reduceByType :: (UUID, UUID) -> NonEmpty Chunk -> [Chunk]
+reduceByType :: (UUID, UUID) -> NonEmpty WireChunk -> [WireChunk]
 reduceByType (obj, typ) = case reducers !? typ of
     Nothing   -> toList  -- TODO use generic reducer
     Just rdcr -> rdcr obj
 
-isQuery :: Chunk -> Bool
+isQuery :: WireChunk -> Bool
 isQuery = \case
     Query _ -> True
     _       -> False
@@ -103,7 +103,7 @@ reducer obj chunks = chunks' ++ leftovers where
                 )
     typ = reducibleOpType @a
     wrapOp = RawOp typ obj
-    (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op], leftovers :: [Chunk])
+    (states :: [(UUID, a)], patches :: [RChunk'], rawops :: [Op], leftovers :: [WireChunk])
         = foldMap load chunks
     load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of

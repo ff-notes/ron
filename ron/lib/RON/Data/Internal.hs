@@ -16,12 +16,12 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           RON.Event (Clock)
-import           RON.Types (Atom (..), Chunk, Object (..), Op (..),
-                            StateChunk (..), StateFrame, UUID)
+import           RON.Types (Atom (..), Object (..), Op (..), StateChunk (..),
+                            StateFrame, UUID, WireChunk)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
-type Reducer = UUID -> NonEmpty Chunk -> [Chunk]
+type Reducer = UUID -> NonEmpty WireChunk -> [WireChunk]
 
 -- | Unapplied patches and ops
 type Unapplied = ([RChunk'], [Op])

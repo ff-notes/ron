@@ -24,10 +24,10 @@ import           Data.ZigZag (zzDecode64)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Internal.Word (safeCast)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Chunk (Query, Raw, Value), Op (..),
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RChunk (..), RawFrame, RawOp (..), UUID (UUID))
+                            RChunk (..), RawOp (..), UUID (UUID),
+                            WireChunk (Query, Raw, Value), WireFrame)
 
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
@@ -51,17 +51,17 @@ extendedLength = do
     else
         pure $ safeCast b
 
-parse :: ByteStringL -> Either String RawFrame
+parse :: ByteStringL -> Either String WireFrame
 parse = parseOnlyL $ parseFrame <* endOfInputEx
 
-parseFrame :: Parser RawFrame
-parseFrame = label "RawFrame" $ do
+parseFrame :: Parser WireFrame
+parseFrame = label "WireFrame" $ do
     _ <- Atto.string "RON2" <|> do
         magic <- takeL 4
         fail $ "unsupported magic sequence " ++ show magic
     parseChunks
 
-parseChunks :: Parser [Chunk]
+parseChunks :: Parser [WireChunk]
 parseChunks = do
     size :: Size <- Binary.decode <$> takeL 4
     if  | testBit size 31 ->
@@ -74,8 +74,8 @@ parseChunks = do
 leastSignificant31 :: Word32 -> Word32
 leastSignificant31 x = x .&. 0x7FFFFFFF
 
-parseChunk :: Size -> Parser Chunk
-parseChunk size = label "Chunk" $ do
+parseChunk :: Size -> Parser WireChunk
+parseChunk size = label "WireChunk" $ do
     (consumed0, (term, op)) <- withInputSize parseDescAndRawOp
     let parseReducedChunk rchunkHeader isQuery = do
             rchunkBody <- parseReducedOps $ fromIntegral size - consumed0
