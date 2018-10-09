@@ -16,7 +16,7 @@ module RON.Data
     , getObjectStateChunk
     , objectEncoding
     , payloadEncoding
-    , reduce
+    , reduceFrame
     ) where
 
 import           RON.Internal.Prelude
@@ -46,8 +46,10 @@ reducers = Map.fromList
     , mkReducer @VersionVector
     ]
 
-reduce :: WireFrame -> WireFrame
-reduce chunks = values' ++ queries where
+-- reduceState :: StateFrame -> StateFrame
+
+reduceFrame :: WireFrame -> WireFrame
+reduceFrame chunks = values' ++ queries where
     chunkObjectAndType = opObjectAndType . \case
         Raw                         op  -> op
         Value WireReducedChunk{wrcHeader = op} -> op

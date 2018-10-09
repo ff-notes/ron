@@ -7,8 +7,6 @@
 
 module RON.Types
     ( Atom (..)
-    , Chunk (..)
-    , Frame (..)
     , Object (..)
     , ObjectId
     , Op (..)
@@ -95,13 +93,6 @@ data StateChunk = StateChunk
     deriving (Eq, Show)
 
 type StateFrame = Map ObjectId StateChunk
-
-data Chunk
-    = State         WireReducedChunk
-    | UnmergedPatch WireReducedChunk
-    | UnmergedOp    RawOp
-
-data Frame = Map ObjectId Chunk
 
 data Object a = Object{objectId :: UUID, objectFrame :: StateFrame}
     deriving (Eq, Show)
