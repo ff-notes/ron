@@ -18,7 +18,7 @@ import           Test.Tasty (TestTree, defaultMain, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.HUnit (assertFailure, testCase)
 
-import           RON.Data (reduceFrame)
+import           RON.Data (reduceWireFrame)
 import qualified RON.Text as RT
 import qualified RON.Text.Serialize as RT
 import           RON.Types (RawOp (..), WireReducedChunk (..), UUID,
@@ -66,7 +66,7 @@ groupObjects chunks =
 
 reduceAndCompareChunks :: [WireChunk] -> [WireChunk] -> Property
 reduceAndCompareChunks chunksIn chunksOut =
-    property $ ((===) `on` prepareChunks) chunksOut (reduceFrame chunksIn)
+    property $ ((===) `on` prepareChunks) chunksOut (reduceWireFrame chunksIn)
 
 prepareChunks :: [WireChunk] -> [WireChunk]
 prepareChunks = map sortChunkOps . sortBy gcompare

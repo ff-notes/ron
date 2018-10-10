@@ -16,7 +16,7 @@ module RON.Data
     , getObjectStateChunk
     , objectEncoding
     , payloadEncoding
-    , reduceFrame
+    , reduceWireFrame
     ) where
 
 import           RON.Internal.Prelude
@@ -46,27 +46,25 @@ reducers = Map.fromList
     , mkReducer @VersionVector
     ]
 
--- reduceState :: StateFrame -> StateFrame
-
-reduceFrame :: WireFrame -> WireFrame
-reduceFrame chunks = values' ++ queries where
-    chunkObjectAndType = opObjectAndType . \case
-        Raw                         op  -> op
+reduceWireFrame :: WireFrame -> WireFrame
+reduceWireFrame chunks = values' ++ queries where
+    chunkTypeAndObject = opTypeAndObject . \case
+        Raw                                op  -> op
         Value WireReducedChunk{wrcHeader = op} -> op
         Query WireReducedChunk{wrcHeader = op} -> op
-    opObjectAndType RawOp{..} = (opObject, opType)
+    opTypeAndObject RawOp{..} = (opType, opObject)
     (queries, values) = partition isQuery chunks
     values' =
         fold $
-        Map.mapWithKey reduceByType $
+        Map.mapWithKey reduceWireFrameByType $
         NonEmpty.fromList <$>
         Map.fromListWith (++)
-            [(chunkObjectAndType value, [value]) | value <- values]
+            [(chunkTypeAndObject value, [value]) | value <- values]
 
-reduceByType :: (UUID, UUID) -> NonEmpty WireChunk -> [WireChunk]
-reduceByType (obj, typ) = case reducers !? typ of
-    Nothing   -> toList  -- TODO use generic reducer
-    Just rdcr -> rdcr obj
+reduceWireFrameByType :: (UUID, UUID) -> NonEmpty WireChunk -> [WireChunk]
+reduceWireFrameByType (typ, obj) = case reducers !? typ of
+    Nothing                   -> toList  -- TODO use default reducer
+    Just Reducer{wireReducer} -> wireReducer obj
 
 isQuery :: WireChunk -> Bool
 isQuery = \case
@@ -74,10 +72,13 @@ isQuery = \case
     _       -> False
 
 mkReducer :: forall a . Reducible a => (UUID, Reducer)
-mkReducer = (reducibleOpType @a, reducer @a)
+mkReducer =
+    ( reducibleOpType @a
+    , Reducer{wireReducer = mkWireReducer @a, stateReducer = mkStateReducer @a}
+    )
 
-reducer :: forall a . Reducible a => Reducer
-reducer obj chunks = chunks' ++ leftovers where
+mkWireReducer :: forall a . Reducible a => WireReducer
+mkWireReducer obj chunks = chunks' <> leftovers where
     chunks'
         =  maybeToList stateChunk'
         ++ map (Value . wrapRChunk) unappliedPatches
@@ -145,3 +146,8 @@ reducer obj chunks = chunks' ++ leftovers where
             Op{opEvent = rcVersion, opRef = rcRef, opPayload = []}
         , wrcBody = rcBody
         }
+
+mkStateReducer
+    :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
+mkStateReducer c1 c2 =
+    stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) c1 c2

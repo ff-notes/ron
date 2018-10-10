@@ -21,7 +21,12 @@ import           RON.Types (Atom (..), Object (..), Op (..), StateChunk (..),
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
-type Reducer = UUID -> NonEmpty WireChunk -> [WireChunk]
+type WireReducer = UUID -> NonEmpty WireChunk -> [WireChunk]
+
+data Reducer = Reducer
+    { wireReducer  :: WireReducer
+    , stateReducer :: StateChunk -> StateChunk -> StateChunk
+    }
 
 -- | Unapplied patches and ops
 type Unapplied = ([ReducedChunk], [Op])
