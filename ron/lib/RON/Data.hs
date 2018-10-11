@@ -74,7 +74,7 @@ isQuery = \case
 mkReducer :: forall a . Reducible a => (UUID, Reducer)
 mkReducer =
     ( reducibleOpType @a
-    , Reducer{wireReducer = mkWireReducer @a, stateReducer = mkStateReducer @a}
+    , Reducer{wireReducer = mkWireReducer @a, stateReducer = reduceState @a}
     )
 
 mkWireReducer :: forall a . Reducible a => WireReducer
@@ -147,7 +147,6 @@ mkWireReducer obj chunks = chunks' <> leftovers where
         , wrcBody = rcBody
         }
 
-mkStateReducer
-    :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
-mkStateReducer c1 c2 =
-    stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) c1 c2
+reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
+reduceState s1 s2 =
+    stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2

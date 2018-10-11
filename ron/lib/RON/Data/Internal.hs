@@ -31,7 +31,7 @@ data Reducer = Reducer
 -- | Unapplied patches and ops
 type Unapplied = ([ReducedChunk], [Op])
 
--- TODO(2018-08-24, cblp) Semilattice a
+-- TODO(2018-08-24, cblp) Semilattice a; Monoid?
 class (Eq a, Semigroup a) => Reducible a where
     reducibleOpType :: UUID
 
