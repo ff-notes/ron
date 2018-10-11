@@ -6,7 +6,8 @@ import           Control.Error (hoistEither)
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (execStateT)
 import qualified Data.HashSet as HashSet
-import           Data.List (intersect, sort, tails)
+import           Data.List (intersect, sortOn, tails)
+import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
@@ -22,8 +23,8 @@ import           RON.Types (Object)
 main :: IO ()
 main = do
     words <- Text.lines <$> Text.getContents
-    mapM_ print $ take 10 $ sort
-        [   (   negate . realToFrac $ minimum
+    mapM_ print $ take 10 $ sortOn Down
+        [   (   realToFrac $ minimum
                     [ levenshteinNorm begin branch1
                     , levenshteinNorm begin branch2
                     , levenshteinNorm branch1 end
@@ -55,7 +56,7 @@ stems :: Text -> [Text]
 stems word
     =   word
     :   [ s
-        | suffix <- ["'s", "ed", "es", "s", "ing"]
+        | suffix <- ["'s", "ed", "es", "s", "ing", "ian"]
         , Just s <- [Text.stripSuffix suffix word]
         ]
     ++  [ s <> "e"

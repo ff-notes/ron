@@ -18,15 +18,13 @@ import           Control.Monad.State.Strict (StateT, evalState, evalStateT,
                                              modify, state)
 import           Control.Monad.Trans (MonadTrans, lift)
 import           Data.Functor.Identity (Identity)
-import           Data.Hashable (hash)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe (fromMaybe)
 
 import           RON.Event (Clock, EpochEvent (..), Replica, ReplicaId (..),
                             advance, getEvents, getPid)
-import           RON.Internal.Word (Word60, Word64, leastSignificant60,
-                                    word60add)
+import           RON.Internal.Word (Word60, Word64, ls60, word60add)
 
 -- | Lamport clock simulation. Key is 'ReplicaId'.
 -- Non-present value is equivalent to (0, initial).
@@ -53,10 +51,10 @@ instance Monad m => Replica (ReplicaSimT m) where
 instance Monad m => Clock (ReplicaSimT m) where
     getEvents n' = ReplicaSim $ do
         rid <- ask
-        t0 <- lift $ preIncreaseTime n rid
+        t0 <- lift $ preIncreaseTime rid
         pure [EpochEvent t rid | t <- [t0 .. t0 `word60add` n]]
       where
-        n = max n' (leastSignificant60 (1 :: Word64))
+        n = max n' (ls60 (1 :: Word64))
 
     advance time = ReplicaSim $ do
         rid <- ask
@@ -79,12 +77,7 @@ runReplicaSimT :: ReplicaId -> ReplicaSimT m a -> NetworkSimT m a
 runReplicaSimT rid (ReplicaSim action) = runReaderT action rid
 
 -- | Increase time by rid and return new value
-preIncreaseTime :: Monad m => Word60 -> ReplicaId -> NetworkSimT m Word60
-preIncreaseTime n rid = NetworkSim $ state $ \pss ->
-    let time0 =
-            fromMaybe (leastSignificant60 (0 :: Word64) :: Word60) $
-            HM.lookup rid pss
-        ReplicaId _ r = rid
-        d     = leastSignificant60 $ hash (time0, n, r) `mod` 0x100
-        time  = max (succ time0) (time0 `word60add` d)
+preIncreaseTime :: Monad m => ReplicaId -> NetworkSimT m Word60
+preIncreaseTime rid = NetworkSim $ state $ \pss ->
+    let time = succ $ fromMaybe (ls60 0) $ HM.lookup rid pss
     in  (time, HM.insert rid time pss)

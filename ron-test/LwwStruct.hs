@@ -72,43 +72,43 @@ replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
 
 ex1expect :: ByteStringL
 ex1expect = [i|
-    *lww    #B/]B~+r3pl1c4  @`                      !
-                                    :int1   =275    ,
-                                    :set4   >]2V    ,
-                                    :str2   >]At    ,
-                                    :str3   '190'   ,
+    *lww    #B/)6+r3pl1c4   @`                  !
+                                :int1   =275    ,
+                                :set4   >)1     ,
+                                :str2   >)5     ,
+                                :str3   '190'   ,
 
-    *rga    #]At            @]As    :0              !
-                            @]5s            '2'     ,
-                            @]8s            '7'     ,
-                            @]As            '5'     ,
+    *rga    #)5             @)4 :0              !
+                            @)2         '2'     ,
+                            @)3         '7'     ,
+                            @)4         '5'     ,
 
-    *set    #]2V            @`                      !
+    *set    #)1             @`                  !
     .
     |]
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/]B~+r3pl1c4  @`]Ns                   !
-                            @]Fs    :int1   =166    ,
-                            @`      :set4   >]2V    ,
-                                    :str2   >]At    ,
-                            @]Ns    :str3   '206'   ,
+    *lww    #B/)6+r3pl1c4   @`)C                    !
+                            @)7     :int1   =166    ,
+                            @`      :set4   >)1     ,
+                                    :str2   >)5     ,
+                            @)C     :str3   '206'   ,
 
-            #]Qs            @`      :0              !
-                                    :vv5    >]Os    ,
+            #)E             @`      :0              !
+                                    :vv5    >)D     ,
 
-    *rga    #]At            @]J~    :0              !
-                            @]5s    :`]Gs   '2'     ,
-                            @]8s    :]Is    '7'     ,
-                            @]It    :0      '1'     ,
-                            @]J~            '4'     ,
-                            @]As            '5'     ,
+    *rga    #)5             @)B     :0              !
+                            @)2     :`)8    '2'     ,
+                            @)3     :)9     '7'     ,
+                            @)A     :0      '1'     ,
+                            @)B             '4'     ,
+                            @)4             '5'     ,
 
-    *set    #]2V            @]Qt                    !
-                                            >]Qs    ,
+    *set    #)1             @)F                     !
+                                            >)E     ,
 
-    *vv     #]Os            @`                      !
+    *vv     #)D             @`                      !
     .
     |]
 
