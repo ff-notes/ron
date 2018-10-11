@@ -16,6 +16,7 @@ module RON.Data
     , getObjectStateChunk
     , objectEncoding
     , payloadEncoding
+    , reduceState
     , reduceWireFrame
     ) where
 
