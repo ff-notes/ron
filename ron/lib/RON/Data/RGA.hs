@@ -96,7 +96,7 @@ vertexListFromOps :: [Op] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
 
 newtype RgaRaw = RgaRaw (Maybe VertexList)
-    deriving (Eq, Semigroup, Show)
+    deriving (Eq, Monoid, Semigroup, Show)
 
 data PatchSet = PatchSet
     { psPatches  :: Map UUID VertexList

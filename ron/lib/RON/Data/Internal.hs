@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE Rank2Types #-}
@@ -31,8 +30,8 @@ data Reducer = Reducer
 -- | Unapplied patches and ops
 type Unapplied = ([ReducedChunk], [Op])
 
--- TODO(2018-08-24, cblp) Semilattice a; Monoid?
-class (Eq a, Semigroup a) => Reducible a where
+-- TODO(2018-08-24, cblp) Semilattice a
+class (Eq a, Monoid a) => Reducible a where
     reducibleOpType :: UUID
 
     stateFromChunk :: [Op] -> a
@@ -40,7 +39,6 @@ class (Eq a, Semigroup a) => Reducible a where
     stateToChunk :: a -> StateChunk
 
     applyPatches :: a -> Unapplied -> (a, Unapplied)
-    default applyPatches :: Monoid a => a -> Unapplied -> (a, Unapplied)
     applyPatches a (patches, ops) =
         ( a <> foldMap (patchValue . patchFromChunk) patches
             <> foldMap (patchValue . patchFromRawOp) ops
