@@ -78,3 +78,13 @@ rgaTrick2 begin' branch1' branch2 =
         branch2' <- (`execStateT` begin') . RGA.edit $ Text.unpack branch2
         end' <- hoistEither $ reduceObject' branch1' branch2'
         hoistEither $ Text.pack <$> RGA.toList end'
+
+{-
+Found
+    ("Bernie",("Arne","Bert"),"Art")
+    ("Bjorne",("Arne","Bonnie"),"Annie")
+        B  j  o    r  n     e
+        B- j- o- A r  n     e
+        B  j- o    r- n n i e
+        B- j- i- A r- n n i e
+-}
