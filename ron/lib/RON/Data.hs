@@ -8,20 +8,25 @@
 {-# LANGUAGE TypeApplications #-}
 
 module RON.Data
-    ( Reducible (..)
+    ( collectFrame
+    , fromRon
+    , getObjectStateChunk
+    , newRon
+    , objectEncoding
+    , payloadEncoding
+    , reduceObject
+    , reduceObject'
+    , reduceStateFrame
+    , reduceWireFrame
+    , Reducible (..)
     , Replicated (..)
     , ReplicatedAsObject (..)
     , ReplicatedAsPayload (..)
-    , collectFrame
-    , getObjectStateChunk
-    , objectEncoding
-    , payloadEncoding
-    , reduceState
-    , reduceWireFrame
     ) where
 
 import           RON.Internal.Prelude
 
+import           Control.Monad.State.Strict (execStateT, lift, modify')
 import           Data.Foldable (fold)
 import           Data.List (partition)
 import qualified Data.List.NonEmpty as NonEmpty
@@ -33,9 +38,9 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Types (Op (..), RawOp (..), StateChunk (..), UUID,
-                            WireChunk (Query, Raw, Value), WireFrame,
-                            WireReducedChunk (..))
+import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
+                            StateFrame, UUID, WireChunk (Query, Raw, Value),
+                            WireFrame, WireReducedChunk (..))
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -151,3 +156,21 @@ mkWireReducer obj chunks = chunks' <> leftovers where
 reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
 reduceState s1 s2 =
     stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2
+
+reduceStateFrame :: StateFrame -> StateFrame -> Either String StateFrame
+reduceStateFrame s1 s2 =
+    (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid@(typ, _) chunk ->
+        case reducers !? typ of
+            Just Reducer{stateReducer} ->
+                modify' $ Map.insertWith stateReducer oid chunk
+            Nothing -> lift $
+                Left $ "Cannot reduce StateFrame of unknown type " ++ show typ
+
+reduceObject :: Object a -> StateFrame -> Either String (Object a)
+reduceObject Object{objectId, objectFrame = s1} s2 = do
+    objectFrame <- reduceStateFrame s1 s2
+    pure Object{..}
+
+-- | Reduce object with frame from another object.
+reduceObject' :: Object a -> Object a -> Either String (Object a)
+reduceObject' obj1 = reduceObject obj1 . objectFrame

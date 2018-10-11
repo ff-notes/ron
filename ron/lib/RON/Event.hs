@@ -15,6 +15,7 @@ module RON.Event
     , ReplicaId (..)
     , Calendar (..)
     , advanceToUuid
+    , applicationSpecific
     , decodeEvent
     , encodeEvent
     , fromCalendarEvent
@@ -261,3 +262,6 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
         , seconds         = ls6  ss
         , nanosecHundreds = ls24 ns
         }
+
+applicationSpecific :: Word64 -> ReplicaId
+applicationSpecific = ReplicaId ApplicationSpecific . ls60

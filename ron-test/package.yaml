@@ -35,3 +35,9 @@ tests:
       - HexDump
       - LwwStruct
       - LwwStruct.Types
+
+executables:
+  words:
+    main: Words.hs
+    dependencies:
+      - text-metrics

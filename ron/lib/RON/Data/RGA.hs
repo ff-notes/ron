@@ -9,10 +9,13 @@
 module RON.Data.RGA
     ( RGA (..)
     , RgaRaw (..)
+    , RgaString
     , edit
+    , fromList
+    , toList
     ) where
 
-import           RON.Internal.Prelude
+import           RON.Internal.Prelude hiding (toList)
 
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (MonadState, get, put)
@@ -364,3 +367,11 @@ edit newItems = do
                     Map.insert (rgaType, objectId) state' objectFrame
                 , ..
                 }
+
+type RgaString = RGA Char
+
+fromList :: (Replicated a, Clock m) => [a] -> m (Object (RGA a))
+fromList = newObject . RGA
+
+toList :: Replicated a => Object (RGA a) -> Either String [a]
+toList = coerce . getObject
