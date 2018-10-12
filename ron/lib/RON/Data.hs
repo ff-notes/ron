@@ -108,9 +108,8 @@ mkWireReducer obj chunks = chunks' <> leftovers where
                 , rcRef = Zero
                 , rcBody = reducedStateBody
                 }
-            in  ( Just $ Value $ wrapRChunk rc
-                , reduceUnappliedPatches @a unapplied'
-                )
+            in
+            (Just $ Value $ wrapRChunk rc, reduceUnappliedPatches @a unapplied')
     typ = reducibleOpType @a
     wrapOp = RawOp typ obj
     (states, patches, rawops, leftovers) = foldMap load chunks
