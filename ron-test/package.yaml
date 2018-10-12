@@ -6,7 +6,6 @@ dependencies:
     - bytestring
     - containers
     - directory
-    - errors
     - extra
     - filepath
     - hedgehog

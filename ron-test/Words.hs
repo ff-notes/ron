@@ -2,8 +2,7 @@
 
 import           Prelude hiding (words)
 
-import           Control.Error (hoistEither)
-import           Control.Monad.Except (runExceptT)
+import           Control.Monad.Except (liftEither, runExceptT)
 import           Control.Monad.State.Strict (execStateT)
 import qualified Data.HashSet as HashSet
 import           Data.List (intersect, sortOn, tails)
@@ -76,8 +75,8 @@ rgaTrick2 (begin', branch1') branch2 =
     either error id .
     runNetworkSim . runReplicaSim (applicationSpecific 2) . runExceptT $ do
         branch2' <- (`execStateT` begin') $ RGA.editText branch2
-        end' <- hoistEither $ reduceObject' branch1' branch2'
-        hoistEither $ RGA.getText end'
+        end' <- liftEither $ reduceObject' branch1' branch2'
+        liftEither $ RGA.getText end'
 
 {-
 Found
