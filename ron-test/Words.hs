@@ -37,9 +37,9 @@ main = do
             )
         | begin <- words
         , branch1 : words' <- tails words
-        , let (begin', branch1') = rgaTrick1 begin branch1
+        , let s = rgaTrick1 begin branch1
         , branch2 <- words'
-        , let end = rgaTrick2 begin' branch1' branch2
+        , let end = rgaTrick2 s branch2
         , end `HashSet.member` HashSet.fromList words
         , and
             [ null $ a `intersect` b
@@ -71,8 +71,8 @@ rgaTrick1 begin branch1 =
         branch1' <- (`execStateT` begin') . RGA.edit $ Text.unpack branch1
         pure (begin', branch1')
 
-rgaTrick2 :: Object RgaString -> Object RgaString -> Text -> Text
-rgaTrick2 begin' branch1' branch2 =
+rgaTrick2 :: (Object RgaString, Object RgaString) -> Text -> Text
+rgaTrick2 (begin', branch1') branch2 =
     either error id .
     runNetworkSim . runReplicaSim (applicationSpecific 2) . runExceptT $ do
         branch2' <- (`execStateT` begin') . RGA.edit $ Text.unpack branch2
