@@ -159,14 +159,10 @@ mkReplicatedStructLww StructLww{..} = do
             [ sigD with $
                 forallT [] (TH.cxt [[t| MonadError String |] `appT` m]) $
                 arrowT `appT`
-                    ([t| StateT |] `appT`
-                        ([t| Object |] `appT` mkGuideType typ) `appT`
-                        m `appT`
-                        unitT) `appT`
-                    ([t| StateT |] `appT`
-                        ([t| Object |] `appT` conT name) `appT`
-                        m `appT`
-                        unitT)
+                    ([t| StateT |] `appT` ([t| Object |] `appT` mkGuideType typ)
+                        `appT` m `appT` a) `appT`
+                    ([t| StateT |] `appT` ([t| Object |] `appT` conT name)
+                        `appT` m `appT` a)
             , valD' with [| LWW.withField $(liftData nameUuid) |]
             ]
         | otherwise =
@@ -185,6 +181,7 @@ mkReplicatedStructLww StructLww{..} = do
       where
         set  = mkNameT $ "set_"  <> mkHaskellFieldName fname
         with = mkNameT $ "with_" <> mkHaskellFieldName fname
+        a = varT (TH.mkName "a")
         m = varT (TH.mkName "m")
         unitT = TH.tupleT 0
 

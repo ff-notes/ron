@@ -18,8 +18,8 @@ import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError)
-import           Control.Monad.State.Strict (MonadState, StateT, execStateT,
-                                             get, put)
+import           Control.Monad.State.Strict (MonadState, StateT, get, put,
+                                             runStateT)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
 
@@ -93,7 +93,7 @@ writeField field (I value) = do
 
 withField
     :: (ReplicatedAsObject outer, MonadError String m)
-    => UUID -> StateT (Object inner) m () -> StateT (Object outer) m ()
+    => UUID -> StateT (Object inner) m a -> StateT (Object outer) m a
 withField field innerModifier = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
@@ -106,6 +106,7 @@ withField field innerModifier = do
         [AUuid oid] -> pure oid
         _           -> throwError "bad payload"
     let innerObject = Object innerObjectId objectFrame
-    Object{objectFrame = objectFrame'} <-
-        lift $ execStateT innerModifier innerObject
+    (a, Object{objectFrame = objectFrame'}) <-
+        lift $ runStateT innerModifier innerObject
     put Object{objectFrame = objectFrame', ..}
+    pure a
