@@ -12,6 +12,7 @@ module RON.Data.RGA
     , getList
     , getText
     , newFromList
+    , newFromText
     , RGA (..)
     , RgaRaw (..)
     , RgaString
@@ -380,6 +381,9 @@ type RgaString = RGA Char
 
 newFromList :: (Replicated a, Clock m) => [a] -> m (Object (RGA a))
 newFromList = newObject . RGA
+
+newFromText :: Clock m => Text -> m (Object RgaString)
+newFromText = newFromList . Text.unpack
 
 getList :: Replicated a => Object (RGA a) -> Either String [a]
 getList = coerce . getObject

@@ -67,8 +67,8 @@ rgaTrick1 :: Text -> Text -> (Object RgaString, Object RgaString)
 rgaTrick1 begin branch1 =
     either error id .
     runNetworkSim . runReplicaSim (applicationSpecific 1) . runExceptT $ do
-        begin' <- RGA.newFromList $ Text.unpack begin
-        branch1' <- (`execStateT` begin') . RGA.edit $ Text.unpack branch1
+        begin' <- RGA.newFromText begin
+        branch1' <- (`execStateT` begin') $ RGA.editText branch1
         pure (begin', branch1')
 
 rgaTrick2 :: (Object RgaString, Object RgaString) -> Text -> Text
