@@ -171,6 +171,8 @@ reduceObject Object{objectId, objectFrame = s1} s2 = do
     objectFrame <- reduceStateFrame s1 s2
     pure Object{..}
 
--- | Reduce object with frame from another object.
+-- | Reduce object with frame from another version of the same object.
 reduceObject' :: Object a -> Object a -> Either String (Object a)
-reduceObject' obj1 = reduceObject obj1 . objectFrame
+reduceObject' o1 o2
+    | objectId o1 == objectId o2 = reduceObject o1 $ objectFrame o2
+    | otherwise                  = Left "Object ids differ"
