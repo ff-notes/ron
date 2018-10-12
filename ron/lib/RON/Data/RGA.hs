@@ -7,15 +7,17 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Data.RGA
-    ( RGA (..)
+    ( edit
+    , editText
+    , getList
+    , getText
+    , newFromList
+    , RGA (..)
     , RgaRaw (..)
     , RgaString
-    , edit
-    , fromList
-    , toList
     ) where
 
-import           RON.Internal.Prelude hiding (toList)
+import           RON.Internal.Prelude
 
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (MonadState, get, put)
@@ -26,6 +28,7 @@ import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import           Data.Monoid (Last (..))
+import qualified Data.Text as Text
 
 import           RON.Data.Internal
 import           RON.Event (Clock, advanceToUuid, getEventUuid)
@@ -368,10 +371,18 @@ edit newItems = do
                 , ..
                 }
 
+editText
+    :: (Clock m, MonadError String m, MonadState (Object RgaString) m)
+    => Text -> m ()
+editText = edit . Text.unpack
+
 type RgaString = RGA Char
 
-fromList :: (Replicated a, Clock m) => [a] -> m (Object (RGA a))
-fromList = newObject . RGA
+newFromList :: (Replicated a, Clock m) => [a] -> m (Object (RGA a))
+newFromList = newObject . RGA
 
-toList :: Replicated a => Object (RGA a) -> Either String [a]
-toList = coerce . getObject
+getList :: Replicated a => Object (RGA a) -> Either String [a]
+getList = coerce . getObject
+
+getText :: Object RgaString -> Either String Text
+getText = fmap Text.pack . getList
