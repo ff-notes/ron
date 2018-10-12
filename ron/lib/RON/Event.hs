@@ -1,38 +1,46 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Event
-    ( CalendarEvent (..)
-    , Clock (..)
-    , EpochEvent (..)
-    , Event (..)
-    , LocalTime (..)
-    , Naming (..)
-    , Replica (..)
-    , ReplicaId (..)
-    , Calendar (..)
-    , advanceToUuid
+    ( advanceToUuid
     , applicationSpecific
+    , Calendar (..)
+    , CalendarEvent (..)
+    , Clock (..)
     , decodeEvent
     , encodeEvent
+    , EpochClock (..)
+    , EpochEvent (..)
+    , Event (..)
     , fromCalendarEvent
     , fromEpochEvent
     , getEvent
     , getEventUuid
     , getEventUuids
+    , LocalTime (..)
     , mkCalendarDate
     , mkCalendarDateTime
     , mkCalendarDateTimeNano
+    , Naming (..)
+    , Replica (..)
+    , ReplicaId (..)
+    , runEpochClock
+    , runEpochClockFromCurrentTime
     , toEpochEvent
     ) where
 
 import           Control.Monad.Except (ExceptT, lift)
+import           Control.Monad.IO.Class (MonadIO)
+import           Control.Monad.Reader (ReaderT (..))
 import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
+import           Data.IORef (IORef, newIORef)
+import           Data.Time.Clock.POSIX (getPOSIXTime)
 
 import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
                                     pattern B11, Word12, Word16, Word2, Word24,
@@ -55,6 +63,10 @@ data Calendar = Calendar
     }
     deriving (Eq, Ord, Show)
 
+-- | RFC 4122 epoch, hundreds of nanoseconds since 1582.
+-- Year range is 1582—5235.
+type EpochTime = Word60
+
 -- | Clock type is encoded in 2 higher bits of variety, value in uuidValue
 data LocalTime
     = TCalendar !Calendar
@@ -63,9 +75,7 @@ data LocalTime
         -- Precision is 100 ns.
     | TLogical !Word60
         -- ^ https://en.wikipedia.org/wiki/Logical_clock
-    | TEpoch !Word60
-        -- ^ RFC 4122 epoch, hundreds of nanoseconds since 1582.
-        -- Year range is 1582—5234.
+    | TEpoch !EpochTime
     | TUnknown !Word60
     deriving (Eq, Show)
 
@@ -265,3 +275,19 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
 
 applicationSpecific :: Word64 -> ReplicaId
 applicationSpecific = ReplicaId ApplicationSpecific . ls60
+
+newtype EpochClock a = EpochClock (ReaderT (IORef EpochTime) IO a)
+    deriving (Applicative, Functor, Monad, MonadIO)
+
+runEpochClock :: IORef EpochTime -> EpochClock a -> IO a
+runEpochClock timeVar (EpochClock action) = runReaderT action timeVar
+
+runEpochClockFromCurrentTime :: EpochClock a -> IO a
+runEpochClockFromCurrentTime clock = do
+    time <- getCurrentEpochTime
+    timeVar <- newIORef time
+    runEpochClock timeVar clock
+
+getCurrentEpochTime :: IO EpochTime
+getCurrentEpochTime =
+    ls60 . (+ 0x01B21DD213814000) . round . (* 10000000) <$> getPOSIXTime
