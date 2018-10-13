@@ -7,11 +7,11 @@
 
 module RON.Data.LWW
     ( LwwPerField (..)
-    , getField
+    , viewField
     , lwwType
     , newFrame
-    , withField
-    , writeField
+    , zoomField
+    , assignField
     ) where
 
 import           RON.Internal.Prelude
@@ -59,9 +59,9 @@ newFrame fields = collectFrame $ do
         [Op e name p | ((name, _), p) <- zip fields payloads]
     pure e
 
-getField :: Replicated a => UUID -> StateChunk -> StateFrame -> Either String a
-getField field StateChunk{..} frame =
-    fmapL (("LWW.getField " <> show field <> ":\n") <>) $ do
+viewField :: Replicated a => UUID -> StateChunk -> StateFrame -> Either String a
+viewField field StateChunk{..} frame =
+    fmapL (("LWW.viewField " <> show field <> ":\n") <>) $ do
         let ops = filter ((field ==) . opRef) stateBody
         Op{..} <- case ops of
             []   -> Left $ unwords ["no field", show field, "in lww chunk"]
@@ -69,13 +69,13 @@ getField field StateChunk{..} frame =
             _    -> Left "unreduced state"
         fromRon opPayload frame
 
-writeField
+assignField
     :: forall a m
     .   ( ReplicatedAsObject a
         , Clock m, MonadError String m, MonadState (Object a) m
         )
     => UUID -> I Replicated -> m ()
-writeField field (I value) = do
+assignField field (I value) = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     advanceToUuid stateVersion
@@ -91,10 +91,10 @@ writeField field (I value) = do
         , ..
         }
 
-withField
+zoomField
     :: (ReplicatedAsObject outer, MonadError String m)
     => UUID -> StateT (Object inner) m a -> StateT (Object outer) m a
-withField field innerModifier = do
+zoomField field innerModifier = do
     obj@Object{..} <- get
     StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
     let ops = filter ((field ==) . opRef) stateBody

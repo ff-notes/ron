@@ -15,10 +15,9 @@ import           Control.Monad.State.Strict (MonadState, StateT)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Language.Haskell.TH (Exp (VarE), appE, bindS, conE, conP, conT,
-                                      dataD, doE, funD, instanceD, letS, listE,
-                                      noBindS, recC, recConE, sigD, tupE, varE,
-                                      varP, varT)
+import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT,
+                                      dataD, doE, letS, listE, noBindS, recC,
+                                      recConE, sigD, varE, varP, varT)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (lift, liftData)
 
@@ -77,11 +76,12 @@ mkReplicatedStructLww StructLww{..} = do
                 pure (fieldNameUuid, fieldName, fieldType, fieldVar)
             Nothing -> fail $
                 "Field name is not representable in RON: " ++ show fieldName
-    sequence
-        $ mkData
-        : mkInstanceReplicated
-        : mkInstanceReplicatedAsObject fields
-        : concatMap mkAccessors fields
+    dataType <- mkData
+    [instanceReplicated] <- mkInstanceReplicated
+    [instanceReplicatedAsObject] <- mkInstanceReplicatedAsObject fields
+    accessors <- fold <$> traverse mkAccessors fields
+    pure $
+        dataType : instanceReplicated : instanceReplicatedAsObject : accessors
   where
 
     StructAnnotations{..} = structAnnotations
@@ -97,76 +97,79 @@ mkReplicatedStructLww StructLww{..} = do
         [TH.derivClause Nothing . map (conT . mkNameT) $
             toList saHaskellDeriving]
 
-    mkInstanceReplicated = instanceD (TH.cxt []) [t| Replicated $(conT name) |]
-        [valD' 'encoding [| objectEncoding |]]
+    mkInstanceReplicated = [d|
+        instance Replicated $(conT name) where
+            encoding = objectEncoding
+        |]
 
     mkInstanceReplicatedAsObject fields = do
-        let fieldsToPack = listE
-                [ tupE [liftData fieldNameUuid, [| I $var |]]
-                | (fieldNameUuid, _, Field fieldType _, fieldVar) <- fields
-                , let var = maybe id (appE . conE) (fieldWrapperC fieldType) $
-                        varE fieldVar
-                ]
-        obj   <- TH.newName "obj";   let objE   = varE obj
-        frame <- TH.newName "frame"; let frameE = varE frame
-        ops   <- TH.newName "ops";   let opsE   = varE ops
+        obj   <- TH.newName "obj"
+        frame <- TH.newName "frame"
+        ops   <- TH.newName "ops"
         let fieldsToUnpack =
-                [ bindS var
-                    [| LWW.getField $(liftData fieldNameUuid) $opsE $frameE |]
+                [ bindS var [|
+                    LWW.viewField
+                        $(liftData fieldNameUuid) $(varE ops) $(varE frame)
+                    |]
                 | (fieldNameUuid, _, Field fieldType _, fieldVar) <- fields
                 , let
                     fieldP = varP fieldVar
                     var = maybe fieldP (\w -> conP w [fieldP]) $
                         fieldWrapperC fieldType
                 ]
-        instanceD (TH.cxt []) [t| ReplicatedAsObject $(conT name) |]
-            [ valD' 'objectOpType [| lwwType |]
-            , funD 'newObject
-                [clause'
-                    [conP name [varP fieldVar | (_, _, _, fieldVar) <- fields]]
-                    [| LWW.newFrame $fieldsToPack |]]
-            , funD 'getObject
-                [clause' [varP obj] $
-                    appE [| fmapL $ (++) $(lift errCtx) |]
-                    $ doE
-                    $ letS [valD' frame [| objectFrame $objE |]]
-                    : bindS (varP ops) [| getObjectStateChunk $objE |]
-                    : fieldsToUnpack
-                    ++ [noBindS [| pure $cons |]]]
-            ]
+        let getObjectImpl = doE
+                $   letS [valD' frame [| objectFrame $(varE obj) |]]
+                :   bindS (varP ops) [| getObjectStateChunk $(varE obj) |]
+                :   fieldsToUnpack
+                ++  [noBindS [| pure $consE |]]
+        [d| instance ReplicatedAsObject $(conT name) where
+                objectOpType = lwwType
+                newObject $consP = LWW.newFrame $fieldsToPack
+                getObject $(varP obj) = fmapL ($(lift errCtx) ++) $getObjectImpl
+            |]
       where
+        fieldsToPack = listE
+            [ [| ($(liftData fieldNameUuid), I $var) |]
+            | (fieldNameUuid, _, Field fieldType _, fieldVar) <- fields
+            , let
+                fieldVarE = varE fieldVar
+                var = case fieldWrapperC fieldType of
+                    Nothing  -> fieldVarE
+                    Just con -> [| $(conE con) $fieldVarE |]
+            ]
         errCtx = "getObject @" ++ Text.unpack structName ++ ":\n"
-        cons = recConE
-            name
+        consE = recConE name
             [ pure (fieldName, VarE fieldVar)
             | (_, field, _, fieldVar) <- fields
             , let fieldName = mkNameT $ mkHaskellFieldName field
             ]
+        consP = conP name [varP fieldVar | (_, _, _, fieldVar) <- fields]
 
     mkHaskellFieldName = (saHaskellFieldPrefix <>)
 
-    mkAccessors (nameUuid, fname, Field typ _, _)
-        | isObjectType typ =
-            [ sigD zoom
-                [t| MonadError String $m
-                    => StateT (Object $(mkGuideType typ)) $m $a
-                    -> StateT (Object $(conT name))       $m $a |]
-            , valD' zoom [| LWW.withField $(liftData nameUuid) |]
-            ]
-        | otherwise =
-            [ sigD assign
-                [t| ( Clock $m
-                    , MonadError String $m
-                    , MonadState (Object $(conT name)) $m
-                    )
-                    => $(mkViewType typ) -> $m () |]
-            , valD' assign [| LWW.writeField $(liftData nameUuid) . I |]
-            ]
+    mkAccessors (nameUuid, fname, Field typ _, _) = do
+        a <- varT <$> TH.newName "a"
+        m <- varT <$> TH.newName "m"
+        sequenceA $
+            if isObjectType typ then
+                [ sigD zoom
+                    [t| MonadError String $m
+                        => StateT (Object $(mkGuideType typ)) $m $a
+                        -> StateT (Object $(conT name))       $m $a |]
+                , valD' zoom [| LWW.zoomField $(liftData nameUuid) |]
+                ]
+            else
+                [ sigD assign
+                    [t| ( Clock $m
+                        , MonadError String $m
+                        , MonadState (Object $(conT name)) $m
+                        )
+                        => $(mkViewType typ) -> $m () |]
+                , valD' assign [| LWW.assignField $(liftData nameUuid) . I |]
+                ]
       where
         assign = mkNameT $ "assign_" <> mkHaskellFieldName fname
         zoom   = mkNameT $ "zoom_"   <> mkHaskellFieldName fname
-        a = varT (TH.mkName "a")
-        m = varT (TH.mkName "m")
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
@@ -174,8 +177,8 @@ mkNameT = TH.mkName . Text.unpack
 mkViewType :: RonType -> TH.TypeQ
 mkViewType = \case
     TAtom atom -> case atom of
-        TAInteger -> conT ''Int64
-        TAString  -> conT ''Text
+        TAInteger -> [t| Int64 |]
+        TAString  -> [t| Text |]
     TOpaque Opaque{..} -> let
         OpaqueAnnotations{..} = opaqueAnnotations
         in case oaHaskellType of
@@ -185,15 +188,12 @@ mkViewType = \case
     TORSet item -> wrapList item
     TRga   item -> wrapList item
     TStructLww StructLww{..} -> conT $ mkNameT structName
-    TVersionVector -> conT ''VersionVector
+    TVersionVector -> [t| VersionVector |]
   where
     wrapList a = [t| [$(mkViewType a)] |]
 
 valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
 valD' name body = TH.valD (varP name) (TH.normalB body) []
-
-clause' :: [TH.PatQ] -> TH.ExpQ -> TH.ClauseQ
-clause' pat body = TH.clause pat (TH.normalB body) []
 
 isObjectType :: RonType -> Bool
 isObjectType = \case
