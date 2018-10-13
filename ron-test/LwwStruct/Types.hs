@@ -12,6 +12,7 @@ import           RON.Schema.TH
 $(let
     example1 = StructLww "Example1"
         [ "int1" -: field (TAtom TAInteger)
+        , "opt5" -: field (TOption (TStructLww example1))
         , "set4" -: field (TORSet (TStructLww example2))
         , "str2" -: field (TRga char)
         , "str3" -: field (TAtom TAString)

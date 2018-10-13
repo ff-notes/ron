@@ -64,7 +64,8 @@ findObjects = fmap Map.fromList . traverse loadBody where
 --------------------------------------------------------------------------------
 
 example0 :: Example1
-example0 = Example1{int1 = 275, str2 = "275", str3 = "190", set4 = mempty}
+example0 = Example1
+    {int1 = 275, str2 = "275", str3 = "190", set4 = mempty, opt5 = Nothing}
 
 -- | "r3pl1c4"
 replica :: ReplicaId
@@ -74,6 +75,7 @@ ex1expect :: ByteStringL
 ex1expect = [i|
     *lww    #B/)6+r3pl1c4   @`                  !
                                 :int1   =275    ,
+                                :opt5           ,
                                 :set4   >)1     ,
                                 :str2   >)5     ,
                                 :str3   '190'   ,
@@ -91,7 +93,8 @@ ex4expect :: ByteStringL
 ex4expect = [i|
     *lww    #B/)6+r3pl1c4   @`)C                    !
                             @)7     :int1   =166    ,
-                            @`      :set4   >)1     ,
+                            @`      :opt5           ,
+                                    :set4   >)1     ,
                                     :str2   >)5     ,
                             @)C     :str3   '206'   ,
 
@@ -114,7 +117,12 @@ ex4expect = [i|
 
 example4expect :: Example1
 example4expect = Example1
-    {int1 = 166, str2 = "145", str3 = "206", set4 = [Example2{vv5 = mempty}]}
+    { int1 = 166
+    , str2 = "145"
+    , str3 = "206"
+    , set4 = [Example2{vv5 = mempty}]
+    , opt5 = Nothing
+    }
 
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
