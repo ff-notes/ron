@@ -20,7 +20,7 @@ import           Language.Haskell.TH (Exp (VarE), appE, bindS, conE, conP, conT,
                                       noBindS, recC, recConE, sigD, tupE, varE,
                                       varP, varT)
 import qualified Language.Haskell.TH as TH
-import           Language.Haskell.TH.Syntax (liftData, liftString)
+import           Language.Haskell.TH.Syntax (lift, liftData)
 
 import           RON.Data (Replicated (..), ReplicatedAsObject (..),
                            getObjectStateChunk, objectEncoding)
@@ -102,9 +102,8 @@ mkReplicatedStructLww StructLww{..} = do
 
     mkInstanceReplicatedAsObject fields = do
         let fieldsToPack = listE
-                [ tupE [liftData fieldNameUuid, [| I |] `appE` var]
-                | (fieldNameUuid, _, Field fieldType _, fieldVar) <-
-                    fields
+                [ tupE [liftData fieldNameUuid, [| I $var |]]
+                | (fieldNameUuid, _, Field fieldType _, fieldVar) <- fields
                 , let var = maybe id (appE . conE) (fieldWrapperC fieldType) $
                         varE fieldVar
                 ]
@@ -112,11 +111,9 @@ mkReplicatedStructLww StructLww{..} = do
         frame <- TH.newName "frame"; let frameE = varE frame
         ops   <- TH.newName "ops";   let opsE   = varE ops
         let fieldsToUnpack =
-                [ bindS var $
-                    [| LWW.getField |] `appE` liftData fieldNameUuid
-                    `appE` opsE `appE` frameE
-                | (fieldNameUuid, _, Field fieldType _, fieldVar) <-
-                    fields
+                [ bindS var
+                    [| LWW.getField $(liftData fieldNameUuid) $opsE $frameE |]
+                | (fieldNameUuid, _, Field fieldType _, fieldVar) <- fields
                 , let
                     fieldP = varP fieldVar
                     var = maybe fieldP (\w -> conP w [fieldP]) $
@@ -127,21 +124,18 @@ mkReplicatedStructLww StructLww{..} = do
             , funD 'newObject
                 [clause'
                     [conP name [varP fieldVar | (_, _, _, fieldVar) <- fields]]
-                    $ [| LWW.newFrame |] `appE` fieldsToPack]
+                    [| LWW.newFrame $fieldsToPack |]]
             , funD 'getObject
                 [clause' [varP obj] $
-                    appE
-                        [| fmapL $ (++)
-                            $(liftString $
-                                "getObject @" ++ structName' ++ ":\n") |]
+                    appE [| fmapL $ (++) $(lift errCtx) |]
                     $ doE
-                    $ letS [valD' frame $ [| objectFrame |] `appE` objE]
-                    : bindS (varP ops) ([| getObjectStateChunk |] `appE` objE)
+                    $ letS [valD' frame [| objectFrame $objE |]]
+                    : bindS (varP ops) [| getObjectStateChunk $objE |]
                     : fieldsToUnpack
-                    ++ [noBindS $ [| pure |] `appE` cons]]
+                    ++ [noBindS [| pure $cons |]]]
             ]
       where
-        structName' = Text.unpack structName
+        errCtx = "getObject @" ++ Text.unpack structName ++ ":\n"
         cons = recConE
             name
             [ pure (fieldName, VarE fieldVar)
