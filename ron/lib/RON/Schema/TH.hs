@@ -156,17 +156,17 @@ mkReplicatedStructLww StructLww{..} = do
 
     mkAccessors (nameUuid, fname, Field typ _, _)
         | isObjectType typ =
-            [ sigD with $
+            [ sigD zoom $
                 forallT [] (TH.cxt [[t| MonadError String |] `appT` m]) $
                 arrowT `appT`
                     ([t| StateT |] `appT` ([t| Object |] `appT` mkGuideType typ)
                         `appT` m `appT` a) `appT`
                     ([t| StateT |] `appT` ([t| Object |] `appT` conT name)
                         `appT` m `appT` a)
-            , valD' with [| LWW.withField $(liftData nameUuid) |]
+            , valD' zoom [| LWW.withField $(liftData nameUuid) |]
             ]
         | otherwise =
-            [ sigD set $
+            [ sigD assign $
                 forallT []
                     (TH.cxt
                         [ [t| Clock |] `appT` m
@@ -176,11 +176,11 @@ mkReplicatedStructLww StructLww{..} = do
                             `appT` m
                         ]) $
                 arrowT `appT` mkViewType typ `appT` (m `appT` unitT)
-            , valD' set [| LWW.writeField $(liftData nameUuid) . I |]
+            , valD' assign [| LWW.writeField $(liftData nameUuid) . I |]
             ]
       where
-        set  = mkNameT $ "set_"  <> mkHaskellFieldName fname
-        with = mkNameT $ "with_" <> mkHaskellFieldName fname
+        assign = mkNameT $ "assign_" <> mkHaskellFieldName fname
+        zoom   = mkNameT $ "zoom_"   <> mkHaskellFieldName fname
         a = varT (TH.mkName "a")
         m = varT (TH.mkName "m")
         unitT = TH.tupleT 0

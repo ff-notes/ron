@@ -28,8 +28,8 @@ import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
                             WireReducedChunk (..))
 import           RON.UUID (zero)
 
-import           LwwStruct.Types (Example1 (..), Example2 (..), set_int1,
-                                  set_str3, with_set4, with_str2)
+import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
+                                  assign_str3, zoom_set4, zoom_str2)
 
 -- Common ----------------------------------------------------------------------
 
@@ -135,10 +135,10 @@ prop_lwwStruct = property $ do
     ex4 <- evalEitherS $
         runNetworkSim $ runReplicaSim replica $
         runExceptT $ (`execStateT` ex2) $ do
-            set_int1 166
-            with_str2 $ RGA.edit "145"
-            set_str3 "206"
-            with_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
+            assign_int1 166
+            zoom_str2 $ RGA.edit "145"
+            assign_str3 "206"
+            zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4
