@@ -15,9 +15,8 @@ import           Control.Monad.State.Strict (MonadState, StateT)
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Language.Haskell.TH (Exp (VarE), appE, appT, arrowT, bindS,
-                                      conE, conP, conT, dataD, doE, forallT,
-                                      funD, instanceD, letS, listE, listT,
+import           Language.Haskell.TH (Exp (VarE), appE, bindS, conE, conP, conT,
+                                      dataD, doE, funD, instanceD, letS, listE,
                                       noBindS, recC, recConE, sigD, tupE, varE,
                                       varP, varT)
 import qualified Language.Haskell.TH as TH
@@ -58,16 +57,16 @@ mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
     TAtom      _            -> view
     TOpaque    _            -> view
-    TOption    t            -> [t| Maybe |] `appT` mkGuideType t
+    TOption    t            -> [t| Maybe $(mkGuideType t) |]
     TORSet     item
-        | isObjectType item -> wrap item ''ObjectORSet
-        | otherwise         -> wrap item ''ORSet
-    TRga       item         -> wrap item ''RGA
+        | isObjectType item -> wrap ''ObjectORSet item
+        | otherwise         -> wrap ''ORSet       item
+    TRga       item         -> wrap ''RGA         item
     TStructLww _            -> view
     TVersionVector          -> view
   where
     view = mkViewType typ
-    wrap item w = conT w `appT` mkGuideType item
+    wrap w item = [t| $(conT w) $(mkGuideType item) |]
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww StructLww{..} = do
@@ -98,8 +97,7 @@ mkReplicatedStructLww StructLww{..} = do
         [TH.derivClause Nothing . map (conT . mkNameT) $
             toList saHaskellDeriving]
 
-    mkInstanceReplicated = instanceD (TH.cxt [])
-        (conT ''Replicated `appT` conT name)
+    mkInstanceReplicated = instanceD (TH.cxt []) [t| Replicated $(conT name) |]
         [valD' 'encoding [| objectEncoding |]]
 
     mkInstanceReplicatedAsObject fields = do
@@ -124,8 +122,7 @@ mkReplicatedStructLww StructLww{..} = do
                     var = maybe fieldP (\w -> conP w [fieldP]) $
                         fieldWrapperC fieldType
                 ]
-        instanceD (TH.cxt [])
-            (conT ''ReplicatedAsObject `appT` conT name)
+        instanceD (TH.cxt []) [t| ReplicatedAsObject $(conT name) |]
             [ valD' 'objectOpType [| lwwType |]
             , funD 'newObject
                 [clause'
@@ -156,26 +153,19 @@ mkReplicatedStructLww StructLww{..} = do
 
     mkAccessors (nameUuid, fname, Field typ _, _)
         | isObjectType typ =
-            [ sigD zoom $
-                forallT [] (TH.cxt [[t| MonadError String |] `appT` m]) $
-                arrowT `appT`
-                    ([t| StateT |] `appT` ([t| Object |] `appT` mkGuideType typ)
-                        `appT` m `appT` a) `appT`
-                    ([t| StateT |] `appT` ([t| Object |] `appT` conT name)
-                        `appT` m `appT` a)
+            [ sigD zoom
+                [t| MonadError String $m
+                    => StateT (Object $(mkGuideType typ)) $m $a
+                    -> StateT (Object $(conT name))       $m $a |]
             , valD' zoom [| LWW.withField $(liftData nameUuid) |]
             ]
         | otherwise =
-            [ sigD assign $
-                forallT []
-                    (TH.cxt
-                        [ [t| Clock |] `appT` m
-                        , [t| MonadError String |] `appT` m
-                        , [t| MonadState |]
-                            `appT` ([t| Object |] `appT` conT name)
-                            `appT` m
-                        ]) $
-                arrowT `appT` mkViewType typ `appT` (m `appT` unitT)
+            [ sigD assign
+                [t| ( Clock $m
+                    , MonadError String $m
+                    , MonadState (Object $(conT name)) $m
+                    )
+                    => $(mkViewType typ) -> $m () |]
             , valD' assign [| LWW.writeField $(liftData nameUuid) . I |]
             ]
       where
@@ -183,7 +173,6 @@ mkReplicatedStructLww StructLww{..} = do
         zoom   = mkNameT $ "zoom_"   <> mkHaskellFieldName fname
         a = varT (TH.mkName "a")
         m = varT (TH.mkName "m")
-        unitT = TH.tupleT 0
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
@@ -198,13 +187,13 @@ mkViewType = \case
         in case oaHaskellType of
             Just name -> conT $ mkNameT name
             Nothing   -> fail "Opaque type must define a Haskell type"
-    TOption t -> [t| Maybe |] `appT` mkViewType t
+    TOption t -> [t| Maybe $(mkViewType t) |]
     TORSet item -> wrapList item
     TRga   item -> wrapList item
     TStructLww StructLww{..} -> conT $ mkNameT structName
     TVersionVector -> conT ''VersionVector
   where
-    wrapList = appT listT . mkViewType
+    wrapList a = [t| [$(mkViewType a)] |]
 
 valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
 valD' name body = TH.valD (varP name) (TH.normalB body) []
