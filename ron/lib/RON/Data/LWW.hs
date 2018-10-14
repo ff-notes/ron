@@ -7,11 +7,12 @@
 
 module RON.Data.LWW
     ( LwwPerField (..)
-    , viewField
+    , assignField
+    , hasField
     , lwwType
     , newFrame
+    , viewField
     , zoomField
-    , assignField
     ) where
 
 import           RON.Internal.Prelude
@@ -110,3 +111,12 @@ zoomField field innerModifier = do
         lift $ runStateT innerModifier innerObject
     put Object{objectFrame = objectFrame', ..}
     pure a
+
+-- | Check if field is present and is not empty.
+hasField
+    :: (ReplicatedAsObject a, MonadError String m, MonadState (Object a) m)
+    => UUID -> m Bool
+hasField field = do
+    obj@Object{..} <- get
+    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    pure $ any (\Op{..} -> opRef == field && not (null opPayload)) stateBody

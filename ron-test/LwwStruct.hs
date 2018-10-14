@@ -16,7 +16,7 @@ import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (getObject, newObject)
+import           RON.Data (ReplicatedAsObject (..), getObject, newObject)
 import qualified RON.Data.ORSet as ORSet
 import qualified RON.Data.RGA as RGA
 import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
@@ -29,7 +29,7 @@ import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
-                                  assign_str3, zoom_set4, zoom_str2)
+                                  assign_str3, has_opt5, zoom_set4, zoom_str2)
 
 -- Common ----------------------------------------------------------------------
 
@@ -141,12 +141,14 @@ prop_lwwStruct = property $ do
 
     -- apply operations to the object (frame)
     ex4 <- evalEitherS $
-        runNetworkSim $ runReplicaSim replica $
-        runExceptT $ (`execStateT` ex2) $ do
+        runNetworkSim $ runReplicaSim replica $ runExceptT $
+        (`execStateT` ex2) $ do
             assign_int1 166
             zoom_str2 $ RGA.edit "145"
             assign_str3 "206"
             zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
+            opt5IsSet <- has_opt5
+            guard $ not opt5IsSet
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4

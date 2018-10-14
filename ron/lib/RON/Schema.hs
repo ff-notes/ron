@@ -5,6 +5,7 @@
 module RON.Schema
     ( Declaration (..)
     , Field (..)
+    , FieldAnnotations (..)
     , Opaque (..)
     , OpaqueAnnotations (..)
     , RonType (..)
@@ -30,7 +31,6 @@ data TAtom = TAInteger | TAString
 data RonType
     = TAtom      TAtom
     | TOpaque    Opaque
-    | TOption    RonType
     | TORSet     RonType
     | TRga       RonType
     | TStructLww StructLww
@@ -56,10 +56,11 @@ data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
 field :: RonType -> Field
 field fieldType = Field{fieldType, fieldAnnotations = def}
 
-data FieldAnnotations = FieldAnnotations
+newtype FieldAnnotations = FieldAnnotations{faOptional :: Bool}
     deriving (Show)
 
-instance Default FieldAnnotations where def = FieldAnnotations
+instance Default FieldAnnotations where
+    def = FieldAnnotations{faOptional = False}
 
 newtype Declaration = DStructLww StructLww
 
