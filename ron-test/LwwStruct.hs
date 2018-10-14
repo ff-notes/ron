@@ -8,7 +8,7 @@ module LwwStruct (prop_lwwStruct) where
 import           RON.Internal.Prelude
 
 import           Control.Monad.Except (runExceptT)
-import           Control.Monad.State.Strict (execStateT)
+import           Control.Monad.State.Strict (runStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.Map.Strict as Map
 import           Data.String.Interpolate.IsString (i)
@@ -29,7 +29,8 @@ import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
-                                  assign_str3, has_opt5, zoom_set4, zoom_str2)
+                                  assign_str3, get_str3, has_opt5, zoom_set4,
+                                  zoom_str2)
 
 -- Common ----------------------------------------------------------------------
 
@@ -140,15 +141,19 @@ prop_lwwStruct = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    ex4 <- evalEitherS $
+    ((str3, opt5IsSet), ex4) <-
+        evalEitherS $
         runNetworkSim $ runReplicaSim replica $ runExceptT $
-        (`execStateT` ex2) $ do
+        (`runStateT` ex2) $ do
             assign_int1 166
             zoom_str2 $ RGA.edit "145"
+            str3 <- get_str3
             assign_str3 "206"
             zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
             opt5IsSet <- has_opt5
-            guard $ not opt5IsSet
+            pure (str3, opt5IsSet)
+    str3 === "190"
+    opt5IsSet === False
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4

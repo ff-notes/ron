@@ -17,7 +17,7 @@ module RON.Data.ORSet
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.Except (MonadError)
+import           Control.Monad.Except (MonadError, liftEither)
 import           Control.Monad.State.Strict (StateT, get, modify, put)
 import           Control.Monad.Writer.Strict (lift, tell)
 import qualified Data.Map.Strict as Map
@@ -119,7 +119,7 @@ add ::  ( ReplicatedAsObject a
     => b -> StateT (Object a) m ()
 add item = do
     obj@Object{..} <- get
-    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    StateChunk{..} <- liftEither $ getObjectStateChunk obj
     e <- getEventUuid
     let p = toPayload item
     let newOp = Op e Zero p

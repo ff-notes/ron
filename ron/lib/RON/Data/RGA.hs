@@ -20,7 +20,7 @@ module RON.Data.RGA
 
 import           RON.Internal.Prelude
 
-import           Control.Monad.Except (MonadError)
+import           Control.Monad.Except (MonadError, liftEither)
 import           Control.Monad.State.Strict (MonadState, get, put)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import           Data.Algorithm.Diff (Diff (Both, First, Second),
@@ -346,7 +346,7 @@ edit
     => [a] -> m ()
 edit newItems = do
     obj@Object{..} <- get
-    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    StateChunk{..} <- liftEither $ getObjectStateChunk obj
     advanceToUuid stateVersion
 
     let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]

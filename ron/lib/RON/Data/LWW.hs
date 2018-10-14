@@ -8,6 +8,7 @@
 module RON.Data.LWW
     ( LwwPerField (..)
     , assignField
+    , getField
     , hasField
     , lwwType
     , newFrame
@@ -18,7 +19,7 @@ module RON.Data.LWW
 import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
-import           Control.Monad.Except (MonadError)
+import           Control.Monad.Except (MonadError, liftEither)
 import           Control.Monad.State.Strict (MonadState, StateT, get, put,
                                              runStateT)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
@@ -70,6 +71,19 @@ viewField field StateChunk{..} frame =
             _    -> Left "unreduced state"
         fromRon opPayload frame
 
+getField
+    ::  ( MonadError String m
+        , MonadState (Object a) m
+        , ReplicatedAsObject a
+        , Replicated b
+        )
+    => UUID -> m b
+getField field = do
+    obj@Object{..} <- get
+    liftEither $ do
+        stateChunk <- getObjectStateChunk obj
+        viewField field stateChunk objectFrame
+
 assignField
     :: forall a m
     .   ( ReplicatedAsObject a
@@ -78,7 +92,7 @@ assignField
     => UUID -> I Replicated -> m ()
 assignField field (I value) = do
     obj@Object{..} <- get
-    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    StateChunk{..} <- liftEither $ getObjectStateChunk obj
     advanceToUuid stateVersion
     let chunk = filter ((field /=) . opRef) stateBody
     e <- getEventUuid
@@ -97,7 +111,7 @@ zoomField
     => UUID -> StateT (Object inner) m a -> StateT (Object outer) m a
 zoomField field innerModifier = do
     obj@Object{..} <- get
-    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    StateChunk{..} <- liftEither $ getObjectStateChunk obj
     let ops = filter ((field ==) . opRef) stateBody
     Op{..} <- case ops of
         []   -> throwError $ unwords ["no field", show field, "in lww chunk"]
@@ -118,5 +132,5 @@ hasField
     => UUID -> m Bool
 hasField field = do
     obj@Object{..} <- get
-    StateChunk{..} <- either throwError pure $ getObjectStateChunk obj
+    StateChunk{..} <- liftEither $ getObjectStateChunk obj
     pure $ any (\Op{..} -> opRef == field && not (null opPayload)) stateBody

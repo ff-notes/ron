@@ -190,18 +190,22 @@ mkReplicatedStructLww struct = do
                     ]
                 else
                     [ sigD assign [t|
-                        ( Clock $m
-                        , MonadError String $m
-                        , MonadState $objectT $m
-                        )
-                        => $(mkViewType field'Type) -> $m ()
+                        (Clock $m, MonadError String $m, MonadState $objectT $m)
+                        => $fieldViewType -> $m ()
                         |]
                     , valD' assign
                         [| LWW.assignField $(liftData field'RonName) . I |]
+                    , sigD get [t|
+                        (MonadError String $m, MonadState $objectT $m)
+                        => $m $fieldViewType
+                        |]
+                    , valD' get [| LWW.getField $(liftData field'RonName) |]
                     ]
       where
         Field'{field'Name, field'Optional, field'RonName, field'Type} = field'
+        fieldViewType = mkViewType field'Type
         assign = mkNameT $ "assign_" <> mkHaskellFieldName field'Name
+        get    = mkNameT $ "get_"    <> mkHaskellFieldName field'Name
         has    = mkNameT $ "has_"    <> mkHaskellFieldName field'Name
         zoom   = mkNameT $ "zoom_"   <> mkHaskellFieldName field'Name
 
