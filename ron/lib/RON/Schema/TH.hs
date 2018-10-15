@@ -112,10 +112,10 @@ mkReplicatedStructLww struct = do
         [recC name
             [ TH.varBangType (mkNameT $ mkHaskellFieldName fieldName) $
                 TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
-                if faOptional then [t| Maybe $vt |] else vt
+                if faOptional then [t| Maybe $viewType |] else viewType
             | (fieldName, Field fieldType FieldAnnotations{faOptional}) <-
                 Map.assocs structFields
-            , let vt = mkViewType fieldType
+            , let viewType = mkViewType fieldType
             ]]
         [TH.derivClause Nothing . map (conT . mkNameT) $
             toList saHaskellDeriving]
@@ -173,37 +173,40 @@ mkReplicatedStructLww struct = do
     mkAccessors field' = do
         a <- varT <$> TH.newName "a"
         m <- varT <$> TH.newName "m"
-        sequenceA
-            $   (guard field'Optional *>
+        let assignF = guard (not $ isObjectType field'Type) *>
+                [ sigD assign [t|
+                    (Clock $m, MonadError String $m, MonadState $objectT $m)
+                    => $fieldViewType -> $m ()
+                    |]
+                , valD' assign
+                    [| LWW.assignField $(liftData field'RonName) . I |]
+                ]
+            getF = guard (not $ isObjectType field'Type) *>
+                [ sigD get [t|
+                    (MonadError String $m, MonadState $objectT $m)
+                    => $m $fieldViewType
+                    |]
+                , valD' get [| LWW.getField $(liftData field'RonName) |]
+                ]
+            hasF = guard field'Optional *>
                 [ sigD has [t|
                     (MonadError String $m, MonadState $objectT $m) => $m Bool
                     |]
                 , valD' has [| LWW.hasField $(liftData field'RonName) |]
-                ])
-            ++  if isObjectType field'Type then
-                    [ sigD zoom [t|
-                        MonadError String $m
-                        => StateT (Object $(mkGuideType field'Type)) $m $a
-                        -> StateT $objectT $m $a
-                        |]
-                    , valD' zoom [| LWW.zoomField $(liftData field'RonName) |]
-                    ]
-                else
-                    [ sigD assign [t|
-                        (Clock $m, MonadError String $m, MonadState $objectT $m)
-                        => $fieldViewType -> $m ()
-                        |]
-                    , valD' assign
-                        [| LWW.assignField $(liftData field'RonName) . I |]
-                    , sigD get [t|
-                        (MonadError String $m, MonadState $objectT $m)
-                        => $m $fieldViewType
-                        |]
-                    , valD' get [| LWW.getField $(liftData field'RonName) |]
-                    ]
+                ]
+            zoomF = guard (isObjectType field'Type) *>
+                [ sigD zoom [t|
+                    MonadError String $m
+                    => StateT (Object $(mkGuideType field'Type)) $m $a
+                    -> StateT $objectT $m $a
+                    |]
+                , valD' zoom [| LWW.zoomField $(liftData field'RonName) |]
+                ]
+        sequenceA $ assignF ++ getF ++ hasF ++ zoomF
       where
         Field'{field'Name, field'Optional, field'RonName, field'Type} = field'
-        fieldViewType = mkViewType field'Type
+        fieldViewType = if field'Optional then [t| Maybe $vt |] else vt where
+            vt = mkViewType field'Type
         assign = mkNameT $ "assign_" <> mkHaskellFieldName field'Name
         get    = mkNameT $ "get_"    <> mkHaskellFieldName field'Name
         has    = mkNameT $ "has_"    <> mkHaskellFieldName field'Name

@@ -13,6 +13,7 @@ $(let
     example1 = StructLww "Example1"
         [ "int1" -: field (TAtom TAInteger)
         , "opt5" -: Field (TStructLww example1) def{faOptional = True}
+        , "opt6" -: Field (TAtom TAInteger)     def{faOptional = True}
         , "set4" -: field (TORSet (TStructLww example2))
         , "str2" -: field (TRga char)
         , "str3" -: field (TAtom TAString)

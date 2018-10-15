@@ -29,8 +29,8 @@ import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
-                                  assign_str3, get_str3, has_opt5, zoom_set4,
-                                  zoom_str2)
+                                  assign_str3, get_opt6, get_str3, has_opt5,
+                                  zoom_set4, zoom_str2)
 
 -- Common ----------------------------------------------------------------------
 
@@ -66,7 +66,13 @@ findObjects = fmap Map.fromList . traverse loadBody where
 
 example0 :: Example1
 example0 = Example1
-    {int1 = 275, str2 = "275", str3 = "190", set4 = mempty, opt5 = Nothing}
+    { int1 = 275
+    , str2 = "275"
+    , str3 = "190"
+    , set4 = mempty
+    , opt5 = Nothing
+    , opt6 = Nothing
+    }
 
 -- | "r3pl1c4"
 replica :: ReplicaId
@@ -77,6 +83,7 @@ ex1expect = [i|
     *lww    #B/)6+r3pl1c4   @`                  !
                                 :int1   =275    ,
                                 :opt5           ,
+                                :opt6           ,
                                 :set4   >)1     ,
                                 :str2   >)5     ,
                                 :str3   '190'   ,
@@ -95,6 +102,7 @@ ex4expect = [i|
     *lww    #B/)6+r3pl1c4   @`)C                    !
                             @)7     :int1   =166    ,
                             @`      :opt5           ,
+                                    :opt6           ,
                                     :set4   >)1     ,
                                     :str2   >)5     ,
                             @)C     :str3   '206'   ,
@@ -123,6 +131,7 @@ example4expect = Example1
     , str3 = "206"
     , set4 = [Example2{vv5 = mempty}]
     , opt5 = Nothing
+    , opt6 = Nothing
     }
 
 prop_lwwStruct :: Property
@@ -141,7 +150,7 @@ prop_lwwStruct = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    ((str3, opt5IsSet), ex4) <-
+    ((str3, opt5IsSet, opt6), ex4) <-
         evalEitherS $
         runNetworkSim $ runReplicaSim replica $ runExceptT $
         (`runStateT` ex2) $ do
@@ -151,9 +160,11 @@ prop_lwwStruct = property $ do
             assign_str3 "206"
             zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
             opt5IsSet <- has_opt5
-            pure (str3, opt5IsSet)
+            opt6 <- get_opt6
+            pure (str3, opt5IsSet, opt6)
     str3 === "190"
     opt5IsSet === False
+    opt6 === Nothing
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4
