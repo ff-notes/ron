@@ -23,6 +23,7 @@ module RON.Event
     , encodeEvent
     , fromCalendarEvent
     , fromEpochEvent
+    , getCurrentEpochTime
     , getEvent
     , getEventUuid
     , getEventUuids
