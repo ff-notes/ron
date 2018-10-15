@@ -29,8 +29,8 @@ import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
 import           RON.UUID (zero)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
-                                  assign_str3, get_opt6, get_str3, has_opt5,
-                                  zoom_set4, zoom_str2)
+                                  assign_opt6, assign_str3, get_opt6, get_str3,
+                                  has_opt5, zoom_set4, zoom_str2)
 
 -- Common ----------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ example0 = Example1
     , str3 = "190"
     , set4 = mempty
     , opt5 = Nothing
-    , opt6 = Nothing
+    , opt6 = Just 74
     }
 
 -- | "r3pl1c4"
@@ -83,7 +83,7 @@ ex1expect = [i|
     *lww    #B/)6+r3pl1c4   @`                  !
                                 :int1   =275    ,
                                 :opt5           ,
-                                :opt6           ,
+                                :opt6   =74     ,
                                 :set4   >)1     ,
                                 :str2   >)5     ,
                                 :str3   '190'   ,
@@ -99,11 +99,11 @@ ex1expect = [i|
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/)6+r3pl1c4   @`)C                    !
+    *lww    #B/)6+r3pl1c4   @`)G                    !
                             @)7     :int1   =166    ,
                             @`      :opt5           ,
-                                    :opt6           ,
-                                    :set4   >)1     ,
+                            @)G     :opt6           ,
+                            @`      :set4   >)1     ,
                                     :str2   >)5     ,
                             @)C     :str3   '206'   ,
 
@@ -161,10 +161,11 @@ prop_lwwStruct = property $ do
             zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
             opt5IsSet <- has_opt5
             opt6 <- get_opt6
+            assign_opt6 Nothing
             pure (str3, opt5IsSet, opt6)
     str3 === "190"
     opt5IsSet === False
-    opt6 === Nothing
+    opt6 === Just 74
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4
