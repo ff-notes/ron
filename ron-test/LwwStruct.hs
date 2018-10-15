@@ -1,7 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module LwwStruct (prop_lwwStruct) where
 
@@ -10,57 +9,21 @@ import           RON.Internal.Prelude
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (runStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import qualified Data.Map.Strict as Map
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (HasCallStack, withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (ReplicatedAsObject (..), getObject, newObject)
+import           RON.Data (getObject, newObject)
 import qualified RON.Data.ORSet as ORSet
 import qualified RON.Data.RGA as RGA
-import           RON.Event (Naming (ApplicationSpecific), ReplicaId (..))
+import           RON.Event (applicationSpecific, ReplicaId)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
-import           RON.Internal.Word (ls60)
-import           RON.Text (parseFrame, serializeFrame)
-import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
-                            StateFrame, UUID, WireChunk (Value), WireFrame,
-                            WireReducedChunk (..))
-import           RON.UUID (zero)
+import           RON.Text (parseObject, serializeObject)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
                                   assign_opt6, assign_str3, get_opt6, get_str3,
                                   has_opt5, zoom_set4, zoom_str2)
-
--- Common ----------------------------------------------------------------------
-
-parseStateFrame :: ByteStringL -> Either String StateFrame
-parseStateFrame = parseFrame >=> findObjects
-
-parseObject :: UUID -> ByteStringL -> Either String (Object a)
-parseObject oid bytes = Object oid <$> parseStateFrame bytes
-
-serializeStateFrame :: StateFrame -> ByteStringL
-serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
-    wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..}
-      where
-        wrcHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
-        wrcBody = stateBody
-        opEvent = stateVersion
-
-serializeObject :: Object a -> (UUID, ByteStringL)
-serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
-
-findObjects :: WireFrame -> Either String StateFrame
-findObjects = fmap Map.fromList . traverse loadBody where
-    loadBody = \case
-        Value WireReducedChunk{..} -> do
-            let RawOp{..} = wrcHeader
-            let Op{..} = op
-            let stateVersion = opEvent
-            let stateBody = wrcBody
-            pure ((opType, opObject), StateChunk{..})
-        _ -> Left "expected reduced chunk"
 
 --------------------------------------------------------------------------------
 
@@ -76,7 +39,7 @@ example0 = Example1
 
 -- | "r3pl1c4"
 replica :: ReplicaId
-replica = ReplicaId ApplicationSpecific (ls60 0xd83d30067100000)
+replica = applicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
 ex1expect = [i|
@@ -150,22 +113,22 @@ prop_lwwStruct = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    ((str3, opt5IsSet, opt6), ex4) <-
+    ((str3Value, opt5IsSet, opt6Value), ex4) <-
         evalEitherS $
         runNetworkSim $ runReplicaSim replica $ runExceptT $
         (`runStateT` ex2) $ do
             assign_int1 166
             zoom_str2 $ RGA.edit "145"
-            str3 <- get_str3
+            str3Value <- get_str3
             assign_str3 "206"
             zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
             opt5IsSet <- has_opt5
-            opt6 <- get_opt6
+            opt6Value <- get_opt6
             assign_opt6 Nothing
-            pure (str3, opt5IsSet, opt6)
-    str3 === "190"
+            pure (str3Value, opt5IsSet, opt6Value)
+    str3Value === "190"
     opt5IsSet === False
-    opt6 === Just 74
+    opt6Value === Just 74
 
     -- decode object after modification
     example4 <- evalEitherS $ getObject ex4

@@ -9,7 +9,9 @@ module RON.Text.Serialize
     ( serializeAtom
     , serializeFrame
     , serializeFrames
+    , serializeObject
     , serializeRawOp
+    , serializeStateFrame
     , serializeString
     , serializeUuid
     ) where
@@ -21,14 +23,16 @@ import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.ByteString.Lazy.Search as BSL
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import           Data.Traversable (for)
 
 import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
-                            RawOp (..), WireChunk (Query, Raw, Value),
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            Object (..), Op (..), RawOp (..), StateChunk (..),
+                            StateFrame, WireChunk (Query, Raw, Value),
                             WireFrame, WireReducedChunk (..))
 import           RON.UUID (UUID, zero)
 
@@ -123,3 +127,14 @@ serializeString =
 serializePayload :: UUID -> [Atom] -> ByteStringL
 serializePayload prev =
     BSLC.unwords . (`evalState` prev) . traverse serializeAtomZip
+
+serializeStateFrame :: StateFrame -> ByteStringL
+serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
+    wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..}
+      where
+        wrcHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
+        wrcBody = stateBody
+        opEvent = stateVersion
+
+serializeObject :: Object a -> (UUID, ByteStringL)
+serializeObject (Object oid frame) = (oid, serializeStateFrame frame)

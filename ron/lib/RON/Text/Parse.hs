@@ -9,7 +9,9 @@ module RON.Text.Parse
     ( parseAtom
     , parseFrame
     , parseFrames
+    , parseObject
     , parseOp
+    , parseStateFrame
     , parseString
     , parseUuid
     ) where
@@ -28,17 +30,19 @@ import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (ord)
+import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 
 import qualified RON.Base64 as Base64
 import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
 import           RON.Text.Common (opZero)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            Object (..), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RawOp (..), UUID (UUID),
-                            WireChunk (Query, Raw, Value), WireFrame,
-                            WireReducedChunk (..))
+                            RawOp (..), StateChunk (..), StateFrame,
+                            UUID (UUID), WireChunk (Query, Raw, Value),
+                            WireFrame, WireReducedChunk (..))
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
@@ -341,3 +345,20 @@ term = do
         ',' -> pure TReduced
         ';' -> pure TRaw
         _   -> fail "not a term"
+
+parseStateFrame :: ByteStringL -> Either String StateFrame
+parseStateFrame = parseFrame >=> findObjects
+
+parseObject :: UUID -> ByteStringL -> Either String (Object a)
+parseObject oid bytes = Object oid <$> parseStateFrame bytes
+
+findObjects :: WireFrame -> Either String StateFrame
+findObjects = fmap Map.fromList . traverse loadBody where
+    loadBody = \case
+        Value WireReducedChunk{..} -> do
+            let RawOp{..} = wrcHeader
+            let Op{..} = op
+            let stateVersion = opEvent
+            let stateBody = wrcBody
+            pure ((opType, opObject), StateChunk{..})
+        _ -> Left "expected reduced chunk"
