@@ -6,28 +6,29 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Event
-    ( advanceToUuid
-    , applicationSpecific
-    , Calendar (..)
+    ( Calendar (..)
     , CalendarEvent (..)
     , Clock (..)
-    , decodeEvent
-    , encodeEvent
     , EpochClock (..)
     , EpochEvent (..)
+    , EpochTime
     , Event (..)
+    , LocalTime (..)
+    , Naming (..)
+    , Replica (..)
+    , ReplicaId (..)
+    , advanceToUuid
+    , applicationSpecific
+    , decodeEvent
+    , encodeEvent
     , fromCalendarEvent
     , fromEpochEvent
     , getEvent
     , getEventUuid
     , getEventUuids
-    , LocalTime (..)
     , mkCalendarDate
     , mkCalendarDateTime
     , mkCalendarDateTimeNano
-    , Naming (..)
-    , Replica (..)
-    , ReplicaId (..)
     , runEpochClock
     , runEpochClockFromCurrentTime
     , toEpochEvent
