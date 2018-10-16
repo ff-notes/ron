@@ -37,11 +37,11 @@ module RON.Event
 
 import           Control.Monad.Except (ExceptT, lift)
 import           Control.Monad.IO.Class (MonadIO)
-import           Control.Monad.Reader (ReaderT (..))
+import           Control.Monad.Reader (ReaderT (..), reader)
 import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
-import           Data.IORef (IORef, newIORef)
+import           Data.IORef (IORef, atomicModifyIORef', newIORef)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 
 import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
@@ -49,8 +49,8 @@ import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
                                     Word32, Word6, Word60, Word64, Word8,
                                     leastSignificant12, leastSignificant2,
                                     leastSignificant24, leastSignificant4,
-                                    leastSignificant6, leastSignificant60, ls12,
-                                    ls24, ls6, ls60, safeCast)
+                                    leastSignificant6, ls12, ls24, ls6, ls60,
+                                    safeCast, word60add)
 import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin,
                            uuidScheme, uuidValue, uuidVariant, uuidVariety)
 import qualified RON.UUID as UUID
@@ -175,7 +175,7 @@ advanceToUuid :: Clock clock => UUID -> clock ()
 advanceToUuid = advance . uuidValue . UUID.split
 
 getEvent :: Clock m => m EpochEvent
-getEvent = head <$> getEvents (leastSignificant60 (1 :: Word64))
+getEvent = head <$> getEvents (ls60 1)
 
 getEventUuid :: Clock m => m UUID
 getEventUuid = encodeEvent . fromEpochEvent <$> getEvent
@@ -278,17 +278,36 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
 applicationSpecific :: Word64 -> ReplicaId
 applicationSpecific = ReplicaId ApplicationSpecific . ls60
 
-newtype EpochClock a = EpochClock (ReaderT (IORef EpochTime) IO a)
+newtype EpochClock a = EpochClock (ReaderT (ReplicaId, IORef EpochTime) IO a)
     deriving (Applicative, Functor, Monad, MonadIO)
 
-runEpochClock :: IORef EpochTime -> EpochClock a -> IO a
-runEpochClock timeVar (EpochClock action) = runReaderT action timeVar
+instance Replica EpochClock where
+    getPid = EpochClock $ reader fst
 
-runEpochClockFromCurrentTime :: EpochClock a -> IO a
-runEpochClockFromCurrentTime clock = do
+instance Clock EpochClock where
+    advance time = EpochClock $ ReaderT $ \(_pid, timeVar) ->
+        atomicModifyIORef' timeVar $ \t0 -> (max time t0, ())
+
+    getEvents n0 = EpochClock $ ReaderT $ \(pid, timeVar) -> do
+        let n = max n0 $ ls60 1
+        realTime <- getCurrentEpochTime
+        timeRangeStart <- atomicModifyIORef' timeVar $ \timeCur ->
+            let timeRangeStart = max realTime $ succ timeCur
+            in (timeRangeStart `word60add` pred n, timeRangeStart)
+        pure
+            [ EpochEvent t pid
+            | t <- [timeRangeStart .. timeRangeStart `word60add` pred n]
+            ]
+
+runEpochClock :: ReplicaId -> IORef EpochTime -> EpochClock a -> IO a
+runEpochClock replicaId timeVar (EpochClock action) =
+    runReaderT action (replicaId, timeVar)
+
+runEpochClockFromCurrentTime :: ReplicaId -> EpochClock a -> IO a
+runEpochClockFromCurrentTime replicaId clock = do
     time <- getCurrentEpochTime
     timeVar <- newIORef time
-    runEpochClock timeVar clock
+    runEpochClock replicaId timeVar clock
 
 getCurrentEpochTime :: IO EpochTime
 getCurrentEpochTime =
