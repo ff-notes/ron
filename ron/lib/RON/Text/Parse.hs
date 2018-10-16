@@ -7,13 +7,13 @@
 
 module RON.Text.Parse
     ( parseAtom
-    , parseFrame
-    , parseFrames
     , parseObject
     , parseOp
     , parseStateFrame
     , parseString
     , parseUuid
+    , parseWireFrame
+    , parseWireFrames
     ) where
 
 import           Prelude hiding (takeWhile)
@@ -46,8 +46,8 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
-parseFrame :: ByteStringL -> Either String WireFrame
-parseFrame = parseOnlyL frame
+parseWireFrame :: ByteStringL -> Either String WireFrame
+parseWireFrame = parseOnlyL frame
 
 chunksTill :: Parser () -> Parser [WireChunk]
 chunksTill end = label "[WireChunk]" $ go opZero
@@ -99,8 +99,8 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
 frame :: Parser WireFrame
 frame = label "WireFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
-parseFrames :: ByteStringL -> Either String [WireFrame]
-parseFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
+parseWireFrames :: ByteStringL -> Either String [WireFrame]
+parseWireFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
 
 frameInStream :: Parser WireFrame
 frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
@@ -347,7 +347,7 @@ term = do
         _   -> fail "not a term"
 
 parseStateFrame :: ByteStringL -> Either String StateFrame
-parseStateFrame = parseFrame >=> findObjects
+parseStateFrame = parseWireFrame >=> findObjects
 
 parseObject :: UUID -> ByteStringL -> Either String (Object a)
 parseObject oid bytes = Object oid <$> parseStateFrame bytes

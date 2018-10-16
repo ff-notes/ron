@@ -1,12 +1,15 @@
 module RON.Text
-    ( parseFrame
-    , parseFrames
-    , parseObject
-    , serializeFrame
-    , serializeFrames
+    ( parseObject
+    , parseStateFrame
+    , parseWireFrame
+    , parseWireFrames
     , serializeObject
+    , serializeStateFrame
+    , serializeWireFrame
+    , serializeWireFrames
     ) where
 
-import           RON.Text.Parse (parseFrame, parseFrames, parseObject)
-import           RON.Text.Serialize (serializeFrame, serializeFrames,
-                                     serializeObject)
+import           RON.Text.Parse (parseObject, parseStateFrame, parseWireFrame,
+                                 parseWireFrames)
+import           RON.Text.Serialize (serializeObject, serializeStateFrame,
+                                     serializeWireFrame, serializeWireFrames)

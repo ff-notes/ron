@@ -53,7 +53,7 @@ loadCases = do
     commonTestDir = "../gritzko~ron-test"
     readChunks file = do
         bytes <- BSL.readFile file
-        let eFrame = RT.parseFrame bytes
+        let eFrame = RT.parseWireFrame bytes
         pure $ groupObjects . filter isRelevant <$> eFrame
     zipDef a b = Map.merge
         (Map.mapMissing $ const (,b))

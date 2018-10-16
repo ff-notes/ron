@@ -8,8 +8,8 @@ import           Criterion (bench, nf)
 import           Criterion.Main (defaultConfig, defaultMainWith)
 import           Criterion.Types (timeLimit)
 
-import           RON.Text (parseFrames, serializeFrames)
-import           RON.Types (WireChunk (Raw), Op (..), RawOp (..))
+import           RON.Text (parseWireFrames, serializeWireFrames)
+import           RON.Types (Op (..), RawOp (..), WireChunk (Raw))
 import qualified RON.UUID as UUID
 
 main :: IO ()
@@ -17,13 +17,13 @@ main = do
     void . evaluate $ force serialized
     defaultMainWith
         defaultConfig{timeLimit = 1}
-        [bench (show n) $ nf parseFrames batch | (n, batch) <- serialized]
+        [bench (show n) $ nf parseWireFrames batch | (n, batch) <- serialized]
   where
     rawop = RawOp{opType = UUID.zero, opObject = UUID.zero, op}
     op = Op{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
     frame n = replicate n $ Raw rawop
 
     serialized =
-        [ (n :: Int, serializeFrames $ replicate 100 $ frame n)
+        [ (n :: Int, serializeWireFrames $ replicate 100 $ frame n)
         | i <- [1 .. 10], let n = 100 * i
         ]

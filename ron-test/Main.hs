@@ -118,11 +118,12 @@ prop_text_roundtrip_op =
 
 prop_text_roundtrip_frame =
     -- TODO increase limits
-    property $ textRoundtrip (Gen.wireFrame 10) RT.serializeFrame RT.parseFrame
+    property $
+    textRoundtrip (Gen.wireFrame 10) RT.serializeWireFrame RT.parseWireFrame
 
 prop_text_roundtrip_frames = property $
     -- TODO increase limits
-    textRoundtrip (Gen.wireFrames 10) RT.serializeFrames RT.parseFrames
+    textRoundtrip (Gen.wireFrames 10) RT.serializeWireFrames RT.parseWireFrames
 
 prop_filename_roundtrip = property $ do
     ShowAs caseTransform _ <- forAll $ Gen.element
@@ -221,7 +222,7 @@ prop_ron_json_example = let
     replicaGritzko = ReplicaId TrieForked gritzko
     in
     property $ do
-        parsed <- evalEitherS $ RT.parseFrame input
+        parsed <- evalEitherS $ RT.parseWireFrame input
         output === parsed
 
 lwwType = fromJust $ UUID.mkName "lww"

@@ -7,13 +7,13 @@
 
 module RON.Text.Serialize
     ( serializeAtom
-    , serializeFrame
-    , serializeFrames
     , serializeObject
     , serializeRawOp
     , serializeStateFrame
     , serializeString
     , serializeUuid
+    , serializeWireFrame
+    , serializeWireFrames
     ) where
 
 import           RON.Internal.Prelude
@@ -36,15 +36,15 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             WireFrame, WireReducedChunk (..))
 import           RON.UUID (UUID, zero)
 
-serializeFrame :: WireFrame -> ByteStringL
-serializeFrame chunks
+serializeWireFrame :: WireFrame -> ByteStringL
+serializeWireFrame chunks
     = (`BSLC.snoc` '.')
     . mconcat
     . (`evalState` opZero)
     $ traverse serializeChunk chunks
 
-serializeFrames :: [WireFrame] -> ByteStringL
-serializeFrames = foldMap serializeFrame
+serializeWireFrames :: [WireFrame] -> ByteStringL
+serializeWireFrames = foldMap serializeWireFrame
 
 serializeChunk :: WireChunk -> State RawOp ByteStringL
 serializeChunk = \case
@@ -129,7 +129,7 @@ serializePayload prev =
     BSLC.unwords . (`evalState` prev) . traverse serializeAtomZip
 
 serializeStateFrame :: StateFrame -> ByteStringL
-serializeStateFrame = serializeFrame . map wrapChunk . Map.assocs where
+serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..}
       where
         wrcHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
