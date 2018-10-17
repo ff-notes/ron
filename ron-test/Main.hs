@@ -6,6 +6,8 @@
 
 import           RON.Internal.Prelude
 
+import           Control.Monad.Except (runExceptT)
+import           Control.Monad.State.Strict (evalStateT, get)
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Char (toLower, toUpper)
@@ -26,14 +28,16 @@ import           Test.Tasty.TH (defaultMainGenerator)
 import qualified RON.Base64 as Base64
 import qualified RON.Binary.Parse as RB
 import qualified RON.Binary.Serialize as RB
+import qualified RON.Data.RGA as RGA
 import           RON.Event (CalendarEvent (..), Naming (TrieForked),
-                            ReplicaId (..), decodeEvent, encodeEvent,
-                            fromCalendarEvent, mkCalendarDateTime)
+                            ReplicaId (..), applicationSpecific, decodeEvent,
+                            encodeEvent, fromCalendarEvent, mkCalendarDateTime)
+import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
 import           RON.Types (Atom (..), Op (..), RawOp (..), UUID (..),
-                            WireChunk (Raw))
+                            WireChunk (Raw), objectFrame)
 import qualified RON.UUID as UUID
 
 import qualified Gen
@@ -228,6 +232,52 @@ prop_ron_json_example = let
 lwwType = fromJust $ UUID.mkName "lww"
 
 prop_lwwStruct = LwwStruct.prop_lwwStruct
+
+prop_RGA_delete_deleted = let
+    prep = map BSL.words . BSL.lines . RT.serializeStateFrame . objectFrame
+    in
+    property $ do
+        (rga0, rga1, rga2) <-
+            evalEitherS $
+            runNetworkSim $
+            runReplicaSim (applicationSpecific 234) $
+            runExceptT $ do
+                rga0 <- RGA.newFromText "hello"
+                (rga1, rga2) <- (`evalStateT` rga0) $ do
+                    RGA.editText "hell"
+                    rga1 <- get
+                    RGA.editText "help"
+                    rga2 <- get
+                    pure (rga1, rga2)
+                pure (rga0, rga1, rga2)
+        prep rga0 ===
+            [ ["*rga", "#B/)6+]3f", "@`)5", "!"]
+            , ["@)1", "'h'", ","]
+            , ["@)2", "'e'", ","]
+            , ["@)3", "'l'", ","]
+            , ["@)4", "'l'", ","]
+            , ["@)5", "'o'", ","]
+            , ["."]
+            ]
+        prep rga1 ===
+            [ ["*rga", "#B/)6+]3f", "@`)7", "!"]
+            , ["@)1", "'h'", ","]
+            , ["@)2", "'e'", ","]
+            , ["@)3", "'l'", ","]
+            , ["@)4", "'l'", ","]
+            , ["@)5", ":`)7", "'o'", ","]
+            , ["."]
+            ]
+        prep rga2 ===
+            [ ["*rga", "#B/)6+]3f", "@`)9", "!"]
+            , ["@)1", "'h'", ","]
+            , ["@)2", "'e'", ","]
+            , ["@)3", "'l'", ","]
+            , ["@)4", ":`)8", "'l'", ","]
+            , ["@)5", ":)7", "'o'", ","]
+            , ["@)9", ":0", "'p'", ","]
+            , ["."]
+            ]
 
 data ShowAs a = ShowAs a String
 

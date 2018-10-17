@@ -352,10 +352,13 @@ edit newItems = do
     let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
     let diff = getGroupedDiffBy ((==) `on` opPayload) stateBody newItems'
     (stateBody', Last lastEvent) <- runWriterT . fmap concat . for diff $ \case
-        First removed -> for removed $ \op -> do
-            tombstone <- lift getEventUuid
-            tell . Last $ Just tombstone
-            pure op{opRef = tombstone}
+        First removed -> for removed $ \case
+            op@Op{opRef = Zero} -> do  -- not deleted yet
+                tombstone <- lift getEventUuid
+                tell . Last $ Just tombstone
+                pure op{opRef = tombstone}
+            op ->  -- deleted already
+                pure op
         Both v _      -> pure v
         Second added  -> for added $ \op -> do
             opEvent <- lift getEventUuid
