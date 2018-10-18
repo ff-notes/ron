@@ -8,10 +8,9 @@
 module RON.Data.LWW
     ( LwwPerField (..)
     , assignField
-    , getField
-    , hasField
     , lwwType
     , newFrame
+    , readField
     , viewField
     , zoomField
     ) where
@@ -71,14 +70,14 @@ viewField field StateChunk{..} frame =
             _    -> Left "unreduced state"
         fromRon opPayload frame
 
-getField
+readField
     ::  ( MonadError String m
         , MonadState (Object a) m
         , ReplicatedAsObject a
         , Replicated b
         )
     => UUID -> m b
-getField field = do
+readField field = do
     obj@Object{..} <- get
     liftEither $ do
         stateChunk <- getObjectStateChunk obj
@@ -126,11 +125,11 @@ zoomField field innerModifier = do
     put Object{objectFrame = objectFrame', ..}
     pure a
 
--- | Check if field is present and is not empty.
-hasField
-    :: (ReplicatedAsObject a, MonadError String m, MonadState (Object a) m)
-    => UUID -> m Bool
-hasField field = do
-    obj@Object{..} <- get
-    StateChunk{..} <- liftEither $ getObjectStateChunk obj
-    pure $ any (\Op{..} -> opRef == field && not (null opPayload)) stateBody
+-- -- | Check if field is present and is not empty.
+-- hasField
+--     :: (ReplicatedAsObject a, MonadError String m, MonadState (Object a) m)
+--     => UUID -> m Bool
+-- hasField field = do
+--     obj@Object{..} <- get
+--     StateChunk{..} <- liftEither $ getObjectStateChunk obj
+--     pure $ any (\Op{..} -> opRef == field && not (null opPayload)) stateBody

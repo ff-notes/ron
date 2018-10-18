@@ -8,6 +8,7 @@ module RON.Schema.TH
     ( mkReplicated
     ) where
 
+import           Prelude hiding (read)
 import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
@@ -31,9 +32,10 @@ import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Event (Clock)
 import           RON.Schema (Declaration (..), Field (..),
-                             FieldAnnotations (..), Opaque (..),
-                             OpaqueAnnotations (..), RonType (..), Schema,
-                             StructAnnotations (..), StructLww (..), TAtom (..))
+                             FieldAnnotations (..), OpaqueAnnotations (..),
+                             RonType (..), Schema, StructAnnotations (..),
+                             StructLww (..), TAtom (..), TComposite (..),
+                             TObject (..), TOpaque (..))
 import           RON.Types (Object (..), UUID)
 import qualified RON.UUID as UUID
 
@@ -42,34 +44,38 @@ mkReplicated = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
         DStructLww s -> mkReplicatedStructLww s
 
+-- | Type-directing newtype
 fieldWrapperC :: RonType -> Maybe TH.Name
 fieldWrapperC typ = case typ of
-    TAtom      _            -> Nothing
-    TOpaque    _            -> Nothing
-    TORSet     item
-        | isObjectType item -> Just 'ObjectORSet
-        | otherwise         -> Just 'ORSet
-    TRga       _            -> Just 'RGA
-    TStructLww _            -> Nothing
-    TVersionVector          -> Nothing
+    TAtom                   _ -> Nothing
+    TComposite              _ -> Nothing
+    TObject                 t -> case t of
+        TORSet              a
+            | isObjectType  a -> Just 'ObjectORSet
+            | otherwise       -> Just 'ORSet
+        TRga                _ -> Just 'RGA
+        TStructLww          _ -> Nothing
+        TVersionVector        -> Nothing
+    TOpaque                 _ -> Nothing
 
 mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
-    TAtom      _            -> view
-    TOpaque    _            -> view
-    TORSet     item
-        | isObjectType item -> wrap ''ObjectORSet item
-        | otherwise         -> wrap ''ORSet       item
-    TRga       item         -> wrap ''RGA         item
-    TStructLww _            -> view
-    TVersionVector          -> view
+    TAtom                   _ -> view
+    TComposite              _ -> view
+    TObject                 t -> case t of
+        TORSet              a
+            | isObjectType  a -> wrap ''ObjectORSet a
+            | otherwise       -> wrap ''ORSet       a
+        TRga                a -> wrap ''RGA         a
+        TStructLww          _ -> view
+        TVersionVector        -> view
+    TOpaque                 _ -> view
   where
     view = mkViewType typ
     wrap w item = [t| $(conT w) $(mkGuideType item) |]
 
 data Field' = Field'
     { field'Name     :: Text
-    , field'Optional :: Bool
     , field'RonName  :: UUID
     , field'Type     :: RonType
     , field'Var      :: TH.Name
@@ -78,9 +84,7 @@ data Field' = Field'
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww struct = do
     fields <- for (Map.assocs structFields) $ \(field'Name, field) -> let
-        Field{fieldType, fieldAnnotations} = field
-        FieldAnnotations{faOptional} = fieldAnnotations
-        field'Optional = faOptional
+        Field{fieldType} = field
         field'Type = fieldType
         in
         case UUID.mkName . BSC.pack $ Text.unpack field'Name of
@@ -111,9 +115,8 @@ mkReplicatedStructLww struct = do
     mkDataType = dataD (TH.cxt []) name [] Nothing
         [recC name
             [ TH.varBangType (mkNameT $ mkHaskellFieldName fieldName) $
-                TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
-                if faOptional then [t| Maybe $viewType |] else viewType
-            | (fieldName, Field fieldType FieldAnnotations{faOptional}) <-
+                TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) viewType
+            | (fieldName, Field fieldType FieldAnnotations) <-
                 Map.assocs structFields
             , let viewType = mkViewType fieldType
             ]]
@@ -181,18 +184,13 @@ mkReplicatedStructLww struct = do
                 , valD' assign
                     [| LWW.assignField $(liftData field'RonName) . I |]
                 ]
-            getF = guard (not $ isObjectType field'Type) *>
-                [ sigD get [t|
+            readF =
+                [ sigD read [t|
                     (MonadError String $m, MonadState $objectT $m)
                     => $m $fieldViewType
                     |]
-                , valD' get [| LWW.getField $(liftData field'RonName) |]
-                ]
-            hasF = guard field'Optional *>
-                [ sigD has [t|
-                    (MonadError String $m, MonadState $objectT $m) => $m Bool
-                    |]
-                , valD' has [| LWW.hasField $(liftData field'RonName) |]
+                , valD' read
+                    [| $unguide <$> LWW.readField $(liftData field'RonName) |]
                 ]
             zoomF = guard (isObjectType field'Type) *>
                 [ sigD zoom [t|
@@ -202,15 +200,19 @@ mkReplicatedStructLww struct = do
                     |]
                 , valD' zoom [| LWW.zoomField $(liftData field'RonName) |]
                 ]
-        sequenceA $ assignF ++ getF ++ hasF ++ zoomF
+        sequenceA $ assignF ++ readF ++ zoomF
       where
-        Field'{field'Name, field'Optional, field'RonName, field'Type} = field'
-        fieldViewType = if field'Optional then [t| Maybe $vt |] else vt where
-            vt = mkViewType field'Type
+        Field'{field'Name, field'RonName, field'Type} = field'
+        fieldViewType = mkViewType field'Type
         assign = mkNameT $ "assign_" <> mkHaskellFieldName field'Name
-        get    = mkNameT $ "get_"    <> mkHaskellFieldName field'Name
-        has    = mkNameT $ "has_"    <> mkHaskellFieldName field'Name
+        read   = mkNameT $ "read_"   <> mkHaskellFieldName field'Name
         zoom   = mkNameT $ "zoom_"   <> mkHaskellFieldName field'Name
+        guidedX = case fieldWrapperC field'Type of
+            Just w  -> conP w [x]
+            Nothing -> x
+          where
+            x = varP $ TH.mkName "x"
+        unguide = [| \ $guidedX -> x |]
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
@@ -220,15 +222,18 @@ mkViewType = \case
     TAtom atom -> case atom of
         TAInteger -> [t| Int64 |]
         TAString  -> [t| Text |]
+    TComposite t -> case t of
+        TOption u -> [t| Maybe $(mkViewType u) |]
+    TObject t -> case t of
+        TORSet     item                  -> wrapList item
+        TRga       item                  -> wrapList item
+        TStructLww StructLww{structName} -> conT $ mkNameT structName
+        TVersionVector                   -> [t| VersionVector |]
     TOpaque Opaque{opaqueAnnotations} -> let
         OpaqueAnnotations{oaHaskellType} = opaqueAnnotations
         in case oaHaskellType of
             Just name -> conT $ mkNameT name
             Nothing   -> fail "Opaque type must define a Haskell type"
-    TORSet item -> wrapList item
-    TRga   item -> wrapList item
-    TStructLww StructLww{structName} -> conT $ mkNameT structName
-    TVersionVector -> [t| VersionVector |]
   where
     wrapList a = [t| [$(mkViewType a)] |]
 
@@ -238,8 +243,6 @@ valD' name body = TH.valD (varP name) (TH.normalB body) []
 isObjectType :: RonType -> Bool
 isObjectType = \case
     TAtom      _                      -> False
+    TComposite _                      -> False
+    TObject    _                      -> True
     TOpaque    Opaque{opaqueIsObject} -> opaqueIsObject
-    TORSet     _                      -> True
-    TRga       _                      -> True
-    TStructLww _                      -> True
-    TVersionVector                    -> True

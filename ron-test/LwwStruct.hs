@@ -17,13 +17,13 @@ import           Hedgehog.Internal.Property (failWith)
 import           RON.Data (getObject, newObject)
 import qualified RON.Data.ORSet as ORSet
 import qualified RON.Data.RGA as RGA
-import           RON.Event (applicationSpecific, ReplicaId)
+import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Text (parseObject, serializeObject)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
-                                  assign_opt6, assign_str3, get_opt6, get_str3,
-                                  has_opt5, zoom_set4, zoom_str2)
+                                  assign_opt6, assign_str3, read_opt5,
+                                  read_opt6, read_str3, zoom_set4, zoom_str2)
 
 --------------------------------------------------------------------------------
 
@@ -113,21 +113,22 @@ prop_lwwStruct = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    ((str3Value, opt5IsSet, opt6Value), ex4) <-
+    ((str3Value, opt5Value, opt6Value), ex4) <-
         evalEitherS $
         runNetworkSim $ runReplicaSim replica $ runExceptT $
         (`runStateT` ex2) $ do
+            -- plain field
             assign_int1 166
             zoom_str2 $ RGA.edit "145"
-            str3Value <- get_str3
+            str3Value <- read_str3
             assign_str3 "206"
             zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
-            opt5IsSet <- has_opt5
-            opt6Value <- get_opt6
+            opt5Value <- read_opt5
+            opt6Value <- read_opt6
             assign_opt6 Nothing
-            pure (str3Value, opt5IsSet, opt6Value)
+            pure (str3Value, opt5Value, opt6Value)
     str3Value === "190"
-    opt5IsSet === False
+    opt5Value === Nothing
     opt6Value === Just 74
 
     -- decode object after modification

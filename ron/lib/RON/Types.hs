@@ -9,6 +9,7 @@ module RON.Types
     ( Atom (..)
     , Object (..)
     , ObjectId
+    , ObjectPart (..)
     , Op (..)
     , OpTerm (..)
     , RawOp (..)
@@ -96,3 +97,6 @@ type StateFrame = Map ObjectId StateChunk
 
 data Object a = Object{objectId :: UUID, objectFrame :: StateFrame}
     deriving (Eq, Show)
+
+data ObjectPart obj part = ObjectPart
+    {partObject :: UUID, partLocation :: UUID, partFrame :: StateFrame}

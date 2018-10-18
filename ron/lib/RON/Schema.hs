@@ -6,13 +6,15 @@ module RON.Schema
     ( Declaration (..)
     , Field (..)
     , FieldAnnotations (..)
-    , Opaque (..)
     , OpaqueAnnotations (..)
     , RonType (..)
     , Schema
     , StructAnnotations (..)
     , StructLww (..)
     , TAtom (..)
+    , TComposite (..)
+    , TObject (..)
+    , TOpaque (..)
     , char
     , def
     , field
@@ -30,8 +32,17 @@ data TAtom = TAInteger | TAString
 
 data RonType
     = TAtom      TAtom
-    | TOpaque    Opaque
-    | TORSet     RonType
+    | TComposite TComposite
+    | TObject    TObject
+    | TOpaque    TOpaque
+    deriving (Show)
+
+newtype TComposite
+    = TOption RonType
+    deriving (Show)
+
+data TObject
+    = TORSet     RonType
     | TRga       RonType
     | TStructLww StructLww
     | TVersionVector
@@ -56,11 +67,11 @@ data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
 field :: RonType -> Field
 field fieldType = Field{fieldType, fieldAnnotations = def}
 
-newtype FieldAnnotations = FieldAnnotations{faOptional :: Bool}
+data FieldAnnotations = FieldAnnotations
     deriving (Show)
 
 instance Default FieldAnnotations where
-    def = FieldAnnotations{faOptional = False}
+    def = FieldAnnotations
 
 newtype Declaration = DStructLww StructLww
 
@@ -73,9 +84,9 @@ char :: RonType
 char = opaqueAtoms def{oaHaskellType = Just "Char"}
 
 rgaString :: RonType
-rgaString = TRga char
+rgaString = TObject $ TRga char
 
-data Opaque =
+data TOpaque =
     Opaque{opaqueIsObject :: Bool, opaqueAnnotations :: OpaqueAnnotations}
     deriving (Show)
 
