@@ -21,9 +21,9 @@ import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Text (parseObject, serializeObject)
 
-import           LwwStruct.Types (Example1 (..), Example2 (..), assign_int1,
-                                  assign_opt6, assign_str3, read_opt5,
-                                  read_opt6, read_str3, zoom_set4, zoom_str2)
+import           LwwStruct.Types (Example1 (..), Example2 (..), int1_assign,
+                                  opt6_assign, opt5_read, opt6_read, str3_read,
+                                  str2_zoom, str3_assign, set4_zoom)
 
 --------------------------------------------------------------------------------
 
@@ -118,14 +118,14 @@ prop_lwwStruct = property $ do
         runNetworkSim $ runReplicaSim replica $ runExceptT $
         (`runStateT` ex2) $ do
             -- plain field
-            assign_int1 166
-            zoom_str2 $ RGA.edit "145"
-            str3Value <- read_str3
-            assign_str3 "206"
-            zoom_set4 $ ORSet.addNewRef Example2{vv5 = mempty}
-            opt5Value <- read_opt5
-            opt6Value <- read_opt6
-            assign_opt6 Nothing
+            int1_assign 166
+            str2_zoom $ RGA.edit "145"
+            str3Value <- str3_read
+            str3_assign "206"
+            set4_zoom $ ORSet.addNewRef Example2{vv5 = mempty}
+            opt5Value <- opt5_read
+            opt6Value <- opt6_read
+            opt6_assign Nothing
             pure (str3Value, opt5Value, opt6Value)
     str3Value === "190"
     opt5Value === Nothing

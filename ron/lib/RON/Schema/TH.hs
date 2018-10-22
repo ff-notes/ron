@@ -204,9 +204,9 @@ mkReplicatedStructLww struct = do
       where
         Field'{field'Name, field'RonName, field'Type} = field'
         fieldViewType = mkViewType field'Type
-        assign = mkNameT $ "assign_" <> mkHaskellFieldName field'Name
-        read   = mkNameT $ "read_"   <> mkHaskellFieldName field'Name
-        zoom   = mkNameT $ "zoom_"   <> mkHaskellFieldName field'Name
+        assign = mkNameT $ mkHaskellFieldName field'Name <> "_assign"
+        read   = mkNameT $ mkHaskellFieldName field'Name <> "_read"
+        zoom   = mkNameT $ mkHaskellFieldName field'Name <> "_zoom"
         guidedX = case fieldWrapperC field'Type of
             Just w  -> conP w [x]
             Nothing -> x
