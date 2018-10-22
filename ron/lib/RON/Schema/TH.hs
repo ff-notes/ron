@@ -176,13 +176,13 @@ mkReplicatedStructLww struct = do
     mkAccessors field' = do
         a <- varT <$> TH.newName "a"
         m <- varT <$> TH.newName "m"
-        let assignF = guard (not $ isObjectType field'Type) *>
+        let assignF =
                 [ sigD assign [t|
                     (Clock $m, MonadError String $m, MonadState $objectT $m)
                     => $fieldViewType -> $m ()
                     |]
                 , valD' assign
-                    [| LWW.assignField $(liftData field'RonName) . I |]
+                    [| LWW.assignField $(liftData field'RonName) . I . $guide |]
                 ]
             readF =
                 [ sigD read [t|
@@ -192,7 +192,7 @@ mkReplicatedStructLww struct = do
                 , valD' read
                     [| $unguide <$> LWW.readField $(liftData field'RonName) |]
                 ]
-            zoomF = guard (isObjectType field'Type) *>
+            zoomF =
                 [ sigD zoom [t|
                     MonadError String $m
                     => StateT (Object $(mkGuideType field'Type)) $m $a
@@ -213,6 +213,9 @@ mkReplicatedStructLww struct = do
           where
             x = varP $ TH.mkName "x"
         unguide = [| \ $guidedX -> x |]
+        guide = case fieldWrapperC field'Type of
+            Just w  -> conE w
+            Nothing -> [| id |]
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
