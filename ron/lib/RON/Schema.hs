@@ -15,12 +15,18 @@ module RON.Schema
     , TComposite (..)
     , TObject (..)
     , TOpaque (..)
+    , atomInteger
+    , atomString
     , char
     , def
     , field
     , opaqueAtoms
     , opaqueObject
+    , option
+    , orSet
     , rgaString
+    , structLww
+    , versionVector
     ) where
 
 import           RON.Internal.Prelude
@@ -95,3 +101,21 @@ opaqueObject = TOpaque . Opaque True
 
 opaqueAtoms :: OpaqueAnnotations -> RonType
 opaqueAtoms = TOpaque . Opaque False
+
+option :: RonType -> RonType
+option = TComposite . TOption
+
+structLww :: StructLww -> RonType
+structLww = TObject . TStructLww
+
+atomString :: RonType
+atomString = TAtom TAString
+
+atomInteger :: RonType
+atomInteger = TAtom TAInteger
+
+orSet :: RonType -> RonType
+orSet = TObject . TORSet
+
+versionVector :: RonType
+versionVector = TObject TVersionVector

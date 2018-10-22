@@ -11,15 +11,14 @@ import           RON.Schema.TH
 
 $(let
     example1 = StructLww "Example1"
-        [ "int1" -: field (TAtom TAInteger)
-        , "opt5" -: field (TComposite $ TOption $ TObject $ TStructLww example1)
-        , "opt6" -: field (TComposite $ TOption $ TAtom TAInteger)
-        , "set4" -: field (TObject $ TORSet $ TObject $ TStructLww example2)
+        [ "int1" -: field atomInteger
+        , "opt5" -: field (option $ structLww example1)
+        , "opt6" -: field (option atomInteger)
+        , "set4" -: field (orSet $ structLww example2)
         , "str2" -: field rgaString
-        , "str3" -: field (TAtom TAString)
+        , "str3" -: field atomString
         ]
         def{saHaskellDeriving = ["Eq", "Show"]}
-    example2 = StructLww "Example2"
-        ["vv5" -: field (TObject TVersionVector)]
+    example2 = StructLww "Example2" ["vv5" -: field versionVector]
         def{saHaskellDeriving = ["Eq", "Show"]}
     in mkReplicated [DStructLww example1, DStructLww example2])
