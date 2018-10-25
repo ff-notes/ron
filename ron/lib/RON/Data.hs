@@ -173,5 +173,8 @@ reduceObject Object{objectId, objectFrame = s1} s2 = do
 -- | Reduce object with frame from another version of the same object.
 reduceObject' :: Object a -> Object a -> Either String (Object a)
 reduceObject' o1 o2
-    | objectId o1 == objectId o2 = reduceObject o1 $ objectFrame o2
-    | otherwise                  = Left "Object ids differ"
+    | id1 == id2 = reduceObject o1 $ objectFrame o2
+    | otherwise  = Left $ "Object ids differ: " ++ show (id1, id2)
+  where
+    id1 = objectId o1
+    id2 = objectId o2
