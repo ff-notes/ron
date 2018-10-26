@@ -21,6 +21,7 @@ module RON.Event
     , applicationSpecific
     , decodeEvent
     , encodeEvent
+    , epochTime
     , fromCalendarEvent
     , fromEpochEvent
     , getCurrentEpochTime
@@ -49,8 +50,8 @@ import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
                                     Word32, Word6, Word60, Word64, Word8,
                                     leastSignificant12, leastSignificant2,
                                     leastSignificant24, leastSignificant4,
-                                    leastSignificant6, ls12, ls24, ls6, ls60,
-                                    safeCast, word60add)
+                                    leastSignificant6, leastSignificant60, ls12,
+                                    ls24, ls6, ls60, safeCast, word60add)
 import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin,
                            uuidScheme, uuidValue, uuidVariant, uuidVariety)
 import qualified RON.UUID as UUID
@@ -312,3 +313,7 @@ runEpochClockFromCurrentTime replicaId clock = do
 getCurrentEpochTime :: IO EpochTime
 getCurrentEpochTime =
     ls60 . (+ 0x01B21DD213814000) . round . (* 10000000) <$> getPOSIXTime
+
+-- | 'EpochTime' smart constructor
+epochTime :: Integral int => int -> LocalTime
+epochTime = TEpoch . leastSignificant60
