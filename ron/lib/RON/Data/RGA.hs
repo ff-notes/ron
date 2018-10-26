@@ -13,6 +13,7 @@ module RON.Data.RGA
     , getText
     , newFromList
     , newFromText
+    , rgaType
     , RGA (..)
     , RgaRaw (..)
     , RgaString
