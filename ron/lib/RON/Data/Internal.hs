@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -16,7 +17,7 @@ import qualified Data.Text as Text
 
 import           RON.Event (Clock)
 import           RON.Types (Atom (..), Object (..), Op (..), StateChunk (..),
-                            StateFrame, UUID, WireChunk)
+                            StateFrame, UUID (..), WireChunk)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -190,9 +191,16 @@ eqPayload a atoms = toPayload a == atoms
 instance Replicated a => Replicated (Maybe a) where
     encoding = Encoding
         { encodingNewRon = \case
-            Just a  -> newRon a
-            Nothing -> pure []
+            Just a  -> (Some :) <$> newRon a
+            Nothing -> pure [None]
         , encodingFromRon = \atoms frame -> case atoms of
-            [] -> pure Nothing
-            _  -> Just <$> fromRon atoms frame
+            [None]        -> pure Nothing
+            Some : atoms' -> Just <$> fromRon atoms' frame
+            _             -> Left "Bad Option"
         }
+
+pattern None :: Atom
+pattern None = AUuid (UUID 0xcb3ca9000000000 0)
+
+pattern Some :: Atom
+pattern Some = AUuid (UUID 0xdf3c69000000000 0)
