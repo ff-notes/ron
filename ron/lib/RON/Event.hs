@@ -311,8 +311,14 @@ runEpochClockFromCurrentTime replicaId clock = do
     runEpochClock replicaId timeVar clock
 
 getCurrentEpochTime :: IO EpochTime
-getCurrentEpochTime =
-    ls60 . (+ 0x01B21DD213814000) . round . (* 10000000) <$> getPOSIXTime
+getCurrentEpochTime
+    =   ls60
+    .   (+ 0x01B21DD213814000)
+        -- the difference between Unix epoch and UUID epoch;
+        -- the constant is taken from RFC 4122
+    .   round
+    .   (* 10000000)
+    <$> getPOSIXTime
 
 -- | 'EpochTime' smart constructor
 epochTime :: Integral int => int -> LocalTime
