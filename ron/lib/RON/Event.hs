@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module RON.Event
     ( Calendar (..)
@@ -21,13 +22,13 @@ module RON.Event
     , applicationSpecific
     , decodeEvent
     , encodeEvent
-    , epochTime
     , fromCalendarEvent
     , fromEpochEvent
     , getCurrentEpochTime
     , getEvent
     , getEventUuid
     , getEventUuids
+    , localEpochTimeFromUnix
     , mkCalendarDate
     , mkCalendarDateTime
     , mkCalendarDateTimeNano
@@ -312,14 +313,18 @@ runEpochClockFromCurrentTime replicaId clock = do
 
 getCurrentEpochTime :: IO EpochTime
 getCurrentEpochTime
-    =   ls60
-    .   (+ 0x01B21DD213814000)
-        -- the difference between Unix epoch and UUID epoch;
-        -- the constant is taken from RFC 4122
+    =   epochTimeFromUnix @Word64
     .   round
     .   (* 10000000)
     <$> getPOSIXTime
 
--- | 'EpochTime' smart constructor
-epochTime :: Integral int => int -> LocalTime
-epochTime = TEpoch . leastSignificant60
+-- | 'EpochTime' from Unix time in hundreds of milliseconds
+epochTimeFromUnix :: Integral int => int -> EpochTime
+epochTimeFromUnix
+    =   leastSignificant60
+    .   (+ 0x01B21DD213814000)
+        -- the difference between Unix epoch and UUID epoch;
+        -- the constant is taken from RFC 4122
+
+localEpochTimeFromUnix :: Integral int => int -> LocalTime
+localEpochTimeFromUnix = TEpoch . epochTimeFromUnix
