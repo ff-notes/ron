@@ -188,19 +188,28 @@ eqRef (Object oid _) atoms = case atoms of
 eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
 eqPayload a atoms = toPayload a == atoms
 
+pattern None :: Atom
+pattern None = AUuid (UUID 0xcb3ca9000000000 0)
+
+pattern Some :: Atom
+pattern Some = AUuid (UUID 0xdf3c69000000000 0)
+
 instance Replicated a => Replicated (Maybe a) where
     encoding = Encoding
         { encodingNewRon = \case
             Just a  -> (Some :) <$> newRon a
             Nothing -> pure [None]
         , encodingFromRon = \atoms frame -> case atoms of
-            [None]        -> pure Nothing
             Some : atoms' -> Just <$> fromRon atoms' frame
+            [None]        -> pure Nothing
             _             -> Left "Bad Option"
         }
 
-pattern None :: Atom
-pattern None = AUuid (UUID 0xcb3ca9000000000 0)
-
-pattern Some :: Atom
-pattern Some = AUuid (UUID 0xdf3c69000000000 0)
+instance ReplicatedAsPayload a => ReplicatedAsPayload (Maybe a) where
+    toPayload = \case
+        Just a  -> Some : toPayload a
+        Nothing -> [None]
+    fromPayload = \case
+        Some : atoms -> Just <$> fromPayload atoms
+        [None]       -> pure Nothing
+        _            -> Left "Bad Option"
