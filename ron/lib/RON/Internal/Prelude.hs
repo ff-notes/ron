@@ -34,6 +34,7 @@ import           Data.Tuple.Extra as X
 import           Data.Vector as X (Vector)
 import           Data.Word as X (Word16, Word32, Word64, Word8)
 import           GHC.Generics as X
+import           GHC.Stack as X (HasCallStack)
 import           GHC.TypeLits as X
 import           Safe.Foldable as X
 

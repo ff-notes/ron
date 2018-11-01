@@ -43,49 +43,49 @@ replica = applicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
 ex1expect = [i|
-    *lww    #B/)6+r3pl1c4   @`                      !
-                                :int1   =275        ,
-                                :opt5   >none       ,
-                                :opt6   >some =74   ,
-                                :set4   >)1         ,
-                                :str2   >)5         ,
-                                :str3   '190'       ,
+    *lww    #B/0000000006+r3pl1c4   @B/0000000006+r3pl1c4   :0  !
+        @B/0000000006+r3pl1c4   :int1   =275                    ,
+        @B/0000000006+r3pl1c4   :opt5   >none                   ,
+        @B/0000000006+r3pl1c4   :opt6   >some =74               ,
+        @B/0000000006+r3pl1c4   :set4   >B/0000000001+r3pl1c4   ,
+        @B/0000000006+r3pl1c4   :str2   >B/0000000005+r3pl1c4   ,
+        @B/0000000006+r3pl1c4   :str3   '190'                   ,
 
-    *rga    #)5             @)4 :0                  !
-                            @)2         '2'         ,
-                            @)3         '7'         ,
-                            @)4         '5'         ,
+    *rga    #B/0000000005+r3pl1c4   @B/0000000004+r3pl1c4   :0  !
+        @B/0000000002+r3pl1c4   :0  '2' ,
+        @B/0000000003+r3pl1c4   :0  '7' ,
+        @B/0000000004+r3pl1c4   :0  '5' ,
 
-    *set    #)1             @`                      !
-    .
-    |]
+    *set    #B/0000000001+r3pl1c4   @B/0000000001+r3pl1c4   :0  !
+
+    . |]
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/)6+r3pl1c4   @`)G                    !
-                            @)7     :int1   =166    ,
-                            @`      :opt5   >none   ,
-                            @)G     :opt6   >none   ,
-                            @`      :set4   >)1     ,
-                                    :str2   >)5     ,
-                            @)C     :str3   '206'   ,
+    *lww    #B/0000000006+r3pl1c4   @B/000000000G+r3pl1c4   :0  !
+        @B/0000000007+r3pl1c4   :int1   =166                    ,
+        @B/0000000006+r3pl1c4   :opt5   >none                   ,
+        @B/000000000G+r3pl1c4   :opt6   >none                   ,
+        @B/0000000006+r3pl1c4   :set4   >B/0000000001+r3pl1c4   ,
+        @B/0000000006+r3pl1c4   :str2   >B/0000000005+r3pl1c4   ,
+        @B/000000000C+r3pl1c4   :str3   '206'                   ,
 
-            #)E             @`      :0              !
-                                    :vv5    >)D     ,
+    *lww    #B/000000000E+r3pl1c4   @B/000000000E+r3pl1c4   :0  !
+        @B/000000000E+r3pl1c4   :vv5    >B/000000000D+r3pl1c4   ,
 
-    *rga    #)5             @)B     :0              !
-                            @)2     :`)8    '2'     ,
-                            @)3     :)9     '7'     ,
-                            @)A     :0      '1'     ,
-                            @)B             '4'     ,
-                            @)4             '5'     ,
+    *rga    #B/0000000005+r3pl1c4   @B/000000000B+r3pl1c4   :0  !
+        @B/0000000002+r3pl1c4   :B/0000000008+r3pl1c4   '2' ,
+        @B/0000000003+r3pl1c4   :B/0000000009+r3pl1c4   '7' ,
+        @B/000000000A+r3pl1c4   :0                      '1' ,
+        @B/000000000B+r3pl1c4   :0                      '4' ,
+        @B/0000000004+r3pl1c4   :0                      '5' ,
 
-    *set    #)1             @)F                     !
-                                            >)E     ,
+    *set    #B/0000000001+r3pl1c4   @B/000000000F+r3pl1c4   :0  !
+        @B/000000000F+r3pl1c4   :0  >B/000000000E+r3pl1c4   ,
 
-    *vv     #)D             @`                      !
-    .
-    |]
+    *vv     #B/000000000D+r3pl1c4   @B/000000000D+r3pl1c4   :0  !
+
+    . |]
 
 example4expect :: Example1
 example4expect = Example1

@@ -67,7 +67,7 @@ data VertexList = VertexList
 instance Semigroup VertexList where
     (<>) = merge
 
-vertexListToList :: Maybe VertexList -> [Vertex]
+vertexListToList :: HasCallStack => Maybe VertexList -> [Vertex]
 vertexListToList mv = case mv of
     Nothing -> []
     Just VertexList{..} -> go listHead listItems
@@ -76,20 +76,21 @@ vertexListToList mv = case mv of
         VertexListItem{..} =
             HashMap.lookupDefault
                 (error $ unlines
-                    $  ["Cannot find vertex id", show root, "in array"]
-                    ++ map show (HashMap.toList items)
-                    ++ ["Original array is", show $ fromJust mv])
+                    $   ["Cannot find vertex id", show root, "in array ["]
+                    ++  map show (HashMap.toList items)
+                    ++  "]"
+                    :   ["Original array is", show $ fromJust mv])
                 root
                 items
         rest = case itemNext of
             Just next -> go next (HashMap.delete root items)
-            Nothing -> []
+            Nothing   -> []
         in itemValue : rest
 
-vertexListToOps :: Maybe VertexList -> [Op]
+vertexListToOps :: HasCallStack => Maybe VertexList -> [Op]
 vertexListToOps = map unVertex . vertexListToList
 
-vertexListFromList :: [Vertex] -> Maybe VertexList
+vertexListFromList :: HasCallStack => [Vertex] -> Maybe VertexList
 vertexListFromList = foldr go mempty where
     go v@(Vertex Op{opEvent = vid}) vlist =
         Just $ VertexList{listHead = vid, listItems = vlist'}
@@ -98,7 +99,16 @@ vertexListFromList = foldr go mempty where
         vlist' = case vlist of
             Nothing -> HashMap.singleton vid (item Nothing)
             Just VertexList{listHead, listItems} ->
-                HashMap.insert vid (item $ Just listHead) listItems
+                HashMap.insertWith
+                    (\new old -> error $ unlines
+                        [ "conflict:"
+                        , "vid = " ++ show vid
+                        , "old = " ++ show old
+                        , "new = " ++ show new
+                        ])
+                    vid
+                    (item $ Just listHead)
+                    listItems
 
 vertexListFromOps :: [Op] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
@@ -172,7 +182,7 @@ instance Reducible RgaRaw where
         patchSetToChunks . reapplyPatchSet $
         foldMap patchSetFromChunk patches <> foldMap patchSetFromRawOp ops
 
-patchSetToChunks :: PatchSet -> Unapplied
+patchSetToChunks :: HasCallStack => PatchSet -> Unapplied
 patchSetToChunks PatchSet{..} =
     (   [ ReducedChunk{rcVersion = chunkVersion rcBody, ..}
         | (rcRef, vertices) <- Map.assocs psPatches
@@ -288,7 +298,7 @@ applyRemoval parent tombstone targetItems = do
     let item' = item{itemValue = Vertex v{opRef = max opRef tombstone}}
     pure $ HashMap.insert parent item' targetItems
 
-merge :: VertexList -> VertexList -> VertexList
+merge :: HasCallStack => VertexList -> VertexList -> VertexList
 merge v1 v2 =
     fromMaybe undefined . vertexListFromList $
     (merge' `on` vertexListToList . Just) v1 v2
