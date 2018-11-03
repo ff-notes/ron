@@ -7,24 +7,38 @@ module Gen where
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
-                               text, unicode, word64)
+                               text, unicode, word64, word8)
 import qualified Hedgehog.Range as Range
 
-import           RON.Event (Calendar (..), Event (..),
+import           RON.Event (Calendar (Calendar), Event (Event),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
-                            ReplicaId (..))
-import           RON.Internal.Word (Word60, leastSignificant60, ls12, ls24, ls6)
-import           RON.Types (Atom (..), Op (..), RawOp (..), UUID (..),
-                            WireChunk (..), WireFrame, WireReducedChunk (..))
+                            ReplicaId (ReplicaId), days, hours, minutes, months,
+                            nanosecHundreds, seconds)
+import           RON.Internal.Word (Word60, leastSignificant2,
+                                    leastSignificant4, ls12, ls24, ls6, ls60)
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (Op),
+                            RawOp (RawOp), UUID, WireChunk (Query, Raw, Value),
+                            WireFrame, WireReducedChunk (WireReducedChunk))
+import           RON.UUID (UuidFields (UuidFields))
+import qualified RON.UUID as UUID
+
+word60 :: MonadGen gen => gen Word60
+word60 =
+    ls60 <$> word64 (Range.exponential 0 $ 2 ^ (60 :: Int) - 1)
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
 
-word60 :: MonadGen gen => gen Word60
-word60 = leastSignificant60 <$> word64'
-
 uuid :: MonadGen gen => gen UUID
-uuid = UUID <$> word64' <*> word64'
+uuid = UUID.build <$> uuidFields
+
+uuidFields :: MonadGen gen => gen UuidFields
+uuidFields = UuidFields
+    <$> (leastSignificant4 <$> word8 (Range.constant 0 15))
+    <*> word60
+    <*> (leastSignificant2 <$> word8 (Range.constant 0 3))
+    <*> (leastSignificant2 <$> word8 (Range.constant 0 3))
+    <*> choice [pure $ ls60 42, word60]
 
 rawOp :: MonadGen gen => Int -> gen RawOp
 rawOp size = RawOp <$> uuid <*> uuid <*> reducedOp size

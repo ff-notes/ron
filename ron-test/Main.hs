@@ -29,16 +29,18 @@ import qualified RON.Base64 as Base64
 import qualified RON.Binary.Parse as RB
 import qualified RON.Binary.Serialize as RB
 import qualified RON.Data.RGA as RGA
-import           RON.Event (CalendarEvent (..), Naming (TrieForked),
-                            ReplicaId (..), applicationSpecific, decodeEvent,
-                            encodeEvent, fromCalendarEvent, mkCalendarDateTime)
+import           RON.Event (CalendarEvent (CalendarEvent), Naming (TrieForked),
+                            ReplicaId (ReplicaId), applicationSpecific,
+                            decodeEvent, encodeEvent, fromCalendarEvent,
+                            mkCalendarDateTime)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
 import qualified RON.Text.Serialize.UUID as RT
-import           RON.Types (Atom (..), Op (..), RawOp (..), UUID (..),
-                            WireChunk (Raw), objectFrame)
+import           RON.Types (Atom (AInteger, AUuid), Op (Op), RawOp (RawOp),
+                            UUID (UUID), WireChunk (Raw), objectFrame, op,
+                            opEvent, opObject, opPayload, opRef, opType)
 import qualified RON.UUID as UUID
 
 import qualified Gen

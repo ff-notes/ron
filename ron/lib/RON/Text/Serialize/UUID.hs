@@ -39,10 +39,15 @@ serializeUuidKey prevKey prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
         B00 -> minimumByLength
             $   unzipped thisFields
-            :   [ zipUuid (split prevKey) thisFields
-                | uuidVariant (split prevKey) == B00 ]
-            ++  [ "`" <> zipUuid (split prev) thisFields
-                | prev /= zero, uuidVariant (split prev) == B00 ]
+            :   [ z
+                | uuidVariant (split prevKey) == B00
+                , Just z <- [zipUuid (split prevKey) thisFields]
+                ]
+            ++  [ "`" <> z
+                | prev /= zero
+                , uuidVariant (split prev) == B00
+                , Just z <- [zipUuid (split prev) thisFields]
+                ]
         _   -> serializeUuidGeneric this
   where
     thisFields = split this
@@ -52,8 +57,11 @@ serializeUuidAtom prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
         B00 -> minimumByLength
             $   unzipped thisFields
-            :   [ zipUuid (split prev) thisFields
-                | prev /= zero, uuidVariant (split prev) == B00 ]
+            :   [ z
+                | prev /= zero
+                , uuidVariant (split prev) == B00
+                , Just z <- [zipUuid (split prev) thisFields]
+                ]
         _   -> serializeUuidGeneric this
   where
     thisFields = split this
@@ -71,15 +79,13 @@ unzipped UuidFields{..} = x' <> y'
             serializeScheme uuidScheme
             `BSC.cons` Base64.encode60short uuidOrigin
 
-zipUuid :: UuidFields -> UuidFields -> ByteString
+zipUuid :: UuidFields -> UuidFields -> Maybe ByteString
 zipUuid prev this
-    | prev == this  = ""
-    | canReuseValue = val
-    | otherwise     = unzipped this
+    | prev == this  = Just ""
+    | canReuseValue = valueZip
+    | otherwise     = Nothing
   where
-    val = fromMaybe value valueZip
     canReuseValue = prev{uuidValue = uuidValue this} == this
-    value = Base64.encode60short $ uuidValue this
     valueZip = zipPrefix (uuidValue prev) (uuidValue this)
 
 zipPrefix :: Word60 -> Word60 -> Maybe ByteString
