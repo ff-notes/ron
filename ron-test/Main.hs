@@ -36,6 +36,7 @@ import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
+import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (..), Op (..), RawOp (..), UUID (..),
                             WireChunk (Raw), objectFrame)
 import qualified RON.UUID as UUID
@@ -106,6 +107,15 @@ textRoundtrip gen serialize parse = do
 
 prop_text_roundtrip_uuid =
     property $ textRoundtrip Gen.uuid RT.serializeUuid RT.parseUuid
+
+prop_text_roundtrip_uuid_zip = property $ do
+    prevKey <- forAll Gen.uuid
+    prev    <- forAll Gen.uuid
+    textRoundtrip
+        Gen.uuid
+        (RT.serializeUuidKey prevKey prev)
+        (RT.parseUuidKey prevKey prev)
+    textRoundtrip Gen.uuid (RT.serializeUuidAtom prev) (RT.parseUuidAtom prev)
 
 prop_text_roundtrip_string = property $
     textRoundtrip

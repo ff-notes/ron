@@ -12,6 +12,8 @@ module RON.Text.Parse
     , parseStateFrame
     , parseString
     , parseUuid
+    , parseUuidKey
+    , parseUuidAtom
     , parseWireFrame
     , parseWireFrames
     ) where
@@ -113,6 +115,13 @@ parseOp = parseOnlyL $ do
 parseUuid :: ByteStringL -> Either String UUID
 parseUuid = parseOnlyL $
     uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
+
+parseUuidKey :: UUID -> UUID -> ByteStringL -> Either String UUID
+parseUuidKey prevKey prev =
+    parseOnlyL $ uuid prevKey prev PrevOpSameKey <* skipSpace <* endOfInputEx
+
+parseUuidAtom :: UUID -> ByteStringL -> Either String UUID
+parseUuidAtom prev = parseOnlyL $ uuidAtom prev <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
@@ -302,7 +311,10 @@ atom prevUuid = skipSpace *> atom'
         char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <+>
         AString                            <$> string
     integer = signed decimal
-    uuid'   = uuid UUID.zero prevUuid SameOpPrevUuid
+    uuid'   = uuidAtom prevUuid
+
+uuidAtom :: UUID -> Parser UUID
+uuidAtom prev = uuid UUID.zero prev SameOpPrevUuid
 
 parseAtom :: ByteStringL -> Either String Atom
 parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
