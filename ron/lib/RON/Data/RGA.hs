@@ -365,6 +365,7 @@ edit newItems = do
     (stateBody', Last lastEvent) <- runWriterT . fmap concat . for diff $ \case
         First removed -> for removed $ \case
             op@Op{opRef = Zero} -> do  -- not deleted yet
+                -- TODO(2018-11-03, #15, cblp) get sequential ids
                 tombstone <- lift getEventUuid
                 tell . Last $ Just tombstone
                 pure op{opRef = tombstone}
@@ -372,6 +373,7 @@ edit newItems = do
                 pure op
         Both v _      -> pure v
         Second added  -> for added $ \op -> do
+            -- TODO(2018-11-03, #15, cblp) get sequential ids
             opEvent <- lift getEventUuid
             tell . Last $ Just opEvent
             pure op{opEvent}
