@@ -9,10 +9,6 @@ module RON.Text.Serialize.UUID
     ( serializeUuid
     , serializeUuidAtom
     , serializeUuidKey
-    -- TODO temporarily unused
-    , minimumByLength
-    , zero
-    , zipUuid
     ) where
 
 import           RON.Internal.Prelude
@@ -40,27 +36,25 @@ serializeUuid this =
     thisFields@UuidFields{..} = split this
 
 serializeUuidKey :: UUID -> UUID -> UUID -> ByteStringL
-serializeUuidKey _prevKey _prev this =
+serializeUuidKey prevKey prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
-        B00 ->
-            -- minimumByLength
-            unzipped thisFields
-            -- :   [ zipUuid False (split prevKey) thisFields
-            --     | uuidVariant (split prevKey) == B00 ]
-            -- ++  [ "`" <> zipUuid True (split prev) thisFields
-            --     | prev /= zero, uuidVariant (split prev) == B00 ]
+        B00 -> minimumByLength
+            $   unzipped thisFields
+            :   [ zipUuid False (split prevKey) thisFields
+                | uuidVariant (split prevKey) == B00 ]
+            ++  [ "`" <> zipUuid True (split prev) thisFields
+                | prev /= zero, uuidVariant (split prev) == B00 ]
         _   -> serializeUuidGeneric this
   where
     thisFields = split this
 
 serializeUuidAtom :: UUID -> UUID -> ByteStringL
-serializeUuidAtom _prev this =
+serializeUuidAtom prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
-        B00 ->
-            -- minimumByLength
-            unzipped thisFields
-            -- :   [ zipUuid False (split prev) thisFields
-            --     | prev /= zero, uuidVariant (split prev) == B00 ]
+        B00 -> minimumByLength
+            $   unzipped thisFields
+            :   [ zipUuid False (split prev) thisFields
+                | prev /= zero, uuidVariant (split prev) == B00 ]
         _   -> serializeUuidGeneric this
   where
     thisFields = split this
