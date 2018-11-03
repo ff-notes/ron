@@ -42,6 +42,7 @@ library:
     - RON.Data.RGA
     - RON.Data.Time
     - RON.Data.VersionVector
+    - RON.Epoch
     - RON.Event
     - RON.Event.Simulation
     - RON.Internal.Prelude
