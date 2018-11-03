@@ -43,26 +43,26 @@ replica = applicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
 ex1expect = [i|
-    *lww    #B/)6+r3pl1c4   @`                      !
-                                :int1   =275        ,
-                                :opt5   >none       ,
-                                :opt6   >some =74   ,
-                                :set4   >)1         ,
-                                :str2   >)5         ,
-                                :str3   '190'       ,
+    *lww    #B/0000000006+r3pl1c4   @`                      !
+                                        :int1   =275        ,
+                                        :opt5   >none       ,
+                                        :opt6   >some =74   ,
+                                        :set4   >)1         ,
+                                        :str2   >)5         ,
+                                        :str3   '190'       ,
 
-    *rga    #)5             @)4 :0                  !
-                            @)2         '2'         ,
-                            @)3         '7'         ,
-                            @)4         '5'         ,
+    *rga    #)5                     @)4 :0                  !
+                                    @)2         '2'         ,
+                                    @)3         '7'         ,
+                                    @)4         '5'         ,
 
-    *set    #)1             @`                      !
+    *set    #)1                     @`                      !
     .
     |]
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/)6+r3pl1c4   @`)G                    !
+    *lww    #B/0000000006+r3pl1c4   @`)G                    !
                             @)7     :int1   =166    ,
                             @`      :opt5   >none   ,
                             @)G     :opt6   >none   ,
