@@ -132,10 +132,13 @@ prop_text_roundtrip_op =
     -- TODO increase limits
     property $ textRoundtrip (Gen.rawOp 100) RT.serializeRawOp RT.parseOp
 
-prop_text_roundtrip_frame =
+prop_text_roundtrip_wireFrame = property $
     -- TODO increase limits
-    property $
     textRoundtrip (Gen.wireFrame 10) RT.serializeWireFrame RT.parseWireFrame
+
+prop_text_roundtrip_stateFrame = property $
+    -- TODO increase limits
+    textRoundtrip (Gen.stateFrame 10) RT.serializeStateFrame RT.parseStateFrame
 
 prop_text_roundtrip_frames = property $
     -- TODO increase limits
@@ -264,30 +267,30 @@ prop_RGA_delete_deleted = let
                 pure (rga0, rga1, rga2)
         prep rga0 ===
             [ ["*rga", "#B/0000000006+000000003f", "@`)5", "!"]
-            , ["@)1", "'h'", ","]
-            , ["@)2", "'e'", ","]
-            , ["@)3", "'l'", ","]
-            , ["@)4", "'l'", ","]
-            , ["@)5", "'o'", ","]
+            , ["@)1", "'h'"]
+            , ["@)2", "'e'"]
+            , ["@)3", "'l'"]
+            , ["@)4", "'l'"]
+            , ["@)5", "'o'"]
             , ["."]
             ]
         prep rga1 ===
             [ ["*rga", "#B/0000000006+000000003f", "@`)7", "!"]
-            , ["@)1", "'h'", ","]
-            , ["@)2", "'e'", ","]
-            , ["@)3", "'l'", ","]
-            , ["@)4", "'l'", ","]
-            , ["@)5", ":`)7", "'o'", ","]
+            , ["@)1", "'h'"]
+            , ["@)2", "'e'"]
+            , ["@)3", "'l'"]
+            , ["@)4", "'l'"]
+            , ["@)5", ":`)7", "'o'"]
             , ["."]
             ]
         prep rga2 ===
             [ ["*rga", "#B/0000000006+000000003f", "@`)9", "!"]
-            , ["@)1", "'h'", ","]
-            , ["@)2", "'e'", ","]
-            , ["@)3", "'l'", ","]
-            , ["@)4", ":`)8", "'l'", ","]
-            , ["@)5", ":)7", "'o'", ","]
-            , ["@)9", ":0", "'p'", ","]
+            , ["@)1", "'h'"]
+            , ["@)2", "'e'"]
+            , ["@)3", "'l'"]
+            , ["@)4", ":`)8", "'l'"]
+            , ["@)5", ":)7", "'o'"]
+            , ["@)9", ":0", "'p'"]
             , ["."]
             ]
 

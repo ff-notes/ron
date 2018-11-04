@@ -62,9 +62,8 @@ serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
     serializeBody = state $ \RawOp{op = opBefore, ..} -> let
         (body, opAfter) =
             (`runState` opBefore) $
-            for wrcBody $ \op -> do
-                o <- serializeReducedOpZip opObject op
-                pure $ "\t" <> BSLC.unwords [o, ","]
+            for wrcBody $
+            fmap ("\t" <>) . serializeReducedOpZip opObject
         in
         ( body
         , RawOp{op = opAfter, ..}
@@ -79,14 +78,14 @@ serializeRawOpZip this = state $ \prev -> let
     typ = serializeUuidKey (opType   prev)  zero             (opType   this)
     obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
     evt = serializeUuidKey (opEvent  prev') (opObject this)  (opEvent  this')
-    loc = serializeUuidKey (opRef    prev') (opEvent  this') (opRef    this')
+    ref = serializeUuidKey (opRef    prev') (opEvent  this') (opRef    this')
     payload = serializePayload (opObject this) (opPayload this')
     in
     ( BSLC.unwords
         $   key '*' typ
         ++  key '#' obj
         ++  key '@' evt
-        ++  key ':' loc
+        ++  key ':' ref
         ++  [payload | not $ BSL.null payload]
     , this
     )
@@ -97,12 +96,15 @@ serializeRawOpZip this = state $ \prev -> let
 serializeReducedOpZip :: UUID -> Op -> State Op ByteStringL
 serializeReducedOpZip opObject this = state $ \prev -> let
     evt = serializeUuidKey (opEvent  prev) opObject       (opEvent this)
-    loc = serializeUuidKey (opRef    prev) (opEvent this) (opRef   this)
+    ref = serializeUuidKey (opRef    prev) (opEvent this) (opRef   this)
     payload = serializePayload opObject (opPayload this)
     in
-    ( BSLC.unwords $
-        key '@' evt ++ key ':' loc ++ [payload | not $ BSL.null payload]
-    , this
+    (   BSLC.unwords
+            $   (if BSL.null evt && BSL.null ref
+                    then ["@"]
+                    else key '@' evt ++ key ':' ref)
+            ++  [payload | not $ BSL.null payload]
+    ,   this
     )
   where
     key c u = [BSLC.cons c u | not $ BSL.null u]

@@ -8,6 +8,7 @@ import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
                                text, unicode, word64, word8)
+import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           RON.Event (Calendar (Calendar), Event (Event),
@@ -17,8 +18,9 @@ import           RON.Event (Calendar (Calendar), Event (Event),
 import           RON.Internal.Word (Word60, leastSignificant2,
                                     leastSignificant4, ls12, ls24, ls6, ls60)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (Op),
-                            RawOp (RawOp), UUID, WireChunk (Query, Raw, Value),
-                            WireFrame, WireReducedChunk (WireReducedChunk))
+                            RawOp (RawOp), StateChunk (StateChunk), StateFrame,
+                            UUID, WireChunk (Query, Raw, Value), WireFrame,
+                            WireReducedChunk (WireReducedChunk))
 import           RON.UUID (UuidFields (UuidFields))
 import qualified RON.UUID as UUID
 
@@ -57,6 +59,19 @@ rchunk size = WireReducedChunk
 
 wireFrame :: MonadGen gen => Int -> gen WireFrame
 wireFrame size = list (Range.exponential 0 size) (wireChunk size)
+
+stateFrame :: MonadGen gen => Int -> gen StateFrame
+stateFrame size
+    = Gen.map (Range.exponential 0 size)
+    $ (,) <$> ((,) <$> uuid <*> uuid) <*> stateChunk size
+
+stateChunk :: MonadGen gen => Int -> gen StateChunk
+stateChunk size = StateChunk
+    <$> choice [pure UUID.zero, uuid]
+    <*> choice
+        [ pure [Op UUID.zero UUID.zero []]
+        , list (Range.exponential 0 size) $ reducedOp size
+        ]
 
 wireFrames :: MonadGen gen => Int -> gen [WireFrame]
 wireFrames size = list (Range.exponential 0 size) (wireFrame size)
