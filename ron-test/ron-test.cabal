@@ -1,0 +1,56 @@
+cabal-version:  2.1
+
+name:           ron-test
+version:        0
+
+test-suite common
+    build-depends:
+        -- global
+        base,
+        bytestring,
+        containers,
+        directory,
+        extra,
+        filepath,
+        hedgehog,
+        syb,
+        tasty,
+        tasty-hedgehog,
+        tasty-hunit,
+        -- project
+        ron,
+    main-is: Common.hs
+    type: exitcode-stdio-1.0
+
+test-suite test
+    build-depends:
+        -- global
+        base,
+        bytestring,
+        directory,
+        hedgehog,
+        interpolate,
+        mtl,
+        tasty-hedgehog,
+        tasty-th,
+        -- project
+        ron,
+    main-is: Main.hs
+    other-modules:
+        Gen
+        HexDump
+        LwwStruct
+        LwwStruct.Types
+    type: exitcode-stdio-1.0
+
+executable words
+    build-depends:
+        -- global
+        base,
+        mtl,
+        text,
+        text-metrics,
+        unordered-containers,
+        -- project
+        ron,
+    main-is: Words.hs

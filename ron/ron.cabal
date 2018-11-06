@@ -1,0 +1,78 @@
+cabal-version:  2.1
+
+name:       ron
+version:    0.1
+copyright:  2018 Yuriy Syrovetskiy
+license:    BSD-3-Clause
+build-type: Simple
+
+common language
+    default-extensions: StrictData
+    default-language:   Haskell2010
+
+library
+    import: language
+    build-depends:
+        aeson,
+        attoparsec,
+        base,
+        binary,
+        bytestring,
+        containers,
+        data-default,
+        deepseq,
+        Diff,
+        errors,
+        extra,
+        hashable,
+        mtl,
+        safe,
+        stringsearch,
+        template-haskell,
+        text,
+        time,
+        unordered-containers,
+        vector,
+    exposed-modules:
+        RON.Base64
+        RON.Binary
+        RON.Binary.Parse
+        RON.Binary.Serialize
+        RON.Binary.Types
+        RON.Data
+        RON.Data.Internal
+        RON.Data.LWW
+        RON.Data.ORSet
+        RON.Data.RGA
+        RON.Data.Time
+        RON.Data.VersionVector
+        RON.Epoch
+        RON.Event
+        RON.Event.Simulation
+        RON.Internal.Prelude
+        RON.Internal.Word
+        RON.Schema
+        RON.Schema.TH
+        RON.Text
+        RON.Text.Common
+        RON.Text.Parse
+        RON.Text.Serialize
+        RON.Text.Serialize.UUID
+        RON.Types
+        RON.UUID
+    other-modules:
+        Attoparsec.Extra
+        Data.ZigZag
+    hs-source-dirs: lib
+
+benchmark bench
+    build-depends:
+        -- global
+        base,
+        criterion,
+        deepseq,
+        -- package
+        ron,
+    main-is: Main.hs
+    hs-source-dirs: bench
+    type: exitcode-stdio-1.0

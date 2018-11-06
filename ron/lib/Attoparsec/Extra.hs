@@ -8,10 +8,7 @@ module Attoparsec.Extra
     , isSuccessful
     , label
     , label'
-    , manyTillEnd
     , parseOnlyL
-    , someTillEnd
-    , takeAtMost
     , takeL
     , withInputSize
     , (??)
@@ -52,18 +49,6 @@ label' :: String -> Parser a -> Parser a
 label' name p = do
     pos <- getPos
     label (name ++ ':' : show pos) p
-
-manyTillEnd :: Parser a -> Parser [a]
-manyTillEnd p = liftA2 (:) p (someTillEnd p)
-
-someTillEnd :: Parser a -> Parser [a]
-someTillEnd p = do
-    r <- p
-    weAreAtEnd <- atEnd
-    if weAreAtEnd then
-        pure [r]
-    else
-        someTillEnd p
 
 -- | Variant of 'endOfInput' with a more debuggable message.
 endOfInputEx :: Parser ()
