@@ -4,7 +4,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module RON.Binary.Serialize where
+-- | Binary serializer elements
+module RON.Binary.Serialize (
+    serialize,
+    serializeAtom,
+    serializeString,
+) where
 
 import           RON.Internal.Prelude
 
@@ -24,6 +29,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             WireChunk (Query, Raw, Value), WireFrame,
                             WireReducedChunk (..))
 
+-- | Serialize a frame
 serialize :: WireFrame -> Either String ByteStringL
 serialize chunks = ("RON2" <>) <$> serializeBody
   where
@@ -46,12 +52,14 @@ serialize chunks = ("RON2" <>) <$> serializeBody
             mconcat <$>
             sequence [chunkSize True (BSL.length c), pure c, foldChunks cs]
 
+-- | Serialize a chunk
 serializeChunk :: WireChunk -> Either String ByteStringL
 serializeChunk = \case
     Raw op       -> serializeRawOp DOpRaw op
     Value rchunk -> serializeReducedChunk False rchunk
     Query rchunk -> serializeReducedChunk True  rchunk
 
+-- | Serialize a raw op
 serializeRawOp :: Desc -> RawOp -> Either String ByteStringL
 serializeRawOp desc RawOp{..} = do
     keys <- sequenceA
@@ -69,15 +77,19 @@ serializeRawOp desc RawOp{..} = do
     serializeUuidEvent  = serializeWithDesc DUuidEvent  . serializeUuid
     serializeUuidRef    = serializeWithDesc DUuidRef    . serializeUuid
 
+-- | Serialize a reduced op
 serializeReducedOp :: Desc -> UUID -> UUID -> Op -> Either String ByteStringL
 serializeReducedOp d opType opObject op = serializeRawOp d RawOp{..}
 
+-- | Serialize a 'UUID'
 serializeUuid :: UUID -> ByteStringL
 serializeUuid (UUID x y) = Binary.encode x <> Binary.encode y
 
+-- | Encode descriptor
 encodeDesc :: Desc -> Word4
 encodeDesc = leastSignificant4 . fromEnum
 
+-- | Prepend serialized bytes with descriptor
 serializeWithDesc
     :: Desc
     -> ByteStringL  -- ^ body
@@ -103,6 +115,7 @@ serializeWithDesc d body = do
         | len < 128 = Binary.encode (fromIntegral len :: Word8)
         | otherwise = Binary.encode (fromIntegral len .|. bit 31 :: Word32)
 
+-- | Serialize an 'Atom'
 serializeAtom :: Atom -> Either String ByteStringL
 serializeAtom = \case
     AFloat   f -> serializeWithDesc DAtomFloat   $ serializeFloat f
@@ -114,9 +127,11 @@ serializeAtom = \case
     zzEncode64 :: Int64 -> Word64
     zzEncode64 = zzEncode
 
+-- | Serialize a float atom
 serializeFloat :: Double -> ByteStringL
 serializeFloat = runPut . putDoublebe
 
+-- | Serialize a reduced chunk
 serializeReducedChunk :: Bool -> WireReducedChunk -> Either String ByteStringL
 serializeReducedChunk isQuery WireReducedChunk{..} = do
     header <-
@@ -126,6 +141,7 @@ serializeReducedChunk isQuery WireReducedChunk{..} = do
   where
     RawOp{..} = wrcHeader
 
+-- | Serialize a string atom
 serializeString :: Text -> ByteStringL
 serializeString = fromStrict . encodeUtf8
 

@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
+-- | Binary parser elements
 module RON.Binary.Parse (
     parse,
     parseAtom,
