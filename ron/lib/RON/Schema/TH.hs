@@ -150,7 +150,7 @@ mkReplicatedStructLww struct = do
                 ++  [noBindS [| pure $consE |]]
         [d| instance ReplicatedAsObject $structT where
                 objectOpType = lwwType
-                newObject $consP = LWW.newFrame $fieldsToPack
+                newObject $consP = LWW.newObject $fieldsToPack
                 getObject $(varP obj) = fmapL ($(lift errCtx) ++) $getObjectImpl
             |]
       where
@@ -182,7 +182,7 @@ mkReplicatedStructLww struct = do
                     => $fieldViewType -> $m ()
                     |]
                 , valD' assign
-                    [| LWW.assignField $(liftData field'RonName) . I . $guide |]
+                    [| LWW.assignField $(liftData field'RonName) . $guide |]
                 ]
             readF =
                 [ sigD read [t|
