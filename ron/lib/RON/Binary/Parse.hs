@@ -6,7 +6,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module RON.Binary.Parse where
+module RON.Binary.Parse (
+    parse,
+    parseAtom,
+    parseString,
+) where
 
 import           RON.Internal.Prelude
 
@@ -30,6 +34,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             WireChunk (Query, Raw, Value), WireFrame,
                             WireReducedChunk (..))
 
+-- | 'Parser' for descriptor
 parseDesc :: Parser (Desc, Size)
 parseDesc = label "desc" $ do
     b <- label "start byte" anyWord8
@@ -43,6 +48,7 @@ parseDesc = label "desc" $ do
         _                   -> pure $ fromIntegral sizeCode
     pure (desc, size)
 
+-- | 'Parser' for extended length field
 extendedLength :: Parser Size
 extendedLength = do
     b <- anyWord8
@@ -52,9 +58,11 @@ extendedLength = do
     else
         pure $ safeCast b
 
+-- | Parse frame
 parse :: ByteStringL -> Either String WireFrame
 parse = parseOnlyL $ parseFrame <* endOfInputEx
 
+-- | 'Parser' for frame
 parseFrame :: Parser WireFrame
 parseFrame = label "WireFrame" $ do
     _ <- Atto.string "RON2" <|> do
@@ -62,6 +70,7 @@ parseFrame = label "WireFrame" $ do
         fail $ "unsupported magic sequence " ++ show magic
     parseChunks
 
+-- | 'Parser' for chunk sequence
 parseChunks :: Parser [WireChunk]
 parseChunks = do
     size :: Size <- Binary.decode <$> takeL 4
@@ -72,10 +81,14 @@ parseChunks = do
         | True ->
             pure []
 
+-- | Clear upper bit of 'Word32'
 leastSignificant31 :: Word32 -> Word32
 leastSignificant31 x = x .&. 0x7FFFFFFF
 
-parseChunk :: Size -> Parser WireChunk
+-- | 'Parser' for a chunk
+parseChunk
+    :: Size  -- ^ expected input length
+    -> Parser WireChunk
 parseChunk size = label "WireChunk" $ do
     (consumed0, (term, op)) <- withInputSize parseDescAndRawOp
     let parseReducedChunk wrcHeader isQuery = do
@@ -87,12 +100,14 @@ parseChunk size = label "WireChunk" $ do
         TReduced -> fail "reduced op without a chunk"
         TRaw     -> assertSize size consumed0 $> Raw op
 
+-- | Assert that is such as expected
 assertSize :: Monad f => Size -> Int -> f ()
 assertSize expected consumed =
     when (consumed /= fromIntegral expected) $
     fail $
     "size mismatch: expected " ++ show expected ++ ", got " ++ show consumed
 
+-- | 'Parser' for a sequence of reduced ops
 parseReducedOps :: Int -> Parser [Op]
 parseReducedOps = label "[Op]" . go
   where
@@ -105,6 +120,7 @@ parseReducedOps = label "[Op]" . go
                 EQ -> pure [op]
                 GT -> fail "impossible"
 
+-- | 'Parser' for raw op, returning the op's terminator along with the op
 parseDescAndRawOp :: Parser (OpTerm, RawOp)
 parseDescAndRawOp = label "d+RawOp" $ do
     (desc, size) <- parseDesc
@@ -116,6 +132,7 @@ parseDescAndRawOp = label "d+RawOp" $ do
         DOpQueryHeader  -> (TQuery,)    <$> parseRawOp
         _               -> fail $ "unimplemented " ++ show desc
 
+-- | 'Parser' for reduced op, returning the op's terminator along with the op
 parseDescAndReducedOp :: Parser (OpTerm, Op)
 parseDescAndReducedOp = label "d+RawOp" $ do
     (desc, size) <- parseDesc
@@ -125,6 +142,7 @@ parseDescAndReducedOp = label "d+RawOp" $ do
         DOpReduced      -> (TReduced,)  <$> parseReducedOp
         _               -> fail $ "unimplemented " ++ show desc
 
+-- | 'Parser' for raw op without terminator
 parseRawOp :: Parser RawOp
 parseRawOp = label "RawOp" $ do
     opType   <- parseOpKey DUuidType
@@ -132,6 +150,7 @@ parseRawOp = label "RawOp" $ do
     op       <- parseReducedOp
     pure RawOp{..}
 
+-- | 'Parser' for reduced op without terminator
 parseReducedOp :: Parser Op
 parseReducedOp = label "Op" $ do
     opEvent   <- parseOpKey DUuidEvent
@@ -139,6 +158,7 @@ parseReducedOp = label "Op" $ do
     opPayload <- parsePayload
     pure Op{..}
 
+-- | 'Parser' for an op key (type, object, event, or reference)
 parseOpKey :: Desc -> Parser UUID
 parseOpKey expectedType = label "OpKey" $ do
     (desc, size) <- parseDesc
@@ -152,7 +172,10 @@ parseOpKey expectedType = label "OpKey" $ do
         DUuidRef    -> go
         _           -> fail $ show desc
 
-uuid :: Size -> Parser UUID
+-- | 'Parser' for UUID
+uuid
+    :: Size  -- ^ expected input length
+    -> Parser UUID
 uuid size = label "UUID" $
     case size of
         16 -> do
@@ -161,9 +184,11 @@ uuid size = label "UUID" $
             pure $ UUID x y
         _  -> fail "expected uuid of size 16"
 
+-- | 'Parser' for a payload (sequence of atoms)
 parsePayload :: Parser [Atom]
 parsePayload = label "payload" $ many atom
 
+-- | 'Parser' for an atom
 atom :: Parser Atom
 atom = label "Atom" $ do
     (desc, size) <- parseDesc
@@ -174,24 +199,35 @@ atom = label "Atom" $ do
         DAtomUuid    -> AUuid    <$> uuid    size
         _            -> fail "expected Atom"
 
+-- | Parse an 'Atom'
 parseAtom :: ByteStringL -> Either String Atom
 parseAtom = parseOnlyL $ atom <* endOfInputEx
 
-float :: Size -> Parser Double
+-- | 'Parser' for a float atom
+float
+    :: Size  -- ^ expected input length
+    -> Parser Double
 float = \case
     8 -> runGet getDoublebe <$> takeL 8
     _ -> undefined
 
--- big-endian, zigzag-coded, lengths 1..8
-integer :: Size -> Parser Int64
+-- | 'Parser' for an integer atom
+integer
+    :: Size  -- ^ expected input length
+    -> Parser Int64
 integer size = label "Integer" $ do
+    -- big-endian, zigzag-coded, lengths 1..8
     unless (size >= 1 && size <= 8) $ fail "integer size must be 1..8"
     unless (size == 8) $ fail "integer size /=8 not implemented"
     zzDecode64 . Binary.decode <$> takeL (fromIntegral size)
 
-string :: Size -> Parser Text
+-- | 'Parser' for an string
+string
+    :: Size  -- ^ expected input length
+    -> Parser Text
 string size = decodeUtf8 . toStrict <$> takeL (fromIntegral size)
 
+-- | Parse a string atom
 parseString :: ByteStringL -> Either String Text
 parseString bs =
     parseOnlyL (string (fromIntegral $ BSL.length bs) <* endOfInputEx) bs
