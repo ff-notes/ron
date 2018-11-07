@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 module RON.Epoch (
-    EpochClock (..),
+    EpochClock,
     getCurrentEpochTime,
     localEpochTimeFromUnix,
     runEpochClock,
@@ -20,6 +20,8 @@ import           RON.Event (EpochEvent (EpochEvent), EpochTime,
                             advance, getEvents, getPid)
 import           RON.Internal.Word (leastSignificant60, ls60, word60add)
 
+-- | Real epoch clock.
+-- Uses kind of global variable to ensure strict monotonicity.
 newtype EpochClock a = EpochClock (ReaderT (ReplicaId, IORef EpochTime) IO a)
     deriving (Applicative, Functor, Monad, MonadIO)
 
@@ -40,16 +42,20 @@ instance ReplicaClock EpochClock where
             | t <- [timeRangeStart .. timeRangeStart `word60add` pred n]
             ]
 
+-- | Run 'EpochClock' action with explicit time variable.
 runEpochClock :: ReplicaId -> IORef EpochTime -> EpochClock a -> IO a
 runEpochClock replicaId timeVar (EpochClock action) =
     runReaderT action (replicaId, timeVar)
 
+-- | Like 'runEpochClock', but initialize time variable with current wall time.
 runEpochClockFromCurrentTime :: ReplicaId -> EpochClock a -> IO a
 runEpochClockFromCurrentTime replicaId clock = do
     time <- getCurrentEpochTime
     timeVar <- newIORef time
     runEpochClock replicaId timeVar clock
 
+-- | Get current time in 'EpochTime' format (with 100 ns resolution).
+-- Monotonicity is not guaranteed.
 getCurrentEpochTime :: IO EpochTime
 getCurrentEpochTime
     =   epochTimeFromUnix @Word64
@@ -57,7 +63,7 @@ getCurrentEpochTime
     .   (* 10000000)
     <$> getPOSIXTime
 
--- | 'EpochTime' from Unix time in hundreds of milliseconds
+-- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
 epochTimeFromUnix :: Integral int => int -> EpochTime
 epochTimeFromUnix
     =   leastSignificant60
@@ -65,5 +71,6 @@ epochTimeFromUnix
         -- the difference between Unix epoch and UUID epoch;
         -- the constant is taken from RFC 4122
 
+-- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
 localEpochTimeFromUnix :: Integral int => int -> LocalTime
 localEpochTimeFromUnix = TEpoch . epochTimeFromUnix
