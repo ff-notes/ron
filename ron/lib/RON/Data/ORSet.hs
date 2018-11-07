@@ -4,6 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+-- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet
     ( ORSet (..)
     , ObjectORSet (..)
@@ -40,6 +41,9 @@ itemFromOp itemOriginalOp@Op{..} = (itemId, item) where
     itemId = if itemIsAlive then opEvent else opRef
     item = SetItem{..}
 
+-- | Untyped OR-Set.
+-- Implementation:
+-- a map from the last change (creation or deletion) to the original op.
 newtype ORSetRaw = ORSetRaw (Map UUID SetItem)
     deriving (Eq, Show)
 
@@ -57,11 +61,14 @@ instance Reducible ORSetRaw where
     stateToChunk (ORSetRaw set) =
         mkStateChunk . sortOn opEvent . map itemOriginalOp $ Map.elems set
 
+-- | Name-UUID to use as OR-Set type marker.
 setType :: UUID
 setType = fromJust $ UUID.mkName "set"
 
+-- | Type-directing wrapper for typed OR-Set of atomic values
 newtype ORSet a = ORSet [a]
 
+-- | Type-directing wrapper for typed OR-Set of objects
 newtype ObjectORSet a = ObjectORSet [a]
 
 instance ReplicatedAsPayload a => Replicated (ORSet a) where
@@ -128,16 +135,19 @@ add item = do
     put Object
         {objectFrame = Map.insert (setType, objectId) state' objectFrame, ..}
 
+-- | Add atomic value to the OR-Set
 addValue
     :: (ReplicatedAsPayload a, Clock m, MonadError String m)
     => a -> StateT (Object (ORSet a)) m ()
 addValue = add
 
+-- | Add a reference to the object to the OR-Set
 addRef
     :: (ReplicatedAsObject a, Clock m, MonadError String m)
     => Object a -> StateT (Object (ObjectORSet a)) m ()
 addRef = add . objectId
 
+-- | Encode an object and add a reference to it to the OR-Set
 addNewRef
     :: forall a m
     . (ReplicatedAsObject a, Clock m, MonadError String m)
@@ -150,8 +160,10 @@ addNewRef item = do
 removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSet a)) m ()
 removeBy = undefined
 
+-- | Remove an atomic value from the OR-Set
 removeValue :: ReplicatedAsPayload a => a -> StateT (Object (ORSet a)) m ()
 removeValue = removeBy . eqPayload
 
+-- | Remove an object reference from the OR-Set
 removeRef :: Object a -> StateT (Object (ORSet a)) m ()
 removeRef = removeBy . eqRef

@@ -46,6 +46,7 @@ instance Reducible VersionVector where
 
     stateToChunk (VersionVector vv) = mkStateChunk $ Map.elems vv
 
+-- | Name-UUID to use as Version Vector type marker.
 vvType :: UUID
 vvType = fromJust $ UUID.mkName "vv"
 

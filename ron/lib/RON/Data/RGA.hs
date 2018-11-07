@@ -6,17 +6,18 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- | Replicated Growable Array (RGA)
 module RON.Data.RGA
-    ( edit
+    ( RGA (..)
+    , RgaRaw
+    , RgaString
+    , edit
     , editText
     , getList
     , getText
     , newFromList
     , newFromText
     , rgaType
-    , RGA (..)
-    , RgaRaw (..)
-    , RgaString
     ) where
 
 import           RON.Internal.Prelude
@@ -57,7 +58,7 @@ data VertexListItem = VertexListItem
     }
     deriving (Eq, Show)
 
--- | MonoFoldable?
+-- | TODO(2018-11-07, cblp) MonoFoldable?
 data VertexList = VertexList
     { listHead  :: UUID
     , listItems :: HashMap UUID VertexListItem
@@ -103,6 +104,7 @@ vertexListFromList = foldr go mempty where
 vertexListFromOps :: [Op] -> Maybe VertexList
 vertexListFromOps = vertexListFromList . map Vertex
 
+-- | Untyped RGA
 newtype RgaRaw = RgaRaw (Maybe VertexList)
     deriving (Eq, Monoid, Semigroup, Show)
 
@@ -312,9 +314,11 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
         , opPayload = maxOn length p1 p2
         }
 
+-- | Name-UUID to use as RGA type marker.
 rgaType :: UUID
 rgaType = fromJust $ UUID.mkName "rga"
 
+-- | Typed RGA
 newtype RGA a = RGA [a]
     deriving (Eq)
 
@@ -340,6 +344,8 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems
 
+-- | Replace content of the RGA throug introducing changes detected by
+-- 'getGroupedDiffBy'.
 edit
     ::  ( Replicated a, ReplicatedAsPayload a
         , Clock m, MonadError String m, MonadState (Object (RGA a)) m
@@ -378,21 +384,28 @@ edit newItems = do
                 , ..
                 }
 
+-- | Speciaization of 'edit' for 'Text'
 editText
     :: (Clock m, MonadError String m, MonadState (Object RgaString) m)
     => Text -> m ()
 editText = edit . Text.unpack
 
+-- | Speciaization of 'RGA' to 'Char'.
+-- This is the recommended way to store a string.
 type RgaString = RGA Char
 
+-- | Create an RGA from a list
 newFromList :: (Replicated a, Clock m) => [a] -> m (Object (RGA a))
 newFromList = newObject . RGA
 
+-- | Create an 'RgaString' from a text
 newFromText :: Clock m => Text -> m (Object RgaString)
 newFromText = newFromList . Text.unpack
 
+-- | Read elements from RGA
 getList :: Replicated a => Object (RGA a) -> Either String [a]
 getList = coerce . getObject
 
+-- | Read characters from 'RgaString'
 getText :: Object RgaString -> Either String Text
 getText = fmap Text.pack . getList

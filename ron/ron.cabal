@@ -1,10 +1,13 @@
 cabal-version:  2.1
 
-name:       ron
-version:    0.1
-copyright:  2018 Yuriy Syrovetskiy
-license:    BSD-3-Clause
-build-type: Simple
+name:           ron
+synopsis:       RON, RON-RDT, and RON-Schema
+version:        0.1
+description:    Replicated Object Notation (RON), data types (RDT),
+                and RON-Schema
+copyright:      2018 Yuriy Syrovetskiy
+license:        BSD-3-Clause
+build-type:     Simple
 
 common language
     default-extensions: StrictData
