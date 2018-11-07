@@ -15,18 +15,17 @@ import           Data.IORef (IORef, atomicModifyIORef', newIORef)
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import           Data.Word (Word64)
 
-import           RON.Event (Clock, EpochEvent (EpochEvent), EpochTime,
-                            LocalTime (TEpoch), Replica, ReplicaId, advance,
-                            getEvents, getPid)
+import           RON.Event (EpochEvent (EpochEvent), EpochTime,
+                            LocalTime (TEpoch), ReplicaClock, ReplicaId,
+                            advance, getEvents, getPid)
 import           RON.Internal.Word (leastSignificant60, ls60, word60add)
 
 newtype EpochClock a = EpochClock (ReaderT (ReplicaId, IORef EpochTime) IO a)
     deriving (Applicative, Functor, Monad, MonadIO)
 
-instance Replica EpochClock where
+instance ReplicaClock EpochClock where
     getPid = EpochClock $ reader fst
 
-instance Clock EpochClock where
     advance time = EpochClock $ ReaderT $ \(_pid, timeVar) ->
         atomicModifyIORef' timeVar $ \t0 -> (max time t0, ())
 

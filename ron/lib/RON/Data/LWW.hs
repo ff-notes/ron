@@ -30,7 +30,7 @@ import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
                                     mkStateChunk, newRon, objectOpType,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
-import           RON.Event (Clock, advanceToUuid, getEventUuid)
+import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
 import qualified RON.UUID as UUID
@@ -60,7 +60,7 @@ lwwType :: UUID
 lwwType = fromJust $ UUID.mkName "lww"
 
 -- | Create LWW object from a list of named fields.
-newObject :: Clock clock => [(UUID, I Replicated)] -> clock (Object a)
+newObject :: ReplicaClock m => [(UUID, I Replicated)] -> m (Object a)
 newObject fields = collectFrame $ do
     payloads <- for fields $ \(_, I value) -> newRon value
     e <- lift getEventUuid
@@ -104,7 +104,7 @@ assignField
     :: forall a b m
     .   ( ReplicatedAsObject a
         , Replicated b
-        , Clock m, MonadError String m, MonadState (Object a) m
+        , ReplicaClock m, MonadError String m, MonadState (Object a) m
         )
     => UUID  -- ^ Field name
     -> b     -- ^ Value (from untyped world)

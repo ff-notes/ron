@@ -34,7 +34,7 @@ import           Data.Monoid (Last (..))
 import qualified Data.Text as Text
 
 import           RON.Data.Internal
-import           RON.Event (Clock, advanceToUuid, getEventUuid)
+import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Internal.Word (pattern B11)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero, uuidScheme)
@@ -348,7 +348,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
 -- 'getGroupedDiffBy'.
 edit
     ::  ( Replicated a, ReplicatedAsPayload a
-        , Clock m, MonadError String m, MonadState (Object (RGA a)) m
+        , ReplicaClock m, MonadError String m, MonadState (Object (RGA a)) m
         )
     => [a] -> m ()
 edit newItems = do
@@ -386,7 +386,7 @@ edit newItems = do
 
 -- | Speciaization of 'edit' for 'Text'
 editText
-    :: (Clock m, MonadError String m, MonadState (Object RgaString) m)
+    :: (ReplicaClock m, MonadError String m, MonadState (Object RgaString) m)
     => Text -> m ()
 editText = edit . Text.unpack
 
@@ -395,11 +395,11 @@ editText = edit . Text.unpack
 type RgaString = RGA Char
 
 -- | Create an RGA from a list
-newFromList :: (Replicated a, Clock m) => [a] -> m (Object (RGA a))
+newFromList :: (Replicated a, ReplicaClock m) => [a] -> m (Object (RGA a))
 newFromList = newObject . RGA
 
 -- | Create an 'RgaString' from a text
-newFromText :: Clock m => Text -> m (Object RgaString)
+newFromText :: ReplicaClock m => Text -> m (Object RgaString)
 newFromText = newFromList . Text.unpack
 
 -- | Read elements from RGA

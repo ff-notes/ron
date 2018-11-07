@@ -7,13 +7,12 @@
 module RON.Event
     ( CalendarTime (..)
     , CalendarEvent (..)
-    , Clock (..)
     , EpochEvent (..)
     , EpochTime
     , Event (..)
     , LocalTime (..)
     , Naming (..)
-    , Replica (..)
+    , ReplicaClock (..)
     , ReplicaId (..)
     , advanceToUuid
     , applicationSpecific
@@ -128,16 +127,11 @@ toEpochEvent (Event t r) = case t of
     TEpoch t' -> Just $ EpochEvent t' r
     _         -> Nothing
 
-class Monad m => Replica m where
+class Monad m => ReplicaClock m where
+
+    -- | Get current replica id
     getPid :: m ReplicaId
 
-instance Replica m => Replica (ExceptT e m) where
-    getPid = lift getPid
-
-instance Replica m => Replica (StateT s m) where
-    getPid = lift getPid
-
-class Replica m => Clock m where
     -- | Get sequential timestamps.
     --
     -- Laws:
@@ -158,24 +152,26 @@ class Replica m => Clock m where
     -- | Make local time not less than this
     advance :: EpochTime -> m ()
 
-instance Clock m => Clock (ExceptT e m) where
+instance ReplicaClock m => ReplicaClock (ExceptT e m) where
+    getPid    = lift   getPid
     getEvents = lift . getEvents
     advance   = lift . advance
 
-instance Clock m => Clock (StateT s m) where
+instance ReplicaClock m => ReplicaClock (StateT s m) where
+    getPid    = lift   getPid
     getEvents = lift . getEvents
     advance   = lift . advance
 
-advanceToUuid :: Clock clock => UUID -> clock ()
+advanceToUuid :: ReplicaClock clock => UUID -> clock ()
 advanceToUuid = advance . uuidValue . UUID.split
 
-getEvent :: Clock m => m EpochEvent
+getEvent :: ReplicaClock m => m EpochEvent
 getEvent = head <$> getEvents (ls60 1)
 
-getEventUuid :: Clock m => m UUID
+getEventUuid :: ReplicaClock m => m UUID
 getEventUuid = encodeEvent . fromEpochEvent <$> getEvent
 
-getEventUuids :: Clock m => Word60 -> m [UUID]
+getEventUuids :: ReplicaClock m => Word60 -> m [UUID]
 getEventUuids = fmap (map $ encodeEvent . fromEpochEvent) . getEvents
 
 encodeCalendar :: CalendarTime -> Word60

@@ -31,7 +31,7 @@ import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
 import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
-import           RON.Event (Clock)
+import           RON.Event (ReplicaClock)
 import           RON.Schema (Declaration (..), Field (..),
                              FieldAnnotations (..), OpaqueAnnotations (..),
                              RonType (..), Schema, StructAnnotations (..),
@@ -180,7 +180,7 @@ mkReplicatedStructLww struct = do
         m <- varT <$> TH.newName "m"
         let assignF =
                 [ sigD assign [t|
-                    (Clock $m, MonadError String $m, MonadState $objectT $m)
+                    (ReplicaClock $m, MonadError String $m, MonadState $objectT $m)
                     => $fieldViewType -> $m ()
                     |]
                 , valD' assign

@@ -24,7 +24,7 @@ import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe (fromMaybe)
 
-import           RON.Event (Clock, EpochEvent (EpochEvent), Replica, ReplicaId,
+import           RON.Event (EpochEvent (EpochEvent), ReplicaClock, ReplicaId,
                             advance, getEvents, getPid)
 import           RON.Internal.Word (Word60, Word64, ls60, word60add)
 
@@ -47,10 +47,9 @@ type ReplicaSim = ReplicaSimT Identity
 instance MonadTrans ReplicaSimT where
     lift = ReplicaSim . lift . lift
 
-instance Monad m => Replica (ReplicaSimT m) where
+instance Monad m => ReplicaClock (ReplicaSimT m) where
     getPid = ReplicaSim ask
 
-instance Monad m => Clock (ReplicaSimT m) where
     getEvents n' = ReplicaSim $ do
         rid <- ask
         t0 <- lift $ preIncreaseTime rid

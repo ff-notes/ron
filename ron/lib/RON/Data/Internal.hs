@@ -15,7 +15,7 @@ import           Control.Monad.Writer.Strict (WriterT, lift, runWriterT, tell)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Event (Clock)
+import           RON.Event (ReplicaClock)
 import           RON.Types (Atom (..), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID (..), WireChunk)
 import           RON.UUID (zero)
@@ -109,12 +109,12 @@ class Replicated a where
 
 data Encoding a = Encoding
     { encodingNewRon
-        :: forall clock . Clock clock => a -> WriterT StateFrame clock [Atom]
+        :: forall m . ReplicaClock m => a -> WriterT StateFrame m [Atom]
     , encodingFromRon :: [Atom] -> StateFrame -> Either String a
     }
 
 -- | Encode typed data to a payload with possible addition objects
-newRon :: (Replicated a, Clock clock) => a -> WriterT StateFrame clock [Atom]
+newRon :: (Replicated a, ReplicaClock m) => a -> WriterT StateFrame m [Atom]
 newRon = encodingNewRon encoding
 
 -- | Decode typed data from a payload.
@@ -190,7 +190,7 @@ class ReplicatedAsObject a where
     objectOpType :: UUID
 
     -- | Encode data
-    newObject :: Clock clock => a -> clock (Object a)
+    newObject :: ReplicaClock m => a -> m (Object a)
 
     -- | Decode data
     getObject :: Object a -> Either String a
