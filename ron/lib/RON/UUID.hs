@@ -50,6 +50,7 @@ data UUID = UUID
     {-# UNPACK #-} !Word64
     deriving (Data, Eq, Generic, Hashable, NFData, Ord)
 
+-- | RON-Text-encoding
 instance Show UUID where
     -- showsPrec a (UUID x y) =
     --     showParen (a >= 11) $
@@ -76,6 +77,7 @@ instance Show UUID where
             B10 -> '+'
             B11 -> '-'
 
+-- | UUID split in parts
 data UuidFields = UuidFields
     { uuidVariety :: !Word4
     , uuidValue   :: !Word60
@@ -85,6 +87,7 @@ data UuidFields = UuidFields
     }
     deriving (Eq, Show)
 
+-- | Split UUID into parts
 split :: UUID -> UuidFields
 split (UUID x y) = UuidFields
     { uuidVariety = leastSignificant4 $ x `shiftR` 60
@@ -94,15 +97,18 @@ split (UUID x y) = UuidFields
     , uuidOrigin  = leastSignificant60  y
     }
 
+-- | Build UUID from parts
 build :: UuidFields -> UUID
 build UuidFields{..} = UUID
     (buildX uuidVariety uuidValue)
     (buildY uuidVariant uuidScheme uuidOrigin)
 
+-- | Build former 64 bits of UUID from parts
 buildX :: Word4 -> Word60 -> Word64
 buildX uuidVariety uuidValue =
     (safeCast uuidVariety `shiftL` 60) .|. safeCast uuidValue
 
+-- | Build latter 64 bits of UUID from parts
 buildY :: Word2 -> Word2 -> Word60 -> Word64
 buildY uuidVariant uuidScheme uuidOrigin
     =   (safeCast uuidVariant `shiftL` 62)
@@ -131,6 +137,7 @@ mkScopedName scope nam = do
         , uuidOrigin  = nam'
         }
 
+-- | Convert UUID to a name
 getName
     :: UUID
     -> Maybe (ByteString, ByteString)
@@ -145,22 +152,27 @@ getName uuid = case split uuid of
             _ -> Base64.encode60short uuidOrigin
     _ -> Nothing
 
+-- | UUID with all zero fields
 zero :: UUID
 zero = UUID 0 0
 
+-- | UUID with all zero fields
 pattern Zero :: UUID
 pattern Zero = UUID 0 0
 
+-- | Increment field 'uuidValue' of a UUID
 succValue :: UUID -> UUID
 succValue = build . go . split where
     go u@UuidFields{uuidValue} = u
         {uuidValue = if uuidValue < maxBound then succ uuidValue else uuidValue}
 
+-- | Encode a UUID to a Base32 string
 encodeBase32 :: UUID -> FilePath
 encodeBase32 (UUID x y) =
     BSC.unpack $
     Base64.encode64base32short x <> "-" <> Base64.encode64base32short y
 
+-- | Decode a UUID from a Base32 string
 decodeBase32 :: FilePath -> Maybe UUID
 decodeBase32 fp = do
     let (x, dashy) = span (/= '-') $ map toUpper fp
