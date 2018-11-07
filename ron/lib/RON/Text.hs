@@ -1,3 +1,4 @@
+-- | RON-Text wire format
 module RON.Text
     ( parseObject
     , parseStateFrame

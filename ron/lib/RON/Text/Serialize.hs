@@ -5,6 +5,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- | RON-Text serialization
 module RON.Text.Serialize
     ( serializeAtom
     , serializeObject
@@ -36,6 +37,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             WireFrame, WireReducedChunk (..))
 import           RON.UUID (UUID, zero)
 
+-- | Serialize a common frame
 serializeWireFrame :: WireFrame -> ByteStringL
 serializeWireFrame chunks
     = (`BSLC.snoc` '.')
@@ -43,15 +45,18 @@ serializeWireFrame chunks
     . (`evalState` opZero)
     $ traverse serializeChunk chunks
 
+-- | Serialize a sequence of common frames
 serializeWireFrames :: [WireFrame] -> ByteStringL
 serializeWireFrames = foldMap serializeWireFrame
 
+-- | Serialize a common chunk
 serializeChunk :: WireChunk -> State RawOp ByteStringL
 serializeChunk = \case
     Raw op      -> (<> " ;\n") <$> serializeRawOpZip op
     Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
+-- | Serialize a reduced chunk
 serializeReducedChunk :: Bool -> WireReducedChunk -> State RawOp ByteStringL
 serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
@@ -69,9 +74,11 @@ serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
         , RawOp{op = opAfter, ..}
         )
 
+-- | Serialize a context-free raw op
 serializeRawOp :: RawOp -> ByteStringL
 serializeRawOp op = evalState (serializeRawOpZip op) opZero
 
+-- | Serialize a raw op with compression in stream context
 serializeRawOpZip :: RawOp -> State RawOp ByteStringL
 serializeRawOpZip this = state $ \prev -> let
     prev' = op prev
@@ -93,7 +100,11 @@ serializeRawOpZip this = state $ \prev -> let
     this' = op this
     key c u = [BSLC.cons c u | not $ BSL.null u]
 
-serializeReducedOpZip :: UUID -> Op -> State Op ByteStringL
+-- | Serialize a reduced op with compression in stream context
+serializeReducedOpZip
+    :: UUID  -- ^ enclosing object
+    -> Op
+    -> State Op ByteStringL
 serializeReducedOpZip opObject this = state $ \prev -> let
     evt = serializeUuidKey (opEvent  prev) opObject       (opEvent this)
     ref = serializeUuidKey (opRef    prev) (opEvent this) (opRef   this)
@@ -109,9 +120,11 @@ serializeReducedOpZip opObject this = state $ \prev -> let
   where
     key c u = [BSLC.cons c u | not $ BSL.null u]
 
+-- | Serialize a context-free atom
 serializeAtom :: Atom -> ByteStringL
 serializeAtom a = evalState (serializeAtomZip a) zero
 
+-- | Serialize an atom with compression for UUID in stream context
 serializeAtomZip :: Atom -> State UUID ByteStringL
 serializeAtomZip = \case
     AFloat   f -> pure $ BSLC.cons '^' $ BSLC.pack (show f)
@@ -120,16 +133,22 @@ serializeAtomZip = \case
     AUuid    u ->
         state $ \prev -> (BSLC.cons '>' $ serializeUuidAtom prev u, u)
 
+-- | Serialize a string atom
 serializeString :: Text -> ByteStringL
 serializeString =
     fixQuotes . BSL.replace "'" ("\\'" :: ByteString) . Json.encode
   where
     fixQuotes = (`BSLC.snoc` '\'') . BSLC.cons '\'' . BSL.init . BSL.tail
 
-serializePayload :: UUID -> [Atom] -> ByteStringL
+-- | Serialize a payload in stream context
+serializePayload
+    :: UUID  -- ^ previous UUID (default is 'zero')
+    -> [Atom]
+    -> ByteStringL
 serializePayload prev =
     BSLC.unwords . (`evalState` prev) . traverse serializeAtomZip
 
+-- | Serialize a state frame
 serializeStateFrame :: StateFrame -> ByteStringL
 serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs where
     wrapChunk ((opType, opObject), StateChunk{..}) = Value WireReducedChunk{..}
@@ -138,5 +157,6 @@ serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs where
         wrcBody = stateBody
         opEvent = stateVersion
 
+-- | Serialize an object. Return object id that must be stored separately.
 serializeObject :: Object a -> (UUID, ByteStringL)
 serializeObject (Object oid frame) = (oid, serializeStateFrame frame)

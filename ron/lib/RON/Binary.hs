@@ -1,3 +1,4 @@
+-- | RON-Binary wire format
 module RON.Binary (parse, serialize) where
 
 import           RON.Binary.Parse (parse)

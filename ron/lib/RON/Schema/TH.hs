@@ -39,6 +39,7 @@ import           RON.Schema (Declaration (..), Field (..),
 import           RON.Types (Object (..), UUID)
 import qualified RON.UUID as UUID
 
+-- | Generate Haskell types from RON-Schema
 mkReplicated :: Schema -> TH.DecsQ
 mkReplicated = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of

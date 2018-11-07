@@ -26,6 +26,7 @@ import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
                                     ls60, safeCast)
 import           RON.UUID (UUID (..), UuidFields (..), split, zero)
 
+-- | Serialize UUID without context (used for test)
 serializeUuid :: UUID -> ByteStringL
 serializeUuid this =
     BSL.fromStrict $ case uuidVariant of
@@ -34,7 +35,12 @@ serializeUuid this =
   where
     thisFields@UuidFields{..} = split this
 
-serializeUuidKey :: UUID -> UUID -> UUID -> ByteStringL
+-- | Serialize UUID in op key context
+serializeUuidKey
+    :: UUID  -- ^ same key in the previous op (default is 'zero')
+    -> UUID  -- ^ previous key of the same op (default is 'zero')
+    -> UUID  -- ^ this
+    -> ByteStringL
 serializeUuidKey prevKey prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
         B00 -> minimumByLength
@@ -52,7 +58,11 @@ serializeUuidKey prevKey prev this =
   where
     thisFields = split this
 
-serializeUuidAtom :: UUID -> UUID -> ByteStringL
+-- | Serialize UUID in op value (atom) context
+serializeUuidAtom
+    :: UUID  -- ^ previous
+    -> UUID  -- ^ this
+    -> ByteStringL
 serializeUuidAtom prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
         B00 -> minimumByLength

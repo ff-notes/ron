@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- | RON-Text parsing
 module RON.Text.Parse
     ( parseAtom
     , parseObject
@@ -48,6 +49,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
+-- | Parse a common frame
 parseWireFrame :: ByteStringL -> Either String WireFrame
 parseWireFrame = parseOnlyL frame
 
@@ -101,26 +103,38 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
 frame :: Parser WireFrame
 frame = label "WireFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
+-- | Parse a sequence of common frames
 parseWireFrames :: ByteStringL -> Either String [WireFrame]
 parseWireFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
 
 frameInStream :: Parser WireFrame
 frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
 
+-- | Parse a single context-free op
 parseOp :: ByteStringL -> Either String RawOp
 parseOp = parseOnlyL $ do
     (_, x) <- rawOp opZero <* skipSpace <* endOfInputEx
     pure x
 
+-- | Parse a single context-free UUID
 parseUuid :: ByteStringL -> Either String UUID
 parseUuid = parseOnlyL $
     uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
 
-parseUuidKey :: UUID -> UUID -> ByteStringL -> Either String UUID
+-- | Parse a UUID in key position
+parseUuidKey
+    :: UUID  -- ^ same key in the previous op (default is 'UUID.zero')
+    -> UUID  -- ^ previous key of the same op (default is 'UUID.zero')
+    -> ByteStringL
+    -> Either String UUID
 parseUuidKey prevKey prev =
     parseOnlyL $ uuid prevKey prev PrevOpSameKey <* skipSpace <* endOfInputEx
 
-parseUuidAtom :: UUID -> ByteStringL -> Either String UUID
+-- | Parse a UUID in value (atom) position
+parseUuidAtom
+    :: UUID  -- ^ previous
+    -> ByteStringL
+    -> Either String UUID
 parseUuidAtom prev = parseOnlyL $ uuidAtom prev <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
@@ -316,6 +330,7 @@ atom prevUuid = skipSpace *> atom'
 uuidAtom :: UUID -> Parser UUID
 uuidAtom prev = uuid UUID.zero prev SameOpPrevUuid
 
+-- | Parse an atom
 parseAtom :: ByteStringL -> Either String Atom
 parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
 
@@ -335,6 +350,7 @@ string = do
                 c    -> (chunk <>) . BSC.cons '\\' . BSC.cons c <$> content
             _ -> fail "cannot happen"
 
+-- | Parse a string atom
 parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
 
@@ -358,12 +374,15 @@ term = do
         ';' -> pure TRaw
         _   -> fail "not a term"
 
+-- | Parse a state frame
 parseStateFrame :: ByteStringL -> Either String StateFrame
 parseStateFrame = parseWireFrame >=> findObjects
 
+-- | Parse a state frame as an object
 parseObject :: UUID -> ByteStringL -> Either String (Object a)
 parseObject oid bytes = Object oid <$> parseStateFrame bytes
 
+-- | Extract object states from a common frame
 findObjects :: WireFrame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
