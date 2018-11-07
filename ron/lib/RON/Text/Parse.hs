@@ -39,7 +39,6 @@ import           Data.Text (Text)
 import qualified RON.Base64 as Base64
 import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
                                     b11, ls60, safeCast)
-import           RON.Text.Common (opZero)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             Object (..), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
@@ -393,3 +392,10 @@ findObjects = fmap Map.fromList . traverse loadBody where
             let stateBody = wrcBody
             pure ((opType, opObject), StateChunk{..})
         _ -> Left "expected reduced chunk"
+
+opZero :: RawOp
+opZero = RawOp
+    { opType   = UUID.zero
+    , opObject = UUID.zero
+    , op       = Op{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
+    }

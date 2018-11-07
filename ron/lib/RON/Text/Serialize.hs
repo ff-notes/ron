@@ -28,7 +28,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 import           Data.Traversable (for)
 
-import           RON.Text.Common (opZero)
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
@@ -160,3 +159,10 @@ serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs where
 -- | Serialize an object. Return object id that must be stored separately.
 serializeObject :: Object a -> (UUID, ByteStringL)
 serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
+
+opZero :: RawOp
+opZero = RawOp
+    { opType   = zero
+    , opObject = zero
+    , op       = Op{opEvent = zero, opRef = zero, opPayload = []}
+    }
