@@ -82,6 +82,7 @@ data Naming
 instance Hashable Naming where
     hashWithSalt = hashUsing fromEnum
 
+-- | Replica identifier
 data ReplicaId = ReplicaId !Naming !Word60
     deriving (Eq, Show)
 
@@ -137,17 +138,20 @@ class Monad m => ReplicaClock m where
     -- Laws:
     --
     -- 1. @
-    --t1 <- getEvents n
-    --t2 <- getEvent
-    --t2 >= t1 + n
+    --t <- getEvents n
+    --(t !! i) == head t + i
     -- @
     --
-    -- 2. @getEvents 0 == getEvents 1@
+    -- 2. @
+    --t1 <- 'getEvent'
+    --t2 <- 'getEvent'
+    --t2 >= t1 + 1
+    -- @
+    --
+    -- 3. @getEvents 0 == getEvents 1@
     getEvents
         :: EpochTime -- ^ number of needed timestamps
         -> m [EpochEvent]
-        -- ^ Starting value of the range.
-        -- So return value @t@ means range @[t .. t + n - 1]@.
 
     -- | Make local time not less than this
     advance :: EpochTime -> m ()
@@ -162,15 +166,19 @@ instance ReplicaClock m => ReplicaClock (StateT s m) where
     getEvents = lift . getEvents
     advance   = lift . advance
 
+-- | 'advance' variant for any UUID
 advanceToUuid :: ReplicaClock clock => UUID -> clock ()
 advanceToUuid = advance . uuidValue . UUID.split
 
+-- | Get a single event
 getEvent :: ReplicaClock m => m EpochEvent
 getEvent = head <$> getEvents (ls60 1)
 
+-- | Get a single event as UUID
 getEventUuid :: ReplicaClock m => m UUID
 getEventUuid = encodeEvent . fromEpochEvent <$> getEvent
 
+-- | Get event sequence as UUIDs
 getEventUuids :: ReplicaClock m => Word60 -> m [UUID]
 getEventUuids = fmap (map $ encodeEvent . fromEpochEvent) . getEvents
 
@@ -243,17 +251,25 @@ encodeReplicaId (ReplicaId naming origin) =
     , origin
     )
 
-mkCalendarDate :: (Word16, Word16, Word8) -> Maybe CalendarTime
+-- | Make a calendar timestamp from a date
+mkCalendarDate
+    :: (Word16, Word16, Word8)  -- ^ date as (year, month [1..12], day [1..])
+    -> Maybe CalendarTime
 mkCalendarDate ymd = mkCalendarDateTime ymd (0, 0, 0)
 
+-- | Make a calendar timestamp from a date and a day time
 mkCalendarDateTime
-    :: (Word16, Word16, Word8) -> (Word8, Word8, Word8) -> Maybe CalendarTime
+    :: (Word16, Word16, Word8)  -- ^ date as (year, month [1..12], day [1..])
+    -> (Word8, Word8, Word8)    -- ^ day time as (hours, minutes, seconds)
+    -> Maybe CalendarTime
 mkCalendarDateTime ymd hms = mkCalendarDateTimeNano ymd hms 0
 
+-- | Make a calendar timestamp from a date, a day time, and a second fraction
 mkCalendarDateTimeNano
-    :: (Word16, Word16, Word8)
-    -> (Word8,  Word8,  Word8)
-    -> Word32
+    :: (Word16, Word16, Word8)  -- ^ date as (year, month [1..12], day [1..])
+    -> (Word8, Word8, Word8)    -- ^ day time as (hours, minutes, seconds)
+    -> Word32                   -- ^ fraction of a second in hundreds of
+                                -- nanosecond
     -> Maybe CalendarTime
 mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
     -- TODO(2018-08-19, cblp) check bounds
@@ -266,5 +282,6 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
         , nanosecHundreds = ls24 ns
         }
 
+-- | Make an 'ApplicationSpecific' replica id from arbitrary number
 applicationSpecific :: Word64 -> ReplicaId
 applicationSpecific = ReplicaId ApplicationSpecific . ls60
