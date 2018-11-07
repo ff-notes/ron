@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Event
-    ( Calendar (..)
+    ( CalendarTime (..)
     , CalendarEvent (..)
     , Clock (..)
     , EpochEvent (..)
@@ -46,7 +46,10 @@ import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin,
                            uuidScheme, uuidValue, uuidVariant, uuidVariety)
 import qualified RON.UUID as UUID
 
-data Calendar = Calendar
+-- | Calendar format. See https://github.com/gritzko/ron/issues/19.
+-- Year range is 2010—2350.
+-- Precision is 100 ns.
+data CalendarTime = CalendarTime
     { months          :: Word12
     , days            :: Word6
     , hours           :: Word6
@@ -62,16 +65,14 @@ type EpochTime = Word60
 
 -- | Clock type is encoded in 2 higher bits of variety, value in uuidValue
 data LocalTime
-    = TCalendar !Calendar
-        -- ^ Calendar format. https://github.com/gritzko/ron/issues/19.
-        -- Year range is 2010—2350.
-        -- Precision is 100 ns.
+    = TCalendar !CalendarTime
     | TLogical !Word60
         -- ^ https://en.wikipedia.org/wiki/Logical_clock
     | TEpoch !EpochTime
     | TUnknown !Word60
     deriving (Eq, Show)
 
+-- | Replica id assignment style
 data Naming
     = TrieForked
     | CryptoForked
@@ -95,7 +96,7 @@ data Event = Event !LocalTime !ReplicaId
     deriving (Eq, Show)
 
 -- | Calendar-based Lamport time event, specific case of 'Event'.
-data CalendarEvent = CalendarEvent !Calendar !ReplicaId
+data CalendarEvent = CalendarEvent !CalendarTime !ReplicaId
     deriving (Eq, Show)
 
 instance Ord CalendarEvent where
@@ -109,7 +110,7 @@ fromCalendarEvent :: CalendarEvent -> Event
 fromCalendarEvent (CalendarEvent t r) = Event (TCalendar t) r
 
 -- | Epoch-based Lamport time event, specific case of 'Event'.
-data EpochEvent = EpochEvent !Word60 !ReplicaId
+data EpochEvent = EpochEvent !EpochTime !ReplicaId
     deriving (Eq, Show)
 
 instance Ord EpochEvent where
@@ -140,19 +141,22 @@ class Replica m => Clock m where
     -- | Get sequential timestamps.
     --
     -- Laws:
-    --    1.  t1 <- getEvents n
-    --        t2 <- getEvent
-    --        t2 >= t1 + n
     --
-    --    2. getEvents 0 == getEvents 1
+    -- 1. @
+    --t1 <- getEvents n
+    --t2 <- getEvent
+    --t2 >= t1 + n
+    -- @
+    --
+    -- 2. @getEvents 0 == getEvents 1@
     getEvents
-        :: Word60 -- ^ number of needed timestamps
+        :: EpochTime -- ^ number of needed timestamps
         -> m [EpochEvent]
         -- ^ Starting value of the range.
         -- So return value @t@ means range @[t .. t + n - 1]@.
 
     -- | Make local time not less than this
-    advance :: Word60 -> m ()
+    advance :: EpochTime -> m ()
 
 instance Clock m => Clock (ExceptT e m) where
     getEvents = lift . getEvents
@@ -174,8 +178,8 @@ getEventUuid = encodeEvent . fromEpochEvent <$> getEvent
 getEventUuids :: Clock m => Word60 -> m [UUID]
 getEventUuids = fmap (map $ encodeEvent . fromEpochEvent) . getEvents
 
-encodeCalendar :: Calendar -> Word60
-encodeCalendar Calendar{..} = ls60 $
+encodeCalendar :: CalendarTime -> Word60
+encodeCalendar CalendarTime{..} = ls60 $
     (safeCast months     `shiftL` 48) .|.
     (safeCast days       `shiftL` 42) .|.
     (safeCast hours      `shiftL` 36) .|.
@@ -183,8 +187,8 @@ encodeCalendar Calendar{..} = ls60 $
     (safeCast seconds    `shiftL` 24) .|.
     safeCast  nanosecHundreds
 
-decodeCalendar :: Word60 -> Calendar
-decodeCalendar w = Calendar
+decodeCalendar :: Word60 -> CalendarTime
+decodeCalendar w = CalendarTime
     { months          = leastSignificant12 $ v `shiftR` 48
     , days            = leastSignificant6  $ v `shiftR` 42
     , hours           = leastSignificant6  $ v `shiftR` 36
@@ -243,21 +247,21 @@ encodeReplicaId (ReplicaId naming origin) =
     , origin
     )
 
-mkCalendarDate :: (Word16, Word16, Word8) -> Maybe Calendar
+mkCalendarDate :: (Word16, Word16, Word8) -> Maybe CalendarTime
 mkCalendarDate ymd = mkCalendarDateTime ymd (0, 0, 0)
 
 mkCalendarDateTime
-    :: (Word16, Word16, Word8) -> (Word8, Word8, Word8) -> Maybe Calendar
+    :: (Word16, Word16, Word8) -> (Word8, Word8, Word8) -> Maybe CalendarTime
 mkCalendarDateTime ymd hms = mkCalendarDateTimeNano ymd hms 0
 
 mkCalendarDateTimeNano
     :: (Word16, Word16, Word8)
     -> (Word8,  Word8,  Word8)
     -> Word32
-    -> Maybe Calendar
+    -> Maybe CalendarTime
 mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
     -- TODO(2018-08-19, cblp) check bounds
-    pure Calendar
+    pure CalendarTime
         { months          = ls12 $ (y - 2010) * 12 + m - 1
         , days            = ls6  $ d - 1
         , hours           = ls6  hh

@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- | Lamport clock network simulation.
--- Each 'ReplicaSim' provides a 'Clock',
+-- 'ReplicaSim' provides 'Replica' and 'Clock' instances,
 -- replicas may interchange data while they are connected in a 'NetworkSim'.
 module RON.Event.Simulation
     ( NetworkSim

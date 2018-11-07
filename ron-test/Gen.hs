@@ -11,7 +11,7 @@ import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           RON.Event (Calendar (Calendar), Event (Event),
+import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
                             ReplicaId (ReplicaId), days, hours, minutes, months,
                             nanosecHundreds, seconds)
@@ -76,19 +76,19 @@ stateChunk size = StateChunk
 wireFrames :: MonadGen gen => Int -> gen [WireFrame]
 wireFrames size = list (Range.exponential 0 size) (wireFrame size)
 
-calendar :: MonadGen gen => gen Calendar
-calendar = do
+calendarTime :: MonadGen gen => gen CalendarTime
+calendarTime = do
     months          <- ls12 <$> integral (Range.constant 0 4095)
     days            <- ls6  <$> integral (Range.constant 0 30)
     hours           <- ls6  <$> integral (Range.constant 0 23)
     minutes         <- ls6  <$> integral (Range.constant 0 59)
     seconds         <- ls6  <$> integral (Range.constant 0 59)
     nanosecHundreds <- ls24 <$> integral (Range.constant 0 10000000)
-    pure Calendar{..}
+    pure CalendarTime{..}
 
 eventTime :: MonadGen gen => gen LocalTime
 eventTime = choice
-    [ TCalendar <$> calendar
+    [ TCalendar <$> calendarTime
     , TLogical  <$> word60
     , TEpoch    <$> word60
     , TUnknown  <$> word60
