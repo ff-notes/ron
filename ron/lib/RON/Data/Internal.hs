@@ -28,17 +28,25 @@ data Reducer = Reducer
     , stateReducer :: StateChunk -> StateChunk -> StateChunk
     }
 
--- | Unapplied patches and ops
+-- | Unapplied patches and raw ops
 type Unapplied = ([ReducedChunk], [Op])
 
--- TODO(2018-08-24, cblp) Semilattice a
+-- TODO(2018-08-24, cblp) Semilattice a?
+-- | Untyped-reducible types.
+-- Untyped means if this type is a container then the types of data contained in
+-- it is not considered.
 class (Eq a, Monoid a) => Reducible a where
+
+    -- | UUID of the type
     reducibleOpType :: UUID
 
+    -- | Load a state from a state chunk
     stateFromChunk :: [Op] -> a
 
+    -- | Store a state to a state chunk
     stateToChunk :: a -> StateChunk
 
+    -- | Merge a state with patches and raw ops
     applyPatches :: a -> Unapplied -> (a, Unapplied)
     applyPatches a (patches, ops) =
         ( a <> foldMap (patchValue . patchFromChunk) patches
@@ -46,6 +54,7 @@ class (Eq a, Monoid a) => Reducible a where
         , mempty
         )
 
+    -- | Merge patches and raw ops into bigger patches or throw obsolete ops
     reduceUnappliedPatches :: Unapplied -> Unapplied
     reduceUnappliedPatches (patches, ops) =
         ( maybeToList .
@@ -92,7 +101,10 @@ patchToChunk Patch{..} = ReducedChunk{..} where
     rcRef = patchRef
     StateChunk rcVersion rcBody = stateToChunk patchValue
 
+-- | Base class for typed encoding
 class Replicated a where
+    -- | Instances SHOULD implement 'encoding' either as 'objectEncoding' or as
+    -- 'payloadEncoding'
     encoding :: Encoding a
 
 data Encoding a = Encoding
@@ -101,12 +113,16 @@ data Encoding a = Encoding
     , encodingFromRon :: [Atom] -> StateFrame -> Either String a
     }
 
+-- | Encode typed data to a payload with possible addition objects
 newRon :: (Replicated a, Clock clock) => a -> WriterT StateFrame clock [Atom]
 newRon = encodingNewRon encoding
 
+-- | Decode typed data from a payload.
+-- The implementation may use other objects in the frame to resolve references.
 fromRon :: Replicated a => [Atom] -> StateFrame -> Either String a
 fromRon = encodingFromRon encoding
 
+-- | Standard implementation of 'Replicated' for 'ReplicatedAsObject' types.
 objectEncoding :: ReplicatedAsObject a => Encoding a
 objectEncoding = Encoding
     { encodingNewRon = \a -> do
@@ -116,14 +132,20 @@ objectEncoding = Encoding
     , encodingFromRon = objectFromRon getObject
     }
 
+-- | Standard implementation of 'Replicated' for 'ReplicatedAsPayload' types.
 payloadEncoding :: ReplicatedAsPayload a => Encoding a
 payloadEncoding = Encoding
     { encodingNewRon  = pure . toPayload
     , encodingFromRon = \atoms _ -> fromPayload atoms
     }
 
+-- | Instances of this class are encoded as payload only.
 class ReplicatedAsPayload a where
+
+    -- | Encode data
     toPayload :: a -> [Atom]
+
+    -- | Decode data
     fromPayload :: [Atom] -> Either String a
 
 instance Replicated Int64 where encoding = payloadEncoding
@@ -160,17 +182,26 @@ instance ReplicatedAsPayload Char where
             _            -> Left "too long string to encode a single character"
         _ -> Left "Char: bad payload"
 
+-- | Instances of this class are encoded as objects.
+-- An enclosing object's payload will be filled with this object's id.
 class ReplicatedAsObject a where
+
+    -- | UUID of the type
     objectOpType :: UUID
+
+    -- | Encode data
     newObject :: Clock clock => a -> clock (Object a)
+
+    -- | Decode data
     getObject :: Object a -> Either String a
 
 objectFromRon
     :: (Object a -> Either String a) -> [Atom] -> StateFrame -> Either String a
 objectFromRon handler atoms frame = case atoms of
     [AUuid oid] -> handler $ Object oid frame
-    _ -> Left "bad payload"
+    _           -> Left "bad payload"
 
+-- | Helper to build an object frame using arbitrarily nested serializers.
 collectFrame :: Functor m => WriterT StateFrame m UUID -> m (Object a)
 collectFrame = fmap (uncurry Object) . runWriterT
 

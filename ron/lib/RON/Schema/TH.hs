@@ -24,7 +24,8 @@ import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (lift, liftData)
 
 import           RON.Data (Replicated (..), ReplicatedAsObject (..),
-                           getObjectStateChunk, objectEncoding)
+                           objectEncoding)
+import           RON.Data.Internal (getObjectStateChunk)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))

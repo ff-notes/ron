@@ -12,7 +12,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Text.Metrics (levenshteinNorm)
 
-import           RON.Data (reduceObject')
+import           RON.Data (reduceObject)
 import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
 import           RON.Event (applicationSpecific)
@@ -75,7 +75,7 @@ rgaTrick2 (begin', branch1') branch2 =
     either error id .
     runNetworkSim . runReplicaSim (applicationSpecific 2) . runExceptT $ do
         branch2' <- (`execStateT` begin') $ RGA.editText branch2
-        end' <- liftEither $ reduceObject' branch1' branch2'
+        end' <- liftEither $ reduceObject branch1' branch2'
         liftEither $ RGA.getText end'
 
 {-

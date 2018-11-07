@@ -7,21 +7,19 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | Typed and untyped RON tools
 module RON.Data
-    ( collectFrame
+    ( Reducible (..)
+    , Replicated (..)
+    , ReplicatedAsObject (..)
+    , ReplicatedAsPayload (..)
     , fromRon
-    , getObjectStateChunk
     , newRon
     , objectEncoding
     , payloadEncoding
     , reduceObject
-    , reduceObject'
     , reduceStateFrame
     , reduceWireFrame
-    , Reducible (..)
-    , Replicated (..)
-    , ReplicatedAsObject (..)
-    , ReplicatedAsPayload (..)
     ) where
 
 import           RON.Internal.Prelude
@@ -165,15 +163,15 @@ reduceStateFrame s1 s2 =
             Nothing -> lift $
                 Left $ "Cannot reduce StateFrame of unknown type " ++ show typ
 
-reduceObject :: Object a -> StateFrame -> Either String (Object a)
-reduceObject Object{objectId, objectFrame = s1} s2 = do
+unsafeReduceObject :: Object a -> StateFrame -> Either String (Object a)
+unsafeReduceObject Object{objectId, objectFrame = s1} s2 = do
     objectFrame <- reduceStateFrame s1 s2
     pure Object{..}
 
 -- | Reduce object with frame from another version of the same object.
-reduceObject' :: Object a -> Object a -> Either String (Object a)
-reduceObject' o1 o2
-    | id1 == id2 = reduceObject o1 $ objectFrame o2
+reduceObject :: Object a -> Object a -> Either String (Object a)
+reduceObject o1 o2
+    | id1 == id2 = unsafeReduceObject o1 $ objectFrame o2
     | otherwise  = Left $ "Object ids differ: " ++ show (id1, id2)
   where
     id1 = objectId o1
