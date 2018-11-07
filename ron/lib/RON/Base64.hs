@@ -2,6 +2,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | RON version of Base64 encoding
 module RON.Base64
     ( decode
     , decode60
@@ -34,10 +35,12 @@ import           RON.Internal.Word (Word4, Word6 (W6), Word60,
 alphabet :: ByteString
 alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 
--- | TODO use approach from 'isUpperHexDigit'
+-- | Check if a character is in the Base64 alphabet.
+-- TODO use approach from 'isUpperHexDigit'
 isLetter :: Char -> Bool
 isLetter c = isAlphaNum c || c == '_' || c == '~'
 
+-- | Convert a Base64 letter to a number [0-63]
 decodeLetter :: Word8 -> Maybe Word6
 decodeLetter x
     | x <  ord0 = Nothing
@@ -50,6 +53,7 @@ decodeLetter x
     | x == ordõ = Just $ leastSignificant6 posõ
     | otherwise  = Nothing
 
+-- ASCII milestone codes
 ord0, ord9, ordA, ordZ, ord_, orda, ordz, ordõ :: Word8
 ord0 = fromIntegral $ ord '0'
 ord9 = fromIntegral $ ord '9'
@@ -60,12 +64,14 @@ orda = fromIntegral $ ord 'a'
 ordz = fromIntegral $ ord 'z'
 ordõ = fromIntegral $ ord '~'
 
+-- Base64 milestone codes
 posA, pos_, posa, posõ :: Word8
 posA = 10
 pos_ = 36
 posa = 37
 posõ = 63
 
+-- | Convert a subset [0-F] of Base64 letters to a number [0-15]
 decodeLetter4 :: Word8 -> Maybe Word4
 decodeLetter4 x
     | x <  ord0 = Nothing
@@ -74,6 +80,7 @@ decodeLetter4 x
     | x <= ordZ = Just . leastSignificant4 $ x - ordA + posA
     | otherwise  = Nothing
 
+-- | Decode a blob from a Base64 string
 decode :: ByteStringL -> Maybe ByteStringL
 decode =
     fmap (BSL.pack . go . map safeCast) . traverse decodeLetter . BSL.unpack
@@ -94,6 +101,7 @@ decode =
         , ((c .&.   0b11) `shiftL` 6) .|.  d
         ]
 
+-- | Decode a 60-bit number from a Base64 string
 decode60 :: ByteString -> Maybe Word60
 decode60 =
     fmap leastSignificant60 . go 10
@@ -119,6 +127,7 @@ decode60 =
         (safeCast c `shiftL` 42) .|.
         (safeCast d `shiftL` 36)
 
+-- | Decode a 60-bit number from a Base32 string
 decode60base32 :: ByteString -> Maybe Word60
 decode60base32 =
     fmap leastSignificant60 . go12
@@ -140,20 +149,13 @@ decode60base32 =
         . take len
         . (++ repeat 0)
 
+-- | Decode a 64-bit number from a Base64 string
 decode64 :: ByteString -> Maybe Word64
 decode64 s = do
     (s0, s1) <- BS.uncons s
     cons64 <$> decodeLetter4 s0 <*> decode60 s1
 
-{-
-    796640 -> 000000000O9V ?
-    24,9,31,0
-    O9V0
-    000000000O9V0
-    000000000O9V
-    0 00000000O9V
--}
-
+-- | Decode a 64-bit number from a Base32 string
 decode64base32 :: ByteString -> Maybe Word64
 decode64base32 s = do
     (s0, s1) <- BS.uncons s
@@ -162,6 +164,7 @@ decode64base32 s = do
 cons64 :: Word4 -> Word60 -> Word64
 cons64 v w = (safeCast v `shiftL` 60) .|. safeCast w
 
+-- | Encode a blob to a Base64 string
 encode :: ByteStringL -> ByteStringL
 encode = BSL.pack . go . BSL.unpack
   where
@@ -185,12 +188,15 @@ encode = BSL.pack . go . BSL.unpack
         ,   c .&. 0b111111
         ]
 
+-- | Convert a number from [0..63] to a single letter
 encodeLetter :: Word6 -> Word8
 encodeLetter i = alphabet `BS.index` safeCast i
 
+-- | Convert a number from [0..15] to a single letter
 encodeLetter4 :: Word4 -> Word8
 encodeLetter4 i = alphabet `BS.index` safeCast i
 
+-- | Encode a 60-bit number to a Base64 string
 encode60 :: Word60 -> ByteString
 encode60 w = BS.pack $
     map (encodeLetter . leastSignificant6)
@@ -198,7 +204,7 @@ encode60 w = BS.pack $
         | i <- [9, 8 .. 0]
         ]
 
--- | Encode Word60, dropping trailing zeroes
+-- | Encode a 60-bit number to a Base64 string, dropping trailing zeroes
 encode60short :: Word60 -> ByteString
 encode60short v = case safeCast v :: Word64 of
     0 -> "0"
@@ -209,6 +215,7 @@ encode60short v = case safeCast v :: Word64 of
         (w `shiftR` (6 * i)) .&. 0b111111 :
         go (i - 1) (w .&. complement (0b111111 `shiftL` (6 * i)))
 
+-- | Encode a 64-bit number to a Base32 string, dropping trailing zeroes
 encode64base32short :: Word64 -> ByteString
 encode64base32short = \case
     0 -> "0"
@@ -221,6 +228,7 @@ encode64base32short = \case
 
     leastSignificant5 w = W6 $ fromIntegral w .&. 0b11111
 
+-- | Encode a 64-bit number to a Base64 string
 encode64 :: Word64 -> ByteString
 encode64 w =
     encodeLetter (leastSignificant6 $ w `shiftR` 60)
