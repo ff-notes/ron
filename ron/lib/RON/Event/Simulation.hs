@@ -1,12 +1,14 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 
--- | Lamport clock simulation
+-- | Lamport clock network simulation.
+-- Each 'ReplicaSim' provides a 'Clock',
+-- replicas may interchange data while they are connected in a 'NetworkSim'.
 module RON.Event.Simulation
     ( NetworkSim
-    , NetworkSimT (..)
+    , NetworkSimT
     , ReplicaSim
-    , ReplicaSimT (..)
+    , ReplicaSimT
     , runNetworkSim
     , runNetworkSimT
     , runReplicaSim
@@ -22,7 +24,7 @@ import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 import           Data.Maybe (fromMaybe)
 
-import           RON.Event (Clock, EpochEvent (..), Replica, ReplicaId (..),
+import           RON.Event (Clock, EpochEvent (EpochEvent), Replica, ReplicaId,
                             advance, getEvents, getPid)
 import           RON.Internal.Word (Word60, Word64, ls60, word60add)
 
@@ -64,6 +66,21 @@ instance Monad m => Clock (ReplicaSimT m) where
             Nothing      -> time
             Just current -> max time current
 
+-- | Execute network simulation
+--
+-- Usage:
+--
+-- @
+-- runNetworkSim $ do
+--     'runReplicaSim' r1 $ do
+--         actions...
+--     'runReplicaSim' r2 $ do
+--         actions...
+--     'runReplicaSim' r1 $ ...
+-- @
+--
+-- Each 'runNetworkSim' starts its own networks.
+-- One shouldn't use in one network events generated in another.
 runNetworkSim :: NetworkSim a -> a
 runNetworkSim (NetworkSim action) = evalState action mempty
 
