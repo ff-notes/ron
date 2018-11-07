@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
+-- | Version Vector
 module RON.Data.VersionVector
-    ( VersionVector (..)
+    ( VersionVector
     ) where
 
 import           RON.Internal.Prelude
@@ -26,6 +27,7 @@ opOrigin Op{opEvent = UUID _ origin} = origin
 latter :: Op -> Op -> Op
 latter = maxOn opTime
 
+-- | Version Vector type. May be used both in typed and untyped contexts.
 newtype VersionVector = VersionVector (Map Origin Op)
     deriving (Eq, Show)
 

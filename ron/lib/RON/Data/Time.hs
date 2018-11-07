@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | 'Day' instances
 module RON.Data.Time (Day, day) where
 
 import           Data.Time (Day, fromGregorian, toGregorian)
@@ -25,5 +26,6 @@ instance ReplicatedAsPayload Day where
             fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)
         _ -> Left "bad Day"
 
+-- | RON-Schema type for 'Day'
 day :: RonType
 day = opaqueAtoms def{oaHaskellType = Just "Day"}
