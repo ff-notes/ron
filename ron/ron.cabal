@@ -1,15 +1,21 @@
 cabal-version:  2.1
 
 name:           ron
-synopsis:       RON, RON-RDT, and RON-Schema
 version:        0.1
+
+category:       Distributed Systems, Protocol, Database
+copyright:      2018 Yuriy Syrovetskiy
 description:    Replicated Object Notation (RON), data types (RDT),
                 and RON-Schema
-copyright:      2018 Yuriy Syrovetskiy
 license:        BSD-3-Clause
+maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
+synopsis:       RON, RON-RDT, and RON-Schema
+
 build-type:     Simple
 
 common language
+    build-depends:
+        base >= 4.11.1.0 && < 4.12,
     default-extensions: StrictData
     default-language:   Haskell2010
 
@@ -18,7 +24,6 @@ library
     build-depends:
         aeson,
         attoparsec,
-        base,
         binary,
         bytestring,
         containers,
@@ -71,7 +76,6 @@ benchmark bench
     import: language
     build-depends:
         -- global
-        base,
         criterion,
         deepseq,
         -- package
