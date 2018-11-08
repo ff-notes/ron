@@ -45,12 +45,7 @@ import qualified RON.UUID as UUID
 --      0 = value is alive,
 --      _ = tombstone event, value is backup for undo
 --   opPayload: the value
--- TODO record pattern synonyms
-newtype Vertex = Vertex Op
-    deriving (Eq, Show)
-
-unVertex :: Vertex -> Op
-unVertex (Vertex op) = op
+type Vertex = Op
 
 data VertexListItem = VertexListItem
     { itemValue :: Vertex
@@ -58,7 +53,6 @@ data VertexListItem = VertexListItem
     }
     deriving (Eq, Show)
 
--- | TODO(2018-11-07, cblp) MonoFoldable?
 data VertexList = VertexList
     { listHead  :: UUID
     , listItems :: HashMap UUID VertexListItem
@@ -68,8 +62,8 @@ data VertexList = VertexList
 instance Semigroup VertexList where
     (<>) = merge
 
-vertexListToList :: Maybe VertexList -> [Vertex]
-vertexListToList mv = case mv of
+vertexListToOps :: Maybe VertexList -> [Vertex]
+vertexListToOps mv = case mv of
     Nothing -> []
     Just VertexList{..} -> go listHead listItems
   where
@@ -87,12 +81,9 @@ vertexListToList mv = case mv of
             Nothing -> []
         in itemValue : rest
 
-vertexListToOps :: Maybe VertexList -> [Op]
-vertexListToOps = map unVertex . vertexListToList
-
-vertexListFromList :: [Vertex] -> Maybe VertexList
-vertexListFromList = foldr go mempty where
-    go v@(Vertex Op{opEvent = vid}) vlist =
+vertexListFromOps :: [Vertex] -> Maybe VertexList
+vertexListFromOps = foldr go mempty where
+    go v@Op{opEvent = vid} vlist =
         Just $ VertexList{listHead = vid, listItems = vlist'}
       where
         item itemNext = VertexListItem{itemValue = v, itemNext}
@@ -100,9 +91,6 @@ vertexListFromList = foldr go mempty where
             Nothing -> HashMap.singleton vid (item Nothing)
             Just VertexList{listHead, listItems} ->
                 HashMap.insert vid (item $ Just listHead) listItems
-
-vertexListFromOps :: [Op] -> Maybe VertexList
-vertexListFromOps = vertexListFromList . map Vertex
 
 -- | Untyped RGA
 newtype RgaRaw = RgaRaw (Maybe VertexList)
@@ -141,7 +129,7 @@ patchSetFromRawOp op@Op{opEvent, opRef, opPayload} = case opPayload of
                             HashMap.singleton
                                 opEvent
                                 VertexListItem
-                                    { itemValue = Vertex op{opRef = Zero}
+                                    { itemValue = op{opRef = Zero}
                                     , itemNext  = Nothing
                                     }
                         }
@@ -285,15 +273,15 @@ applyRemoval
     -> HashMap UUID VertexListItem
     -> Maybe (HashMap UUID VertexListItem)
 applyRemoval parent tombstone targetItems = do
-    item@VertexListItem{itemValue = Vertex v@Op{opRef}} <-
+    item@VertexListItem{itemValue = v@Op{opRef}} <-
         HashMap.lookup parent targetItems
-    let item' = item{itemValue = Vertex v{opRef = max opRef tombstone}}
+    let item' = item{itemValue = v{opRef = max opRef tombstone}}
     pure $ HashMap.insert parent item' targetItems
 
 merge :: VertexList -> VertexList -> VertexList
 merge v1 v2 =
-    fromMaybe undefined . vertexListFromList $
-    (merge' `on` vertexListToList . Just) v1 v2
+    fromMaybe undefined . vertexListFromOps $
+    (merge' `on` vertexListToOps . Just) v1 v2
 
 merge' :: [Vertex] -> [Vertex] -> [Vertex]
 merge' [] vs2 = vs2
@@ -304,11 +292,11 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
         GT -> v1 : merge' vs1 w2
         EQ -> mergeVertices : merge' vs1 vs2
   where
-    Vertex Op{opEvent = e1, opRef = tombstone1, opPayload = p1} = v1
-    Vertex Op{opEvent = e2, opRef = tombstone2, opPayload = p2} = v2
+    Op{opEvent = e1, opRef = tombstone1, opPayload = p1} = v1
+    Op{opEvent = e2, opRef = tombstone2, opPayload = p2} = v2
 
     -- priority of deletion
-    mergeVertices = Vertex Op
+    mergeVertices = Op
         { opEvent   = e1
         , opRef     = max tombstone1 tombstone2
         , opPayload = maxOn length p1 p2
