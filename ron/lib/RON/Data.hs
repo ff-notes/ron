@@ -67,7 +67,8 @@ reduceWireFrame chunks = values' ++ queries where
 
 reduceWireFrameByType :: (UUID, UUID) -> NonEmpty WireChunk -> [WireChunk]
 reduceWireFrameByType (typ, obj) = case reducers !? typ of
-    Nothing                   -> toList  -- TODO use default reducer
+    Nothing ->
+        toList  -- TODO(2018-11-08, cblp, #27) use default reducer
     Just Reducer{wireReducer} -> wireReducer obj
 
 isQuery :: WireChunk -> Bool

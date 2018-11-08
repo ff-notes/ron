@@ -272,7 +272,7 @@ mkCalendarDateTimeNano
                                 -- nanosecond
     -> Maybe CalendarTime
 mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
-    -- TODO(2018-08-19, cblp) check bounds
+    -- TODO(2018-08-19, cblp, #24) validate bounds
     pure CalendarTime
         { months          = ls12 $ (y - 2010) * 12 + m - 1
         , days            = ls6  $ d - 1

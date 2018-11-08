@@ -92,13 +92,13 @@ prop_binary_roundtrip_string =
         RB.parseString
 
 prop_binary_roundtrip_atom =
-    -- TODO increase limits
+    -- TODO(2018-11-08, cblp, #4) increase limits
     binaryRoundtrip (Gen.atom 1000) RB.serializeAtom RB.parseAtom
 
--- TODO(cblp, 2018-10-02) fix and enable
+-- TODO(2018-10-02, cblp, #23) fix and enable
 -- prop_binary_roundtrip_frame =
---     -- TODO increase limits
---     binaryRoundtrip (Gen.frame 10) RB.serialize RB.parse
+--     -- TODO(2018-11-08, cblp, #4) increase limits
+--     binaryRoundtrip (Gen.wireFrame 10) RB.serialize RB.parse
 
 textRoundtrip
     :: (Show a, Show b, Applicative f, Eq (f a), Show (f a), Monad m)
@@ -129,19 +129,19 @@ prop_text_roundtrip_atom =
     property $ textRoundtrip (Gen.atom 10000) RT.serializeAtom RT.parseAtom
 
 prop_text_roundtrip_op =
-    -- TODO increase limits
+    -- TODO(2018-11-08, cblp, #4) increase limits
     property $ textRoundtrip (Gen.rawOp 100) RT.serializeRawOp RT.parseOp
 
 prop_text_roundtrip_wireFrame = property $
-    -- TODO increase limits
+    -- TODO(2018-11-08, cblp, #4) increase limits
     textRoundtrip (Gen.wireFrame 10) RT.serializeWireFrame RT.parseWireFrame
 
 prop_text_roundtrip_stateFrame = property $
-    -- TODO increase limits
+    -- TODO(2018-11-08, cblp, #4) increase limits
     textRoundtrip (Gen.stateFrame 10) RT.serializeStateFrame RT.parseStateFrame
 
 prop_text_roundtrip_frames = property $
-    -- TODO increase limits
+    -- TODO(2018-11-08, cblp, #4) increase limits
     textRoundtrip (Gen.wireFrames 10) RT.serializeWireFrames RT.parseWireFrames
 
 prop_filename_roundtrip = property $ do

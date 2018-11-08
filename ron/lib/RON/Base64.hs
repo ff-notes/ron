@@ -36,7 +36,7 @@ alphabet :: ByteString
 alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 
 -- | Check if a character is in the Base64 alphabet.
--- TODO use approach from 'isUpperHexDigit'
+-- TODO(2018-11-08, cblp, #25) use approach from 'isUpperHexDigit'
 isLetter :: Char -> Bool
 isLetter c = isAlphaNum c || c == '_' || c == '~'
 

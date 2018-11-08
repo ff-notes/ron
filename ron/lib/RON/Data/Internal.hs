@@ -31,7 +31,7 @@ data Reducer = Reducer
 -- | Unapplied patches and raw ops
 type Unapplied = ([ReducedChunk], [Op])
 
--- TODO(2018-08-24, cblp) Semilattice a?
+-- TODO(2018-08-24, cblp, #26) Semilattice a?
 -- | Untyped-reducible types.
 -- Untyped means if this type is a container then the types of data contained in
 -- it is not considered.
