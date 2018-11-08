@@ -3,10 +3,12 @@ cabal-version:  2.2
 name:           ron
 version:        0.1
 
+bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
 copyright:      2018 Yuriy Syrovetskiy
 description:    Replicated Object Notation (RON), data types (RDT),
                 and RON-Schema
+homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
 maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
 synopsis:       RON, RON-RDT, and RON-Schema
