@@ -83,10 +83,10 @@ unzipped UuidFields{..} = x' <> y'
         B0000 -> ""
         _     -> BS.singleton (Base64.encodeLetter4 uuidVariety) <> "/"
     x' = variety <> Base64.encode60short uuidValue
-    y' = case (uuidScheme, uuidOrigin) of
+    y' = case (uuidVersion, uuidOrigin) of
         (B00, safeCast -> 0 :: Word64) -> ""
         _ ->
-            serializeScheme uuidScheme
+            serializeVersion uuidVersion
             `BSC.cons` Base64.encode60short uuidOrigin
 
 zipUuid :: UuidFields -> UuidFields -> Maybe ByteString
@@ -116,8 +116,8 @@ zipPrefix prev this
         0 -> ""
         w -> Base64.encode60short $ ls60 w
 
-serializeScheme :: Word2 -> Char
-serializeScheme = \case
+serializeVersion :: Word2 -> Char
+serializeVersion = \case
     B00 -> '$'
     B01 -> '%'
     B10 -> '+'

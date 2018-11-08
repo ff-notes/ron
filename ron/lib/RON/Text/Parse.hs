@@ -183,9 +183,9 @@ uuid11 = label "UUID-RON-11-letter-value" $ do
     guard $ BS.length rawX == 11
     x <- Base64.decode64 rawX ?? fail "Base64.decode64"
     skipSpace
-    rawScheme <- optional pScheme
-    rawOrigin <- optional $ base64word $ maybe 11 (const 10) rawScheme
-    y <- case (rawScheme, BS.length <$> rawOrigin) of
+    rawUuidVersion <- optional pUuidVersion
+    rawOrigin <- optional $ base64word $ maybe 11 (const 10) rawUuidVersion
+    y <- case (rawUuidVersion, BS.length <$> rawOrigin) of
         (Nothing, Just 11) ->
             case rawOrigin of
                 Nothing     -> pure 0
@@ -194,7 +194,7 @@ uuid11 = label "UUID-RON-11-letter-value" $ do
             origin <- case rawOrigin of
                 Nothing     -> pure $ ls60 0
                 Just origin -> Base64.decode60 origin ?? fail "Base64.decode60"
-            pure $ UUID.buildY b00 (fromMaybe b00 rawScheme) origin
+            pure $ UUID.buildY b00 (fromMaybe b00 rawUuidVersion) origin
     pure $ UUID x y
 
 data UuidZipBase = PrevOpSameKey | SameOpPrevUuid
@@ -206,7 +206,7 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
     rawReuseValue <- optional pReuse
     rawValue <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseValue
     skipSpace
-    rawScheme <- optional pScheme
+    rawUuidVersion <- optional pUuidVersion
     rawReuseOrigin <- optional pReuse
     rawOrigin <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseOrigin
 
@@ -216,7 +216,7 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
             ||  (   not changeZipBase
                 &&  isNothing rawReuseValue && isJust rawValue
                 &&  isNothing rawReuseOrigin
-                &&  (isNothing rawScheme || isJust rawOrigin)
+                &&  (isNothing rawUuidVersion || isJust rawOrigin)
                 )
 
     if isSimple then
@@ -224,14 +224,14 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
             { uuidVariety = fromMaybe b0000    rawVariety
             , uuidValue   = fromMaybe (ls60 0) rawValue
             , uuidVariant = b00
-            , uuidScheme  = fromMaybe b00      rawScheme
+            , uuidVersion = fromMaybe b00      rawUuidVersion
             , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
             }
     else do
         uuidVariety <- pure $ fromMaybe (uuidVariety prev) rawVariety
         uuidValue <- pure $ reuse rawReuseValue rawValue (uuidValue prev)
         let uuidVariant = b00
-        uuidScheme <- pure $ fromMaybe (uuidScheme prev) rawScheme
+        uuidVersion <- pure $ fromMaybe (uuidVersion prev) rawUuidVersion
         uuidOrigin <-
             pure $ reuse rawReuseOrigin rawOrigin (uuidOrigin prev)
         pure $ UUID.build UuidFields{..}
@@ -293,14 +293,14 @@ pVariety = label "variety" $ do
     letter <- satisfy isUpperHexDigit <* "/"
     Base64.decodeLetter4 letter ?? fail "Base64.decodeLetter4"
 
-pScheme :: Parser Word2
-pScheme = label "scheme" $
+pUuidVersion :: Parser Word2
+pUuidVersion = label "UUID-version" $
     anyChar >>= \case
         '$' -> pure b00
         '%' -> pure b01
         '+' -> pure b10
         '-' -> pure b11
-        _   -> fail "not a scheme"
+        _   -> fail "not a UUID-version"
 
 payload :: UUID -> Parser [Atom]
 payload = label "payload" . go

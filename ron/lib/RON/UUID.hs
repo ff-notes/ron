@@ -67,11 +67,11 @@ instance Show UUID where
             B0000 -> ""
             _     -> chr (fromIntegral $ Base64.encodeLetter4 uuidVariety) : "/"
         x' = variety <> BSC.unpack (Base64.encode60short uuidValue)
-        y' = case (uuidScheme, uuidOrigin) of
+        y' = case (uuidVersion, uuidOrigin) of
             (B00, safeCast -> 0 :: Word64) -> ""
-            _ -> scheme : BSC.unpack (Base64.encode60short uuidOrigin)
+            _ -> version : BSC.unpack (Base64.encode60short uuidOrigin)
         generic = BSC.unpack $ Base64.encode64 x <> Base64.encode64 y
-        scheme = case uuidScheme of
+        version = case uuidVersion of
             B00 -> '$'
             B01 -> '%'
             B10 -> '+'
@@ -82,7 +82,7 @@ data UuidFields = UuidFields
     { uuidVariety :: !Word4
     , uuidValue   :: !Word60
     , uuidVariant :: !Word2
-    , uuidScheme  :: !Word2
+    , uuidVersion :: !Word2
     , uuidOrigin  :: !Word60
     }
     deriving (Eq, Show)
@@ -93,7 +93,7 @@ split (UUID x y) = UuidFields
     { uuidVariety = leastSignificant4 $ x `shiftR` 60
     , uuidValue   = leastSignificant60  x
     , uuidVariant = leastSignificant2 $ y `shiftR` 62
-    , uuidScheme  = leastSignificant2 $ y `shiftR` 60
+    , uuidVersion = leastSignificant2 $ y `shiftR` 60
     , uuidOrigin  = leastSignificant60  y
     }
 
@@ -101,7 +101,7 @@ split (UUID x y) = UuidFields
 build :: UuidFields -> UUID
 build UuidFields{..} = UUID
     (buildX uuidVariety uuidValue)
-    (buildY uuidVariant uuidScheme uuidOrigin)
+    (buildY uuidVariant uuidVersion uuidOrigin)
 
 -- | Build former 64 bits of UUID from parts
 buildX :: Word4 -> Word60 -> Word64
@@ -110,9 +110,9 @@ buildX uuidVariety uuidValue =
 
 -- | Build latter 64 bits of UUID from parts
 buildY :: Word2 -> Word2 -> Word60 -> Word64
-buildY uuidVariant uuidScheme uuidOrigin
+buildY uuidVariant uuidVersion uuidOrigin
     =   (safeCast uuidVariant `shiftL` 62)
-    .|. (safeCast uuidScheme  `shiftL` 60)
+    .|. (safeCast uuidVersion `shiftL` 60)
     .|.  safeCast uuidOrigin
 
 -- | Make an unscoped (unqualified) name
@@ -133,7 +133,7 @@ mkScopedName scope nam = do
         { uuidVariety = B0000
         , uuidValue   = scope'
         , uuidVariant = B00
-        , uuidScheme  = B00
+        , uuidVersion = B00
         , uuidOrigin  = nam'
         }
 
@@ -143,7 +143,7 @@ getName
     -> Maybe (ByteString, ByteString)
         -- ^ @(scope, name)@ for a scoped name; @(name, "")@ for a global name
 getName uuid = case split uuid of
-    UuidFields{uuidVariety = B0000, uuidVariant = B00, uuidScheme = B00, ..} ->
+    UuidFields{uuidVariety = B0000, uuidVariant = B00, uuidVersion = B00, ..} ->
         Just (x, y)
       where
         x = Base64.encode60short uuidValue

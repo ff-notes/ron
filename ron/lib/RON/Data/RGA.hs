@@ -37,7 +37,7 @@ import           RON.Data.Internal
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Internal.Word (pattern B11)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
-import           RON.UUID (pattern Zero, uuidScheme)
+import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
 
 -- | opEvent = vertex id
@@ -149,7 +149,7 @@ patchSetFromRawOp op@Op{opEvent, opRef, opPayload} = case opPayload of
 
 patchSetFromChunk :: ReducedChunk -> PatchSet
 patchSetFromChunk ReducedChunk{rcRef, rcBody} =
-    case uuidScheme $ UUID.split rcRef of
+    case uuidVersion $ UUID.split rcRef of
         B11 ->
             -- derived event -- rm-patch compatibility
             foldMap patchSetFromRawOp rcBody

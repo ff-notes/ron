@@ -41,8 +41,8 @@ import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
                                     leastSignificant24, leastSignificant4,
                                     leastSignificant6, ls12, ls24, ls6, ls60,
                                     safeCast)
-import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin,
-                           uuidScheme, uuidValue, uuidVariant, uuidVariety)
+import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin, uuidValue,
+                           uuidVariant, uuidVariety, uuidVersion)
 import qualified RON.UUID as UUID
 
 -- | Calendar format. See https://github.com/gritzko/ron/issues/19.
@@ -222,7 +222,7 @@ encodeEvent (Event time replicaId) = UUID.build UuidFields
     { uuidVariety
     , uuidValue
     , uuidVariant = B00
-    , uuidScheme  = B10
+    , uuidVersion = B10
     , uuidOrigin
     }
   where

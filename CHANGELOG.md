@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Renamed UUID field "schema" to "version", according to changes in the
+  specification.
 
 ## [0.1] - 2018-11-08
 ### Added
