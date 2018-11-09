@@ -17,6 +17,7 @@ module RON.Schema
     , TOpaque (..)
     , atomInteger
     , atomString
+    , boole
     , char
     , def
     , field
@@ -119,3 +120,6 @@ orSet = TObject . TORSet
 
 versionVector :: RonType
 versionVector = TObject TVersionVector
+
+boole :: RonType
+boole = opaqueAtoms def{oaHaskellType = Just "Bool"}

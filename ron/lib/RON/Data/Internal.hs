@@ -220,10 +220,10 @@ eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
 eqPayload a atoms = toPayload a == atoms
 
 pattern None :: Atom
-pattern None = AUuid (UUID 0xcb3ca9000000000 0)
+pattern None = AUuid (UUID 0xcb3ca9000000000 0)  -- none
 
 pattern Some :: Atom
-pattern Some = AUuid (UUID 0xdf3c69000000000 0)
+pattern Some = AUuid (UUID 0xdf3c69000000000 0)  -- some
 
 instance Replicated a => Replicated (Maybe a) where
     encoding = Encoding
@@ -244,3 +244,21 @@ instance ReplicatedAsPayload a => ReplicatedAsPayload (Maybe a) where
         Some : atoms -> Just <$> fromPayload atoms
         [None]       -> pure Nothing
         _            -> Left "Bad Option"
+
+pattern ATrue :: Atom
+pattern ATrue  = AUuid (UUID 0xe36e69000000000 0)
+
+pattern AFalse :: Atom
+pattern AFalse = AUuid (UUID 0xaa5c37a40000000 0)
+
+instance Replicated Bool where encoding = payloadEncoding
+
+instance ReplicatedAsPayload Bool where
+    toPayload b
+        | b         = [ATrue]
+        | otherwise = [AFalse]
+
+    fromPayload = \case
+        [ATrue]  -> pure True
+        [AFalse] -> pure False
+        _        -> fail "Expected single UUID"
