@@ -6,6 +6,11 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Schema:
+  - boole type
+- RON.Storage and submodules are moved from ff project.
+
 ### Changed
 - Renamed UUID field "schema" to "version", according to changes in the
   specification.

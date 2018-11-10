@@ -32,10 +32,13 @@ library
         data-default,
         deepseq,
         Diff,
+        directory,
         errors,
         extra,
+        filepath,
         hashable,
         mtl,
+        network-info,
         safe,
         stringsearch,
         template-haskell,
@@ -63,6 +66,9 @@ library
         RON.Internal.Word
         RON.Schema
         RON.Schema.TH
+        RON.Storage
+        RON.Storage.IO
+        RON.Storage.Test
         RON.Text
         RON.Text.Parse
         RON.Text.Serialize
