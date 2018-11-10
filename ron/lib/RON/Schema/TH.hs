@@ -4,9 +4,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module RON.Schema.TH
-    ( mkReplicated
-    ) where
+module RON.Schema.TH(
+    module X,
+    mkReplicated,
+) where
 
 import           Prelude hiding (read)
 import           RON.Internal.Prelude
@@ -32,11 +33,7 @@ import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
 import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Event (ReplicaClock)
-import           RON.Schema (Declaration (..), Field (..),
-                             FieldAnnotations (..), OpaqueAnnotations (..),
-                             RonType (..), Schema, StructAnnotations (..),
-                             StructLww (..), TAtom (..), TComposite (..),
-                             TObject (..), TOpaque (..))
+import           RON.Schema as X
 import           RON.Types (Object (..), UUID)
 import qualified RON.UUID as UUID
 
@@ -85,14 +82,11 @@ data Field' = Field'
 
 mkReplicatedStructLww :: StructLww -> TH.DecsQ
 mkReplicatedStructLww struct = do
-    fields <- for (Map.assocs structFields) $ \(field'Name, field) -> let
-        Field{fieldType} = field
-        field'Type = fieldType
-        in
+    fields <- for (Map.assocs structFields) $ \(field'Name, Field{fieldType}) ->
         case UUID.mkName . BSC.pack $ Text.unpack field'Name of
             Just field'RonName -> do
                 field'Var <- TH.newName $ Text.unpack field'Name
-                pure Field'{..}
+                pure Field'{field'Type = fieldType, ..}
             Nothing -> fail $
                 "Field name is not representable in RON: " ++ show field'Name
     dataType <- mkDataType
