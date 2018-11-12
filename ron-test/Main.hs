@@ -8,6 +8,7 @@ import           RON.Internal.Prelude
 
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (evalStateT, get)
+import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import           Data.Char (toLower, toUpper)
@@ -293,6 +294,10 @@ prop_RGA_delete_deleted = let
             , ["@)9", ":0", "'p'"]
             , ["."]
             ]
+
+prop_base64_isLetter = property $ do
+        c <- forAll $ Gen.word8 Range.constantBounded
+        (c `BS.elem` Base64.alphabet) === Base64.isLetter c
 
 data ShowAs a = ShowAs a String
 

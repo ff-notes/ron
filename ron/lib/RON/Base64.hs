@@ -4,7 +4,8 @@
 
 -- | RON version of Base64 encoding
 module RON.Base64
-    ( decode
+    ( alphabet
+    , decode
     , decode60
     , decode60base32
     , decode64
@@ -26,19 +27,24 @@ import           RON.Internal.Prelude
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Char (isAlphaNum, ord)
+import           Data.Char (ord)
 
 import           RON.Internal.Word (Word4, Word6 (W6), Word60,
                                     leastSignificant4, leastSignificant6,
                                     leastSignificant60, safeCast)
 
+-- | Base64 alphabet
 alphabet :: ByteString
 alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 
 -- | Check if a character is in the Base64 alphabet.
--- TODO(2018-11-08, cblp, #25) use approach from 'isUpperHexDigit'
-isLetter :: Char -> Bool
-isLetter c = isAlphaNum c || c == '_' || c == '~'
+isLetter :: Word8 -> Bool
+isLetter c
+    =  c - ord0 <= 9
+    || c - ordA <= 25
+    || c - orda <= 25
+    || c == ord_
+    || c == ordõ
 
 -- | Convert a Base64 letter to a number [0-63]
 decodeLetter :: Word8 -> Maybe Word6
