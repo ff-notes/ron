@@ -294,6 +294,12 @@ prop_RGA_delete_deleted = let
             , ["."]
             ]
 
+prop_base64_isLetter =
+    let alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~" :: String
+    in property $ do
+        c <- forAll Gen.unicodeAll
+        (c `elem` alphabet) === Base64.isLetter c
+
 data ShowAs a = ShowAs a String
 
 instance Show (ShowAs a) where
