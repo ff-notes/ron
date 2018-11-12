@@ -26,9 +26,9 @@ import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
                                    label, manyTill, parseOnlyL, satisfy, (<+>),
                                    (??))
 import qualified Data.Aeson as Json
+import           Data.Attoparsec.ByteString (takeWhile1)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
-                                                   signed, skipSpace, takeWhile,
-                                                   takeWhile1)
+                                                   signed, skipSpace, takeWhile)
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
