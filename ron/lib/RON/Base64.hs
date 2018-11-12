@@ -39,11 +39,12 @@ alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 
 -- | Check if a character is in the Base64 alphabet.
 isLetter :: Word8 -> Bool
-isLetter c =    c - ord0 <= 9
-             || c - ordA <= 25
-             || c - orda <= 25
-             || c == ord_
-             || c == ordõ
+isLetter c
+    =  c - ord0 <= 9
+    || c - ordA <= 25
+    || c - orda <= 25
+    || c == ord_
+    || c == ordõ
 
 -- | Convert a Base64 letter to a number [0-63]
 decodeLetter :: Word8 -> Maybe Word6
