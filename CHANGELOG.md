@@ -10,11 +10,13 @@ and this project adheres to
 - Schema:
   - boole type
 - RON.Storage and submodules are moved from ff project.
+- RON.Schema is now re-exported via RON.Schema.TH.
 
 ### Changed
 - Renamed UUID field "schema" to "version", according to changes in the
   specification.
 - RGA: sequential UUIDs on initialization.
+- Optimized `Base64.isLetter`.
 
 ## [0.1] - 2018-11-08
 ### Added
