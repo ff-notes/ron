@@ -29,13 +29,15 @@ import           Data.Algorithm.Diff (Diff (Both, First, Second),
                                       getGroupedDiffBy)
 import           Data.Bifunctor (bimap)
 import qualified Data.HashMap.Strict as HashMap
+import           Data.List (genericLength)
 import qualified Data.Map.Strict as Map
 import           Data.Monoid (Last (..))
 import qualified Data.Text as Text
 
 import           RON.Data.Internal
-import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Internal.Word (pattern B11)
+import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
+                            getEventUuids)
+import           RON.Internal.Word (pattern B11, ls60)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
@@ -316,8 +318,8 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
     objectOpType = rgaType
 
     newObject (RGA items) = collectFrame $ do
-        ops <- for items $ \item -> do
-            vertexId <- lift getEventUuid
+        vertexIds <- lift $ getEventUuids $ ls60 $ genericLength items
+        ops <- for (zip items vertexIds) $ \(item, vertexId) -> do
             payload <- newRon item
             pure $ Op vertexId Zero payload
         oid <- lift getEventUuid

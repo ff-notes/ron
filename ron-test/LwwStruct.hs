@@ -62,28 +62,28 @@ ex1expect = [i|
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/0000000006+r3pl1c4   @`)G            !
-                                    @)7     :int1   =166
-                                    @`      :opt5   >none
-                                    @)G     :opt6   >none
+    *lww    #B/0000000006+r3pl1c4   @`)F            !
+                                    @`      :int1   =166
+                                            :opt5   >none
+                                    @)F     :opt6   >none
                                     @`      :set4   >)1
                                             :str2   >)5
-                                    @)C     :str3   '206'
+                                    @)B     :str3   '206'
 
-            #)E                     @`      :0      !
-                                            :vv5    >)D
+            #)D                     @`      :0      !
+                                            :vv5    >)C
 
-    *rga    #)5                     @)B     :0      !
-                                    @)2     :`)8    '2'
-                                    @)3     :)9     '7'
-                                    @)A     :0      '1'
-                                    @)B             '4'
+    *rga    #)5                     @)A     :0      !
+                                    @)2     :`)7    '2'
+                                    @)3     :)8     '7'
+                                    @)9     :0      '1'
+                                    @)A             '4'
                                     @)4             '5'
 
-    *set    #)1                     @)F             !
-                                    @               >)E
+    *set    #)1                     @)E             !
+                                    @               >)D
 
-    *vv     #)D                     @`              !
+    *vv     #)C                     @`              !
     .
     |]
 

@@ -14,6 +14,7 @@ and this project adheres to
 ### Changed
 - Renamed UUID field "schema" to "version", according to changes in the
   specification.
+- RGA: sequential UUIDs on initialization.
 
 ## [0.1] - 2018-11-08
 ### Added

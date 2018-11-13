@@ -22,11 +22,10 @@ import           Control.Monad.Trans (MonadTrans, lift)
 import           Data.Functor.Identity (Identity)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
-import           Data.Maybe (fromMaybe)
 
 import           RON.Event (EpochEvent (EpochEvent), ReplicaClock, ReplicaId,
                             advance, getEvents, getPid)
-import           RON.Internal.Word (Word60, Word64, ls60, word60add)
+import           RON.Internal.Word (Word60, ls60, word60add)
 
 -- | Lamport clock simulation. Key is 'ReplicaId'.
 -- Non-present value is equivalent to (0, initial).
@@ -52,10 +51,14 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
 
     getEvents n' = ReplicaSim $ do
         rid <- ask
-        t0 <- lift $ preIncreaseTime rid
-        pure [EpochEvent t rid | t <- [t0 .. t0 `word60add` n]]
+        (t0, t1) <-
+            lift $ NetworkSim $ state $ \replicaStates -> let
+                t0 = HM.lookupDefault (ls60 1) rid replicaStates
+                t1 = t0 `word60add` n
+                in ((t0, t1), HM.insert rid t1 replicaStates)
+        pure [EpochEvent t rid | t <- [t0 .. t1]]
       where
-        n = max n' (ls60 (1 :: Word64))
+        n = max n' (ls60 1)
 
     advance time = ReplicaSim $ do
         rid <- ask
@@ -91,9 +94,3 @@ runReplicaSim rid (ReplicaSim action) = runReaderT action rid
 
 runReplicaSimT :: ReplicaId -> ReplicaSimT m a -> NetworkSimT m a
 runReplicaSimT rid (ReplicaSim action) = runReaderT action rid
-
--- | Increase time by rid and return new value
-preIncreaseTime :: Monad m => ReplicaId -> NetworkSimT m Word60
-preIncreaseTime rid = NetworkSim $ state $ \pss ->
-    let time = succ $ fromMaybe (ls60 0) $ HM.lookup rid pss
-    in  (time, HM.insert rid time pss)
