@@ -166,13 +166,11 @@ prop_word64base32_roundtrip = property $
 
 prop_base64_roundtrip = property $ do
     bytes <- forAll $ fromStrict <$> Gen.bytes (Range.exponential 0 1000)
-    let text   = Base64.encode bytes
-    let bytes' = Base64.decode text
-    Just bytes === bytes'
+    tripping bytes Base64.encode Base64.decode
 
 prop_word60base64_roundtrip = property $ do
     w <- forAll Gen.word60
-    Base64.decode60 (Base64.encode60 w) === Just w
+    tripping w Base64.encode60 Base64.decode60
 
 prop_long_uuid = property $
     Right (UUID 0xa001083105187209 0x89669e8a6aaecb6e) ===
@@ -209,10 +207,8 @@ evalEitherS = \case
     Right a -> pure a
 
 prop_event_roundtrip = property $ do
-    event  <- forAll Gen.event
-    let uuid   = encodeEvent event
-    let event' = decodeEvent uuid
-    event === event'
+    event <- forAll Gen.event
+    tripping event encodeEvent (Just . decodeEvent)
 
 prop_ron_json_example = let
     input =
