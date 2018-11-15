@@ -17,6 +17,7 @@ and this project adheres to
   specification.
 - RGA: sequential UUIDs on initialization.
 - Optimized `Base64.isLetter`.
+- Extend `UUID.mkName` to accept any monad.
 
 ## [0.1] - 2018-11-08
 ### Added

@@ -117,18 +117,20 @@ buildY uuidVariant uuidVersion uuidOrigin
 
 -- | Make an unscoped (unqualified) name
 mkName
-    :: ByteString  -- ^ name, max 10 Base64 letters
-    -> Maybe UUID
+    :: Monad m
+    => ByteString  -- ^ name, max 10 Base64 letters
+    -> m UUID
 mkName nam = mkScopedName nam ""
 
 -- | Make a scoped (qualified) name
 mkScopedName
-    :: ByteString  -- ^ scope, max 10 Base64 letters
+    :: Monad m
+    => ByteString  -- ^ scope, max 10 Base64 letters
     -> ByteString  -- ^ local name, max 10 Base64 letters
-    -> Maybe UUID
+    -> m UUID
 mkScopedName scope nam = do
-    scope' <- Base64.decode60 scope
-    nam'   <- Base64.decode60 nam
+    scope' <- maybe (fail "Bad scope") pure $ Base64.decode60 scope
+    nam'   <- maybe (fail "Bad name")  pure $ Base64.decode60 nam
     pure $ build UuidFields
         { uuidVariety = B0000
         , uuidValue   = scope'
