@@ -9,8 +9,9 @@ import           RON.Internal.Prelude
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (evalStateT, get)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)
-import qualified Data.ByteString.Lazy.Char8 as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Char (toLower, toUpper)
 import           Data.Foldable (for_)
 import           Data.Maybe (fromJust)
@@ -153,16 +154,16 @@ prop_filename_roundtrip = property $ do
         ]
     textRoundtrip
         Gen.uuid
-        (BSL.pack . caseTransform . UUID.encodeBase32)
+        (BSLC.pack . caseTransform . UUID.encodeBase32)
         (maybe (Left ("Filename decoding error" :: String)) Right .
-            UUID.decodeBase32 . BSL.unpack)
+            UUID.decodeBase32 . BSLC.unpack)
 
 prop_word64base32_roundtrip = property $
     textRoundtrip
         Gen.word64'
         (fromStrict . Base64.encode64base32short)
         (maybe (Left ("Decoding error" :: String)) Right .
-            Base64.decode64base32 . BSL.toStrict)
+            Base64.decode64base32 . BSLC.toStrict)
 
 prop_base64_roundtrip = property $ do
     bytes <- forAll $ fromStrict <$> Gen.bytes (Range.exponential 0 1000)
@@ -182,7 +183,7 @@ prop_uuid_abbreviations = property $ do
     -- parse
     for_ encodings $ \e -> do
         annotateShow e
-        Right aLed === RT.parseUuid (BSL.pack e)
+        Right aLed === RT.parseUuid (BSLC.pack e)
   where
     encodings =
         [ "ALED0000000 00000000000"
@@ -209,6 +210,23 @@ evalEitherS = \case
 prop_event_roundtrip = property $ do
     event <- forAll Gen.event
     tripping event encodeEvent (Just . decodeEvent)
+
+prop_name_roundtip = property $ do
+    name <- forAll genName
+    tripping name UUID.mkName $ \mu -> do
+        u <- mu
+        (n, "") <- UUID.getName u
+        pure $ dropZeroesEnd n
+    scope <- forAll genName
+    tripping (scope, name) (uncurry UUID.mkScopedName) $ \mu -> do
+        u <- mu
+        (s, n) <- UUID.getName u
+        pure (dropZeroesEnd s, dropZeroesEnd n)
+  where
+    genName
+        = fmap (dropZeroesEnd . BS.pack) $ Gen.list (Range.linear 1 10)
+        $ Gen.element $ BS.unpack Base64.alphabet
+    dropZeroesEnd = fst . BSC.spanEnd (== '0')
 
 prop_ron_json_example = let
     input =
@@ -246,7 +264,7 @@ lwwType = fromJust $ UUID.mkName "lww"
 prop_lwwStruct = LwwStruct.prop_lwwStruct
 
 prop_RGA_delete_deleted = let
-    prep = map BSL.words . BSL.lines . RT.serializeStateFrame . objectFrame
+    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
     rga0expect =
         [ ["*rga", "#B/0000000006+000000003f", "@`)5", "!"]
         , ["@)1", "'h'"]

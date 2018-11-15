@@ -114,18 +114,18 @@ decode60 =
     <=< traverse (fmap safeCast . decodeLetter) . BS.unpack
   where
     go :: Int -> [Word8] -> Maybe Word64
-    go n
-        | n > 0 = \case
-            []           -> Just 0
-            [a]          -> Just $ decode4 a 0 0 0
-            [a, b]       -> Just $ decode4 a b 0 0
-            [a, b, c]    -> Just $ decode4 a b c 0
-            a:b:c:d:rest -> do
+    go n = \case
+        []  | n >= 0 -> Just 0
+        [a] | n >= 1 -> Just $ decode4 a 0 0 0
+        [a, b]
+            | n >= 2 -> Just $ decode4 a b 0 0
+        [a, b, c]
+            | n >= 3 -> Just $ decode4 a b c 0
+        (a:b:c:d:rest)
+            | n >= 4 -> do
                 lowerPart <- go (n - 4) rest
                 pure $ decode4 a b c d .|. (lowerPart `shiftR` 24)
-        | otherwise = \case
-            [] -> Just 0
-            _  -> Nothing  -- extra input
+        _ -> Nothing  -- extra input
     decode4 :: Word8 -> Word8 -> Word8 -> Word8 -> Word64
     decode4 a b c d =
         (safeCast a `shiftL` 54) .|.
