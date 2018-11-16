@@ -36,14 +36,14 @@ script:
 
 matrix:
   include:
+    - compiler: GHC 8.4
     - compiler: GHC 8.6
       env: STACK_YAML="ghc-8.6.yaml"
-    - compiler: GHC 8.4
     - name: hlint
       install: $STACK build hlint
       script: $STACK exec -- hlint .
     - name: haddock
-      install: null
+      install: []
       script: $STACK haddock --no-haddock-deps
     - name: weeder
       install: $STACK build weeder
