@@ -19,6 +19,11 @@ and this project adheres to
 - Optimized `Base64.isLetter`.
 - Extend `UUID.mkName` to accept any monad.
 - Renamed `MonadStorage` methods `list...` -> `get...`
+- Renamed `RON.Storage.saveDocument` -> `createDocument`
+
+### Removed
+- `RON.Storage.uuidToFileName` as it has no sense as an abstraction
+- `RON.Storage.IO.runStorageT` with `StorageT`
 
 ## [0.1] - 2018-11-08
 ### Added

@@ -6,13 +6,26 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | A real-world file storage.
+--
+-- Typical usage:
+--
+-- @
+-- import RON.Storage.IO as Storage
+--
+-- main = do
+--     let dataDir = ".\/data\/"
+--     h <- Storage.'newHandle' dataDir
+--     'runStorage' h $ do
+--         obj <- 'newObject' Note{active = True, text = "Write an example"}
+--         'createDocument' obj
+-- @
 module RON.Storage.IO (
     module X,
     Handle,
     Storage,
     newHandle,
     runStorage,
-    runStorageT,
 ) where
 
 import           Control.Exception (catch, throwIO)
@@ -21,7 +34,7 @@ import           Control.Monad.Except (ExceptT (ExceptT), MonadError,
                                        runExceptT, throwError)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (ReaderT (ReaderT), ask, runReaderT)
-import           Control.Monad.Trans (MonadTrans, lift)
+import           Control.Monad.Trans (lift)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.IORef (IORef, newIORef)
@@ -40,29 +53,31 @@ import           System.IO.Error (isDoesNotExistError)
 import           RON.Storage as X
 
 -- | Environment is the dataDir
-newtype StorageT clock a = Storage (ExceptT String (ReaderT FilePath clock) a)
+newtype Storage a = Storage (ExceptT String (ReaderT FilePath EpochClock) a)
     deriving (Applicative, Functor, Monad, MonadError String, MonadIO)
 
-runStorageT :: FilePath -> StorageT m a -> m (Either String a)
-runStorageT dataDir (Storage except) =
-    (`runReaderT` dataDir) $ runExceptT except
+-- | Run a 'Storage' action
+runStorage :: Handle -> Storage a -> IO a
+runStorage Handle{hReplica, hDataDir, hClock} (Storage action) = do
+    res <-
+        runEpochClock hReplica hClock $
+        (`runReaderT` hDataDir) $
+        runExceptT action
+    either fail pure res
 
-instance MonadTrans StorageT where
-    lift = Storage . lift . lift
+instance ReplicaClock Storage where
+    getPid    = Storage . lift $ lift getPid
+    getEvents = Storage . lift . lift . getEvents
+    advance   = Storage . lift . lift . advance
 
-instance ReplicaClock m => ReplicaClock (StorageT m) where
-    getPid    = lift getPid
-    getEvents = lift . getEvents
-    advance   = lift . advance
-
-instance (ReplicaClock m, MonadIO m) => MonadStorage (StorageT m) where
+instance MonadStorage Storage where
     getCollections = Storage $ do
         dataDir <- ask
         liftIO $
             listDirectory dataDir
             >>= filterM (doesDirectoryExist . (dataDir </>))
 
-    getDocuments :: forall doc. Collection doc => StorageT m [DocId doc]
+    getDocuments :: forall doc. Collection doc => Storage [DocId doc]
     getDocuments = map DocId <$> listDirectoryIfExists (collectionName @doc)
 
     getDocumentVersions = listDirectoryIfExists . docDir
@@ -105,14 +120,14 @@ instance (ReplicaClock m, MonadIO m) => MonadStorage (StorageT m) where
         when (newPath /= oldPath) $
             liftIO $ renameDirectory oldPath newPath
 
+-- | Storage handle (uses the “Handle pattern”).
 data Handle = Handle
     { hClock    :: IORef EpochTime
     , hDataDir  :: FilePath
     , hReplica  :: ReplicaId
     }
 
-type Storage = StorageT EpochClock
-
+-- | Create new storage handle
 newHandle :: FilePath -> IO Handle
 newHandle hDataDir = do
     time <- getCurrentEpochTime
@@ -120,12 +135,7 @@ newHandle hDataDir = do
     hReplica <- applicationSpecific <$> getMacAddress
     pure Handle{hDataDir, hClock, hReplica}
 
-runStorage :: Handle -> Storage a -> IO a
-runStorage Handle{hReplica, hDataDir, hClock} action = do
-    res <- runEpochClock hReplica hClock $ runStorageT hDataDir action
-    either fail pure res
-
-listDirectoryIfExists :: MonadIO m => FilePath -> StorageT m [FilePath]
+listDirectoryIfExists :: FilePath -> Storage [FilePath]
 listDirectoryIfExists relpath = Storage $ do
     dataDir <- ask
     let dir = dataDir </> relpath
