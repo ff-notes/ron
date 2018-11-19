@@ -8,6 +8,7 @@ category:       Distributed Systems, Protocol, Database
 copyright:      2018 Yuriy Syrovetskiy
 homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
+license-file:   LICENSE
 maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
 synopsis:       RON, RON-RDT, and RON-Schema
 
