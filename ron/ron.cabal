@@ -6,12 +6,37 @@ version:        0.1
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
 copyright:      2018 Yuriy Syrovetskiy
-description:    Replicated Object Notation (RON), data types (RDT),
-                and RON-Schema
 homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
 maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
 synopsis:       RON, RON-RDT, and RON-Schema
+
+description:
+    Replicated Object Notation (RON), data types (RDT), and RON-Schema
+    .
+    Typical usage:
+    .
+    > import RON.Data
+    > import RON.Schema.TH
+    > import RON.Storage.IO as Storage
+    >
+    > $(let note = StructLww "Note"
+    >           [ ("active", field boole)
+    >           , ("text",   field rgaString) ]
+    >           def{saHaskellDeriving = ["Eq", "Show"]}
+    >   in mkReplicated [DStructLww note])
+    >
+    > instance Collection Note where
+    >     collectionName = "note"
+    >
+    > main :: IO ()
+    > main = do
+    >     let dataDir = "./data/"
+    >     h <- Storage.newHandle dataDir
+    >     runStorage h $ do
+    >         obj <- newObject
+    >             Note{active = True, text = "Выступить на FProg SPb"}
+    >         createDocument obj
 
 build-type:     Simple
 
