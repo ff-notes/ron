@@ -56,16 +56,16 @@ instance ReplicaClock m => ReplicaClock (StorageT m) where
     advance   = lift . advance
 
 instance (ReplicaClock m, MonadIO m) => MonadStorage (StorageT m) where
-    listCollections = Storage $ do
+    getCollections = Storage $ do
         dataDir <- ask
         liftIO $
             listDirectory dataDir
             >>= filterM (doesDirectoryExist . (dataDir </>))
 
-    listDocuments :: forall doc. Collection doc => StorageT m [DocId doc]
-    listDocuments = map DocId <$> listDirectoryIfExists (collectionName @doc)
+    getDocuments :: forall doc. Collection doc => StorageT m [DocId doc]
+    getDocuments = map DocId <$> listDirectoryIfExists (collectionName @doc)
 
-    listVersions = listDirectoryIfExists . docDir
+    getDocumentVersions = listDirectoryIfExists . docDir
 
     saveVersionContent docid version content =
         Storage $ do

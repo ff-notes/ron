@@ -6,6 +6,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | RON File Storage
 module RON.Storage
     ( Collection (..)
     , CollectionName
@@ -55,15 +56,14 @@ class ReplicatedAsObject a => Collection a where
     fallbackParse :: UUID -> ByteString -> Either String (Object a)
     fallbackParse _ _ = Left "no fallback parser implemented"
 
--- | TODO rename list -> getList
 class (ReplicaClock m, MonadError String m) => MonadStorage m where
-    listCollections :: m [CollectionName]
+    getCollections :: m [CollectionName]
 
     -- | Must return @[]@ for non-existent collection
-    listDocuments :: Collection a => m [DocId a]
+    getDocuments :: Collection a => m [DocId a]
 
     -- | Must return @[]@ for non-existent document
-    listVersions :: Collection a => DocId a -> m [DocVersion]
+    getDocumentVersions :: Collection a => DocId a -> m [DocVersion]
 
     -- | Must create collection and document if not exist
     saveVersionContent
@@ -120,7 +120,7 @@ loadDocument docid = loadRetry (3 :: Int)
   where
     loadRetry n
         | n > 0 = do
-            versions0 <- listVersions docid
+            versions0 <- getDocumentVersions docid
             case versions0 of
                 []   -> throwError $ "Empty document " ++ show docid
                 v:vs -> do

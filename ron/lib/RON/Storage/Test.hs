@@ -21,9 +21,9 @@ import           RON.Event.Simulation (ReplicaSim, runNetworkSim, runReplicaSim)
 
 import           RON.Storage (Collection, CollectionName, DocId (DocId),
                               DocVersion, MonadStorage, changeDocId,
-                              collectionName, deleteVersion, listCollections,
-                              listDocuments, listVersions, loadVersionContent,
-                              saveVersionContent)
+                              collectionName, deleteVersion, getCollections,
+                              getDocumentVersions, getDocuments,
+                              loadVersionContent, saveVersionContent)
 
 type ByteStringL = BSL.ByteString
 
@@ -44,14 +44,14 @@ runStorageSim db (StorageSim action) =
     runExceptT $ runStateT action db
 
 instance MonadStorage StorageSim where
-    listCollections = StorageSim $ gets Map.keys
+    getCollections = StorageSim $ gets Map.keys
 
-    listDocuments :: forall a . Collection a => StorageSim [DocId a]
-    listDocuments = StorageSim $ do
+    getDocuments :: forall a . Collection a => StorageSim [DocId a]
+    getDocuments = StorageSim $ do
         db <- get
         pure $ map DocId $ Map.keys $ db !. collectionName @a
 
-    listVersions (DocId doc :: DocId a) = StorageSim $ do
+    getDocumentVersions (DocId doc :: DocId a) = StorageSim $ do
         db <- get
         pure $ Map.keys $ db !. collectionName @a !. doc
 
