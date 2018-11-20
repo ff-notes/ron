@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.2] - 2018-11-20
 ### Added
 - Schema:
   - boole type
@@ -38,5 +40,6 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ff/compare/v0.1...HEAD
+[Unreleased]: https://github.com/ff-notes/ff/compare/v0.2...HEAD
+[0.2]: https://github.com/ff-notes/ff/compare/v0.1...v0.2
 [0.1]: https://github.com/ff-notes/ff/tree/v0.1
