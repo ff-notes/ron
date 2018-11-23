@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Removed
+- `RON.Storage.createVersion` from public API
 
 ## [0.2] - 2018-11-20
 ### Added

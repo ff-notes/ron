@@ -15,7 +15,6 @@ module RON.Storage
     , DocVersion
     , MonadStorage (..)
     , createDocument
-    , createVersion
     , decodeDocId
     , loadDocument
     , modify
