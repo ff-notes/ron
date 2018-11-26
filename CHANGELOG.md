@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Encode/decode EpochTime
+
 ### Removed
 - `RON.Storage.createVersion` from public API
 

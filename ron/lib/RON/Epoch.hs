@@ -1,8 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
 module RON.Epoch (
     EpochClock,
+    decode,
+    encode,
     getCurrentEpochTime,
     localEpochTimeFromUnix,
     runEpochClock,
@@ -12,13 +13,17 @@ module RON.Epoch (
 import           Control.Monad.IO.Class (MonadIO)
 import           Control.Monad.Reader (ReaderT (ReaderT), reader, runReaderT)
 import           Data.IORef (IORef, atomicModifyIORef', newIORef)
-import           Data.Time.Clock.POSIX (getPOSIXTime)
+import           Data.Ratio ((%))
+import           Data.Time (UTCTime)
+import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
+                                        posixSecondsToUTCTime)
 import           Data.Word (Word64)
 
 import           RON.Event (EpochEvent (EpochEvent), EpochTime,
                             LocalTime (TEpoch), ReplicaClock, ReplicaId,
                             advance, getEvents, getPid)
-import           RON.Internal.Word (leastSignificant60, ls60, word60add)
+import           RON.Internal.Word (leastSignificant60, ls60, safeCast,
+                                    word60add)
 
 -- | Real epoch clock.
 -- Uses kind of global variable to ensure strict monotonicity.
@@ -55,20 +60,29 @@ runEpochClockFromCurrentTime replicaId clock = do
 -- | Get current time in 'EpochTime' format (with 100 ns resolution).
 -- Monotonicity is not guaranteed.
 getCurrentEpochTime :: IO EpochTime
-getCurrentEpochTime
-    =   epochTimeFromUnix @Word64
-    .   round
-    .   (* 10000000)
-    <$> getPOSIXTime
+getCurrentEpochTime = encode <$> getPOSIXTime
 
 -- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
-epochTimeFromUnix :: Integral int => int -> EpochTime
-epochTimeFromUnix
-    =   leastSignificant60
-    .   (+ 0x01B21DD213814000)
-        -- the difference between Unix epoch and UUID epoch;
-        -- the constant is taken from RFC 4122
+epochTimeFromUnix :: Word64 -> EpochTime
+epochTimeFromUnix = leastSignificant60 . (+ epochDiff)
+
+-- The difference between Unix epoch and UUID epoch;
+-- the constant is taken from RFC 4122
+epochDiff :: Word64
+epochDiff = 0x01B21DD213814000
 
 -- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
-localEpochTimeFromUnix :: Integral int => int -> LocalTime
+localEpochTimeFromUnix :: Word64 -> LocalTime
 localEpochTimeFromUnix = TEpoch . epochTimeFromUnix
+
+-- | Decode date and time from UUID epoch timestamp
+decode :: EpochTime -> UTCTime
+decode
+    = posixSecondsToUTCTime
+    . realToFrac
+    . (% 10000000)
+    . subtract epochDiff
+    . safeCast
+
+encode :: POSIXTime -> EpochTime
+encode = epochTimeFromUnix . round . (* 10000000)
