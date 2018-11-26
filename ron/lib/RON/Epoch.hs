@@ -34,13 +34,11 @@ instance ReplicaClock EpochClock where
     getEvents n0 = EpochClock $ ReaderT $ \(pid, timeVar) -> do
         let n = max n0 $ ls60 1
         realTime <- getCurrentEpochTime
-        timeRangeStart <- atomicModifyIORef' timeVar $ \timeCur ->
-            let timeRangeStart = max realTime $ succ timeCur
-            in (timeRangeStart `word60add` pred n, timeRangeStart)
-        pure
-            [ EpochEvent t pid
-            | t <- [timeRangeStart .. timeRangeStart `word60add` pred n]
-            ]
+        (begin, end) <- atomicModifyIORef' timeVar $ \timeCur -> let
+            begin = max realTime $ succ timeCur
+            end   = begin `word60add` pred n
+            in (end, (begin, end))
+        pure [EpochEvent t pid | t <- [begin .. end]]
 
 -- | Run 'EpochClock' action with explicit time variable.
 runEpochClock :: ReplicaId -> IORef EpochTime -> EpochClock a -> IO a
