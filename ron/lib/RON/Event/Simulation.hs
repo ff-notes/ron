@@ -23,9 +23,9 @@ import           Data.Functor.Identity (Identity)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 
-import           RON.Event (EpochEvent (EpochEvent), ReplicaClock, ReplicaId,
-                            advance, getEvents, getPid)
-import           RON.Internal.Word (Word60, ls60, word60add)
+import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,
+                            ReplicaId (ReplicaId), advance, getEvents, getPid)
+import           RON.Internal.Word (Word60, ls60, safeCast, word60add)
 
 -- | Lamport clock simulation. Key is 'ReplicaId'.
 -- Non-present value is equivalent to (0, initial).
@@ -53,10 +53,14 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
         rid <- ask
         (t0, t1) <-
             lift $ NetworkSim $ state $ \replicaStates -> let
-                t0 = HM.lookupDefault (ls60 1) rid replicaStates
+                t0orig = HM.lookupDefault (ls60 0) rid replicaStates
+                ReplicaId _ r = rid
+                randomLeap =
+                    ls60 $ (safeCast t0orig + safeCast n + safeCast r) `mod` 41
+                t0 = t0orig `word60add` randomLeap
                 t1 = t0 `word60add` n
                 in ((t0, t1), HM.insert rid t1 replicaStates)
-        pure [EpochEvent t rid | t <- [t0 .. t1]]
+        pure [EpochEvent t rid | t <- [succ t0 .. t1]]
       where
         n = max n' (ls60 1)
 

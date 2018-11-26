@@ -43,47 +43,47 @@ replica = applicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
 ex1expect = [i|
-    *lww    #B/0000000006+r3pl1c4   @`          !
+    *lww    #B/000000000y+r3pl1c4   @`          !
                                         :int1   =275
                                         :opt5   >none
                                         :opt6   >some =74
-                                        :set4   >)1
-                                        :str2   >)5
+                                        :set4   >)3
+                                        :str2   >)T
                                         :str3   '190'
 
-    *rga    #)5                     @)4 :0      !
-                                    @)2         '2'
-                                    @)3         '7'
-                                    @)4         '5'
+    *rga    #)T                     @)D :0      !
+                                    @)B         '2'
+                                    @)C         '7'
+                                    @)D         '5'
 
-    *set    #)1                     @`          !
+    *set    #)3                     @`          !
     .
     |]
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/0000000006+r3pl1c4   @`)F            !
-                                    @`      :int1   =166
-                                            :opt5   >none
-                                    @)F     :opt6   >none
-                                    @`      :set4   >)1
-                                            :str2   >)5
-                                    @)B     :str3   '206'
+    *lww    #B/000000000y+r3pl1c4   @`]4j           !
+                                    @]1K    :int1   =166
+                                    @`      :opt5   >none
+                                    @]4j    :opt6   >none
+                                    @`      :set4   >)3
+                                            :str2   >)T
+                                    @]36    :str3   '206'
 
-            #)D                     @`      :0      !
-                                            :vv5    >)C
+            #]4C                    @`      :0      !
+                                            :vv5    >]3g
 
-    *rga    #)5                     @)A     :0      !
-                                    @)2     :`)7    '2'
-                                    @)3     :)8     '7'
-                                    @)9     :0      '1'
-                                    @)A             '4'
-                                    @)4             '5'
+    *rga    #]0T                    @]2V    :0      !
+                                    @]0B    :`]1P   '2'
+                                    @)C     :)Z     '7'
+                                    @]1s    :0      '1'
+                                    @]2V            '4'
+                                    @]0D            '5'
 
-    *set    #)1                     @)E             !
-                                    @               >)D
+    *set    #)3                     @]4a            !
+                                    @               >]4C
 
-    *vv     #)C                     @`              !
+    *vv     #]3g                    @`              !
     .
     |]
 
