@@ -99,8 +99,7 @@ mkReplicatedStructLww struct = do
 
     StructLww{structName, structFields, structAnnotations} = struct
 
-    StructAnnotations{saHaskellDeriving, saHaskellFieldPrefix} =
-        structAnnotations
+    StructAnnotations{saHaskellFieldPrefix} = structAnnotations
 
     name = mkNameT structName
 
@@ -116,8 +115,7 @@ mkReplicatedStructLww struct = do
                 Map.assocs structFields
             , let viewType = mkViewType fieldType
             ]]
-        [TH.derivClause Nothing . map (conT . mkNameT) $
-            toList saHaskellDeriving]
+        []
 
     mkInstanceReplicated = [d|
         instance Replicated $structT where

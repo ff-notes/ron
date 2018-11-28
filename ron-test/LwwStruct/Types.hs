@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module LwwStruct.Types where
@@ -18,7 +19,12 @@ $(let
         , "str2" -: field rgaString
         , "str3" -: field atomString
         ]
-        def{saHaskellDeriving = ["Eq", "Show"]}
-    example2 = StructLww "Example2" ["vv5" -: field versionVector]
-        def{saHaskellDeriving = ["Eq", "Show"]}
+        def
+    example2 = StructLww "Example2" ["vv5" -: field versionVector] def
     in mkReplicated [DStructLww example1, DStructLww example2])
+
+deriving instance Eq   Example1
+deriving instance Show Example1
+
+deriving instance Eq   Example2
+deriving instance Show Example2
