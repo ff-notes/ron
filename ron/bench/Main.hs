@@ -1,9 +1,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-import           RON.Internal.Prelude
-
 import           Control.DeepSeq (force)
 import           Control.Exception (evaluate)
+import           Control.Monad (void)
 import           Criterion (bench, nf)
 import           Criterion.Main (defaultConfig, defaultMainWith)
 import           Criterion.Types (timeLimit)

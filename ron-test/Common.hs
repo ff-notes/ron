@@ -3,14 +3,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-import           RON.Internal.Prelude
-
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
+import           Data.Function (on)
 import           Data.Generics (gcompare)
-import           Data.List.Extra (dropEnd, isPrefixOf, isSuffixOf)
+import           Data.List.Extra (dropEnd, isPrefixOf, isSuffixOf, sortBy)
 import qualified Data.Map.Merge.Strict as Map
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromJust)
+import           Data.Traversable (for)
 import           Hedgehog (Property, property, (===))
 import           System.Directory (listDirectory)
 import           System.FilePath ((</>))
@@ -21,8 +23,8 @@ import           Test.Tasty.HUnit (assertFailure, testCase)
 import           RON.Data (reduceWireFrame)
 import qualified RON.Text as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (RawOp (..), WireReducedChunk (..), UUID,
-                            WireChunk (Query, Raw, Value))
+import           RON.Types (RawOp (..), UUID, WireChunk (Query, Raw, Value),
+                            WireReducedChunk (..))
 import qualified RON.UUID as UUID
 
 main :: IO ()

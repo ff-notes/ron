@@ -23,11 +23,11 @@ import           Data.Text.Encoding (encodeUtf8)
 import           Data.ZigZag (zzEncode)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
-import           RON.Internal.Word (Word4, b0000, leastSignificant4, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             RawOp (..), UUID (UUID),
                             WireChunk (Query, Raw, Value), WireFrame,
                             WireReducedChunk (..))
+import           RON.Util.Word (Word4, b0000, leastSignificant4, safeCast)
 
 -- | Serialize a frame
 serialize :: WireFrame -> Either String ByteStringL

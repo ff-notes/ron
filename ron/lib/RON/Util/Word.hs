@@ -4,7 +4,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module RON.Internal.Word
+module RON.Util.Word
     (
     -- * Word2
       Word2

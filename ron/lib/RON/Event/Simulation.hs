@@ -25,7 +25,7 @@ import qualified Data.HashMap.Strict as HM
 
 import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,
                             ReplicaId (ReplicaId), advance, getEvents, getPid)
-import           RON.Internal.Word (Word60, ls60, safeCast, word60add)
+import           RON.Util.Word (Word60, ls60, safeCast, word60add)
 
 -- | Lamport clock simulation. Key is 'ReplicaId'.
 -- Non-present value is equivalent to (0, initial).

@@ -4,8 +4,6 @@
 
 module LwwStruct (prop_lwwStruct) where
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (runStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -24,6 +22,8 @@ import           RON.Text (parseObject, serializeObject)
 import           LwwStruct.Types (Example1 (..), Example2 (..), int1_assign,
                                   opt6_assign, opt5_read, opt6_read, str3_read,
                                   str2_zoom, str3_assign, set4_zoom)
+
+type ByteStringL = BSLC.ByteString
 
 --------------------------------------------------------------------------------
 

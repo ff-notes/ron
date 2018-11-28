@@ -21,9 +21,9 @@ import           Data.List (minimumBy)
 import           Data.Ord (comparing)
 
 import qualified RON.Base64 as Base64
-import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
-                                    pattern B10, pattern B11, Word2, Word60,
-                                    ls60, safeCast)
+import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
+                                pattern B10, pattern B11, Word2, Word60, ls60,
+                                safeCast)
 import           RON.UUID (UUID (..), UuidFields (..), split, zero)
 
 -- | Serialize UUID without context (used for test)

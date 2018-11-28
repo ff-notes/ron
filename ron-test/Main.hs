@@ -4,8 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.State.Strict (evalStateT, get)
 import qualified Data.ByteString as BS
@@ -48,6 +46,8 @@ import qualified RON.UUID as UUID
 import qualified Gen
 import           HexDump (hexdump)
 import qualified LwwStruct
+
+type ByteStringL = BSLC.ByteString
 
 main :: IO ()
 main = do

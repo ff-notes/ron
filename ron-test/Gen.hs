@@ -15,12 +15,12 @@ import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
                             ReplicaId (ReplicaId), days, hours, minutes, months,
                             nanosecHundreds, seconds)
-import           RON.Internal.Word (Word60, leastSignificant2,
-                                    leastSignificant4, ls12, ls24, ls6, ls60)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (Op),
                             RawOp (RawOp), StateChunk (StateChunk), StateFrame,
                             UUID, WireChunk (Query, Raw, Value), WireFrame,
                             WireReducedChunk (WireReducedChunk))
+import           RON.Util.Word (Word60, leastSignificant2, leastSignificant4,
+                                ls12, ls24, ls6, ls60)
 import           RON.UUID (UuidFields (UuidFields))
 import qualified RON.UUID as UUID
 

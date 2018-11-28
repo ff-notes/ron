@@ -34,13 +34,13 @@ import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
 
-import           RON.Internal.Word (pattern B00, pattern B01, pattern B10,
-                                    pattern B11, Word12, Word16, Word2, Word24,
-                                    Word32, Word6, Word60, Word64, Word8,
-                                    leastSignificant12, leastSignificant2,
-                                    leastSignificant24, leastSignificant4,
-                                    leastSignificant6, ls12, ls24, ls6, ls60,
-                                    safeCast)
+import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
+                                pattern B11, Word12, Word16, Word2, Word24,
+                                Word32, Word6, Word60, Word64, Word8,
+                                leastSignificant12, leastSignificant2,
+                                leastSignificant24, leastSignificant4,
+                                leastSignificant6, ls12, ls24, ls6, ls60,
+                                safeCast)
 import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin, uuidValue,
                            uuidVariant, uuidVariety, uuidVersion)
 import qualified RON.UUID as UUID

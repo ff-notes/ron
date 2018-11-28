@@ -19,6 +19,7 @@ test-suite common
         tasty-hunit,
         -- project
         ron,
+    default-language: Haskell2010
     main-is: Common.hs
     type: exitcode-stdio-1.0
 

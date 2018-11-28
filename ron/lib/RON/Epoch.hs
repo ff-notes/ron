@@ -22,8 +22,7 @@ import           Data.Word (Word64)
 import           RON.Event (EpochEvent (EpochEvent), EpochTime,
                             LocalTime (TEpoch), ReplicaClock, ReplicaId,
                             advance, getEvents, getPid)
-import           RON.Internal.Word (leastSignificant60, ls60, safeCast,
-                                    word60add)
+import           RON.Util.Word (leastSignificant60, ls60, safeCast, word60add)
 
 -- | Real epoch clock.
 -- Uses kind of global variable to ensure strict monotonicity.

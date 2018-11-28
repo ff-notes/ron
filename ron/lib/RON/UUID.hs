@@ -38,11 +38,10 @@ import           Data.Hashable (Hashable)
 import           GHC.Generics (Generic)
 
 import qualified RON.Base64 as Base64
-import           RON.Internal.Word (pattern B00, pattern B0000, pattern B01,
-                                    pattern B10, pattern B11, Word2, Word4,
-                                    Word60, leastSignificant2,
-                                    leastSignificant4, leastSignificant60,
-                                    safeCast)
+import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
+                                pattern B10, pattern B11, Word2, Word4, Word60,
+                                leastSignificant2, leastSignificant4,
+                                leastSignificant60, safeCast)
 
 -- | Universally unique identifier of anything
 data UUID = UUID

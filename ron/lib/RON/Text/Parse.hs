@@ -37,14 +37,14 @@ import qualified Data.Map.Strict as Map
 import           Data.Text (Text)
 
 import qualified RON.Base64 as Base64
-import           RON.Internal.Word (Word2, Word4, Word60, b00, b0000, b01, b10,
-                                    b11, ls60, safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             Object (..), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
                             RawOp (..), StateChunk (..), StateFrame,
                             UUID (UUID), WireChunk (Query, Raw, Value),
                             WireFrame, WireReducedChunk (..))
+import           RON.Util.Word (Word2, Word4, Word60, b00, b0000, b01, b10, b11,
+                                ls60, safeCast)
 import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
