@@ -8,19 +8,20 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | Typed and untyped RON tools
-module RON.Data
-    ( Reducible (..)
-    , Replicated (..)
-    , ReplicatedAsObject (..)
-    , ReplicatedAsPayload (..)
-    , fromRon
-    , newRon
-    , objectEncoding
-    , payloadEncoding
-    , reduceObject
-    , reduceStateFrame
-    , reduceWireFrame
-    ) where
+module RON.Data (
+    Reducible (..),
+    Replicated (..),
+    ReplicatedAsObject (..),
+    ReplicatedAsPayload (..),
+    fromRon,
+    mkStateChunk,
+    newRon,
+    objectEncoding,
+    payloadEncoding,
+    reduceObject,
+    reduceStateFrame,
+    reduceWireFrame,
+) where
 
 import           RON.Internal.Prelude
 
