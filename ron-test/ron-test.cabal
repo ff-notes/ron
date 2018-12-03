@@ -1,12 +1,16 @@
-cabal-version:  2.1
+cabal-version:  2.2
 
 name:           ron-test
 version:        0
 
+common language
+    build-depends: base
+    default-language: Haskell2010
+
 test-suite common
+    import: language
     build-depends:
         -- global
-        base,
         bytestring,
         containers,
         directory,
@@ -19,14 +23,13 @@ test-suite common
         tasty-hunit,
         -- project
         ron,
-    default-language: Haskell2010
     main-is: Common.hs
     type: exitcode-stdio-1.0
 
 test-suite test
+    import: language
     build-depends:
         -- global
-        base,
         bytestring,
         directory,
         hedgehog,
@@ -45,9 +48,9 @@ test-suite test
     type: exitcode-stdio-1.0
 
 executable words
+    import: language
     build-depends:
         -- global
-        base,
         mtl,
         text,
         text-metrics,
