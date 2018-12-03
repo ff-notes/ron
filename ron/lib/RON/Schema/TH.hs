@@ -16,6 +16,7 @@ import           Control.Error (fmapL)
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (MonadState, StateT)
 import qualified Data.ByteString.Char8 as BSC
+import           Data.Char (toTitle)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT,
@@ -99,7 +100,8 @@ mkReplicatedStructLww struct = do
 
     StructLww{structName, structFields, structAnnotations} = struct
 
-    StructAnnotations{saHaskellFieldPrefix} = structAnnotations
+    StructAnnotations{saHaskellFieldPrefix, saHaskellFieldCaseTransform} =
+        structAnnotations
 
     name = mkNameT structName
 
@@ -165,7 +167,12 @@ mkReplicatedStructLww struct = do
             ]
         consP = conP name [varP field'Var | Field'{field'Var} <- fields]
 
-    mkHaskellFieldName = (saHaskellFieldPrefix <>)
+    mkHaskellFieldName base = saHaskellFieldPrefix <> base' where
+        base' = case saHaskellFieldCaseTransform of
+            Nothing        -> base
+            Just TitleCase -> case Text.uncons base of
+                Nothing            -> base
+                Just (b, baseTail) -> Text.cons (toTitle b) baseTail
 
     mkAccessors field' = do
         a <- varT <$> TH.newName "a"
