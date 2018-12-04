@@ -29,7 +29,6 @@ module RON.UUID
 
 import           RON.Internal.Prelude
 
-import           Control.DeepSeq (NFData)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (chr, toUpper)
@@ -47,7 +46,7 @@ import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
 data UUID = UUID
     {-# UNPACK #-} !Word64
     {-# UNPACK #-} !Word64
-    deriving (Data, Eq, Generic, Hashable, NFData, Ord)
+    deriving (Data, Eq, Generic, Hashable, Ord)
 
 -- | RON-Text-encoding
 instance Show UUID where

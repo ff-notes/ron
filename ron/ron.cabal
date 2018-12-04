@@ -56,7 +56,6 @@ library
         bytestring,
         containers,
         data-default,
-        deepseq,
         Diff,
         directory,
         errors,

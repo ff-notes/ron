@@ -24,7 +24,6 @@ module RON.Types
 
 import           RON.Internal.Prelude
 
-import           Control.DeepSeq (NFData)
 import           Data.Data (Data)
 import           Data.Text (Text)
 import           GHC.Generics (Generic)
@@ -33,7 +32,7 @@ import           RON.UUID (UUID (..))
 
 -- | Atom — a payload element
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
-    deriving (Data, Eq, Generic, Hashable, NFData, Show)
+    deriving (Data, Eq, Generic, Hashable, Show)
 
 -- | Raw op
 data RawOp = RawOp
@@ -44,7 +43,7 @@ data RawOp = RawOp
     , op       :: Op
         -- ^ other keys and payload, that are common with reduced op
     }
-    deriving (Data, Eq, Generic, NFData)
+    deriving (Data, Eq, Generic)
 
 -- | “Reduced” op (op from reduced chunk)
 data Op = Op
@@ -55,7 +54,7 @@ data Op = Op
     , opPayload :: [Atom]
         -- ^ payload
     }
-    deriving (Data, Eq, Generic, Hashable, NFData, Show)
+    deriving (Data, Eq, Generic, Hashable, Show)
 
 instance Show RawOp where
     show RawOp{opType, opObject, op = Op{opEvent, opRef, opPayload}} =
@@ -77,11 +76,11 @@ data WireReducedChunk = WireReducedChunk
     { wrcHeader :: RawOp
     , wrcBody   :: [Op]
     }
-    deriving (Data, Eq, Generic, NFData, Show)
+    deriving (Data, Eq, Generic, Show)
 
 -- | Common chunk
 data WireChunk = Raw RawOp | Value WireReducedChunk | Query WireReducedChunk
-    deriving (Data, Eq, Generic, NFData, Show)
+    deriving (Data, Eq, Generic, Show)
 
 -- | Common frame
 type WireFrame = [WireChunk]

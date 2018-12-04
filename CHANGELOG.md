@@ -11,6 +11,7 @@ and this project adheres to
 
 ### Removed
 - `RON.Storage.createVersion` from public API
+- `NFData` instances
 
 ## [0.2] - 2018-11-20
 ### Added
