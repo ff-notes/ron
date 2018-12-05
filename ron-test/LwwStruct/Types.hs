@@ -53,12 +53,12 @@ instance ReplicatedAsPayload TestOpaque where
         vv5 VersionVector)
 
     (struct_lww Example1
-        int1 AtomInteger
+        int1 Integer
         str2 RgaString
-        str3 AtomString
+        str3 String
         set4 (ORSet Example2)
         opt5 (Option Example2)
-        opt6 (Option AtomInteger))
+        opt6 (Option Integer))
 
     (struct_lww TestFieldPrefix
         #haskell {field_prefix "tfp_"}
@@ -66,7 +66,7 @@ instance ReplicatedAsPayload TestOpaque where
 
     (struct_lww TestFieldPrefixAndTitle
         #haskell {field_prefix "tfpat", field_case title}
-        innerField AtomInteger)
+        innerField Integer)
 |]
 
 deriving instance Eq   Example1

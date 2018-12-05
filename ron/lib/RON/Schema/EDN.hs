@@ -26,6 +26,7 @@ import qualified Data.Text.Lazy as TextL
 import           Data.Text.Lazy.Builder (toLazyText)
 import qualified Data.Text.Lazy.Encoding as TextL
 
+import           RON.Data.Time (day)
 import           RON.Schema
 
 newtype Env = Env {knownTypes :: Map Text RonType}
@@ -34,10 +35,11 @@ newtype Env = Env {knownTypes :: Map Text RonType}
 startEnv :: Env
 startEnv = Env
     { knownTypes = Map.fromList
-        [ ("AtomInteger",   atomInteger)
-        , ("AtomString",    atomString)
-        , ("Boole",         boole)
+        [ ("Boole",         boole)
+        , ("Day",           day)
+        , ("Integer",       atomInteger)
         , ("RgaString",     rgaString)
+        , ("String",        atomString)
         , ("VersionVector", versionVector)
         ]
     }
