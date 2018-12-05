@@ -35,14 +35,17 @@ newtype Env = Env {knownTypes :: Map Text RonType}
 startEnv :: Env
 startEnv = Env
     { knownTypes = Map.fromList
-        [ ("Boole",         boole)
-        , ("Day",           day)
-        , ("Integer",       atomInteger)
-        , ("RgaString",     rgaString)
-        , ("String",        atomString)
-        , ("VersionVector", versionVector)
+        [ ("Boole",        opaqueAtoms "Boole" def{oaHaskellType = Just "Bool"})
+        , ("Day",          day)
+        , ("Integer",      TAtom TAInteger)
+        , ("RgaString",    TObject $ TRga char)
+        , ("String",       TAtom TAString)
+        , ("VersionVector",
+                           TObject TVersionVector)
         ]
     }
+  where
+    char = opaqueAtoms "Char" def{oaHaskellType = Just "Char"}
 
 type Parser' = StateT Env Parser
 
@@ -111,7 +114,7 @@ parseStructLww code = do
         [] -> fail
             "Expected declaration in the form\
             \ (struct_lww <name:symbol> <annotations>... <fields>...)"
-    insertKnownType (structName struct) (structLww struct)
+    insertKnownType (structName struct) (TObject $ TStructLww struct)
     pure struct
 
   where
@@ -181,8 +184,8 @@ applyType func args = parseText "parametric type" func >>= go
   where
 
     go = \case
-        "Option" -> apply "Option" option
-        "ORSet"  -> apply "ORSet" orSet
+        "Option" -> apply "Option" $ TComposite . TOption
+        "ORSet"  -> apply "ORSet"  $ TObject    . TORSet
         name     -> fail $ "unknown parametric type " ++ Text.unpack name
 
     apply name wrapper = case args of

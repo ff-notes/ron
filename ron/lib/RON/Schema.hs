@@ -17,19 +17,9 @@ module RON.Schema (
     TEnum (..),
     TComposite (..),
     TObject (..),
-    atomInteger,
-    atomString,
-    boole,
-    char,
     def,
-    field,
     opaqueAtoms,
     opaqueObject,
-    option,
-    orSet,
-    rgaString,
-    structLww,
-    versionVector,
 ) where
 
 import           RON.Internal.Prelude
@@ -82,9 +72,6 @@ instance Default StructAnnotations where def = StructAnnotations "" Nothing
 data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
     deriving (Show)
 
-field :: RonType -> Field
-field fieldType = Field{fieldType, fieldAnnotations = def}
-
 data FieldAnnotations = FieldAnnotations
     deriving (Show)
 
@@ -98,12 +85,6 @@ type Schema = [Declaration]
 newtype OpaqueAnnotations = OpaqueAnnotations{oaHaskellType :: Maybe Text}
     deriving (Default, Show)
 
-char :: RonType
-char = opaqueAtoms "Char" def{oaHaskellType = Just "Char"}
-
-rgaString :: RonType
-rgaString = TObject $ TRga char
-
 data Opaque = Opaque
     { opaqueIsObject    :: Bool
     , opaqueName        :: Text
@@ -116,24 +97,3 @@ opaqueObject name = TOpaque . Opaque True name
 
 opaqueAtoms :: Text -> OpaqueAnnotations -> RonType
 opaqueAtoms name = TOpaque . Opaque False name
-
-option :: RonType -> RonType
-option = TComposite . TOption
-
-structLww :: StructLww -> RonType
-structLww = TObject . TStructLww
-
-atomString :: RonType
-atomString = TAtom TAString
-
-atomInteger :: RonType
-atomInteger = TAtom TAInteger
-
-orSet :: RonType -> RonType
-orSet = TObject . TORSet
-
-versionVector :: RonType
-versionVector = TObject TVersionVector
-
-boole :: RonType
-boole = opaqueAtoms "Boole" def{oaHaskellType = Just "Bool"}
