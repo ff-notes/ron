@@ -28,4 +28,4 @@ instance ReplicatedAsPayload Day where
 
 -- | RON-Schema type for 'Day'
 day :: RonType
-day = opaqueAtoms def{oaHaskellType = Just "Day"}
+day = opaqueAtoms "Day" def{oaHaskellType = Just "Day"}

@@ -35,9 +35,20 @@ module LwwStruct.Types (
     tfpatInnerField_zoom,
 ) where
 
+import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
+                           fromPayload, payloadEncoding, toPayload)
 import           RON.Schema.TH (mkReplicated)
 
+data TestOpaque = TestOpaque
+    deriving (Eq, Show)
+instance Replicated TestOpaque where encoding = payloadEncoding
+instance ReplicatedAsPayload TestOpaque where
+    toPayload   = undefined
+    fromPayload = undefined
+
 [mkReplicated|
+    (opaque atoms TestOpaque)
+
     (struct_lww Example2
         vv5 VersionVector)
 
@@ -51,7 +62,7 @@ import           RON.Schema.TH (mkReplicated)
 
     (struct_lww TestFieldPrefix
         #haskell {field_prefix "tfp_"}
-        field AtomInteger)
+        field (Option TestOpaque))
 
     (struct_lww TestFieldPrefixAndTitle
         #haskell {field_prefix "tfpat", field_case title}

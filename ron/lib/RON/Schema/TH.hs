@@ -52,6 +52,7 @@ mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
 mkReplicated' :: Schema -> TH.DecsQ
 mkReplicated' = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
+        DOpaque    _ -> pure []
         DStructLww s -> mkReplicatedStructLww s
 
 -- | Type-directing newtype
@@ -243,11 +244,9 @@ mkViewType = \case
         TRga       item                  -> wrapList item
         TStructLww StructLww{structName} -> conT $ mkNameT structName
         TVersionVector                   -> [t| VersionVector |]
-    TOpaque Opaque{opaqueAnnotations} -> let
+    TOpaque Opaque{opaqueName, opaqueAnnotations} -> let
         OpaqueAnnotations{oaHaskellType} = opaqueAnnotations
-        in case oaHaskellType of
-            Just name -> conT $ mkNameT name
-            Nothing   -> fail "Opaque type must define a Haskell type"
+        in conT $ mkNameT $ fromMaybe opaqueName oaHaskellType
   where
     wrapList a = [t| [$(mkViewType a)] |]
 

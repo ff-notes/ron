@@ -51,8 +51,46 @@ parseDeclaration = withNoTag $ withList "declaration" $ \case
     [] -> fail "empty declaration"
   where
     go args = withNoPrefix "declaration name" $ \case
+        "opaque"     -> DOpaque    <$> parseOpaque    args
         "struct_lww" -> DStructLww <$> parseStructLww args
         name         -> fail $ "unknown declaration " ++ decodeUtf8 name
+
+parseOpaque :: EDNList -> Parser' Opaque
+parseOpaque code = do
+    opaque@Opaque{opaqueName} <- case code of
+        kind' : name : annotations -> do
+            kind <- parseKind kind'
+            case kind of
+                "atoms"  -> go False
+                "object" -> go True
+                _        -> fail "opaque kind must be either atoms or object"
+          where
+            go isObject =
+                Opaque isObject <$> parseName name <*> parseAnnotations
+            parseKind =
+                withNoTag $
+                withSymbol "opaque kind symbol" $
+                withNoPrefix "opaque kind" pure
+            parseName =
+                withNoTag $
+                withSymbol "opaque name symbol" $
+                withNoPrefix "opaque name" $
+                pure . Text.decodeUtf8
+            parseAnnotations = case annotations of
+                [] -> pure def
+                _  -> fail "opaque annotations are not implemented yet"
+        _ -> fail
+            "Expected declaration in the form\
+            \ (opaque <kind:symbol> <name:symbol> <annotations>...)"
+    env@Env{knownTypes} <- get
+    case Map.lookup opaqueName knownTypes of
+        Nothing ->
+            put env { knownTypes =
+                        Map.insert opaqueName (TOpaque opaque) knownTypes
+                    }
+        Just _ ->
+            fail $ "duplicate declaration of type " ++ Text.unpack opaqueName
+    pure opaque
 
 parseStructLww :: EDNList -> Parser' StructLww
 parseStructLww code = do
@@ -63,7 +101,7 @@ parseStructLww code = do
                 <$> parseName name
                 <*> parseFields fields
                 <*> parseAnnotations annotations
-        _ -> fail
+        [] -> fail
             "Expected declaration in the form\
             \ (struct_lww <name:symbol> <annotations>... <fields>...)"
     env@Env{knownTypes} <- get
@@ -195,22 +233,12 @@ withNoTag f = \case
         $ "when expecting a non-tagged value, encountered tag "
         ++ decodeUtf8 prefix ++ "/" ++ decodeUtf8 tag ++ " instead"
 
--- withString :: String -> (Text -> Parser a) -> Value -> Parser a
--- withString expected f = \case
---     String string -> f string
---     value         -> typeMismatch expected value
-
 withSymbol
     :: MonadTrans t
     => String -> (ByteString -> ByteString -> t Parser a) -> Value -> t Parser a
 withSymbol expected f = \case
     Symbol prefix symbol -> f prefix symbol
     value                -> lift $ typeMismatch expected value
-
--- withVector :: String -> (EDNVec -> Parser a) -> Value -> Parser a
--- withVector expected f = \case
---     Vec vec -> f vec
---     value   -> typeMismatch expected value
 
 -- * ByteString helpers
 

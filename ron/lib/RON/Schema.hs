@@ -2,34 +2,34 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module RON.Schema
-    ( CaseTransform (..)
-    , Declaration (..)
-    , Field (..)
-    , FieldAnnotations (..)
-    , OpaqueAnnotations (..)
-    , RonType (..)
-    , Schema
-    , StructAnnotations (..)
-    , StructLww (..)
-    , TAtom (..)
-    , TComposite (..)
-    , TObject (..)
-    , TOpaque (..)
-    , atomInteger
-    , atomString
-    , boole
-    , char
-    , def
-    , field
-    , opaqueAtoms
-    , opaqueObject
-    , option
-    , orSet
-    , rgaString
-    , structLww
-    , versionVector
-    ) where
+module RON.Schema (
+    CaseTransform (..),
+    Declaration (..),
+    Field (..),
+    FieldAnnotations (..),
+    Opaque (..),
+    OpaqueAnnotations (..),
+    RonType (..),
+    Schema,
+    StructAnnotations (..),
+    StructLww (..),
+    TAtom (..),
+    TComposite (..),
+    TObject (..),
+    atomInteger,
+    atomString,
+    boole,
+    char,
+    def,
+    field,
+    opaqueAtoms,
+    opaqueObject,
+    option,
+    orSet,
+    rgaString,
+    structLww,
+    versionVector,
+) where
 
 import           RON.Internal.Prelude
 
@@ -42,7 +42,7 @@ data RonType
     = TAtom      TAtom
     | TComposite TComposite
     | TObject    TObject
-    | TOpaque    TOpaque
+    | TOpaque    Opaque
     deriving (Show)
 
 newtype TComposite
@@ -86,7 +86,7 @@ data FieldAnnotations = FieldAnnotations
 instance Default FieldAnnotations where
     def = FieldAnnotations
 
-newtype Declaration = DStructLww StructLww
+data Declaration = DOpaque Opaque | DStructLww StructLww
 
 type Schema = [Declaration]
 
@@ -94,20 +94,23 @@ newtype OpaqueAnnotations = OpaqueAnnotations{oaHaskellType :: Maybe Text}
     deriving (Default, Show)
 
 char :: RonType
-char = opaqueAtoms def{oaHaskellType = Just "Char"}
+char = opaqueAtoms "Char" def{oaHaskellType = Just "Char"}
 
 rgaString :: RonType
 rgaString = TObject $ TRga char
 
-data TOpaque =
-    Opaque{opaqueIsObject :: Bool, opaqueAnnotations :: OpaqueAnnotations}
+data Opaque = Opaque
+    { opaqueIsObject    :: Bool
+    , opaqueName        :: Text
+    , opaqueAnnotations :: OpaqueAnnotations
+    }
     deriving (Show)
 
-opaqueObject :: OpaqueAnnotations -> RonType
-opaqueObject = TOpaque . Opaque True
+opaqueObject :: Text -> OpaqueAnnotations -> RonType
+opaqueObject name = TOpaque . Opaque True name
 
-opaqueAtoms :: OpaqueAnnotations -> RonType
-opaqueAtoms = TOpaque . Opaque False
+opaqueAtoms :: Text -> OpaqueAnnotations -> RonType
+opaqueAtoms name = TOpaque . Opaque False name
 
 option :: RonType -> RonType
 option = TComposite . TOption
@@ -128,4 +131,4 @@ versionVector :: RonType
 versionVector = TObject TVersionVector
 
 boole :: RonType
-boole = opaqueAtoms def{oaHaskellType = Just "Bool"}
+boole = opaqueAtoms "Boole" def{oaHaskellType = Just "Bool"}
