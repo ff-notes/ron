@@ -36,6 +36,7 @@ startEnv = Env
     { knownTypes = Map.fromList
         [ ("AtomInteger",   atomInteger)
         , ("AtomString",    atomString)
+        , ("Boole",         boole)
         , ("RgaString",     rgaString)
         , ("VersionVector", versionVector)
         ]

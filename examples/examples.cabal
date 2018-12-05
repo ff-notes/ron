@@ -1,0 +1,10 @@
+cabal-version: 2.2
+
+name: examples
+version: 0
+build-type: Simple
+
+executable TypicalUsage
+    build-depends: base, ron
+    default-language: Haskell2010
+    main-is: TypicalUsage.lhs

@@ -21,11 +21,11 @@ description:
     > import RON.Schema.TH
     > import RON.Storage.IO as Storage
     >
-    > $(let note = StructLww "Note"
-    >           [ ("active", field boole)
-    >           , ("text",   field rgaString) ]
-    >           def{saHaskellDeriving = ["Eq", "Show"]}
-    >   in mkReplicated [DStructLww note])
+    > [mkReplicated|
+    >     (struct_lww Note
+    >         active Boole
+    >         text RgaString)
+    > |]
     >
     > instance Collection Note where
     >     collectionName = "note"
@@ -36,7 +36,7 @@ description:
     >     h <- Storage.newHandle dataDir
     >     runStorage h $ do
     >         obj <- newObject
-    >             Note{active = True, text = "Выступить на FProg SPb"}
+    >             Note{active = True, text = "Write a task manager"}
     >         createDocument obj
 
 build-type:     Simple
