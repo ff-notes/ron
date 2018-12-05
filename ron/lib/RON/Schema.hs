@@ -1,12 +1,9 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module RON.Schema (
     CaseTransform (..),
     Declaration (..),
     Field (..),
-    FieldAnnotations (..),
     Opaque (..),
     OpaqueAnnotations (..),
     RonType (..),
@@ -17,6 +14,8 @@ module RON.Schema (
     TEnum (..),
     TComposite (..),
     TObject (..),
+    defaultOpaqueAnnotations,
+    defaultStructAnnotations,
     opaqueAtoms,
     opaqueAtoms_,
     opaqueObject,
@@ -24,7 +23,7 @@ module RON.Schema (
 
 import           RON.Internal.Prelude
 
-import           Data.Default (Default, def)
+import qualified Data.Text as Text
 
 data TAtom = TAInteger | TAString
     deriving (Show)
@@ -64,26 +63,25 @@ data StructAnnotations = StructAnnotations
     }
     deriving (Show)
 
+defaultStructAnnotations :: StructAnnotations
+defaultStructAnnotations = StructAnnotations
+    {saHaskellFieldPrefix = Text.empty, saHaskellFieldCaseTransform = Nothing}
+
 data CaseTransform = TitleCase
     deriving (Show)
 
-instance Default StructAnnotations where def = StructAnnotations "" Nothing
-
-data Field = Field{fieldType :: RonType, fieldAnnotations :: FieldAnnotations}
+newtype Field = Field{fieldType :: RonType}
     deriving (Show)
-
-data FieldAnnotations = FieldAnnotations
-    deriving (Show)
-
-instance Default FieldAnnotations where
-    def = FieldAnnotations
 
 data Declaration = DEnum TEnum | DOpaque Opaque | DStructLww StructLww
 
 type Schema = [Declaration]
 
 newtype OpaqueAnnotations = OpaqueAnnotations{oaHaskellType :: Maybe Text}
-    deriving (Default, Show)
+    deriving (Show)
+
+defaultOpaqueAnnotations :: OpaqueAnnotations
+defaultOpaqueAnnotations = OpaqueAnnotations{oaHaskellType = Nothing}
 
 data Opaque = Opaque
     { opaqueIsObject    :: Bool
@@ -99,4 +97,4 @@ opaqueAtoms :: Text -> OpaqueAnnotations -> RonType
 opaqueAtoms name = TOpaque . Opaque False name
 
 opaqueAtoms_ :: Text -> RonType
-opaqueAtoms_ name = TOpaque $ Opaque False name def
+opaqueAtoms_ name = TOpaque $ Opaque False name defaultOpaqueAnnotations

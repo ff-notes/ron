@@ -13,7 +13,6 @@ import           Data.Attoparsec.Lazy (Result (Done))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Char (isSpace)
-import           Data.Default (def)
 import           Data.EDN (Tagged (NoTag, Tagged), Value (List, Map, Symbol),
                            (.!=), (.:?))
 import           Data.EDN.Encode (fromTagged)
@@ -36,17 +35,17 @@ newtype Env = Env {knownTypes :: Map Text RonType}
 startEnv :: Env
 startEnv = Env
     { knownTypes = Map.fromList
-        [ ("Boole",        opaqueAtoms "Boole" def{oaHaskellType = Just "Bool"})
-        , ("Day",          day)
-        , ("Integer",      TAtom TAInteger)
-        , ("RgaString",    TObject $ TRga char)
-        , ("String",       TAtom TAString)
-        , ("VersionVector",
-                           TObject TVersionVector)
+        [ ("Boole",
+            opaqueAtoms "Boole" OpaqueAnnotations{oaHaskellType = Just "Bool"})
+        , ("Day",           day)
+        , ("Integer",       TAtom TAInteger)
+        , ("RgaString",     TObject $ TRga char)
+        , ("String",        TAtom TAString)
+        , ("VersionVector", TObject TVersionVector)
         ]
     }
   where
-    char = opaqueAtoms "Char" def{oaHaskellType = Just "Char"}
+    char = opaqueAtoms "Char" OpaqueAnnotations{oaHaskellType = Just "Char"}
 
 type Parser' = StateT Env Parser
 
@@ -88,7 +87,7 @@ parseOpaque code = do
                     <$> parseText "opaque name" name
                     <*> parseAnnotations
             parseAnnotations = case annotations of
-                [] -> pure def
+                [] -> pure defaultOpaqueAnnotations
                 _  -> fail "opaque annotations are not implemented yet"
         _ -> fail
             "Expected declaration in the form\
@@ -125,13 +124,13 @@ parseStructLww code = do
         nameAsTagged : typeAsTagged : cont -> do
             name <- parseText "struct_lww field name" nameAsTagged
             typ  <- parseType typeAsTagged
-            Map.insert name (Field typ FieldAnnotations) <$> parseFields cont
+            Map.insert name (Field typ) <$> parseFields cont
         [f] -> fail $ "field " ++ showEdn f ++ " must have type"
 
     parseAnnotations annTaggedValues = do
         annValues <- traverse unwrapTag annTaggedValues
         case lookup "haskell" annValues of
-            Nothing -> pure def
+            Nothing -> pure defaultStructAnnotations
             Just annValue ->
                 withMap "struct_lww haskell annotations map" go annValue
       where

@@ -126,8 +126,7 @@ mkReplicatedStructLww struct = do
         [recC name
             [ TH.varBangType (mkNameT $ mkHaskellFieldName fieldName) $
                 TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) viewType
-            | (fieldName, Field fieldType FieldAnnotations) <-
-                Map.assocs structFields
+            | (fieldName, Field fieldType) <- Map.assocs structFields
             , let viewType = mkViewType fieldType
             ]]
         []
