@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Schema: `enum` declaration
 
 ## [0.3] - 2018-12-05
 ### Added
@@ -18,8 +20,7 @@ and this project adheres to
 
 ## [0.2] - 2018-11-20
 ### Added
-- Schema:
-  - boole type
+- Schema: boole type
 - RON.Storage and submodules are moved from ff project.
 - RON.Schema is now re-exported via RON.Schema.TH.
 

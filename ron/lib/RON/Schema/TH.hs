@@ -20,9 +20,10 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toTitle)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT,
-                                      dataD, doE, letS, listE, noBindS, recC,
-                                      recConE, sigD, varE, varP, varT)
+import           GHC.Stack (HasCallStack)
+import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT, doE,
+                                      letS, listE, noBindS, recC, recConE, sigD,
+                                      varE, varP, varT)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
                                             quoteExp, quotePat, quoteType)
@@ -42,16 +43,17 @@ import qualified RON.Schema.EDN as EDN
 import           RON.Types (Object (..), UUID)
 import qualified RON.UUID as UUID
 
-mkReplicated :: QuasiQuoter
+mkReplicated :: HasCallStack => QuasiQuoter
 mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
   where
     e = error "declaration only"
     quoteDec = EDN.parseSchema >=> mkReplicated'
 
 -- | Generate Haskell types from RON-Schema
-mkReplicated' :: Schema -> TH.DecsQ
+mkReplicated' :: HasCallStack => Schema -> TH.DecsQ
 mkReplicated' = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
+        DEnum      e -> mkEnum e
         DOpaque    _ -> pure []
         DStructLww s -> mkReplicatedStructLww s
 
@@ -92,7 +94,7 @@ data Field' = Field'
     , field'Var      :: TH.Name
     }
 
-mkReplicatedStructLww :: StructLww -> TH.DecsQ
+mkReplicatedStructLww :: HasCallStack => StructLww -> TH.DecsQ
 mkReplicatedStructLww struct = do
     fields <- for (Map.assocs structFields) $ \(field'Name, Field{fieldType}) ->
         case UUID.mkName . BSC.pack $ Text.unpack field'Name of
@@ -120,7 +122,7 @@ mkReplicatedStructLww struct = do
 
     objectT = [t| Object $structT |]
 
-    mkDataType = dataD (TH.cxt []) name [] Nothing
+    mkDataType = TH.dataD (TH.cxt []) name [] Nothing
         [recC name
             [ TH.varBangType (mkNameT $ mkHaskellFieldName fieldName) $
                 TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) viewType
@@ -232,13 +234,14 @@ mkReplicatedStructLww struct = do
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
 
-mkViewType :: RonType -> TH.TypeQ
+mkViewType :: HasCallStack => RonType -> TH.TypeQ
 mkViewType = \case
     TAtom atom -> case atom of
         TAInteger -> [t| Int64 |]
         TAString  -> [t| Text |]
     TComposite t -> case t of
-        TOption u -> [t| Maybe $(mkViewType u) |]
+        TEnum   Enum{enumName} -> conT $ mkNameT enumName
+        TOption u              -> [t| Maybe $(mkViewType u) |]
     TObject t -> case t of
         TORSet     item                  -> wrapList item
         TRga       item                  -> wrapList item
@@ -259,3 +262,8 @@ isObjectType = \case
     TComposite _                      -> False
     TObject    _                      -> True
     TOpaque    Opaque{opaqueIsObject} -> opaqueIsObject
+
+mkEnum :: TEnum -> TH.DecsQ
+mkEnum Enum{enumName, enumItems} = sequenceA
+    [TH.dataD (TH.cxt []) (mkNameT enumName) [] Nothing
+        [TH.normalC (mkNameT item) [] | item <- enumItems] []]

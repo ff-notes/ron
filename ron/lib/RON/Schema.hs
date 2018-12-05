@@ -14,6 +14,7 @@ module RON.Schema (
     StructAnnotations (..),
     StructLww (..),
     TAtom (..),
+    TEnum (..),
     TComposite (..),
     TObject (..),
     atomInteger,
@@ -45,8 +46,12 @@ data RonType
     | TOpaque    Opaque
     deriving (Show)
 
-newtype TComposite
+data TComposite
     = TOption RonType
+    | TEnum   TEnum
+    deriving (Show)
+
+data TEnum = Enum {enumName :: Text, enumItems :: [Text]}
     deriving (Show)
 
 data TObject
@@ -86,7 +91,7 @@ data FieldAnnotations = FieldAnnotations
 instance Default FieldAnnotations where
     def = FieldAnnotations
 
-data Declaration = DOpaque Opaque | DStructLww StructLww
+data Declaration = DEnum TEnum | DOpaque Opaque | DStructLww StructLww
 
 type Schema = [Declaration]
 

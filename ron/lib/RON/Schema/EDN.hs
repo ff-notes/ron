@@ -48,96 +48,81 @@ type Parser' = StateT Env Parser
 
 parseDeclaration :: Tagged Value -> Parser' Declaration
 parseDeclaration = withNoTag $ withList "declaration" $ \case
-    func : args -> do
-        func' <- withNoTag pure func
-        withSymbol "declaration name symbol" (go args) func'
+    func : args -> go =<< parseText "declaration name" func
+      where
+        go = \case
+            "enum"       -> DEnum      <$> parseEnum      args
+            "opaque"     -> DOpaque    <$> parseOpaque    args
+            "struct_lww" -> DStructLww <$> parseStructLww args
+            name         -> fail $ "unknown declaration " ++ Text.unpack name
     [] -> fail "empty declaration"
-  where
-    go args = withNoPrefix "declaration name" $ \case
-        "opaque"     -> DOpaque    <$> parseOpaque    args
-        "struct_lww" -> DStructLww <$> parseStructLww args
-        name         -> fail $ "unknown declaration " ++ decodeUtf8 name
+
+parseEnum :: EDNList -> Parser' TEnum
+parseEnum code = do
+    enum <- case code of
+        name : items -> Enum
+            <$> parseText "enum name" name
+            <*> traverse (parseText "enum item") items
+        [] -> fail
+            "Expected declaration in the form\
+            \ (enum <name:symbol> <item:symbol>...)"
+    insertKnownType (enumName enum) (TComposite $ TEnum enum)
+    pure enum
 
 parseOpaque :: EDNList -> Parser' Opaque
 parseOpaque code = do
-    opaque@Opaque{opaqueName} <- case code of
-        kind' : name : annotations -> do
-            kind <- parseKind kind'
-            case kind of
+    opaque <- case code of
+        kind : name : annotations ->
+            parseText "opaque kind" kind >>= \case
                 "atoms"  -> go False
                 "object" -> go True
                 _        -> fail "opaque kind must be either atoms or object"
           where
             go isObject =
-                Opaque isObject <$> parseName name <*> parseAnnotations
-            parseKind =
-                withNoTag $
-                withSymbol "opaque kind symbol" $
-                withNoPrefix "opaque kind" pure
-            parseName =
-                withNoTag $
-                withSymbol "opaque name symbol" $
-                withNoPrefix "opaque name" $
-                pure . Text.decodeUtf8
+                Opaque
+                    isObject
+                    <$> parseText "opaque name" name
+                    <*> parseAnnotations
             parseAnnotations = case annotations of
                 [] -> pure def
                 _  -> fail "opaque annotations are not implemented yet"
         _ -> fail
             "Expected declaration in the form\
             \ (opaque <kind:symbol> <name:symbol> <annotations>...)"
-    env@Env{knownTypes} <- get
-    case Map.lookup opaqueName knownTypes of
-        Nothing ->
-            put env { knownTypes =
-                        Map.insert opaqueName (TOpaque opaque) knownTypes
-                    }
-        Just _ ->
-            fail $ "duplicate declaration of type " ++ Text.unpack opaqueName
+    insertKnownType (opaqueName opaque) (TOpaque opaque)
     pure opaque
+
+insertKnownType :: Text -> RonType -> Parser' ()
+insertKnownType name typ = do
+    env@Env{knownTypes} <- get
+    case Map.lookup name knownTypes of
+        Nothing -> put env{knownTypes = Map.insert name typ knownTypes}
+        Just _  -> fail $ "duplicate declaration of type " ++ Text.unpack name
 
 parseStructLww :: EDNList -> Parser' StructLww
 parseStructLww code = do
-    struct@StructLww{structName} <- case code of
+    struct <- case code of
         name : body -> do
             let (annotations, fields) = span isTagged body
             StructLww
-                <$> parseName name
+                <$> parseText "struct_lww name" name
                 <*> parseFields fields
                 <*> parseAnnotations annotations
         [] -> fail
             "Expected declaration in the form\
             \ (struct_lww <name:symbol> <annotations>... <fields>...)"
-    env@Env{knownTypes} <- get
-    case Map.lookup structName knownTypes of
-        Nothing ->
-            put env { knownTypes =
-                        Map.insert structName (structLww struct) knownTypes
-                    }
-        Just _ ->
-            fail $ "duplicate declaration of type " ++ Text.unpack structName
+    insertKnownType (structName struct) (structLww struct)
     pure struct
 
   where
 
-    parseName =
-        withNoTag $
-        withSymbol "struct_lww name symbol" $
-        withNoPrefix "struct_lww name" $
-        pure . Text.decodeUtf8
-
     parseFields = \case
         [] -> pure mempty
         nameAsTagged : typeAsTagged : cont -> do
-            name <- parseFieldName nameAsTagged
+            name <- parseText "struct_lww field name" nameAsTagged
             typ  <- parseType typeAsTagged
             Map.insert name (Field typ FieldAnnotations) <$> parseFields cont
         [f] -> fail $ "field " ++ showEdn f ++ " must have type"
-      where
-        parseFieldName =
-            withNoTag $
-            withSymbol "struct_lww field name symbol" $
-            withNoPrefix "struct_lww field name" $
-            pure . Text.decodeUtf8
 
     parseAnnotations annTaggedValues = do
         annValues <- traverse unwrapTag annTaggedValues
@@ -156,11 +141,9 @@ parseStructLww code = do
             <$>  m .:? Symbol "" "field_prefix" .!= ""
             <*> (m .:? Symbol "" "field_case" >>= traverse parseCaseTransform)
 
-parseCaseTransform :: Value -> Parser CaseTransform
-parseCaseTransform =
-    (runIdentityT .) $
-    withSymbol "case transformation symbol" $
-    withNoPrefix "case transformation" $ \case
+parseCaseTransform :: Tagged Value -> Parser CaseTransform
+parseCaseTransform v =
+    runIdentityT (parseText "case transformation" v) >>= \case
         "title" -> pure TitleCase
         _       -> fail "unknown case transformation"
 
@@ -194,17 +177,13 @@ evalType = \case
     func : args -> applyType func =<< traverse parseType args
 
 applyType :: Tagged Value -> [RonType] -> Parser' RonType
-applyType func args =
-    withNoTag
-        (withSymbol "parametric type symbol" $
-            withNoPrefix "parametric type" go)
-        func
+applyType func args = parseText "parametric type" func >>= go
   where
 
     go = \case
         "Option" -> apply "Option" option
         "ORSet"  -> apply "ORSet" orSet
-        name     -> fail $ "unknown parametric type " ++ decodeUtf8 name
+        name     -> fail $ "unknown parametric type " ++ Text.unpack name
 
     apply name wrapper = case args of
         [a] -> pure $ wrapper a
@@ -242,6 +221,13 @@ withSymbol
 withSymbol expected f = \case
     Symbol prefix symbol -> f prefix symbol
     value                -> lift $ typeMismatch expected value
+
+parseText
+    :: (MonadTrans t, Monad (t Parser))
+    => String -> Tagged Value -> t Parser Text
+parseText name =
+    withNoTag $ withSymbol (name ++ " symbol") $ withNoPrefix name $
+    pure . Text.decodeUtf8
 
 -- * ByteString helpers
 
