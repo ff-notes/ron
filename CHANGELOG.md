@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - Encode/decode EpochTime
+- EDN-based schema DSL
 
 ### Removed
 - `RON.Storage.createVersion` from public API
