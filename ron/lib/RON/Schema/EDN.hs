@@ -13,6 +13,7 @@ import           Data.Attoparsec.Lazy (Result (Done))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Char (isSpace)
+import           Data.Default (def)
 import           Data.EDN (Tagged (NoTag, Tagged), Value (List, Map, Symbol),
                            (.!=), (.:?))
 import           Data.EDN.Encode (fromTagged)

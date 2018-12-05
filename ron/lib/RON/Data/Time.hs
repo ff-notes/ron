@@ -10,7 +10,7 @@ import           Data.Time (Day, fromGregorian, toGregorian)
 
 import           RON.Data (Replicated (..), ReplicatedAsPayload (..),
                            payloadEncoding)
-import           RON.Schema (OpaqueAnnotations (..), RonType, def, opaqueAtoms)
+import           RON.Schema (RonType, opaqueAtoms_)
 import           RON.Types (Atom (..))
 
 instance Replicated Day where encoding = payloadEncoding
@@ -28,4 +28,4 @@ instance ReplicatedAsPayload Day where
 
 -- | RON-Schema type for 'Day'
 day :: RonType
-day = opaqueAtoms "Day" def{oaHaskellType = Just "Day"}
+day = opaqueAtoms_ "Day"

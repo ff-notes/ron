@@ -17,8 +17,8 @@ module RON.Schema (
     TEnum (..),
     TComposite (..),
     TObject (..),
-    def,
     opaqueAtoms,
+    opaqueAtoms_,
     opaqueObject,
 ) where
 
@@ -97,3 +97,6 @@ opaqueObject name = TOpaque . Opaque True name
 
 opaqueAtoms :: Text -> OpaqueAnnotations -> RonType
 opaqueAtoms name = TOpaque . Opaque False name
+
+opaqueAtoms_ :: Text -> RonType
+opaqueAtoms_ name = TOpaque $ Opaque False name def
