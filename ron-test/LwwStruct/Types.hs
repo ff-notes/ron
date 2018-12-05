@@ -33,8 +33,7 @@ module LwwStruct.Types (
     tfpatInnerField_assign,
     tfpatInnerField_read,
     tfpatInnerField_zoom,
-    TestEnum1,
-    TestEnum2 (..),
+    TestEnum (..),
 ) where
 
 import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
@@ -70,8 +69,7 @@ instance ReplicatedAsPayload TestOpaque where
         #haskell {field_prefix "tfpat", field_case title}
         innerField Integer)
 
-    (enum TestEnum1)
-    (enum TestEnum2 TE2_Item1 TE2_Item2)
+    (enum TestEnum TEItem1 TEItem2)
 |]
 
 deriving instance Eq   Example1

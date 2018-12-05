@@ -20,17 +20,18 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toTitle)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import           GHC.Stack (HasCallStack)
 import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT, doE,
-                                      letS, listE, noBindS, recC, recConE, sigD,
-                                      varE, varP, varT)
+                                      lamCaseE, letS, listE, noBindS, normalB,
+                                      recC, recConE, sigD, varE, varP, varT)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
                                             quoteExp, quotePat, quoteType)
-import           Language.Haskell.TH.Syntax (lift, liftData)
+import           Language.Haskell.TH.Syntax (dataToPatQ, lift, liftData)
 
 import           RON.Data (Replicated (..), ReplicatedAsObject (..),
-                           objectEncoding)
+                           ReplicatedAsPayload (..), objectEncoding)
 import           RON.Data.Internal (getObjectStateChunk)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
@@ -253,7 +254,7 @@ mkViewType = \case
     wrapList a = [t| [$(mkViewType a)] |]
 
 valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
-valD' name body = TH.valD (varP name) (TH.normalB body) []
+valD' name body = TH.valD (varP name) (normalB body) []
 
 isObjectType :: RonType -> Bool
 isObjectType = \case
@@ -263,6 +264,39 @@ isObjectType = \case
     TOpaque    Opaque{opaqueIsObject} -> opaqueIsObject
 
 mkEnum :: TEnum -> TH.DecsQ
-mkEnum Enum{enumName, enumItems} = sequenceA
-    [TH.dataD (TH.cxt []) (mkNameT enumName) [] Nothing
-        [TH.normalC (mkNameT item) [] | item <- enumItems] []]
+mkEnum Enum{enumName, enumItems} = do
+    itemsUuids <- for enumItems $ \item -> do
+        uuid <- UUID.mkName $ Text.encodeUtf8 item
+        pure (mkNameT item, uuid)
+    dataType <- mkDataType
+    [instanceReplicated] <- mkInstanceReplicated
+    [instanceReplicatedAsPayload] <- mkInstanceReplicatedAsPayload itemsUuids
+    pure [dataType, instanceReplicated, instanceReplicatedAsPayload]
+
+  where
+
+    typeName = conT $ mkNameT enumName
+
+    mkDataType = TH.dataD (TH.cxt []) (mkNameT enumName) [] Nothing
+        [TH.normalC (mkNameT item) [] | item <- enumItems] []
+
+    mkInstanceReplicated = [d|
+        instance Replicated $typeName where
+            encoding = payloadEncoding
+        |]
+
+    mkInstanceReplicatedAsPayload itemsUuids = [d|
+        instance ReplicatedAsPayload $typeName where
+            toPayload = toPayload . $toUuid
+            fromPayload = fromPayload >=> $fromUuid
+        |]
+      where
+        toUuid = lamCaseE
+            [match (conP name []) (liftData uuid) | (name, uuid) <- itemsUuids]
+        fromUuid = lamCaseE
+            $   [ match (liftDataP uuid) [| pure $(conE name) |]
+                | (name, uuid) <- itemsUuids
+                ]
+            ++  [match TH.wildP [| fail "expected one of enum items" |]]
+        liftDataP = dataToPatQ $ const Nothing
+        match pat body = TH.match pat (normalB body) []
