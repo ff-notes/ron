@@ -3,6 +3,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -22,22 +23,26 @@
 -- @
 module RON.Storage.IO (
     module X,
+    -- * Handle
     Handle,
-    Storage,
+    OnDocumentChanged (..),
     newHandle,
+    setOnDocumentChanged,
+    -- * Storage
+    Storage,
     runStorage,
 ) where
 
 import           Control.Exception (catch, throwIO)
-import           Control.Monad (filterM, unless, when)
 import           Control.Monad.Except (ExceptT (ExceptT), MonadError,
                                        runExceptT, throwError)
+import           Control.Monad.Extra (filterM, unless, when, whenJust)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (ReaderT (ReaderT), ask, runReaderT)
 import           Control.Monad.Trans (lift)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.IORef (IORef, newIORef)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.Maybe (fromMaybe, listToMaybe)
 import           Data.Word (Word64)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
@@ -53,15 +58,15 @@ import           System.IO.Error (isDoesNotExistError)
 import           RON.Storage as X
 
 -- | Environment is the dataDir
-newtype Storage a = Storage (ExceptT String (ReaderT FilePath EpochClock) a)
+newtype Storage a = Storage (ExceptT String (ReaderT Handle EpochClock) a)
     deriving (Applicative, Functor, Monad, MonadError String, MonadIO)
 
 -- | Run a 'Storage' action
 runStorage :: Handle -> Storage a -> IO a
-runStorage Handle{hReplica, hDataDir, hClock} (Storage action) = do
+runStorage h@Handle{hReplica, hClock} (Storage action) = do
     res <-
         runEpochClock hReplica hClock $
-        (`runReaderT` hDataDir) $
+        (`runReaderT` h) $
         runExceptT action
     either fail pure res
 
@@ -72,10 +77,10 @@ instance ReplicaClock Storage where
 
 instance MonadStorage Storage where
     getCollections = Storage $ do
-        dataDir <- ask
+        Handle{hDataDir} <- ask
         liftIO $
-            listDirectory dataDir
-            >>= filterM (doesDirectoryExist . (dataDir </>))
+            listDirectory hDataDir
+            >>= filterM (doesDirectoryExist . (hDataDir </>))
 
     getDocuments :: forall doc. Collection doc => Storage [DocId doc]
     getDocuments = map DocId <$> listDirectoryIfExists (collectionName @doc)
@@ -84,28 +89,32 @@ instance MonadStorage Storage where
 
     saveVersionContent docid version content =
         Storage $ do
-            dataDir <- ask
-            let docdir = dataDir </> docDir docid
+            Handle{hDataDir, hOnDocumentChanged} <- ask
+            let docdir = hDataDir </> docDir docid
             liftIO $ do
                 createDirectoryIfMissing True docdir
                 BSL.writeFile (docdir </> version) content
+                mOnDocumentChanged <- readIORef hOnDocumentChanged
+                whenJust mOnDocumentChanged $
+                    \(OnDocumentChanged onDocumentChanged) ->
+                        onDocumentChanged docid
 
     loadVersionContent docid version = Storage $ do
-        dataDir <- ask
-        liftIO $ BSL.readFile $ dataDir </> docDir docid </> version
+        Handle{hDataDir} <- ask
+        liftIO $ BSL.readFile $ hDataDir </> docDir docid </> version
 
     deleteVersion docid version = Storage $ do
-        dataDir <- ask
+        Handle{hDataDir} <- ask
         liftIO $ do
-            let file = dataDir </> docDir docid </> version
+            let file = hDataDir </> docDir docid </> version
             removeFile file
             `catch` \e ->
                 unless (isDoesNotExistError e) $ throwIO e
 
     changeDocId old new = Storage $ do
-        db <- ask
-        let oldPath = db </> docDir old
-            newPath = db </> docDir new
+        Handle{hDataDir} <- ask
+        let oldPath = hDataDir </> docDir old
+            newPath = hDataDir </> docDir new
         oldPathCanon <- liftIO $ canonicalizePath oldPath
         newPathCanon <- liftIO $ canonicalizePath newPath
         when (newPathCanon /= oldPathCanon) $ do
@@ -122,10 +131,14 @@ instance MonadStorage Storage where
 
 -- | Storage handle (uses the “Handle pattern”).
 data Handle = Handle
-    { hClock    :: IORef EpochTime
-    , hDataDir  :: FilePath
-    , hReplica  :: ReplicaId
+    { hClock             :: IORef EpochTime
+    , hDataDir           :: FilePath
+    , hReplica           :: ReplicaId
+    , hOnDocumentChanged :: IORef (Maybe OnDocumentChanged)
     }
+
+newtype OnDocumentChanged =
+    OnDocumentChanged (forall a . Collection a => DocId a -> IO ())
 
 -- | Create new storage handle
 newHandle :: FilePath -> IO Handle
@@ -133,12 +146,17 @@ newHandle hDataDir = do
     time <- getCurrentEpochTime
     hClock <- newIORef time
     hReplica <- applicationSpecific <$> getMacAddress
-    pure Handle{hDataDir, hClock, hReplica}
+    hOnDocumentChanged <- newIORef Nothing
+    pure Handle{hDataDir, hClock, hReplica, hOnDocumentChanged}
+
+setOnDocumentChanged :: Handle -> OnDocumentChanged -> IO ()
+setOnDocumentChanged h handler =
+    writeIORef (hOnDocumentChanged h) $ Just handler
 
 listDirectoryIfExists :: FilePath -> Storage [FilePath]
 listDirectoryIfExists relpath = Storage $ do
-    dataDir <- ask
-    let dir = dataDir </> relpath
+    Handle{hDataDir} <- ask
+    let dir = hDataDir </> relpath
     liftIO $ do
         exists <- doesDirectoryExist dir
         if exists then listDirectory dir else pure []

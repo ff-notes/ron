@@ -9,6 +9,7 @@ and this project adheres to
 ### Added
 - Schema `enum` declaration
 - `docIdFromUuid`
+- `OnDocumentChanged`
 
 ### Removed
 - Schema embedded DSL helpers: `atomInteger`, `atomString`, `boole`, `char`,
