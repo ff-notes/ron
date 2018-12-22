@@ -7,19 +7,20 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | RON File Storage. For usage, see "RON.Storage.IO".
-module RON.Storage
-    ( Collection (..)
-    , CollectionName
-    , DocId (..)
-    , Document (..)
-    , DocVersion
-    , MonadStorage (..)
-    , createDocument
-    , decodeDocId
-    , loadDocument
-    , modify
-    , readVersion
-    ) where
+module RON.Storage (
+    Collection (..),
+    CollectionName,
+    DocId (..),
+    Document (..),
+    DocVersion,
+    MonadStorage (..),
+    createDocument,
+    decodeDocId,
+    docIdFromUuid,
+    loadDocument,
+    modify,
+    readVersion,
+) where
 
 import           Control.Monad (unless, when)
 import           Control.Monad.Except (MonadError, catchError, liftEither,
@@ -212,3 +213,6 @@ showDocId :: DocId a -> String
 showDocId (DocId path) = case UUID.decodeBase32 path of
     Nothing -> path
     Just uid -> BSLC.unpack $ serializeUuid uid
+
+docIdFromUuid :: UUID -> DocId a
+docIdFromUuid = DocId . UUID.encodeBase32

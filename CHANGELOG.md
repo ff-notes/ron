@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - Schema `enum` declaration
+- `docIdFromUuid`
 
 ### Removed
 - Schema embedded DSL helpers: `atomInteger`, `atomString`, `boole`, `char`,
