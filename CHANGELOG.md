@@ -7,9 +7,9 @@ and this project adheres to
 
 ## [Unreleased]
 ### Added
-- Schema `enum` declaration
-- `docIdFromUuid`
-- `OnDocumentChanged`
+- Schema `enum` declaration.
+- `docIdFromUuid`.
+- `OnDocumentChanged` is called each time when any document is changed.
 
 ### Removed
 - Schema embedded DSL helpers: `atomInteger`, `atomString`, `boole`, `char`,
@@ -17,16 +17,16 @@ and this project adheres to
 
 ## [0.3] - 2018-12-05
 ### Added
-- Encode/decode EpochTime
-- EDN-based schema DSL
+- Encode/decode EpochTime.
+- EDN-based schema DSL.
 
 ### Removed
-- `RON.Storage.createVersion` from public API
-- `NFData` instances
+- `RON.Storage.createVersion` from public API.
+- `NFData` instances.
 
 ## [0.2] - 2018-11-20
 ### Added
-- Schema boole type
+- Schema boole type.
 - RON.Storage and submodules are moved from ff project.
 - RON.Schema is now re-exported via RON.Schema.TH.
 
