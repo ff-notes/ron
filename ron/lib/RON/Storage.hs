@@ -31,6 +31,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (for_)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
 import           Data.Traversable (for)
+import           Data.Typeable (Typeable)
 import           System.FilePath ((</>))
 
 import           RON.Data (ReplicatedAsObject, reduceObject)
@@ -55,7 +56,7 @@ type CollectionName = FilePath
 
 -- | A type that intended to be put in a separate collection must define a
 -- Collection instance.
-class ReplicatedAsObject a => Collection a where
+class (ReplicatedAsObject a, Typeable a) => Collection a where
 
     collectionName :: CollectionName
 
