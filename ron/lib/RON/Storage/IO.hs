@@ -87,17 +87,14 @@ instance MonadStorage Storage where
 
     getDocumentVersions = listDirectoryIfExists . docDir
 
-    saveVersionContent docid version content =
+    saveVersionContent docid version content = do
         Storage $ do
-            Handle{hDataDir, hOnDocumentChanged} <- ask
+            Handle{hDataDir} <- ask
             let docdir = hDataDir </> docDir docid
             liftIO $ do
                 createDirectoryIfMissing True docdir
                 BSL.writeFile (docdir </> version) content
-                mOnDocumentChanged <- readIORef hOnDocumentChanged
-                whenJust mOnDocumentChanged $
-                    \(OnDocumentChanged onDocumentChanged) ->
-                        onDocumentChanged docid
+        emitDocumentChanged docid
 
     loadVersionContent docid version = Storage $ do
         Handle{hDataDir} <- ask
@@ -111,23 +108,26 @@ instance MonadStorage Storage where
             `catch` \e ->
                 unless (isDoesNotExistError e) $ throwIO e
 
-    changeDocId old new = Storage $ do
-        Handle{hDataDir} <- ask
-        let oldPath = hDataDir </> docDir old
-            newPath = hDataDir </> docDir new
-        oldPathCanon <- liftIO $ canonicalizePath oldPath
-        newPathCanon <- liftIO $ canonicalizePath newPath
-        when (newPathCanon /= oldPathCanon) $ do
-            newPathExists <- liftIO $ doesPathExist newPath
-            when newPathExists $
-                throwError $ unwords
-                    [ "changeDocId"
-                    , show old, "[", oldPath, "->", oldPathCanon, "]"
-                    , show new, "[", newPath, "->", newPathCanon, "]"
-                    , ": internal error: new document id is already taken"
-                    ]
-        when (newPath /= oldPath) $
-            liftIO $ renameDirectory oldPath newPath
+    changeDocId old new = do
+        renamed <- Storage $ do
+            Handle{hDataDir} <- ask
+            let oldPath = hDataDir </> docDir old
+                newPath = hDataDir </> docDir new
+            oldPathCanon <- liftIO $ canonicalizePath oldPath
+            newPathCanon <- liftIO $ canonicalizePath newPath
+            let pathsDiffer = newPathCanon /= oldPathCanon
+            when pathsDiffer $ do
+                newPathExists <- liftIO $ doesPathExist newPath
+                when newPathExists $
+                    throwError $ unwords
+                        [ "changeDocId"
+                        , show old, "[", oldPath, "->", oldPathCanon, "]"
+                        , show new, "[", newPath, "->", newPathCanon, "]"
+                        , ": internal error: new document id is already taken"
+                        ]
+                liftIO $ renameDirectory oldPath newPath
+            pure pathsDiffer
+        when renamed $ emitDocumentChanged new
 
 -- | Storage handle (uses the “Handle pattern”).
 data Handle = Handle
@@ -137,8 +137,18 @@ data Handle = Handle
     , hOnDocumentChanged :: IORef (Maybe OnDocumentChanged)
     }
 
+-- | The handler is called as @onDocumentChanged docid@, where
+-- @docid@ is the changed document id.
 newtype OnDocumentChanged =
     OnDocumentChanged (forall a . Collection a => DocId a -> IO ())
+
+emitDocumentChanged :: Collection a => DocId a -> Storage ()
+emitDocumentChanged docid = Storage $ do
+    Handle{hOnDocumentChanged} <- ask
+    liftIO $ do
+        mOnDocumentChanged <- readIORef hOnDocumentChanged
+        whenJust mOnDocumentChanged $ \(OnDocumentChanged onDocumentChanged) ->
+            onDocumentChanged docid
 
 -- | Create new storage handle
 newHandle :: FilePath -> IO Handle
