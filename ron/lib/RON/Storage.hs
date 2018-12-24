@@ -47,6 +47,7 @@ type DocVersion = FilePath
 -- | Document identifier (directory name),
 -- should be a RON-Base32-encoded RON-UUID.
 newtype DocId a = DocId FilePath
+    deriving Eq
 
 instance Collection a => Show (DocId a) where
     show (DocId file) = collectionName @a </> file
