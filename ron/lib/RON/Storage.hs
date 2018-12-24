@@ -37,7 +37,6 @@ import           System.FilePath ((</>))
 import           RON.Data (ReplicatedAsObject, reduceObject)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
-import           RON.Text.Serialize (serializeUuid)
 import           RON.Types (Object (Object), UUID, objectFrame, objectId)
 import qualified RON.UUID as UUID
 
@@ -135,7 +134,9 @@ loadDocument docid = loadRetry (3 :: Int)
         | n > 0 = do
             versions0 <- getDocumentVersions docid
             case versions0 of
-                []   -> throwError $ "Document with id " ++ showDocId docid ++ " has not found."
+                []   ->
+                    throwError $
+                    "Document with id " ++ show docid ++ " has not found."
                 v:vs -> do
                     let versions = v :| vs
                     let wrapDoc (value, isTouched) =
@@ -209,12 +210,6 @@ createVersion mDoc newObj = case mDoc of
 -- | Create document assuming it doesn't exist yet.
 createDocument :: (Collection a, MonadStorage m) => Object a -> m ()
 createDocument = createVersion Nothing
-
--- | Show NoteId as it was inputted by user.
-showDocId :: DocId a -> String
-showDocId (DocId path) = case UUID.decodeBase32 path of
-    Nothing -> path
-    Just uid -> BSLC.unpack $ serializeUuid uid
 
 docIdFromUuid :: UUID -> DocId a
 docIdFromUuid = DocId . UUID.encodeBase32
