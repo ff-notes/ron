@@ -11,6 +11,9 @@ and this project adheres to
 - `docIdFromUuid`.
 - `OnDocumentChanged` is called each time when any document is changed.
 
+### Changed
+- Made GHC 8.6 default.
+
 ### Removed
 - Schema embedded DSL helpers: `atomInteger`, `atomString`, `boole`, `char`,
   `field`, `option`, `orSet`, `rgaString`, `structLww`, `versionVector`.

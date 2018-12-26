@@ -1,12 +1,17 @@
-resolver: nightly-2018-11-15
+resolver: lts-13.0
 
 packages:
   - ron
   - ron-test
+  - examples
 
 extra-deps:
-  # ron:
+  # ron (Schema)
   - hedn-0.1.9.1@sha256:01d77f74d211e1187d94e67dd880e3131d0552a5184c7f067b5e686f94b250c7
 
-  # hedn:
-  - stringsearch-0.3.6.6@sha256:e88c03f4adb4bb3ab88550c921a9a8a2836a0a70f58b9cc64cff2ac65af9b77c
+  # ron-test
+  - hedgehog-0.6.1@sha256:c16546b1a7c38fa0e2d54dd287c198b8ba8173f6e70735d28d6d545b6ea943ba
+  - tasty-hedgehog-0.2.0.0@sha256:83a8b777fa472040979e44dba43c32441f55d5ddb9641a4d53deee4b0e09fa34
+
+  # ron-test -> hedgehog
+  - pretty-show-1.8.2@sha256:e16e0174bf4ad3dae49fea69b1f65ca9d8d4b61b3d80c78fbe3320f2181e92e9
