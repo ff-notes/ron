@@ -211,7 +211,7 @@ prop_event_roundtrip = property $ do
     event <- forAll Gen.event
     tripping event encodeEvent (Just . decodeEvent)
 
-prop_name_roundtip = property $ do
+prop_name_roundtrip = property $ do
     name <- forAll genName
     tripping name UUID.mkName $ \mu -> do
         u <- mu
