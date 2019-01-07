@@ -312,6 +312,43 @@ prop_RGA_delete_deleted = let
         rga1expect === prep rga1
         rga2expect === prep rga2
 
+prop_RGA_insert_deleted = let
+    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    rga0expect =
+        [ ["*rga", "#B/000000000p+000000003f", "@`)V", "!"]
+        , ["@", "'x'"]
+        , ["."]
+        ]
+    rga1expect =
+        [ ["*rga", "#B/000000000p+000000003f", "@`)q", "!"]
+        , ["@)V", ":`)q", "'x'"]
+        , ["."]
+        ]
+    rga2expect =
+        [ ["*rga", "#B/000000000p+000000003f", "@`)s", "!"]
+        , ["@)V", ":`)q", "'x'"]
+        , ["@)s", ":0", "'x'"]
+        , ["."]
+        ]
+    in
+    property $ do
+        (rga0, rga1, rga2) <-
+            evalEitherS $
+            runNetworkSim $
+            runReplicaSim (applicationSpecific 234) $
+            runExceptT $ do
+                rga0 <- RGA.newFromText "x"
+                (rga1, rga2) <- (`evalStateT` rga0) $ do
+                    RGA.editText ""
+                    rga1 <- get
+                    RGA.editText "x"
+                    rga2 <- get
+                    pure (rga1, rga2)
+                pure (rga0, rga1, rga2)
+        rga0expect === prep rga0
+        rga1expect === prep rga1
+        rga2expect === prep rga2
+
 prop_base64_isLetter = property $ do
         c <- forAll $ Gen.word8 Range.constantBounded
         (c `BS.elem` Base64.alphabet) === Base64.isLetter c
