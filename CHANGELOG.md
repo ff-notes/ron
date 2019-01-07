@@ -18,6 +18,9 @@ and this project adheres to
 - Schema embedded DSL helpers: `atomInteger`, `atomString`, `boole`, `char`,
   `field`, `option`, `orSet`, `rgaString`, `structLww`, `versionVector`.
 
+### Fixed
+- `RGA.edit` bug with re-adding deleted items (#39).
+
 ## [0.3] - 2018-12-05
 ### Added
 - Encode/decode EpochTime.
