@@ -4,10 +4,11 @@
 
 module Gen where
 
+import           Data.Text (Text)
 import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
-                               text, unicode, word64, word8)
+                               text, unicodeAll, word64, word8)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
@@ -101,7 +102,7 @@ atom :: MonadGen gen => Int -> gen Atom
 atom size = choice
     [ AFloat    <$> double (Range.exponentialFloatFrom 0 (-1e308) 1e308)
     , AInteger  <$> integral (Range.exponentialFrom 0 (-1e18) 1e18)
-    , AString   <$> text (Range.exponential 0 size) unicode
+    , AString   <$> text (Range.exponential 0 size) unicodeAll
     , AUuid     <$> uuid
     ]
 
@@ -110,3 +111,6 @@ event = Event <$> eventTime <*> replicaId
 
 replicaId :: MonadGen gen => gen ReplicaId
 replicaId = ReplicaId <$> enumBounded <*> word60
+
+shortText :: MonadGen gen => gen Text
+shortText = text (Range.linear 0 10) unicodeAll

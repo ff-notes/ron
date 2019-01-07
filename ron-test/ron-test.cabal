@@ -37,6 +37,7 @@ test-suite test
         mtl,
         tasty-hedgehog,
         tasty-th,
+        text,
         -- project
         ron,
     main-is: Main.hs
