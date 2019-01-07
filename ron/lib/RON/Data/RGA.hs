@@ -347,7 +347,7 @@ edit newItems = do
     advanceToUuid stateVersion
 
     let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
-    let diff = getGroupedDiffBy ((==) `on` opPayload) stateBody newItems'
+    let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
     (stateBody', Last lastEvent) <- runWriterT . fmap concat . for diff $ \case
         First removed -> for removed $ \case
             op@Op{opRef = Zero} -> do  -- not deleted yet
@@ -373,6 +373,13 @@ edit newItems = do
                     Map.insert (rgaType, objectId) state' objectFrame
                 , ..
                 }
+
+  where
+    eqAliveOnPayload
+            Op{opRef = Zero, opPayload = p1}
+            Op{opRef = Zero, opPayload = p2}
+        = p1 == p2
+    eqAliveOnPayload _ _ = False
 
 -- | Speciaization of 'edit' for 'Text'
 editText

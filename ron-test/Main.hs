@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 import           Control.Monad.Except (runExceptT)
-import           Control.Monad.State.Strict (evalStateT, get)
+import           Control.Monad.State.Strict (evalStateT, execStateT, get)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)
@@ -262,6 +262,31 @@ prop_ron_json_example = let
 lwwType = fromJust $ UUID.mkName "lww"
 
 prop_lwwStruct = LwwStruct.prop_lwwStruct
+
+prop_RGA_edit_idempotency = property $ do
+    textX <- forAll Gen.shortText
+    textY <- forAll Gen.shortText
+    rgaY <-
+        evalEitherS $
+        runNetworkSim $
+        runReplicaSim (applicationSpecific 271) $
+        runExceptT $ do
+            rgaX <-               RGA.newFromText textX
+            (`execStateT` rgaX) $ RGA.editText    textY
+    Right textY === RGA.getText rgaY
+
+prop_RGA_edit_idempotency_back = property $ do
+    textX <- forAll Gen.shortText
+    textY <- forAll Gen.shortText
+    rgaX' <-
+        evalEitherS $
+        runNetworkSim $
+        runReplicaSim (applicationSpecific 271) $
+        runExceptT $ do
+            rgaX <-                       RGA.newFromText textX
+            rgaY <- (`execStateT` rgaX) $ RGA.editText    textY
+            (        `execStateT` rgaY) $ RGA.editText    textX
+    Right textX === RGA.getText rgaX'
 
 prop_RGA_delete_deleted = let
     prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
