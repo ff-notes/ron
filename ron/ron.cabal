@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron
-version:        0.3
+version:        0.4
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
