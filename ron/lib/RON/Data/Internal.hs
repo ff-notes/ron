@@ -7,7 +7,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module RON.Data.Internal where
+module RON.Data.Internal (
+    ReducedChunk (..),
+    Reducer (..),
+    Reducible (..),
+    Replicated (..),
+    ReplicatedAsObject (..),
+    ReplicatedAsPayload (..),
+    Unapplied,
+    WireReducer,
+    collectFrame,
+    eqPayload,
+    eqRef,
+    fromRon,
+    getObjectStateChunk,
+    mkStateChunk,
+    newRon,
+    objectEncoding,
+    payloadEncoding,
+) where
 
 import           RON.Internal.Prelude
 
@@ -73,10 +91,6 @@ data ReducedChunk = ReducedChunk
 
 mkChunkVersion :: [Op] -> UUID
 mkChunkVersion = maximumDef zero . map opEvent
-
-mkRC :: UUID -> [Op] -> ReducedChunk
-mkRC ref rcBody =
-    ReducedChunk{rcVersion = mkChunkVersion rcBody, rcRef = ref, ..}
 
 mkStateChunk :: [Op] -> StateChunk
 mkStateChunk ops = StateChunk (mkChunkVersion ops) ops

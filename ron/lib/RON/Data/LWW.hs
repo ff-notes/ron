@@ -33,6 +33,7 @@ import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
+import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
 
 -- | Last-Write-Wins: select an op with latter event
@@ -60,9 +61,9 @@ lwwType :: UUID
 lwwType = fromJust $ UUID.mkName "lww"
 
 -- | Create LWW object from a list of named fields.
-newObject :: ReplicaClock m => [(UUID, I Replicated)] -> m (Object a)
+newObject :: ReplicaClock m => [(UUID, Instance Replicated)] -> m (Object a)
 newObject fields = collectFrame $ do
-    payloads <- for fields $ \(_, I value) -> newRon value
+    payloads <- for fields $ \(_, Instance value) -> newRon value
     e <- lift getEventUuid
     tell $ Map.singleton (lwwType, e) $ StateChunk e
         [Op e name p | ((name, _), p) <- zip fields payloads]

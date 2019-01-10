@@ -4,13 +4,14 @@
 
 module RON.Schema.EDN (parseSchema) where
 
-import           RON.Internal.Prelude
-
+import           Control.Monad (unless)
 import           Control.Monad.State.Strict (StateT, evalStateT, get, gets, put)
 import           Control.Monad.Trans (MonadTrans, lift)
 import           Control.Monad.Trans.Identity (runIdentityT)
 import           Data.Attoparsec.Lazy (Result (Done))
+import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Char (isSpace)
 import           Data.EDN (Tagged (NoTag, Tagged), Value (List, Map, Symbol),
@@ -19,15 +20,18 @@ import           Data.EDN.Encode (fromTagged)
 import           Data.EDN.Parser (parseBSL)
 import           Data.EDN.Types (EDNList, EDNMap)
 import           Data.EDN.Types.Class (Parser, parseEither, typeMismatch)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Text.Lazy as TextL
 import           Data.Text.Lazy.Builder (toLazyText)
 import qualified Data.Text.Lazy.Encoding as TextL
 
-import           RON.Data.Time (day)
 import           RON.Schema
+
+type ByteStringL = BSL.ByteString
 
 newtype Env = Env {knownTypes :: Map Text RonType}
     deriving (Show)
@@ -46,6 +50,7 @@ startEnv = Env
     }
   where
     char = opaqueAtoms "Char" OpaqueAnnotations{oaHaskellType = Just "Char"}
+    day = opaqueAtoms_ "Day"
 
 type Parser' = StateT Env Parser
 

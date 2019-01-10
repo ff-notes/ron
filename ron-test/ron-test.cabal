@@ -22,7 +22,7 @@ test-suite common
         tasty-hedgehog,
         tasty-hunit,
         -- project
-        ron,
+        ron
     main-is: Common.hs
     type: exitcode-stdio-1.0
 
@@ -40,6 +40,7 @@ test-suite test
         text,
         -- project
         ron,
+        ron-schema
     main-is: Main.hs
     other-modules:
         Gen
@@ -57,5 +58,5 @@ executable words
         text-metrics,
         unordered-containers,
         -- project
-        ron,
+        ron
     main-is: Words.hs

@@ -4,10 +4,8 @@ module Attoparsec.Extra
     ( module Attoparsec
     , char
     , endOfInputEx
-    , getPos
     , isSuccessful
     , label
-    , label'
     , parseOnlyL
     , takeL
     , withInputSize
@@ -45,10 +43,10 @@ withInputSize p = do
 label :: String -> Parser a -> Parser a
 label = flip (<?>)
 
-label' :: String -> Parser a -> Parser a
-label' name p = do
-    pos <- getPos
-    label (name ++ ':' : show pos) p
+-- label' :: String -> Parser a -> Parser a
+-- label' name p = do
+--     pos <- getPos
+--     label (name ++ ':' : show pos) p
 
 -- | Variant of 'endOfInput' with a more debuggable message.
 endOfInputEx :: Parser ()

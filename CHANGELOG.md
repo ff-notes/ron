@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Changed
 - Extracted `ron-storage` package.
+- Extracted `ron-schema` package.
 
 ## [0.4] - 2019-01-09
 ### Added

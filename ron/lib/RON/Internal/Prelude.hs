@@ -1,6 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE ExistentialQuantification #-}
-
 module RON.Internal.Prelude
     ( module RON.Internal.Prelude
     , module X
@@ -51,13 +48,3 @@ instance Ord a => Semigroup (MaxOnFst a b) where
     mof1@(MaxOnFst (a1, _)) <> mof2@(MaxOnFst (a2, _))
         | a1 < a2   = mof2
         | otherwise = mof1
-
-listSingleton :: a -> [a]
-listSingleton a = [a]
-
--- | Instance
-data I c = forall a . c a => I a
-
-(-:) :: a -> b -> (a, b)
-a -: b = (a, b)
-infixr 0 -:

@@ -11,16 +11,21 @@ module RON.Schema.TH(
 ) where
 
 import           Prelude hiding (read)
-import           RON.Internal.Prelude
 
 import           Control.Error (fmapL)
+import           Control.Monad ((>=>))
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (MonadState, StateT)
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toTitle)
+import           Data.Foldable (fold)
+import           Data.Int (Int64)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
+import           Data.Traversable (for)
 import           GHC.Stack (HasCallStack)
 import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT, doE,
                                       lamCaseE, letS, listE, noBindS, normalB,
@@ -31,8 +36,8 @@ import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
 import           Language.Haskell.TH.Syntax (dataToPatQ, lift, liftData)
 
 import           RON.Data (Replicated (..), ReplicatedAsObject (..),
-                           ReplicatedAsPayload (..), objectEncoding)
-import           RON.Data.Internal (getObjectStateChunk)
+                           ReplicatedAsPayload (..), getObjectStateChunk,
+                           objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
@@ -42,6 +47,7 @@ import           RON.Event (ReplicaClock)
 import           RON.Schema as X
 import qualified RON.Schema.EDN as EDN
 import           RON.Types (Object (..), UUID)
+import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
 
 mkReplicated :: HasCallStack => QuasiQuoter
@@ -164,7 +170,7 @@ mkReplicatedStructLww struct = do
             |]
       where
         fieldsToPack = listE
-            [ [| ($(liftData field'RonName), I $var) |]
+            [ [| ($(liftData field'RonName), Instance $var) |]
             | Field'{field'Type, field'Var, field'RonName} <- fields
             , let
                 fieldVarE = varE field'Var

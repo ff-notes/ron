@@ -1,7 +1,9 @@
-resolver: lts-12.25
+resolver: lts-12.26
 
 packages:
   - ron
+  - ron-schema
+  - ron-storage
   - ron-test
   - examples
 

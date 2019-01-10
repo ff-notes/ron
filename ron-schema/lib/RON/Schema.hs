@@ -21,8 +21,8 @@ module RON.Schema (
     opaqueObject,
 ) where
 
-import           RON.Internal.Prelude
-
+import           Data.Map.Strict (Map)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 
 data TAtom = TAInteger | TAString

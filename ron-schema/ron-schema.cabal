@@ -1,6 +1,6 @@
 cabal-version:  2.2
 
-name:           ron
+name:           ron-schema
 version:        0.4
 
 bug-reports:    https://github.com/ff-notes/ron/issues
@@ -10,7 +10,7 @@ homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
 license-file:   LICENSE
 maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       RON and RON-RDT
+synopsis:       RON-Schema
 
 description:
     Replicated Object Notation (RON), data types (RDT), and RON-Schema
@@ -50,60 +50,21 @@ common language
 library
     import: language
     build-depends:
-        aeson,
+        -- global
         attoparsec,
-        binary,
         bytestring,
         containers,
-        Diff,
         errors,
-        extra,
-        hashable,
+        hedn,
         mtl,
-        safe,
+        template-haskell,
         text,
-        time,
         transformers,
-        unordered-containers,
-        vector
-    exposed-modules:
-        RON.Base64
-        RON.Binary
-        RON.Binary.Parse
-        RON.Binary.Serialize
-        RON.Binary.Types
-        RON.Data
-        RON.Data.LWW
-        RON.Data.ORSet
-        RON.Data.RGA
-        RON.Data.Time
-        RON.Data.VersionVector
-        RON.Epoch
-        RON.Event
-        RON.Event.Simulation
-        RON.Text
-        RON.Text.Parse
-        RON.Text.Serialize
-        RON.Text.Serialize.UUID
-        RON.Types
-        RON.Util
-        RON.Util.Word
-        RON.UUID
-    other-modules:
-        Attoparsec.Extra
-        Data.ZigZag
-        RON.Data.Internal
-        RON.Internal.Prelude
-    hs-source-dirs: lib
-
-benchmark bench
-    import: language
-    build-depends:
-        -- global
-        criterion,
-        deepseq,
-        -- package
+        -- project
         ron
-    main-is: Main.hs
-    hs-source-dirs: bench
-    type: exitcode-stdio-1.0
+    exposed-modules:
+        RON.Schema
+        RON.Schema.TH
+    other-modules:
+        RON.Schema.EDN
+    hs-source-dirs: lib

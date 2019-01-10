@@ -2,7 +2,18 @@
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Gen where
+module Gen (
+    atom,
+    event,
+    rawOp,
+    shortText,
+    stateFrame,
+    uuid,
+    wireFrame,
+    wireFrames,
+    word60,
+    word64',
+) where
 
 import           Data.Text (Text)
 import           Data.Word (Word64)
