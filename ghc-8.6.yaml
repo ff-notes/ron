@@ -2,6 +2,7 @@ resolver: lts-13.0
 
 packages:
   - ron
+  - ron-storage
   - ron-test
   - examples
 

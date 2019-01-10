@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Extracted `ron-storage` package.
 
 ## [0.4] - 2019-01-09
 ### Added

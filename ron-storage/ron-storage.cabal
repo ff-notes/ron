@@ -1,6 +1,6 @@
 cabal-version:  2.2
 
-name:           ron
+name:           ron-storage
 version:        0.4
 
 bug-reports:    https://github.com/ff-notes/ron/issues
@@ -10,7 +10,7 @@ homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
 license-file:   LICENSE
 maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       RON, RON-RDT, and RON-Schema
+synopsis:       RON Storage
 
 description:
     Replicated Object Notation (RON), data types (RDT), and RON-Schema
@@ -50,64 +50,19 @@ common language
 library
     import: language
     build-depends:
-        aeson,
-        attoparsec,
-        binary,
+        -- global
         bytestring,
         containers,
-        Diff,
-        errors,
+        directory,
         extra,
-        hashable,
-        hedn,
+        filepath,
         mtl,
-        safe,
-        template-haskell,
-        text,
-        time,
+        network-info,
         transformers,
-        unordered-containers,
-        vector
-    exposed-modules:
-        RON.Base64
-        RON.Binary
-        RON.Binary.Parse
-        RON.Binary.Serialize
-        RON.Binary.Types
-        RON.Data
-        RON.Data.LWW
-        RON.Data.ORSet
-        RON.Data.RGA
-        RON.Data.Time
-        RON.Data.VersionVector
-        RON.Epoch
-        RON.Event
-        RON.Event.Simulation
-        RON.Schema
-        RON.Schema.TH
-        RON.Text
-        RON.Text.Parse
-        RON.Text.Serialize
-        RON.Text.Serialize.UUID
-        RON.Types
-        RON.Util.Word
-        RON.UUID
-    other-modules:
-        Attoparsec.Extra
-        Data.ZigZag
-        RON.Data.Internal
-        RON.Internal.Prelude
-        RON.Schema.EDN
-    hs-source-dirs: lib
-
-benchmark bench
-    import: language
-    build-depends:
-        -- global
-        criterion,
-        deepseq,
-        -- package
+        -- project
         ron
-    main-is: Main.hs
-    hs-source-dirs: bench
-    type: exitcode-stdio-1.0
+    exposed-modules:
+        RON.Storage
+        RON.Storage.IO
+        RON.Storage.Test
+    hs-source-dirs: lib

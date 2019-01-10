@@ -5,6 +5,6 @@ version: 0
 build-type: Simple
 
 executable TypicalUsage
-    build-depends: base, ron
+    build-depends: base, ron, ron-storage
     default-language: Haskell2010
     main-is: TypicalUsage.lhs
