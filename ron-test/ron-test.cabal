@@ -7,6 +7,12 @@ common language
     build-depends: base
     default-language: Haskell2010
 
+library
+    import: language
+    build-depends: ron, ron-schema
+    exposed-modules: LwwStruct.Types
+    hs-source-dirs: lib
+
 test-suite common
     import: language
     build-depends:
@@ -40,13 +46,13 @@ test-suite test
         text,
         -- project
         ron,
-        ron-schema
+        -- package
+        ron-test
     main-is: Main.hs
     other-modules:
         Gen
         HexDump
         LwwStruct
-        LwwStruct.Types
     type: exitcode-stdio-1.0
 
 executable words
