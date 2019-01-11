@@ -1,13 +1,11 @@
 module RON.Internal.Prelude
-    ( module RON.Internal.Prelude
-    , module X
+    ( module X
     ) where
 
 import           Control.Applicative as X
 import           Control.Monad as X
 import           Control.Monad.Except as X (throwError)
 import           Data.ByteString as X (ByteString)
-import qualified Data.ByteString.Lazy as BSL
 import           Data.Coerce as X
 import           Data.Either as X
 import           Data.Foldable as X
@@ -33,5 +31,3 @@ import           Data.Word as X (Word16, Word32, Word64, Word8)
 import           GHC.Generics as X
 import           GHC.TypeLits as X
 import           Safe.Foldable as X
-
-type ByteStringL = BSL.ByteString

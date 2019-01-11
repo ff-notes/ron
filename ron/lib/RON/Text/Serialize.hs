@@ -33,6 +33,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             Object (..), Op (..), RawOp (..), StateChunk (..),
                             StateFrame, WireChunk (Query, Raw, Value),
                             WireFrame, WireReducedChunk (..))
+import           RON.Util (ByteStringL)
 import           RON.UUID (UUID, zero)
 
 -- | Serialize a common frame

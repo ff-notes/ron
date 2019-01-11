@@ -28,6 +28,7 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.ZigZag (zzDecode64)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
+import           RON.Util (ByteStringL)
 import           RON.Util.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),

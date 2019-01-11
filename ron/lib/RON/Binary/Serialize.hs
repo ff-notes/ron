@@ -27,6 +27,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             RawOp (..), UUID (UUID),
                             WireChunk (Query, Raw, Value), WireFrame,
                             WireReducedChunk (..))
+import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word4, b0000, leastSignificant4, safeCast)
 
 -- | Serialize a frame

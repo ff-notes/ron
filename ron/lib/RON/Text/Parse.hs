@@ -43,6 +43,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             RawOp (..), StateChunk (..), StateFrame,
                             UUID (UUID), WireChunk (Query, Raw, Value),
                             WireFrame, WireReducedChunk (..))
+import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word2, Word4, Word60, b00, b0000, b01, b10, b11,
                                 ls60, safeCast)
 import           RON.UUID (UuidFields (..))

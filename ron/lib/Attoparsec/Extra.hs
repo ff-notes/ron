@@ -22,6 +22,8 @@ import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
 import           Data.List (intercalate)
 
+import           RON.Util (ByteStringL)
+
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
 parseOnlyL p = parseOnly p . toStrict
 
