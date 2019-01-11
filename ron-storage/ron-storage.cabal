@@ -60,7 +60,8 @@ library
         network-info,
         transformers,
         -- project
-        ron
+        ron,
+        ron-rdt
     exposed-modules:
         RON.Storage
         RON.Storage.IO

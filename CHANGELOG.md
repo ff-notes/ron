@@ -6,9 +6,13 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `RON.UUID.liftName`
+
 ### Changed
 - Extracted `ron-storage` package.
 - Extracted `ron-schema` package.
+- Extracted `ron-rdt` package.
 
 ## [0.4] - 2019-01-09
 ### Added

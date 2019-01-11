@@ -3,6 +3,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet
@@ -16,16 +17,20 @@ module RON.Data.ORSet
     , removeValue
     ) where
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.Except (MonadError, liftEither)
 import           Control.Monad.State.Strict (StateT, get, modify, put)
 import           Control.Monad.Writer.Strict (lift, tell)
+import           Data.List (sortOn)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes)
+import           Data.Traversable (for)
+import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom, Object (..), Op (..), StateChunk (..), UUID)
+import           RON.Util (minOn)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -63,7 +68,7 @@ instance Reducible ORSetRaw where
 
 -- | Name-UUID to use as OR-Set type marker.
 setType :: UUID
-setType = fromJust $ UUID.mkName "set"
+setType = $(UUID.liftName "set")
 
 -- | Type-directing wrapper for typed OR-Set of atomic values
 newtype ORSet a = ORSet [a]

@@ -9,7 +9,11 @@ common language
 
 library
     import: language
-    build-depends: ron, ron-schema
+    build-depends:
+        -- project
+        ron,
+        ron-rdt,
+        ron-schema
     exposed-modules: LwwStruct.Types
     hs-source-dirs: lib
 
@@ -28,7 +32,8 @@ test-suite common
         tasty-hedgehog,
         tasty-hunit,
         -- project
-        ron
+        ron,
+        ron-rdt
     main-is: Common.hs
     type: exitcode-stdio-1.0
 
@@ -46,6 +51,7 @@ test-suite test
         text,
         -- project
         ron,
+        ron-rdt,
         -- package
         ron-test
     main-is: Main.hs
@@ -64,5 +70,6 @@ executable words
         text-metrics,
         unordered-containers,
         -- project
-        ron
+        ron,
+        ron-rdt
     main-is: Words.hs

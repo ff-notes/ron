@@ -24,14 +24,17 @@ module RON.Data (
     reduceWireFrame,
 ) where
 
-import           RON.Internal.Prelude
-
+import           Control.Monad (guard)
 import           Control.Monad.State.Strict (execStateT, lift, modify')
-import           Data.Foldable (fold)
+import           Data.Foldable (fold, toList)
+import           Data.Function (on)
 import           Data.List (partition)
+import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict (Map, (!?))
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (fromMaybe, maybeToList)
+import           Data.Semigroup (sconcat)
 
 import           RON.Data.Internal
 import           RON.Data.LWW (LwwPerField)
@@ -179,3 +182,10 @@ reduceObject o1 o2
   where
     id1 = objectId o1
     id2 = objectId o2
+
+newtype MaxOnFst a b = MaxOnFst (a, b)
+
+instance Ord a => Semigroup (MaxOnFst a b) where
+    mof1@(MaxOnFst (a1, _)) <> mof2@(MaxOnFst (a2, _))
+        | a1 < a2   = mof2
+        | otherwise = mof1

@@ -3,6 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | LWW-per-field RDT
@@ -16,14 +17,15 @@ module RON.Data.LWW
     , zoomField
     ) where
 
-import           RON.Internal.Prelude
-
 import           Control.Error (fmapL)
-import           Control.Monad.Except (MonadError, liftEither)
+import           Control.Monad.Except (MonadError, liftEither, throwError)
 import           Control.Monad.State.Strict (MonadState, StateT, get, put,
                                              runStateT)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
+import           Data.List (sortOn)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Traversable (for)
 
 import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
                                     collectFrame, fromRon, getObjectStateChunk,
@@ -33,7 +35,7 @@ import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
-import           RON.Util (Instance (Instance))
+import           RON.Util (Instance (Instance), maxOn)
 import qualified RON.UUID as UUID
 
 -- | Last-Write-Wins: select an op with latter event
@@ -58,7 +60,7 @@ instance Reducible LwwPerField where
 
 -- | Name-UUID to use as LWW type marker.
 lwwType :: UUID
-lwwType = fromJust $ UUID.mkName "lww"
+lwwType = $(UUID.liftName "lww")
 
 -- | Create LWW object from a list of named fields.
 newObject :: ReplicaClock m => [(UUID, Instance Replicated)] -> m (Object a)

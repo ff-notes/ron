@@ -20,6 +20,7 @@ module RON.UUID
     , pattern Zero
     -- * Name
     , getName
+    , liftName
     , mkName
     , mkScopedName
     -- * Base32 encoding, suitable for file names
@@ -35,6 +36,7 @@ import           Data.Char (chr, toUpper)
 import           Data.Data (Data)
 import           Data.Hashable (Hashable)
 import           GHC.Generics (Generic)
+import           Language.Haskell.TH.Syntax (Exp, Q, liftData)
 
 import qualified RON.Base64 as Base64
 import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
@@ -119,6 +121,11 @@ mkName
     => ByteString  -- ^ name, max 10 Base64 letters
     -> m UUID
 mkName nam = mkScopedName nam ""
+
+-- | Contruct a UUID name in compile-time
+liftName :: ByteString -> Q Exp
+liftName = mkName >=> liftData
+-- TODO(2019-01-11, cblp) typed splice
 
 -- | Make a scoped (qualified) name
 mkScopedName

@@ -1,6 +1,6 @@
 cabal-version:  2.2
 
-name:           ron-schema
+name:           ron-rdt
 version:        0.4
 
 bug-reports:    https://github.com/ff-notes/ron/issues
@@ -10,7 +10,7 @@ homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
 license-file:   LICENSE
 maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       RON-Schema
+synopsis:       Replicated Data Types (RON-RDT)
 
 description:
     Replicated Object Notation (RON), data types (RDT), and RON-Schema
@@ -51,21 +51,25 @@ library
     import: language
     build-depends:
         -- global
-        attoparsec,
-        bytestring,
         containers,
+        Diff,
         errors,
-        hedn,
+        hashable,
         mtl,
-        template-haskell,
+        safe,
         text,
+        time,
         transformers,
+        unordered-containers,
         -- project
-        ron,
-        ron-rdt
+        ron
     exposed-modules:
-        RON.Schema
-        RON.Schema.TH
+        RON.Data
+        RON.Data.LWW
+        RON.Data.ORSet
+        RON.Data.RGA
+        RON.Data.Time
+        RON.Data.VersionVector
     other-modules:
-        RON.Schema.EDN
+        RON.Data.Internal
     hs-source-dirs: lib

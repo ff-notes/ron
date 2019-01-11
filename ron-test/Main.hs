@@ -244,11 +244,11 @@ prop_ron_json_example = let
             , op = Op{opEvent = foo, opRef = fooName, opPayload = [AUuid bar]}
             }
         ]
-    barName = fromJust $ UUID.mkName "bar"
+    barName = $(UUID.liftName "bar")
     bar     = encodeEvent $ fromCalendarEvent $ CalendarEvent
                 (fromJust $ mkCalendarDateTime (2017, 10, 31) (10, 26, 00))
                 replicaGritzko
-    fooName = fromJust $ UUID.mkName "foo"
+    fooName = $(UUID.liftName "foo")
     foo     = encodeEvent $ fromCalendarEvent $ CalendarEvent
                 (fromJust $ mkCalendarDateTime (2017, 10, 31) (10, 27, 00))
                 replicaGritzko
@@ -259,7 +259,7 @@ prop_ron_json_example = let
         parsed <- evalEitherS $ RT.parseWireFrame input
         output === parsed
 
-lwwType = fromJust $ UUID.mkName "lww"
+lwwType = $(UUID.liftName "lww")
 
 prop_lwwStruct = LwwStruct.prop_lwwStruct
 

@@ -35,16 +35,3 @@ import           GHC.TypeLits as X
 import           Safe.Foldable as X
 
 type ByteStringL = BSL.ByteString
-
-maxOn :: Ord b => (a -> b) -> a -> a -> a
-maxOn f x y = if f x < f y then y else x
-
-minOn :: Ord b => (a -> b) -> a -> a -> a
-minOn f x y = if f x < f y then x else y
-
-newtype MaxOnFst a b = MaxOnFst (a, b)
-
-instance Ord a => Semigroup (MaxOnFst a b) where
-    mof1@(MaxOnFst (a1, _)) <> mof2@(MaxOnFst (a2, _))
-        | a1 < a2   = mof2
-        | otherwise = mof1

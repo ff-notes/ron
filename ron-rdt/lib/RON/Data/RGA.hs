@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- | Replicated Growable Array (RGA)
 module RON.Data.RGA
@@ -20,24 +21,32 @@ module RON.Data.RGA
     , rgaType
     ) where
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.Except (MonadError, liftEither)
 import           Control.Monad.State.Strict (MonadState, get, put)
 import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import           Data.Algorithm.Diff (Diff (Both, First, Second),
                                       getGroupedDiffBy)
 import           Data.Bifunctor (bimap)
+import           Data.Coerce (coerce)
+import           Data.Foldable (asum)
+import           Data.Function (on)
+import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List (genericLength)
+import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Maybe (catMaybes, fromJust, fromMaybe)
 import           Data.Monoid (Last (..))
+import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Traversable (for)
+import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
                             getEventUuids)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
+import           RON.Util (maxOn)
 import           RON.Util.Word (pattern B11, ls60)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
@@ -306,7 +315,7 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
 
 -- | Name-UUID to use as RGA type marker.
 rgaType :: UUID
-rgaType = fromJust $ UUID.mkName "rga"
+rgaType = $(UUID.liftName "rga")
 
 -- | Typed RGA
 newtype RGA a = RGA [a]

@@ -5,6 +5,13 @@ version: 0
 build-type: Simple
 
 executable TypicalUsage
-    build-depends: base, ron, ron-schema, ron-storage
+    build-depends:
+        -- global
+        base,
+        -- project
+        ron,
+        ron-rdt,
+        ron-schema,
+        ron-storage
     default-language: Haskell2010
     main-is: TypicalUsage.lhs

@@ -46,6 +46,9 @@ matrix:
     - name: 'cabal check: ron'
       install: $STACK install cabal-install
       script: cd ron && cabal check
+    - name: 'cabal check: ron-rdt'
+      install: $STACK install cabal-install
+      script: cd ron-rdt && cabal check
     - name: 'cabal check: ron-schema'
       install: $STACK install cabal-install
       script: cd ron-schema && cabal check
