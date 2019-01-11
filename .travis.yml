@@ -45,10 +45,13 @@ matrix:
       install: []
       script: $STACK haddock --no-haddock-deps
     - name: 'cabal check: ron'
+      install: stack install cabal-install
       script: cd ron && cabal check
     - name: 'cabal check: ron-schema'
+      install: stack install cabal-install
       script: cd ron-schema && cabal check
     - name: 'cabal check: ron-storage'
+      install: stack install cabal-install
       script: cd ron-storage && cabal check
     - name: weeder
       install: $STACK build weeder
