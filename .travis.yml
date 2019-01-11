@@ -42,7 +42,6 @@ matrix:
       install: $STACK build hlint
       script: $STACK exec -- hlint .
     - name: haddock
-      install: []
       script: $STACK haddock --no-haddock-deps
     - name: 'cabal check: ron'
       install: $STACK install cabal-install
