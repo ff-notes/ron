@@ -18,14 +18,11 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
 import           RON.Text (parseObject, serializeObject)
+import           RON.Util (ByteStringL)
 
 import           LwwStruct.Types (Example1 (..), Example2 (..), int1_assign,
                                   opt5_read, opt6_assign, opt6_read, set4_zoom,
                                   str2_zoom, str3_assign, str3_read)
-
-type ByteStringL = BSLC.ByteString
-
---------------------------------------------------------------------------------
 
 example0 :: Example1
 example0 = Example1

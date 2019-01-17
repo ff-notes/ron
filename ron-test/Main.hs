@@ -41,13 +41,12 @@ import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid), Op (Op), RawOp (RawOp),
                             UUID (UUID), WireChunk (Raw), objectFrame, op,
                             opEvent, opObject, opPayload, opRef, opType)
+import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
 import qualified Gen
 import           HexDump (hexdump)
 import qualified LwwStruct
-
-type ByteStringL = BSLC.ByteString
 
 main :: IO ()
 main = do

@@ -11,7 +11,6 @@ import           Control.Monad.Trans.Identity (runIdentityT)
 import           Data.Attoparsec.Lazy (Result (Done))
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Char (isSpace)
 import           Data.EDN (Tagged (NoTag, Tagged), Value (List, Map, Symbol),
@@ -29,9 +28,9 @@ import qualified Data.Text.Lazy as TextL
 import           Data.Text.Lazy.Builder (toLazyText)
 import qualified Data.Text.Lazy.Encoding as TextL
 
-import           RON.Schema
+import           RON.Util (ByteStringL)
 
-type ByteStringL = BSL.ByteString
+import           RON.Schema
 
 newtype Env = Env {knownTypes :: Map Text RonType}
     deriving (Show)

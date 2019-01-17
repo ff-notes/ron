@@ -10,7 +10,6 @@ module RON.Storage.Test (TestDB, runStorageSim) where
 import           Control.Monad.Except (ExceptT, MonadError, runExceptT)
 import           Control.Monad.State.Strict (StateT, get, gets, modify,
                                              runStateT)
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Functor.Compose (Compose (Compose), getCompose)
 import           Data.Map.Strict (Map, (!), (!?))
@@ -24,8 +23,7 @@ import           RON.Storage (Collection, CollectionName, DocId (DocId),
                               collectionName, deleteVersion, getCollections,
                               getDocumentVersions, getDocuments,
                               loadVersionContent, saveVersionContent)
-
-type ByteStringL = BSL.ByteString
+import           RON.Util (ByteStringL)
 
 type TestDB = Map CollectionName (Map DocumentId (Map DocVersion Document))
 
