@@ -32,10 +32,6 @@ import           RON.Internal.Prelude
 
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
-import           Data.Char (chr, toUpper)
-import           Data.Data (Data)
-import           Data.Hashable (Hashable)
-import           GHC.Generics (Generic)
 import           Language.Haskell.TH.Syntax (Exp, Q, liftData)
 
 import qualified RON.Base64 as Base64

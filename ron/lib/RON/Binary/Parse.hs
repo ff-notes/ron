@@ -23,7 +23,6 @@ import           Data.Binary.Get (getDoublebe, runGet)
 import           Data.Bits (shiftR, testBit, (.&.))
 import           Data.ByteString.Lazy (cons, toStrict)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Text (Text)
 import           Data.Text.Encoding (decodeUtf8)
 import           Data.ZigZag (zzDecode64)
 

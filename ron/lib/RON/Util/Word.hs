@@ -47,11 +47,10 @@ module RON.Util.Word
     , SafeCast (..)
     ) where
 
+import           RON.Internal.Prelude
+
 import           Data.Bits ((.&.))
-import           Data.Coerce (coerce)
 import           Data.Fixed (Fixed, HasResolution)
-import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
-import           Data.Word (Word16, Word32, Word64, Word8)
 
 newtype Word2 = W2 Word8
     deriving (Eq, Ord, Show)

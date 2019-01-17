@@ -29,10 +29,11 @@ module RON.Event
     , toEpochEvent
     ) where
 
-import           Control.Monad.Except (ExceptT, lift)
+import           RON.Internal.Prelude
+
+import           Control.Monad.Except (ExceptT)
 import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
-import           Data.Hashable (Hashable, hashUsing, hashWithSalt)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word16, Word2, Word24,

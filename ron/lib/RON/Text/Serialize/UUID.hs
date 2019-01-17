@@ -17,8 +17,6 @@ import           Data.Bits (countLeadingZeros, shiftL, xor)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
-import           Data.List (minimumBy)
-import           Data.Ord (comparing)
 
 import qualified RON.Base64 as Base64
 import           RON.Util (ByteStringL)

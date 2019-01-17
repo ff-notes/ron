@@ -24,8 +24,6 @@ import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
-import           Data.Traversable (for)
 
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)

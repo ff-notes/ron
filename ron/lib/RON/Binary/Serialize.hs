@@ -18,7 +18,6 @@ import           Data.Binary.Put (putDoublebe, runPut)
 import           Data.Bits (bit, shiftL, (.|.))
 import           Data.ByteString.Lazy (cons, fromStrict)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8)
 import           Data.ZigZag (zzEncode)
 

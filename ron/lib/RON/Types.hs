@@ -24,10 +24,6 @@ module RON.Types
 
 import           RON.Internal.Prelude
 
-import           Data.Data (Data)
-import           Data.Text (Text)
-import           GHC.Generics (Generic)
-
 import           RON.UUID (UUID (..))
 
 -- | Atom — a payload element

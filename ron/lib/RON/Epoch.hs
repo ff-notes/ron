@@ -10,14 +10,14 @@ module RON.Epoch (
     runEpochClockFromCurrentTime,
 ) where
 
-import           Control.Monad.IO.Class (MonadIO)
+import           RON.Internal.Prelude
+
 import           Control.Monad.Reader (ReaderT (ReaderT), reader, runReaderT)
 import           Data.IORef (IORef, atomicModifyIORef', newIORef)
 import           Data.Ratio ((%))
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
                                         posixSecondsToUTCTime)
-import           Data.Word (Word64)
 
 import           RON.Event (EpochEvent (EpochEvent), EpochTime,
                             LocalTime (TEpoch), ReplicaClock, ReplicaId,

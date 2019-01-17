@@ -32,7 +32,6 @@ import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import           Data.Char (ord)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust, isNothing)
 
