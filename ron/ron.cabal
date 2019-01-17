@@ -55,16 +55,13 @@ library
         binary,
         bytestring,
         containers,
-        extra,
         hashable,
         mtl,
-        safe,
         template-haskell,
         text,
         time,
         transformers,
-        unordered-containers,
-        vector
+        unordered-containers
     exposed-modules:
         RON.Base64
         RON.Binary

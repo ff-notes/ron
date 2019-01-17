@@ -34,7 +34,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (ord)
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
+import           Data.Maybe (isJust, isNothing)
 
 import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
