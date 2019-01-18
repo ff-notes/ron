@@ -1,0 +1,3 @@
+- message:
+  - name: Missing other-modules entry
+  - module: Prelude

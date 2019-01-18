@@ -90,9 +90,7 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
             xs <- reducedOps x <|> stop
             pure $ x : xs
     wrcBody <- reducedOps (op wrcHeader) <|> stop
-    let lastOp = case wrcBody of
-            [] -> op wrcHeader
-            _  -> last wrcBody
+    let lastOp = lastDef (op wrcHeader) wrcBody
         wrap op = RawOp
             {opType = opType wrcHeader, opObject = opObject wrcHeader, op}
     pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
