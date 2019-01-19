@@ -3,6 +3,7 @@
 
 module Prelude (
     module X,
+    fmapL,
     identity,
     lastDef,
     maximumDef,
@@ -22,7 +23,7 @@ import           Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import           Data.Char as X (Char, chr, ord, toLower, toUpper)
 import           Data.Coerce as X (coerce)
 import           Data.Data as X (Data)
-import           Data.Either as X (Either (Left, Right))
+import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
 import           Data.Foldable as X (Foldable, asum, fold, foldMap, foldl',
                                      foldr, length, minimumBy, null, toList)
@@ -76,13 +77,14 @@ import           Data.Hashable as X (Hashable, hashUsing, hashWithSalt)
 #endif
 
 #ifdef VERSION_mtl
-import           Control.Monad.Except as X (ExceptT, MonadError, liftEither)
+import           Control.Monad.Except as X (ExceptT, MonadError, liftEither,
+                                            throwError)
 import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
                                             runReaderT)
 import           Control.Monad.State.Strict as X (MonadState, State, StateT,
                                                   evalState, evalStateT,
                                                   execStateT, get, modify', put,
-                                                  runState, state)
+                                                  runState, runStateT, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
 import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 #endif
@@ -102,6 +104,9 @@ import           Data.HashMap.Strict as X (HashMap)
 --------------------------------------------------------------------------------
 
 import           Data.List (last, maximum)
+
+fmapL :: (a -> b) -> Either a c -> Either b c
+fmapL f = either (Left . f) Right
 
 identity :: a -> a
 identity x = x

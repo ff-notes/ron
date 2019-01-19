@@ -17,15 +17,7 @@ module RON.Data.LWW
     , zoomField
     ) where
 
-import           Control.Error (fmapL)
-import           Control.Monad.Except (MonadError, liftEither, throwError)
-import           Control.Monad.State.Strict (MonadState, StateT, get, put,
-                                             runStateT)
-import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
-import           Data.List (sortOn)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Traversable (for)
 
 import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
                                     collectFrame, fromRon, getObjectStateChunk,

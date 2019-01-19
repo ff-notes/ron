@@ -54,7 +54,6 @@ library
         -- global
         containers,
         Diff,
-        errors,
         hashable,
         mtl,
         text,
