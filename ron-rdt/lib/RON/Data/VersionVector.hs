@@ -12,7 +12,6 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
 import           RON.Types (Op (..), StateChunk (..), UUID (UUID))
-import           RON.Util (maxOn)
 import qualified RON.UUID as UUID
 
 type Origin = Word64

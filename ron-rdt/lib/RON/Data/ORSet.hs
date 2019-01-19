@@ -22,7 +22,6 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom, Object (..), Op (..), StateChunk (..), UUID)
-import           RON.Util (minOn)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 

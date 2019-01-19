@@ -33,7 +33,6 @@ import           RON.Data.Internal
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
                             getEventUuids)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
-import           RON.Util (maxOn)
 import           RON.Util.Word (pattern B11, ls60)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID

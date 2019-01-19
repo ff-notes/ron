@@ -8,6 +8,8 @@ module Prelude (
     identity,
     lastDef,
     maximumDef,
+    maxOn,
+    minOn,
     whenJust,
     (?:),
 ) where
@@ -134,7 +136,11 @@ list' onEmpty onNonEmpty = \case
 maximumDef :: Ord a => a -> [a] -> a
 maximumDef def = list' def maximum
 
--- TODO Add minOn, maxOn
+maxOn :: Ord b => (a -> b) -> a -> a -> a
+maxOn f x y = if f x < f y then y else x
+
+minOn :: Ord b => (a -> b) -> a -> a -> a
+minOn f x y = if f x < f y then x else y
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust m f = maybe (pure ()) f m

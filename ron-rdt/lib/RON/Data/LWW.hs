@@ -27,7 +27,7 @@ import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
-import           RON.Util (Instance (Instance), maxOn)
+import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
 
 -- | Last-Write-Wins: select an op with latter event
