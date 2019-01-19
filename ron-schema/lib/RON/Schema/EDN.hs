@@ -16,7 +16,7 @@ import           Data.EDN (FromEDN, Tagged (NoTag, Tagged),
 import           Data.EDN.Class.Parser (parseM)
 import           Data.EDN.Extra (decodeMultiDoc, isTagged, parseList,
                                  parseSymbol', withNoPrefix, withSymbol')
-import           Data.Map.Strict ((!), (!?))
+import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
@@ -207,7 +207,11 @@ evalSchema env = fst <$> userTypes' where
             struct = StructLww{structFields = structFields', ..}
             in (DStructLww struct, Type0 $ TObject $ TStructLww struct)
 
-    getType typ = fromMaybe (snd $ userTypes' ! typ) $ prelude !? typ
+    getType :: TypeName -> RonTypeF
+    getType typ
+        =   (prelude !? typ)
+        <|> (snd <$> userTypes' !? typ)
+        ?:  error "type is validated but not found"
 
     evalType = \case
         Use   typ      -> case getType typ of

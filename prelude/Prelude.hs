@@ -7,6 +7,7 @@ module Prelude (
     identity,
     lastDef,
     maximumDef,
+    (?:),
 ) where
 
 -- base
@@ -124,3 +125,9 @@ maximumDef :: Ord a => a -> [a] -> a
 maximumDef def = list' def maximum
 
 -- TODO Add minOn, maxOn
+
+-- | An infix form of 'fromMaybe' with arguments flipped.
+(?:) :: Maybe a -> a -> a
+maybeA ?: b = fromMaybe b maybeA
+{-# INLINABLE (?:) #-}
+infixr 0 ?:
