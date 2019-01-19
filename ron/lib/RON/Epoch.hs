@@ -10,10 +10,6 @@ module RON.Epoch (
     runEpochClockFromCurrentTime,
 ) where
 
-import           Control.Monad.Reader (ReaderT (ReaderT), reader, runReaderT)
-import           Data.IORef (IORef, atomicModifyIORef', newIORef)
-import           Data.Ratio ((%))
-import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
                                         posixSecondsToUTCTime)
 

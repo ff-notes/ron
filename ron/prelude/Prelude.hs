@@ -23,6 +23,7 @@ import           Data.Foldable as X (Foldable, fold, foldMap, foldl', minimumBy,
 import           Data.Function as X (const, flip, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
+import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
 import           Data.List as X (map, repeat, replicate, span, splitAt, take,
                                  takeWhile, unlines, unwords, (++))
 import           Data.List (last)
@@ -30,6 +31,7 @@ import           Data.Maybe as X (Maybe (Just, Nothing), fromMaybe, maybe)
 import           Data.Monoid as X (Monoid, mempty)
 import           Data.Ord as X (Ord, Ordering (EQ, GT, LT), compare, comparing,
                                 max, (<), (<=), (>), (>=))
+import           Data.Ratio as X ((%))
 import           Data.Semigroup as X ((<>))
 import           Data.String as X (String)
 import           Data.Traversable as X (for, sequence, sequenceA, traverse)
@@ -67,7 +69,13 @@ import           Data.Hashable as X (Hashable, hashUsing, hashWithSalt)
 import           Data.Text as X (Text)
 #endif
 
+#ifdef VERSION_time
+import           Data.Time as X (UTCTime)
+#endif
+
 #ifdef VERSION_mtl
+import           Control.Monad.Reader as X (ReaderT (ReaderT), reader,
+                                            runReaderT)
 import           Control.Monad.Trans as X (lift)
 #endif
 
