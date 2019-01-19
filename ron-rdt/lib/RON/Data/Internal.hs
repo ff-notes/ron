@@ -279,4 +279,4 @@ instance ReplicatedAsPayload Bool where
     fromPayload = \case
         [ATrue]  -> pure True
         [AFalse] -> pure False
-        _        -> fail "Expected single UUID"
+        _        -> Left "Expected single UUID"
