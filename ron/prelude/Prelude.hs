@@ -7,6 +7,7 @@ module Prelude (module X, lastDef) where
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
                                            many, optional, pure, some, (*>),
                                            (<*), (<*>), (<|>))
+import           Control.Exception as X (evaluate)
 import           Control.Monad as X (Monad, guard, unless, void, when, (<=<),
                                      (=<<), (>=>), (>>=))
 import           Control.Monad.Fail as X (MonadFail, fail)
@@ -52,6 +53,10 @@ import           Data.ByteString as X (ByteString)
 
 #ifdef VERSION_containers
 import           Data.Map.Strict as X (Map)
+#endif
+
+#ifdef VERSION_deepseq
+import           Control.DeepSeq as X (NFData, force)
 #endif
 
 #ifdef VERSION_hashable

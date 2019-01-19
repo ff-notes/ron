@@ -4,9 +4,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-import           Control.DeepSeq (NFData, force)
-import           Control.Exception (evaluate)
-import           Control.Monad (void)
 import           Criterion (bench, nf)
 import           Criterion.Main (defaultConfig, defaultMainWith)
 import           Criterion.Types (timeLimit)
