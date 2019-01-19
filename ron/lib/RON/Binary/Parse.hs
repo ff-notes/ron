@@ -13,12 +13,9 @@ module RON.Binary.Parse (
     parseString,
 ) where
 
-import           Prelude hiding (fail)
-
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, takeL, withInputSize)
 import qualified Attoparsec.Extra as Atto
-import           Control.Monad.Fail (MonadFail, fail)
 import qualified Data.Binary as Binary
 import           Data.Binary.Get (getDoublebe, runGet)
 import           Data.Bits (shiftR, testBit, (.&.))
