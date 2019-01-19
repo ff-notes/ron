@@ -14,7 +14,6 @@ module RON.Binary.Parse (
 ) where
 
 import           Prelude hiding (fail)
-import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, takeL, withInputSize)

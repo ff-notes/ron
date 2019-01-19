@@ -17,8 +17,6 @@ module RON.Text.Serialize
     , serializeWireFrames
     ) where
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.State.Strict (State, evalState, runState, state)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL

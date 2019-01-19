@@ -5,9 +5,8 @@ module Data.ZigZag
     , zzDecode64
     ) where
 
-import Data.Word
-import Data.Int
-import Data.Bits
+import           Data.Bits (Bits, FiniteBits, finiteBitSize, shiftL, shiftR,
+                            xor, (.&.))
 
 {-# SPECIALIZE INLINE zzEncode :: Int8 -> Word8 #-}
 {-# SPECIALIZE INLINE zzEncode :: Int16 -> Word16 #-}

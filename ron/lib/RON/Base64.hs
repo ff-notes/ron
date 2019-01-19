@@ -22,8 +22,6 @@ module RON.Base64
     , isLetter
     ) where
 
-import           RON.Internal.Prelude
-
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL

@@ -29,8 +29,6 @@ module RON.Event
     , toEpochEvent
     ) where
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))

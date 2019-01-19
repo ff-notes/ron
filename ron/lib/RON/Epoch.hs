@@ -10,8 +10,6 @@ module RON.Epoch (
     runEpochClockFromCurrentTime,
 ) where
 
-import           RON.Internal.Prelude
-
 import           Control.Monad.Reader (ReaderT (ReaderT), reader, runReaderT)
 import           Data.IORef (IORef, atomicModifyIORef', newIORef)
 import           Data.Ratio ((%))

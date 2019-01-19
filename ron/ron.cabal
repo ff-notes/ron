@@ -82,7 +82,6 @@ library
     other-modules:
         Attoparsec.Extra
         Data.ZigZag
-        RON.Internal.Prelude
     hs-source-dirs: lib
 
 benchmark bench

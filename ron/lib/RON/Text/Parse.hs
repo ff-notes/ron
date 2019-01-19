@@ -20,7 +20,6 @@ module RON.Text.Parse
     ) where
 
 import           Prelude hiding (takeWhile)
-import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
                                    label, manyTill, parseOnlyL, satisfy, (<+>),

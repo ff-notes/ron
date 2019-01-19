@@ -11,8 +11,6 @@ module RON.Binary.Serialize (
     serializeString,
 ) where
 
-import           RON.Internal.Prelude
-
 import qualified Data.Binary as Binary
 import           Data.Binary.Put (putDoublebe, runPut)
 import           Data.Bits (bit, shiftL, (.|.))

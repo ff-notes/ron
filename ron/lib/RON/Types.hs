@@ -22,8 +22,6 @@ module RON.Types
     , WireReducedChunk (..)
     ) where
 
-import           RON.Internal.Prelude
-
 import           RON.UUID (UUID (..))
 
 -- | Atom — a payload element

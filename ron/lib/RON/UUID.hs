@@ -29,7 +29,6 @@ module RON.UUID
     ) where
 
 import           Prelude hiding (fail)
-import           RON.Internal.Prelude
 
 import           Control.Monad.Fail (MonadFail, fail)
 import           Data.Bits (shiftL, shiftR, (.|.))
