@@ -15,12 +15,6 @@ module RON.Event.Simulation
     , runReplicaSimT
     ) where
 
-import           Control.Monad.Reader (ReaderT, ask, runReaderT)
-import           Control.Monad.State.Strict (StateT, evalState, evalStateT,
-                                             modify, state)
-import           Control.Monad.Trans (MonadTrans, lift)
-import           Data.Functor.Identity (Identity)
-import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HM
 
 import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,

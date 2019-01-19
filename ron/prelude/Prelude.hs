@@ -22,6 +22,7 @@ import           Data.Foldable as X (Foldable, fold, foldMap, foldl', minimumBy,
                                      null, toList)
 import           Data.Function as X (const, flip, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
+import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
 import           Data.List as X (map, repeat, replicate, span, splitAt, take,
@@ -65,6 +66,16 @@ import           Control.DeepSeq as X (NFData, force)
 import           Data.Hashable as X (Hashable, hashUsing, hashWithSalt)
 #endif
 
+#ifdef VERSION_mtl
+import           Control.Monad.Except as X (ExceptT)
+import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
+                                            runReaderT)
+import           Control.Monad.State.Strict as X (State, StateT, evalState,
+                                                  evalStateT, modify, runState,
+                                                  state)
+import           Control.Monad.Trans as X (MonadTrans, lift)
+#endif
+
 #ifdef VERSION_text
 import           Data.Text as X (Text)
 #endif
@@ -73,13 +84,8 @@ import           Data.Text as X (Text)
 import           Data.Time as X (UTCTime)
 #endif
 
-#ifdef VERSION_mtl
-import           Control.Monad.Except as X (ExceptT)
-import           Control.Monad.Reader as X (ReaderT (ReaderT), reader,
-                                            runReaderT)
-import           Control.Monad.State.Strict as X (State, StateT, evalState,
-                                                  runState, state)
-import           Control.Monad.Trans as X (lift)
+#ifdef VERSION_unordered_containers
+import           Data.HashMap.Strict as X (HashMap)
 #endif
 
 lastDef :: a -> [a] -> a
