@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
@@ -26,7 +25,6 @@ import           Control.Monad (unless, when)
 import           Control.Monad.Except (MonadError, catchError, liftEither,
                                        throwError)
 import           Control.Monad.State.Strict (StateT, execStateT)
-import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (for_)
 import           Data.List.NonEmpty (NonEmpty ((:|)))
@@ -38,6 +36,7 @@ import           RON.Data (ReplicatedAsObject, reduceObject)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
 import           RON.Types (Object (Object), UUID, objectFrame, objectId)
+import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
 -- | Document version identifier (file name)
@@ -61,7 +60,7 @@ class (ReplicatedAsObject a, Typeable a) => Collection a where
     collectionName :: CollectionName
 
     -- | Called when RON parser fails.
-    fallbackParse :: UUID -> ByteString -> Either String (Object a)
+    fallbackParse :: UUID -> ByteStringL -> Either String (Object a)
     fallbackParse _ _ = Left "no fallback parser implemented"
 
 -- | Storage backend interface
@@ -76,9 +75,9 @@ class (ReplicaClock m, MonadError String m) => MonadStorage m where
 
     -- | Must create collection and document if not exist
     saveVersionContent
-        :: Collection a => DocId a -> DocVersion -> ByteString -> m ()
+        :: Collection a => DocId a -> DocVersion -> ByteStringL -> m ()
 
-    loadVersionContent :: Collection a => DocId a -> DocVersion -> m ByteString
+    loadVersionContent :: Collection a => DocId a -> DocVersion -> m ByteStringL
 
     deleteVersion :: Collection a => DocId a -> DocVersion -> m ()
 
@@ -167,11 +166,6 @@ vsconcat = foldr1 vappend
 
 try :: MonadError e m => m a -> m (Either e a)
 try ma = (Right <$> ma) `catchError` (pure . Left)
-
-fmapL :: (a -> b) -> Either a c -> Either b c
-fmapL f = \case
-    Left a  -> Left $ f a
-    Right c -> Right c
 
 -- | Load document, apply changes and put it back to storage
 modify

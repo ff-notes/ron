@@ -4,6 +4,7 @@
 module Prelude (
     module X,
     fmapL,
+    foldr1,
     identity,
     lastDef,
     maximumDef,
@@ -106,6 +107,7 @@ import           Data.HashMap.Strict as X (HashMap)
 --------------------------------------------------------------------------------
 
 import           Data.List (last, maximum)
+import qualified Data.Foldable
 
 fmapL :: (a -> b) -> Either a c -> Either b c
 fmapL f = either (Left . f) Right
@@ -131,3 +133,6 @@ maximumDef def = list' def maximum
 maybeA ?: b = fromMaybe b maybeA
 {-# INLINABLE (?:) #-}
 infixr 0 ?:
+
+foldr1 :: (a -> a -> a) -> NonEmpty a -> a
+foldr1 = Data.Foldable.foldr1
