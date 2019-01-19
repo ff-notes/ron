@@ -21,25 +21,13 @@ module RON.Data.RGA
     , rgaType
     ) where
 
-import           Control.Monad.Except (MonadError, liftEither)
-import           Control.Monad.State.Strict (MonadState, get, put)
-import           Control.Monad.Writer.Strict (lift, runWriterT, tell)
 import           Data.Algorithm.Diff (Diff (Both, First, Second),
                                       getGroupedDiffBy)
-import           Data.Bifunctor (bimap)
-import           Data.Coerce (coerce)
-import           Data.Foldable (asum)
-import           Data.Function (on)
-import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
-import           Data.List (genericLength)
-import           Data.Map.Strict (Map)
+import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes, fromJust, fromMaybe)
-import           Data.Monoid (Last (..))
-import           Data.Text (Text)
+import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
-import           Data.Traversable (for)
 
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
@@ -216,7 +204,7 @@ reapplyPatchesToState (RgaRaw rstate, ps@PatchSet{..}) = case rstate of
     Nothing -> do
         -- rstate is empty => only virtual 0 node exists
         -- => we can apply only 0 patch
-        patch <- Map.lookup Zero psPatches
+        patch <- psPatches !? Zero
         pure (RgaRaw $ Just patch, ps{psPatches = Map.delete Zero psPatches})
 
 reapplyPatchesToOtherPatches :: PatchSet -> Maybe PatchSet
