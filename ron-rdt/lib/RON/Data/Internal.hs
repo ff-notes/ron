@@ -27,13 +27,7 @@ module RON.Data.Internal (
     payloadEncoding,
 ) where
 
-import           Control.Monad.Writer.Strict (WriterT, lift, runWriterT, tell)
-import           Data.Int (Int64)
-import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (maybeToList)
-import           Data.Semigroup (sconcat)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           RON.Event (ReplicaClock)

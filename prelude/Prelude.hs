@@ -81,7 +81,7 @@ import           Control.Monad.State.Strict as X (State, StateT, evalState,
                                                   evalStateT, execStateT,
                                                   modify', runState, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
-import           Control.Monad.Writer.Strict as X (tell)
+import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 #endif
 
 #ifdef VERSION_text

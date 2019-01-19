@@ -8,7 +8,6 @@ module RON.Data.VersionVector
     ) where
 
 import qualified Data.Map.Strict as Map
--- import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
