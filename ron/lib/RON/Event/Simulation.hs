@@ -60,7 +60,7 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
 
     advance time = ReplicaSim $ do
         rid <- ask
-        lift . NetworkSim . modify $ HM.alter (Just . advancePS) rid
+        lift . NetworkSim . modify' $ HM.alter (Just . advancePS) rid
       where
         advancePS = \case
             Nothing      -> time

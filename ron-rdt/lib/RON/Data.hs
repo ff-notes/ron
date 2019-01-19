@@ -24,17 +24,9 @@ module RON.Data (
     reduceWireFrame,
 ) where
 
-import           Control.Monad (guard)
-import           Control.Monad.State.Strict (execStateT, lift, modify')
-import           Data.Foldable (fold, toList)
-import           Data.Function (on)
-import           Data.List (partition)
-import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import qualified Data.List.NonEmpty as NonEmpty
-import           Data.Map.Strict (Map, (!?))
+import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe, maybeToList)
-import           Data.Semigroup (sconcat)
 
 import           RON.Data.Internal
 import           RON.Data.LWW (LwwPerField)

@@ -24,20 +24,22 @@ import           Data.Either as X (Either (Left, Right))
 import           Data.Eq as X (Eq, (/=), (==))
 import           Data.Foldable as X (Foldable, fold, foldMap, foldl', foldr,
                                      length, minimumBy, null, toList)
-import           Data.Function as X (const, flip, ($), (.))
+import           Data.Function as X (const, flip, on, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
-import           Data.List as X (filter, intercalate, map, repeat, replicate,
-                                 span, splitAt, take, takeWhile, unlines,
-                                 unwords, zip, (++))
-import           Data.Maybe as X (Maybe (Just, Nothing), fromMaybe, maybe)
+import           Data.List as X (filter, intercalate, map, partition, repeat,
+                                 replicate, span, splitAt, take, takeWhile,
+                                 unlines, unwords, zip, (++))
+import           Data.List.NonEmpty as X (NonEmpty, nonEmpty)
+import           Data.Maybe as X (Maybe (Just, Nothing), fromMaybe, maybe,
+                                  maybeToList)
 import           Data.Monoid as X (Monoid, mempty)
 import           Data.Ord as X (Ord, Ordering (EQ, GT, LT), compare, comparing,
                                 max, min, (<), (<=), (>), (>=))
 import           Data.Ratio as X ((%))
-import           Data.Semigroup as X (Semigroup, (<>))
+import           Data.Semigroup as X (Semigroup, sconcat, (<>))
 import           Data.String as X (String)
 import           Data.Traversable as X (for, sequence, sequenceA, traverse)
 import           Data.Tuple as X (fst, snd, uncurry)
@@ -75,8 +77,8 @@ import           Control.Monad.Except as X (ExceptT)
 import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
                                             runReaderT)
 import           Control.Monad.State.Strict as X (State, StateT, evalState,
-                                                  evalStateT, modify, runState,
-                                                  state)
+                                                  evalStateT, execStateT,
+                                                  modify', runState, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
 #endif
 
