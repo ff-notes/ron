@@ -231,7 +231,7 @@ mkReplicatedStructLww struct = do
         unguide = [| \ $guidedX -> x |]
         guide = case fieldWrapperC field'Type of
             Just w  -> conE w
-            Nothing -> [| id |]
+            Nothing -> [| identity |]
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack

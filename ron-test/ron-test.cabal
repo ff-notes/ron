@@ -4,8 +4,11 @@ name:           ron-test
 version:        0
 
 common language
-    build-depends: base
+    build-depends: base >= 4.10 && < 4.13, integer-gmp
+    default-extensions: StrictData
     default-language: Haskell2010
+    hs-source-dirs: prelude
+    other-modules: Prelude
 
 library
     import: language
@@ -34,6 +37,7 @@ test-suite common
         -- project
         ron,
         ron-rdt
+    hs-source-dirs: .
     main-is: Common.hs
     type: exitcode-stdio-1.0
 
@@ -54,6 +58,7 @@ test-suite test
         ron-rdt,
         -- package
         ron-test
+    hs-source-dirs: .
     main-is: Main.hs
     other-modules:
         Gen
@@ -72,4 +77,5 @@ executable words
         -- project
         ron,
         ron-rdt
+    hs-source-dirs: .
     main-is: Words.hs

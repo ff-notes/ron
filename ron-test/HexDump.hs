@@ -3,6 +3,7 @@
 module HexDump where
 
 import qualified Data.ByteString.Lazy as BSL
+import           Data.List (init, tail)
 import           Numeric (showHex)
 
 hexdump :: BSL.ByteString -> String

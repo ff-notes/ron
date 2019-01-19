@@ -1,16 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Prelude hiding (words)
-
 import           Control.Monad.Except (liftEither, runExceptT)
 import           Control.Monad.State.Strict (execStateT)
 import qualified Data.HashSet as HashSet
-import           Data.List (intersect, sortOn, tails)
+import           Data.List (intersect, minimum, sortOn, tails)
 import           Data.Ord (Down (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Text.Metrics (levenshteinNorm)
+import           System.IO (print)
 
 import           RON.Data (reduceObject)
 import           RON.Data.RGA (RgaString)
@@ -22,7 +21,7 @@ import           RON.Types (Object)
 main :: IO ()
 main = do
     words <- Text.lines <$> Text.getContents
-    mapM_ print $ take 10 $ sortOn Down
+    traverse_ print $ take 10 $ sortOn Down
         [   (   realToFrac $ minimum
                     [ levenshteinNorm begin branch1
                     , levenshteinNorm begin branch2
@@ -64,7 +63,7 @@ stems word
 
 rgaTrick1 :: Text -> Text -> (Object RgaString, Object RgaString)
 rgaTrick1 begin branch1 =
-    either error id .
+    either error identity .
     runNetworkSim . runReplicaSim (applicationSpecific 1) . runExceptT $ do
         begin' <- RGA.newFromText begin
         branch1' <- (`execStateT` begin') $ RGA.editText branch1
@@ -72,7 +71,7 @@ rgaTrick1 begin branch1 =
 
 rgaTrick2 :: (Object RgaString, Object RgaString) -> Text -> Text
 rgaTrick2 (begin', branch1') branch2 =
-    either error id .
+    either error identity .
     runNetworkSim . runReplicaSim (applicationSpecific 2) . runExceptT $ do
         branch2' <- (`execStateT` begin') $ RGA.editText branch2
         end' <- liftEither $ reduceObject branch1' branch2'

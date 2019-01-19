@@ -30,8 +30,8 @@ import           Data.Coerce as X (coerce)
 import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
-import           Data.Foldable as X (Foldable, asum, fold, foldMap, foldl',
-                                     foldr, for_, length, minimumBy, null,
+import           Data.Foldable as X (Foldable, and, asum, fold, foldMap, foldl',
+                                     foldr, for_, length, minimumBy, null, or,
                                      toList, traverse_)
 import           Data.Function as X (const, flip, on, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
@@ -63,7 +63,8 @@ import           GHC.Exts as X (Double)
 import           GHC.Generics as X (Generic)
 import           GHC.Integer as X (Integer)
 import           GHC.Num as X (Num, negate, subtract, (*), (+), (-))
-import           GHC.Real as X (Integral, fromIntegral, mod, realToFrac, round)
+import           GHC.Real as X (Integral, fromIntegral, mod, realToFrac, round,
+                                (^), (^^))
 import           GHC.Stack as X (HasCallStack)
 import           System.IO as X (FilePath, IO)
 import           Text.Show as X (Show, show)
