@@ -4,16 +4,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.State.Strict (evalStateT, execStateT, get)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Char (toLower, toUpper)
-import           Data.Foldable (for_)
 import           Data.Maybe (fromJust)
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
                            annotateShow, forAll, property, tripping, (===))
 import qualified Hedgehog.Gen as Gen

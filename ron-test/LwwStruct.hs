@@ -4,11 +4,9 @@
 
 module LwwStruct (prop_lwwStruct) where
 
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.State.Strict (runStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String.Interpolate.IsString (i)
-import           GHC.Stack (HasCallStack, withFrozenCallStack)
+import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (MonadTest, Property, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 

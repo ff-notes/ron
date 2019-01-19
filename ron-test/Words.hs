@@ -1,11 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-import           Control.Monad.Except (liftEither, runExceptT)
-import           Control.Monad.State.Strict (execStateT)
 import qualified Data.HashSet as HashSet
-import           Data.List (intersect, minimum, sortOn, tails)
-import           Data.Ord (Down (..))
-import           Data.Text (Text)
+import           Data.List (intersect, minimum, tails)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 import           Data.Text.Metrics (levenshteinNorm)

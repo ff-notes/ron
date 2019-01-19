@@ -39,16 +39,17 @@ import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef,
                                   readIORef, writeIORef)
-import           Data.List as X (filter, genericLength, intercalate, lookup,
-                                 map, partition, repeat, replicate, sortOn,
-                                 span, splitAt, take, takeWhile, unlines,
-                                 unwords, zip, (++))
+import           Data.List as X (filter, genericLength, intercalate, isPrefixOf,
+                                 isSuffixOf, lookup, map, partition, repeat,
+                                 replicate, sortBy, sortOn, span, splitAt, take,
+                                 takeWhile, unlines, unwords, zip, (++))
 import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
 import           Data.Maybe as X (Maybe (Just, Nothing), catMaybes, fromMaybe,
                                   listToMaybe, maybe, maybeToList)
 import           Data.Monoid as X (Last (Last), Monoid, mempty)
-import           Data.Ord as X (Ord, Ordering (EQ, GT, LT), compare, comparing,
-                                max, min, (<), (<=), (>), (>=))
+import           Data.Ord as X (Down (Down), Ord, Ordering (EQ, GT, LT),
+                                compare, comparing, max, min, (<), (<=), (>),
+                                (>=))
 import           Data.Ratio as X ((%))
 import           Data.Semigroup as X (Semigroup, sconcat, (<>))
 import           Data.String as X (String)

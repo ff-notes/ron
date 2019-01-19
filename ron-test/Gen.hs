@@ -15,8 +15,6 @@ module Gen (
     word64',
 ) where
 
-import           Data.Text (Text)
-import           Data.Word (Word64)
 import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
                                text, unicodeAll, word64, word8)

@@ -1,21 +1,17 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Function (on)
 import           Data.Generics (gcompare)
-import           Data.List.Extra (dropEnd, isPrefixOf, isSuffixOf, sortBy)
+import           Data.List.Extra (dropEnd)
 import qualified Data.Map.Merge.Strict as Map
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust)
-import           Data.Traversable (for)
 import           Hedgehog (Property, property, (===))
 import           System.Directory (listDirectory)
-import           System.FilePath ((</>))
 import           Test.Tasty (TestTree, defaultMain, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.HUnit (assertFailure, testCase)
@@ -89,7 +85,7 @@ isRelevant :: WireChunk -> Bool
 isRelevant = \case
     Query _ -> False
     Value WireReducedChunk{wrcHeader = RawOp{opType}} ->
-        opType /= fromJust (UUID.mkName "~")
+        opType /= $(UUID.liftName "~")
     _       -> True
 
 collectLefts :: (Either a b, Either a b) -> Either [(String, a)] (b, b)
