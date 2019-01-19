@@ -34,6 +34,7 @@ import           RON.Internal.Prelude
 import           Control.Monad.Except (ExceptT)
 import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
+import           GHC.Stack (HasCallStack)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word16, Word2, Word24,
@@ -172,8 +173,10 @@ advanceToUuid :: ReplicaClock clock => UUID -> clock ()
 advanceToUuid = advance . uuidValue . UUID.split
 
 -- | Get a single event
-getEvent :: ReplicaClock m => m EpochEvent
-getEvent = head <$> getEvents (ls60 1)
+getEvent :: (HasCallStack, ReplicaClock m) => m EpochEvent
+getEvent = getEvents (ls60 1) >>= \case
+    e:_ -> pure e
+    []  -> error "getEvents returned no events"
 
 -- | Get a single event as UUID
 getEventUuid :: ReplicaClock m => m UUID
