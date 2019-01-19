@@ -1,4 +1,6 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -29,10 +31,7 @@ module RON.Event
     , toEpochEvent
     ) where
 
-import           Control.Monad.Except (ExceptT)
-import           Control.Monad.State.Strict (StateT)
 import           Data.Bits (shiftL, shiftR, (.|.))
-import           GHC.Stack (HasCallStack)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word16, Word2, Word24,
@@ -84,10 +83,7 @@ instance Hashable Naming where
 
 -- | Replica identifier
 data ReplicaId = ReplicaId !Naming !Word60
-    deriving (Eq, Show)
-
-instance Hashable ReplicaId where
-    hashWithSalt = hashUsing $ \(ReplicaId n r) -> (n, r)
+    deriving (Eq, Show, Generic, Hashable)
 
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.

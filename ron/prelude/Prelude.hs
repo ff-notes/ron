@@ -74,8 +74,10 @@ import           Data.Time as X (UTCTime)
 #endif
 
 #ifdef VERSION_mtl
+import           Control.Monad.Except as X (ExceptT)
 import           Control.Monad.Reader as X (ReaderT (ReaderT), reader,
                                             runReaderT)
+import           Control.Monad.State.Strict as X (StateT)
 import           Control.Monad.Trans as X (lift)
 #endif
 
