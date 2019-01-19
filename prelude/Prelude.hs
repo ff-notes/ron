@@ -31,11 +31,11 @@ import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
 import           Data.List as X (filter, intercalate, map, partition, repeat,
-                                 replicate, span, splitAt, take, takeWhile,
-                                 unlines, unwords, zip, (++))
+                                 replicate, sortOn, span, splitAt, take,
+                                 takeWhile, unlines, unwords, zip, (++))
 import           Data.List.NonEmpty as X (NonEmpty, nonEmpty)
-import           Data.Maybe as X (Maybe (Just, Nothing), fromMaybe, maybe,
-                                  maybeToList)
+import           Data.Maybe as X (Maybe (Just, Nothing), catMaybes, fromMaybe,
+                                  maybe, maybeToList)
 import           Data.Monoid as X (Monoid, mempty)
 import           Data.Ord as X (Ord, Ordering (EQ, GT, LT), compare, comparing,
                                 max, min, (<), (<=), (>), (>=))
@@ -74,12 +74,12 @@ import           Data.Hashable as X (Hashable, hashUsing, hashWithSalt)
 #endif
 
 #ifdef VERSION_mtl
-import           Control.Monad.Except as X (ExceptT)
+import           Control.Monad.Except as X (ExceptT, MonadError, liftEither)
 import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
                                             runReaderT)
 import           Control.Monad.State.Strict as X (State, StateT, evalState,
-                                                  evalStateT, execStateT,
-                                                  modify', runState, state)
+                                                  evalStateT, execStateT, get,
+                                                  modify', put, runState, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
 import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 #endif

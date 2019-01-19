@@ -17,14 +17,7 @@ module RON.Data.ORSet
     , removeValue
     ) where
 
-import           Control.Monad.Except (MonadError, liftEither)
-import           Control.Monad.State.Strict (StateT, get, modify, put)
-import           Control.Monad.Writer.Strict (lift, tell)
-import           Data.List (sortOn)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (catMaybes)
-import           Data.Traversable (for)
 
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, getEventUuid)
@@ -158,7 +151,7 @@ addNewRef
     => a -> StateT (Object (ObjectORSet a)) m ()
 addNewRef item = do
     itemObj@(Object _ itemFrame) <- lift $ newObject item
-    modify $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
+    modify' $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
     addRef itemObj
 
 removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSet a)) m ()
