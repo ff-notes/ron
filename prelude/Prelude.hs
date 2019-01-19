@@ -5,6 +5,7 @@ module Prelude (
     module X,
     identity,
     lastDef,
+    maximumDef,
 ) where
 
 -- base
@@ -80,6 +81,7 @@ import           Control.Monad.State.Strict as X (State, StateT, evalState,
                                                   evalStateT, execStateT,
                                                   modify', runState, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
+import           Control.Monad.Writer.Strict as X (tell)
 #endif
 
 #ifdef VERSION_text
@@ -96,12 +98,18 @@ import           Data.HashMap.Strict as X (HashMap)
 
 --------------------------------------------------------------------------------
 
-import           Data.List (last)
+import           Data.List (last, maximum)
 
 identity :: a -> a
 identity x = x
 
 lastDef :: a -> [a] -> a
-lastDef def = \case
-    [] -> def
-    xs -> last xs
+lastDef def = list' def last
+
+list' :: b -> ([a] -> b) -> [a] -> b
+list' onEmpty onNonEmpty = \case
+    [] -> onEmpty
+    xs -> onNonEmpty xs
+
+maximumDef :: Ord a => a -> [a] -> a
+maximumDef def = list' def maximum

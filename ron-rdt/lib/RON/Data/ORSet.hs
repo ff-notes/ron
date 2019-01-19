@@ -25,7 +25,6 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import           Data.Traversable (for)
-import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, getEventUuid)

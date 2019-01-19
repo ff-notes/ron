@@ -40,7 +40,6 @@ import           Data.Monoid (Last (..))
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Traversable (for)
-import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,

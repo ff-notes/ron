@@ -35,7 +35,6 @@ import           Data.Maybe (maybeToList)
 import           Data.Semigroup (sconcat)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Safe.Foldable (maximumDef)
 
 import           RON.Event (ReplicaClock)
 import           RON.Types (Atom (..), Object (..), Op (..), StateChunk (..),

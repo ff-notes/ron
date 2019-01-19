@@ -7,13 +7,8 @@ module RON.Data.VersionVector
     ( VersionVector
     ) where
 
-import           Control.Monad.Writer.Strict (lift, tell)
-import           Data.Coerce (coerce)
-import           Data.Hashable (Hashable, hashWithSalt)
-import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Word (Word64)
-import           Safe.Foldable (maximumDef)
+-- import           Safe.Foldable (maximumDef)
 
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
