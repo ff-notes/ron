@@ -28,9 +28,6 @@ module RON.UUID
     , encodeBase32
     ) where
 
-import           Prelude hiding (fail)
-
-import           Control.Monad.Fail (MonadFail, fail)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
 import           Language.Haskell.TH.Syntax (Exp, Q, liftData)
