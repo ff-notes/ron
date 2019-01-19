@@ -1,7 +1,11 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Prelude (module X, lastDef) where
+module Prelude (
+    module X,
+    identity,
+    lastDef,
+) where
 
 -- base
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
@@ -18,26 +22,25 @@ import           Data.Coerce as X (coerce)
 import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right))
 import           Data.Eq as X (Eq, (/=), (==))
-import           Data.Foldable as X (Foldable, fold, foldMap, foldl', minimumBy,
-                                     null, toList)
+import           Data.Foldable as X (Foldable, fold, foldMap, foldl', foldr,
+                                     length, minimumBy, null, toList)
 import           Data.Function as X (const, flip, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
-import           Data.List as X (intercalate, map, repeat, replicate, span,
-                                 splitAt, take, takeWhile, unlines, unwords,
-                                 (++))
-import           Data.List (last)
+import           Data.List as X (filter, intercalate, map, repeat, replicate,
+                                 span, splitAt, take, takeWhile, unlines,
+                                 unwords, zip, (++))
 import           Data.Maybe as X (Maybe (Just, Nothing), fromMaybe, maybe)
 import           Data.Monoid as X (Monoid, mempty)
 import           Data.Ord as X (Ord, Ordering (EQ, GT, LT), compare, comparing,
-                                max, (<), (<=), (>), (>=))
+                                max, min, (<), (<=), (>), (>=))
 import           Data.Ratio as X ((%))
-import           Data.Semigroup as X ((<>))
+import           Data.Semigroup as X (Semigroup, (<>))
 import           Data.String as X (String)
 import           Data.Traversable as X (for, sequence, sequenceA, traverse)
-import           Data.Tuple as X (fst, snd)
+import           Data.Tuple as X (fst, snd, uncurry)
 import           Data.Word as X (Word, Word16, Word32, Word64, Word8)
 import           GHC.Enum as X (Bounded, Enum, fromEnum, maxBound, minBound,
                                 pred, succ, toEnum)
@@ -88,6 +91,13 @@ import           Data.Time as X (UTCTime)
 #ifdef VERSION_unordered_containers
 import           Data.HashMap.Strict as X (HashMap)
 #endif
+
+--------------------------------------------------------------------------------
+
+import           Data.List (last)
+
+identity :: a -> a
+identity x = x
 
 lastDef :: a -> [a] -> a
 lastDef def = \case

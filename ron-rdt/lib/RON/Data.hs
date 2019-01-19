@@ -97,8 +97,8 @@ mkWireReducer obj chunks = chunks' <> leftovers where
     (stateChunk', (unappliedPatches, unappliedOps)) = case mStates of
         Nothing -> (Nothing, reduceUnappliedPatches @a (patches, rawops))
         Just nStates -> let
-            state = sconcat $ fmap snd nStates
-            (reducedState, unapplied') = applyPatches state (patches, rawops)
+            nState = sconcat $ fmap snd nStates
+            (reducedState, unapplied') = applyPatches nState (patches, rawops)
             StateChunk reducedStateVersion reducedStateBody =
                 stateToChunk @a reducedState
             MaxOnFst (seenStateVersion, seenState) =

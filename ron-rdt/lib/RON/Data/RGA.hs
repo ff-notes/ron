@@ -166,7 +166,7 @@ instance Reducible RgaRaw where
         ops = vertexListToOps rga
 
     applyPatches rga (patches, ops) =
-        bimap id patchSetToChunks . reapplyPatchSetToState rga $
+        bimap identity patchSetToChunks . reapplyPatchSetToState rga $
         foldMap patchSetFromChunk patches <> foldMap patchSetFromRawOp ops
 
     reduceUnappliedPatches (patches, ops) =
@@ -204,7 +204,7 @@ continue x fs = case asum $ map ($ x) fs of
     Just x' -> continue x' fs
 
 reapplyPatchesToState :: (RgaRaw, PatchSet) -> Maybe (RgaRaw, PatchSet)
-reapplyPatchesToState (RgaRaw state, ps@PatchSet{..}) = case state of
+reapplyPatchesToState (RgaRaw rstate, ps@PatchSet{..}) = case rstate of
     Just VertexList{listHead = targetHead, listItems = targetItems} -> asum
         [ do
             targetItems' <- applyPatch parent patch targetItems
@@ -215,7 +215,7 @@ reapplyPatchesToState (RgaRaw state, ps@PatchSet{..}) = case state of
         | (parent, patch) <- Map.assocs psPatches
         ]
     Nothing -> do
-        -- state is empty => only virtual 0 node exists
+        -- rstate is empty => only virtual 0 node exists
         -- => we can apply only 0 patch
         patch <- Map.lookup Zero psPatches
         pure (RgaRaw $ Just patch, ps{psPatches = Map.delete Zero psPatches})
@@ -251,8 +251,8 @@ applyPatch parent patch targetItems = case parent of
         pure $ HashMap.insert parent item' targetItems <> newItems
 
 reapplyRemovalsToState :: (RgaRaw, PatchSet) -> Maybe (RgaRaw, PatchSet)
-reapplyRemovalsToState (RgaRaw state, ps@PatchSet{..}) = do
-    VertexList{listHead = targetHead, listItems = targetItems} <- state
+reapplyRemovalsToState (RgaRaw rstate, ps@PatchSet{..}) = do
+    VertexList{listHead = targetHead, listItems = targetItems} <- rstate
     asum
         [ do
             targetItems' <- applyRemoval parent tombstone targetItems
@@ -357,7 +357,7 @@ edit newItems = do
 
     let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
     let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
-    (stateBody', Last lastEvent) <- runWriterT . fmap concat . for diff $ \case
+    (stateBody', Last lastEvent) <- runWriterT . fmap fold . for diff $ \case
         First removed -> for removed $ \case
             op@Op{opRef = Zero} -> do  -- not deleted yet
                 -- TODO(2018-11-03, #15, cblp) get sequential ids
