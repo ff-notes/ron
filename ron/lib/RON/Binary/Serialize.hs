@@ -49,7 +49,7 @@ serialize chunks = ("RON2" <>) <$> serializeBody
         []   -> chunkSize False 0
         [c]  -> (<> c) <$> chunkSize False (BSL.length c)
         c:cs ->
-            mconcat <$>
+            fold <$>
             sequence [chunkSize True (BSL.length c), pure c, foldChunks cs]
 
 -- | Serialize a chunk
@@ -69,7 +69,7 @@ serializeRawOp desc RawOp{..} = do
         , serializeUuidRef    opRef
         ]
     payload <- traverse serializeAtom opPayload
-    serializeWithDesc desc $ mconcat $ keys ++ payload
+    serializeWithDesc desc $ fold $ keys ++ payload
   where
     Op{..} = op
     serializeUuidType   = serializeWithDesc DUuidType   . serializeUuid

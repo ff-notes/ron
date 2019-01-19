@@ -38,7 +38,7 @@ import           RON.UUID (UUID, zero)
 serializeWireFrame :: WireFrame -> ByteStringL
 serializeWireFrame chunks
     = (`BSLC.snoc` '.')
-    . mconcat
+    . fold
     . (`evalState` opZero)
     $ traverse serializeChunk chunks
 
