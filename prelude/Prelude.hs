@@ -32,10 +32,10 @@ import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
-import           Data.List as X (filter, genericLength, intercalate, map,
-                                 partition, repeat, replicate, sortOn, span,
-                                 splitAt, take, takeWhile, unlines, unwords,
-                                 zip, (++))
+import           Data.List as X (filter, genericLength, intercalate, lookup,
+                                 map, partition, repeat, replicate, sortOn,
+                                 span, splitAt, take, takeWhile, unlines,
+                                 unwords, zip, (++))
 import           Data.List.NonEmpty as X (NonEmpty, nonEmpty)
 import           Data.Maybe as X (Maybe (Just, Nothing), catMaybes, fromMaybe,
                                   maybe, maybeToList)

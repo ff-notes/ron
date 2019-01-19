@@ -11,9 +11,8 @@ module RON.Schema.TH(
     mkReplicated',
 ) where
 
-import           Prelude hiding (read)
+import           Prelude hiding (lift)
 
-import           Control.Error (fmapL)
 import           Control.Monad ((>=>))
 import           Control.Monad.Except (MonadError)
 import           Control.Monad.State.Strict (MonadState, StateT)
@@ -309,6 +308,6 @@ mkEnum Enum{enumName, enumItems} = do
             $   [ match (liftDataP uuid) [| pure $(conE name) |]
                 | (name, uuid) <- itemsUuids
                 ]
-            ++  [match TH.wildP [| fail "expected one of enum items" |]]
+            ++  [match TH.wildP [| Left "expected one of enum items" |]]
         liftDataP = dataToPatQ $ const Nothing
         match pat body = TH.match pat (normalB body) []
