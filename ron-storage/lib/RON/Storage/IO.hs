@@ -33,27 +33,17 @@ module RON.Storage.IO (
     runStorage,
 ) where
 
-import           Control.Exception (catch, throwIO)
-import           Control.Monad.Except (ExceptT (ExceptT), MonadError,
-                                       runExceptT, throwError)
-import           Control.Monad.Extra (filterM, unless, when, whenJust)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Control.Monad.Reader (ReaderT (ReaderT), ask, runReaderT)
-import           Control.Monad.Trans (lift)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
-import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
-import           Data.Maybe (fromMaybe, listToMaybe)
-import           Data.Word (Word64)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
-import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
-import           RON.Event (EpochTime, ReplicaClock, ReplicaId, advance,
-                            applicationSpecific, getEvents, getPid)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                                    doesDirectoryExist, doesPathExist,
                                    listDirectory, removeFile, renameDirectory)
-import           System.FilePath ((</>))
 import           System.IO.Error (isDoesNotExistError)
+
+import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
+import           RON.Event (EpochTime, ReplicaClock, ReplicaId, advance,
+                            applicationSpecific, getEvents, getPid)
 
 import           RON.Storage as X
 

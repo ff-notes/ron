@@ -21,16 +21,7 @@ module RON.Storage (
     readVersion,
 ) where
 
-import           Control.Monad (unless, when)
-import           Control.Monad.Except (MonadError, catchError, liftEither,
-                                       throwError)
-import           Control.Monad.State.Strict (StateT, execStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Foldable (for_)
-import           Data.List.NonEmpty (NonEmpty ((:|)))
-import           Data.Traversable (for)
-import           Data.Typeable (Typeable)
-import           System.FilePath ((</>))
 
 import           RON.Data (ReplicatedAsObject, reduceObject)
 import           RON.Event (ReplicaClock, getEventUuid)

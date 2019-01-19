@@ -55,7 +55,6 @@ library
         bytestring,
         containers,
         directory,
-        extra,
         filepath,
         mtl,
         network-info,

@@ -7,23 +7,20 @@
 
 module RON.Storage.Test (TestDB, runStorageSim) where
 
-import           Control.Monad.Except (ExceptT, MonadError, runExceptT)
-import           Control.Monad.State.Strict (StateT, get, gets, modify,
-                                             runStateT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Functor.Compose (Compose (Compose), getCompose)
-import           Data.Map.Strict (Map, (!), (!?))
+import           Data.Map.Strict ((!), (!?))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
+
 import           RON.Event (ReplicaClock, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSim, runNetworkSim, runReplicaSim)
+import           RON.Util (ByteStringL)
 
 import           RON.Storage (Collection, CollectionName, DocId (DocId),
                               DocVersion, MonadStorage, changeDocId,
                               collectionName, deleteVersion, getCollections,
                               getDocumentVersions, getDocuments,
                               loadVersionContent, saveVersionContent)
-import           RON.Util (ByteStringL)
 
 type TestDB = Map CollectionName (Map DocumentId (Map DocVersion Document))
 
@@ -62,7 +59,7 @@ instance MonadStorage StorageSim where
                 . Map.alter insertDocumentVersion docid
                 . fromMaybe mempty
         let alterCollection = Map.alter alterDocument (collectionName @a)
-        StorageSim $ modify alterCollection
+        StorageSim $ modify' alterCollection
 
     loadVersionContent (DocId dir :: DocId a) version = StorageSim $ do
         db <- get
@@ -70,13 +67,13 @@ instance MonadStorage StorageSim where
 
     deleteVersion (DocId doc :: DocId a) version
         = StorageSim
-        . modify
+        . modify'
         . (`Map.adjust` collectionName @a)
         . (`Map.adjust` doc)
         $ Map.delete version
 
     changeDocId (DocId old :: DocId a) (DocId new :: DocId a) = StorageSim $
-        modify $ (`Map.adjust` collectionName @a) $ \collection ->
+        modify' $ (`Map.adjust` collectionName @a) $ \collection ->
             maybe collection (uncurry $ Map.insert new) $
             mapTake old collection
 

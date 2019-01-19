@@ -8,6 +8,7 @@ module Prelude (
     identity,
     lastDef,
     maximumDef,
+    whenJust,
     (?:),
 ) where
 
@@ -15,11 +16,11 @@ module Prelude (
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
                                            many, optional, pure, some, (*>),
                                            (<*), (<*>), (<|>))
-import           Control.Exception as X (evaluate)
-import           Control.Monad as X (Monad, guard, unless, void, when, (<=<),
-                                     (=<<), (>=>), (>>=))
+import           Control.Exception as X (catch, evaluate, throwIO)
+import           Control.Monad as X (Monad, filterM, guard, unless, void, when,
+                                     (<=<), (=<<), (>=>), (>>=))
 import           Control.Monad.Fail as X (MonadFail, fail)
-import           Control.Monad.IO.Class as X (MonadIO)
+import           Control.Monad.IO.Class as X (MonadIO, liftIO)
 import           Data.Bifunctor as X (bimap)
 import           Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import           Data.Char as X (Char, chr, ord, toLower, toUpper)
@@ -34,14 +35,15 @@ import           Data.Function as X (const, flip, on, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
-import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
+import           Data.IORef as X (IORef, atomicModifyIORef', newIORef,
+                                  readIORef, writeIORef)
 import           Data.List as X (filter, genericLength, intercalate, lookup,
                                  map, partition, repeat, replicate, sortOn,
                                  span, splitAt, take, takeWhile, unlines,
                                  unwords, zip, (++))
-import           Data.List.NonEmpty as X (NonEmpty, nonEmpty)
+import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
 import           Data.Maybe as X (Maybe (Just, Nothing), catMaybes, fromMaybe,
-                                  maybe, maybeToList)
+                                  listToMaybe, maybe, maybeToList)
 import           Data.Monoid as X (Last (Last), Monoid, mempty)
 import           Data.Ord as X (Ord, Ordering (EQ, GT, LT), compare, comparing,
                                 max, min, (<), (<=), (>), (>=))
@@ -50,6 +52,7 @@ import           Data.Semigroup as X (Semigroup, sconcat, (<>))
 import           Data.String as X (String)
 import           Data.Traversable as X (for, sequence, sequenceA, traverse)
 import           Data.Tuple as X (fst, snd, uncurry)
+import           Data.Typeable as X (Typeable)
 import           Data.Word as X (Word, Word16, Word32, Word64, Word8)
 import           GHC.Enum as X (Bounded, Enum, fromEnum, maxBound, minBound,
                                 pred, succ, toEnum)
@@ -75,19 +78,24 @@ import           Data.Map.Strict as X (Map)
 import           Control.DeepSeq as X (NFData, force)
 #endif
 
+#ifdef VERSION_filepath
+import           System.FilePath as X ((</>))
+#endif
+
 #ifdef VERSION_hashable
 import           Data.Hashable as X (Hashable, hashUsing, hashWithSalt)
 #endif
 
 #ifdef VERSION_mtl
-import           Control.Monad.Except as X (ExceptT, MonadError, liftEither,
-                                            throwError)
+import           Control.Monad.Except as X (ExceptT, MonadError, catchError,
+                                            liftEither, runExceptT, throwError)
 import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
                                             runReaderT)
 import           Control.Monad.State.Strict as X (MonadState, State, StateT,
                                                   evalState, evalStateT,
-                                                  execStateT, get, modify', put,
-                                                  runState, runStateT, state)
+                                                  execStateT, get, gets,
+                                                  modify', put, runState,
+                                                  runStateT, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
 import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 #endif
@@ -106,8 +114,8 @@ import           Data.HashMap.Strict as X (HashMap)
 
 --------------------------------------------------------------------------------
 
-import           Data.List (last, maximum)
 import qualified Data.Foldable
+import           Data.List (last, maximum)
 
 fmapL :: (a -> b) -> Either a c -> Either b c
 fmapL f = either (Left . f) Right
@@ -127,6 +135,9 @@ maximumDef :: Ord a => a -> [a] -> a
 maximumDef def = list' def maximum
 
 -- TODO Add minOn, maxOn
+
+whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
+whenJust m f = maybe (pure ()) f m
 
 -- | An infix form of 'fromMaybe' with arguments flipped.
 (?:) :: Maybe a -> a -> a
