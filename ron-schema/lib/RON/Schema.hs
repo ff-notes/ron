@@ -30,8 +30,6 @@ module RON.Schema (
     opaqueObject,
 ) where
 
-import           Data.Map.Strict (Map)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 data Stage = Parsed | Resolved

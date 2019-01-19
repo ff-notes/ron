@@ -10,23 +10,14 @@
 
 module RON.Schema.EDN (readSchema) where
 
-import           Prelude hiding (fail)
-
-import           Control.Applicative (optional, (<|>))
-import           Control.Monad (unless)
-import           Control.Monad.Fail (MonadFail, fail)
-import           Control.Monad.State.Strict (MonadState, execStateT, get, put)
 import           Data.EDN (FromEDN, Tagged (NoTag, Tagged),
                            Value (List, Symbol), mapGetSymbol, parseEDN,
                            renderText, unexpected, withList, withMap, withNoTag)
 import           Data.EDN.Class.Parser (parseM)
 import           Data.EDN.Extra (decodeMultiDoc, isTagged, parseList,
                                  parseSymbol', withNoPrefix, withSymbol')
-import           Data.Foldable (for_, traverse_)
-import           Data.Map.Strict (Map, (!), (!?))
+import           Data.Map.Strict ((!), (!?))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           RON.Schema

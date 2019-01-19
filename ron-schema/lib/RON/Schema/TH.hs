@@ -13,20 +13,11 @@ module RON.Schema.TH(
 
 import           Prelude hiding (lift)
 
-import           Control.Monad ((>=>))
-import           Control.Monad.Except (MonadError)
-import           Control.Monad.State.Strict (MonadState, StateT)
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toTitle)
-import           Data.Foldable (fold)
-import           Data.Int (Int64)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromMaybe)
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Data.Traversable (for)
-import           GHC.Stack (HasCallStack)
 import           Language.Haskell.TH (Exp (VarE), Loc (Loc), bindS, conE, conP,
                                       conT, doE, lamCaseE, letS, listE, noBindS,
                                       normalB, recC, recConE, sigD, varE, varP,

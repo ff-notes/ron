@@ -26,7 +26,8 @@ import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
 import           Data.Foldable as X (Foldable, asum, fold, foldMap, foldl',
-                                     foldr, length, minimumBy, null, toList)
+                                     foldr, for_, length, minimumBy, null,
+                                     toList, traverse_)
 import           Data.Function as X (const, flip, on, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)

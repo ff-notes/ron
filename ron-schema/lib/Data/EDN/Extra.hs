@@ -10,15 +10,10 @@ module Data.EDN.Extra (
     withSymbol',
 ) where
 
-import           Prelude hiding (fail)
-
-import           Control.Applicative (many)
-import           Control.Monad.Fail (MonadFail, fail)
 import qualified Data.EDN.AST.Lexer as EdnAst
 import qualified Data.EDN.AST.Parser as EdnAst
 import qualified Data.EDN.AST.Types as EdnAst
 import           Data.EDN.Class.Parser (Parser)
-import           Data.Text (Text)
 import qualified Text.Megaparsec as Mpc
 
 import           Data.EDN (EDNList, FromEDN, Tagged (NoTag, Tagged),
