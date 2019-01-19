@@ -13,11 +13,13 @@ module RON.Binary.Parse (
     parseString,
 ) where
 
+import           Prelude hiding (fail)
 import           RON.Internal.Prelude
 
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, takeL, withInputSize)
 import qualified Attoparsec.Extra as Atto
+import           Control.Monad.Fail (MonadFail, fail)
 import qualified Data.Binary as Binary
 import           Data.Binary.Get (getDoublebe, runGet)
 import           Data.Bits (shiftR, testBit, (.&.))
@@ -27,13 +29,13 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.ZigZag (zzDecode64)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
-import           RON.Util (ByteStringL)
-import           RON.Util.Word (safeCast)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
                             RawOp (..), UUID (UUID),
                             WireChunk (Query, Raw, Value), WireFrame,
                             WireReducedChunk (..))
+import           RON.Util (ByteStringL)
+import           RON.Util.Word (safeCast)
 
 -- | 'Parser' for descriptor
 parseDesc :: Parser (Desc, Size)
@@ -102,7 +104,7 @@ parseChunk size = label "WireChunk" $ do
         TRaw     -> assertSize size consumed0 $> Raw op
 
 -- | Assert that is such as expected
-assertSize :: Monad f => Size -> Int -> f ()
+assertSize :: MonadFail f => Size -> Int -> f ()
 assertSize expected consumed =
     when (consumed /= fromIntegral expected) $
     fail $

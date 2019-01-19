@@ -28,8 +28,10 @@ module RON.UUID
     , encodeBase32
     ) where
 
+import           Prelude hiding (fail)
 import           RON.Internal.Prelude
 
+import           Control.Monad.Fail (MonadFail, fail)
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
 import           Language.Haskell.TH.Syntax (Exp, Q, liftData)
@@ -113,7 +115,7 @@ buildY uuidVariant uuidVersion uuidOrigin
 
 -- | Make an unscoped (unqualified) name
 mkName
-    :: Monad m
+    :: MonadFail m
     => ByteString  -- ^ name, max 10 Base64 letters
     -> m UUID
 mkName nam = mkScopedName nam ""
@@ -125,7 +127,7 @@ liftName = mkName >=> liftData
 
 -- | Make a scoped (qualified) name
 mkScopedName
-    :: Monad m
+    :: MonadFail m
     => ByteString  -- ^ scope, max 10 Base64 letters
     -> ByteString  -- ^ local name, max 10 Base64 letters
     -> m UUID
