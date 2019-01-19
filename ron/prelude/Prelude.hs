@@ -25,8 +25,9 @@ import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef)
-import           Data.List as X (map, repeat, replicate, span, splitAt, take,
-                                 takeWhile, unlines, unwords, (++))
+import           Data.List as X (intercalate, map, repeat, replicate, span,
+                                 splitAt, take, takeWhile, unlines, unwords,
+                                 (++))
 import           Data.List (last)
 import           Data.Maybe as X (Maybe (Just, Nothing), fromMaybe, maybe)
 import           Data.Monoid as X (Monoid, mempty)

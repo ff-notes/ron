@@ -18,7 +18,6 @@ import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
-import           Data.List (intercalate)
 
 import           RON.Util (ByteStringL)
 
