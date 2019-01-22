@@ -5,7 +5,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Replicated Growable Array (RGA)
 module RON.Data.RGA
@@ -30,6 +32,7 @@ import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
 
 import           RON.Data.Internal
+import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
                             getEventUuids)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
@@ -333,7 +336,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
 -- 'getGroupedDiffBy'.
 edit
     ::  ( Replicated a, ReplicatedAsPayload a
-        , ReplicaClock m, MonadError String m, MonadState (Object (RGA a)) m
+        , ReplicaClock m, MonadE m, MonadState (Object (RGA a)) m
         )
     => [a] -> m ()
 edit newItems = do
@@ -378,7 +381,7 @@ edit newItems = do
 
 -- | Speciaization of 'edit' for 'Text'
 editText
-    :: (ReplicaClock m, MonadError String m, MonadState (Object RgaString) m)
+    :: (ReplicaClock m, MonadE m, MonadState (Object RgaString) m)
     => Text -> m ()
 editText = edit . Text.unpack
 
@@ -395,9 +398,9 @@ newFromText :: ReplicaClock m => Text -> m (Object RgaString)
 newFromText = newFromList . Text.unpack
 
 -- | Read elements from RGA
-getList :: Replicated a => Object (RGA a) -> Either String [a]
-getList = coerce . getObject
+getList :: forall a m . (Replicated a, MonadE m) => Object (RGA a) -> m [a]
+getList = fmap coerce . getObject
 
 -- | Read characters from 'RgaString'
-getText :: Object RgaString -> Either String Text
+getText :: MonadE m => Object RgaString -> m Text
 getText = fmap Text.pack . getList

@@ -25,7 +25,7 @@ import           Language.Haskell.TH (Exp (VarE), Loc (Loc), bindS, conE, conP,
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
                                             quoteExp, quotePat, quoteType)
-import           Language.Haskell.TH.Syntax (dataToPatQ, lift, liftData)
+import           Language.Haskell.TH.Syntax (dataToPatQ, liftData, liftString)
 
 import           RON.Data (Replicated (..), ReplicatedAsObject (..),
                            ReplicatedAsPayload (..), getObjectStateChunk,
@@ -35,6 +35,7 @@ import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
 import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
+import           RON.Error (MonadE, errorContext, throwErrorString)
 import           RON.Event (ReplicaClock)
 import           RON.Schema as X
 import qualified RON.Schema.EDN as EDN
@@ -162,7 +163,8 @@ mkReplicatedStructLww struct = do
         [d| instance ReplicatedAsObject $structT where
                 objectOpType = lwwType
                 newObject $consP = LWW.newObject $fieldsToPack
-                getObject $(varP obj) = fmapL ($(lift errCtx) ++) $getObjectImpl
+                getObject $(varP obj) =
+                    errorContext $(liftString errCtx) $getObjectImpl
             |]
       where
         fieldsToPack = listE
@@ -174,7 +176,7 @@ mkReplicatedStructLww struct = do
                     Nothing  -> fieldVarE
                     Just con -> [| $(conE con) $fieldVarE |]
             ]
-        errCtx = "getObject @" ++ Text.unpack structName ++ ":\n"
+        errCtx = "getObject @" <> Text.unpack structName <> ":\n"
         consE = recConE name
             [ pure (fieldName, VarE field'Var)
             | Field'{field'Name, field'Var} <- fields
@@ -194,7 +196,7 @@ mkReplicatedStructLww struct = do
         m <- varT <$> TH.newName "m"
         let assignF =
                 [ sigD assign [t|
-                    (ReplicaClock $m, MonadError String $m, MonadState $objectT $m)
+                    (ReplicaClock $m, MonadE $m, MonadState $objectT $m)
                     => $fieldViewType -> $m ()
                     |]
                 , valD' assign
@@ -202,15 +204,14 @@ mkReplicatedStructLww struct = do
                 ]
             readF =
                 [ sigD read [t|
-                    (MonadError String $m, MonadState $objectT $m)
-                    => $m $fieldViewType
+                    (MonadE $m, MonadState $objectT $m) => $m $fieldViewType
                     |]
                 , valD' read
                     [| $unguide <$> LWW.readField $(liftData field'RonName) |]
                 ]
             zoomF =
                 [ sigD zoom [t|
-                    MonadError String $m
+                    MonadE $m
                     => StateT (Object $(mkGuideType field'Type)) $m $a
                     -> StateT $objectT $m $a
                     |]
@@ -299,6 +300,8 @@ mkEnum Enum{enumName, enumItems} = do
             $   [ match (liftDataP uuid) [| pure $(conE name) |]
                 | (name, uuid) <- itemsUuids
                 ]
-            ++  [match TH.wildP [| Left "expected one of enum items" |]]
+            ++  [match
+                    TH.wildP
+                    [| throwErrorString "expected one of enum items" |]]
         liftDataP = dataToPatQ $ const Nothing
         match pat body = TH.match pat (normalB body) []

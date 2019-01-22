@@ -7,7 +7,7 @@ module LwwStruct (prop_lwwStruct) where
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (withFrozenCallStack)
-import           Hedgehog (MonadTest, Property, property, (===))
+import           Hedgehog (MonadTest, Property, evalEither, property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
 import           RON.Data (getObject, newObject)
@@ -121,12 +121,12 @@ prop_lwwStruct = property $ do
     ex1 === ex2
 
     -- decode newly created object
-    example3 <- evalEitherS $ getObject ex2
+    example3 <- evalEither $ getObject ex2
     example0 === example3
 
     -- apply operations to the object (frame)
     ((str3Value, opt5Value, opt6Value), ex4) <-
-        evalEitherS $
+        evalEither $
         runNetworkSim $ runReplicaSim replica $ runExceptT $
         (`runStateT` ex2) $ do
             -- plain field
@@ -153,7 +153,7 @@ prop_lwwStruct = property $ do
     opt6Value === Just 74
 
     -- decode object after modification
-    example4 <- evalEitherS $ getObject ex4
+    example4 <- evalEither $ getObject ex4
     example4expect === example4
 
     -- serialize object after modification

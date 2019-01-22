@@ -58,6 +58,7 @@ library
         filepath,
         mtl,
         network-info,
+        text,
         transformers,
         -- project
         ron,

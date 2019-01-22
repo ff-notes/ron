@@ -20,6 +20,7 @@ module RON.Data.ORSet
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
+import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom, Object (..), Op (..), StateChunk (..), UUID)
 import           RON.UUID (pattern Zero)
@@ -115,10 +116,7 @@ instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
         pure . ObjectORSet $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
-add ::  ( ReplicatedAsObject a
-        , ReplicatedAsPayload b
-        , ReplicaClock m, MonadError String m
-        )
+add :: (ReplicatedAsObject a, ReplicatedAsPayload b, ReplicaClock m, MonadE m)
     => b -> StateT (Object a) m ()
 add item = do
     obj@Object{..} <- get
@@ -133,20 +131,20 @@ add item = do
 
 -- | Add atomic value to the OR-Set
 addValue
-    :: (ReplicatedAsPayload a, ReplicaClock m, MonadError String m)
+    :: (ReplicatedAsPayload a, ReplicaClock m, MonadE m)
     => a -> StateT (Object (ORSet a)) m ()
 addValue = add
 
 -- | Add a reference to the object to the OR-Set
 addRef
-    :: (ReplicatedAsObject a, ReplicaClock m, MonadError String m)
+    :: (ReplicatedAsObject a, ReplicaClock m, MonadE m)
     => Object a -> StateT (Object (ObjectORSet a)) m ()
 addRef = add . objectId
 
 -- | Encode an object and add a reference to it to the OR-Set
 addNewRef
     :: forall a m
-    . (ReplicatedAsObject a, ReplicaClock m, MonadError String m)
+    . (ReplicatedAsObject a, ReplicaClock m, MonadE m)
     => a -> StateT (Object (ObjectORSet a)) m ()
 addNewRef item = do
     itemObj@(Object _ itemFrame) <- lift $ newObject item

@@ -69,6 +69,7 @@ library
         RON.Binary.Serialize
         RON.Binary.Types
         RON.Epoch
+        RON.Error
         RON.Event
         RON.Event.Simulation
         RON.Text

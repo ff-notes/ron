@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -22,8 +23,10 @@ module RON.Storage (
 ) where
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
+import           Data.String (fromString)
 
 import           RON.Data (ReplicatedAsObject, reduceObject)
+import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorString)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
 import           RON.Types (Object (Object), UUID, objectFrame, objectId)
@@ -51,11 +54,11 @@ class (ReplicatedAsObject a, Typeable a) => Collection a where
     collectionName :: CollectionName
 
     -- | Called when RON parser fails.
-    fallbackParse :: UUID -> ByteStringL -> Either String (Object a)
-    fallbackParse _ _ = Left "no fallback parser implemented"
+    fallbackParse :: MonadE m => UUID -> ByteStringL -> m (Object a)
+    fallbackParse _ _ = throwError "no fallback parser implemented"
 
 -- | Storage backend interface
-class (ReplicaClock m, MonadError String m) => MonadStorage m where
+class (ReplicaClock m, MonadE m) => MonadStorage m where
     getCollections :: m [CollectionName]
 
     -- | Must return @[]@ for non-existent collection
@@ -88,19 +91,21 @@ readVersion
     => Collection a => DocId a -> DocVersion -> m (Object a, IsTouched)
 readVersion docid version = do
     (isObjectIdValid, objectId) <-
-        liftEither $
-        maybe (Left $ "Bad Base32 UUID " ++ show docid) Right $
+        liftMaybe ("Bad Base32 UUID " ++ show docid) $
         decodeDocId docid
-    unless isObjectIdValid $ throwError $ "Not a Base32 UUID " ++ show docid
+    unless isObjectIdValid $
+        throwErrorString $ "Not a Base32 UUID " ++ show docid
     contents <- loadVersionContent docid version
     case parseStateFrame contents of
         Right objectFrame ->
             pure (Object{objectId, objectFrame}, IsTouched False)
-        Left ronError -> case fallbackParse objectId contents of
-            Right object       -> pure (object, IsTouched True)
-            Left fallbackError -> throwError $ case BSLC.head contents of
-                '{' -> fallbackError
-                _   -> ronError
+        Left ronError ->
+            do  object <- fallbackParse objectId contents
+                pure (object, IsTouched True)
+            `catchError` \fallbackError ->
+                throwError $ case BSLC.head contents of
+                    '{' -> fallbackError
+                    _   -> fromString ronError
 
 -- | A thing (e.g. document) was fixed during loading.
 -- It it was fixed during loading it must be saved to the storage.
@@ -125,20 +130,19 @@ loadDocument docid = loadRetry (3 :: Int)
             versions0 <- getDocumentVersions docid
             case versions0 of
                 []   ->
-                    throwError $
+                    throwErrorString $
                     "Document with id " ++ show docid ++ " has not found."
                 v:vs -> do
                     let versions = v :| vs
                     let wrapDoc (value, isTouched) =
                             Document{value, versions, isTouched}
-                    e1 <-
-                        for versions $ \ver -> do
-                            let ctx =   "document "  ++ show docid
-                                    ++  ", version " ++ ver
-                                    ++  ": "
-                            e1 <- try $ readVersion docid ver
-                            pure $ fmapL (ctx ++) e1
-                    liftEither $ wrapDoc <$> vsconcat e1
+                    readResults <-
+                        errorContext ("document " <> show docid) $
+                        for versions $ \ver ->
+                            try $
+                            errorContext ("version " <> ver) $
+                            readVersion docid ver
+                    liftEither $ wrapDoc <$> vsconcat readResults
         | otherwise = throwError "Maximum retries exceeded"
 
 -- | Validation-like version of 'sconcat'.
@@ -147,7 +151,7 @@ vsconcat
     -> Either String (Object a, IsTouched)
 vsconcat = foldr1 vappend
   where
-    vappend    (Left  e1)    (Left  e2) = Left $ e1 ++ "\n" ++ e2
+    vappend    (Left  e1)    (Left  e2) = Left $ "vappend: " ++ show [e1, e2]
     vappend e1@(Left  _ )    (Right _ ) = e1
     vappend    (Right _ ) e2@(Left  _ ) = e2
     vappend    (Right r1)    (Right r2) =

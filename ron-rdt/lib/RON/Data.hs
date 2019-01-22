@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -33,6 +34,7 @@ import           RON.Data.LWW (LwwPerField)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
+import           RON.Error (MonadE, throwErrorString)
 import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
                             StateFrame, UUID, WireChunk (Query, Raw, Value),
                             WireFrame, WireReducedChunk (..))
@@ -152,25 +154,26 @@ reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
 reduceState s1 s2 =
     stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2
 
-reduceStateFrame :: StateFrame -> StateFrame -> Either String StateFrame
+reduceStateFrame :: MonadE m => StateFrame -> StateFrame -> m StateFrame
 reduceStateFrame s1 s2 =
     (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid@(typ, _) chunk ->
         case reducers !? typ of
             Just Reducer{stateReducer} ->
                 modify' $ Map.insertWith stateReducer oid chunk
-            Nothing -> lift $
-                Left $ "Cannot reduce StateFrame of unknown type " ++ show typ
+            Nothing ->
+                throwErrorString $
+                "Cannot reduce StateFrame of unknown type " ++ show typ
 
-unsafeReduceObject :: Object a -> StateFrame -> Either String (Object a)
+unsafeReduceObject :: MonadE m => Object a -> StateFrame -> m (Object a)
 unsafeReduceObject Object{objectId, objectFrame = s1} s2 = do
     objectFrame <- reduceStateFrame s1 s2
     pure Object{..}
 
 -- | Reduce object with frame from another version of the same object.
-reduceObject :: Object a -> Object a -> Either String (Object a)
+reduceObject :: MonadE m => Object a -> Object a -> m (Object a)
 reduceObject o1 o2
     | id1 == id2 = unsafeReduceObject o1 $ objectFrame o2
-    | otherwise  = Left $ "Object ids differ: " ++ show (id1, id2)
+    | otherwise  = throwErrorString $ "Object ids differ: " ++ show (id1, id2)
   where
     id1 = objectId o1
     id2 = objectId o2
