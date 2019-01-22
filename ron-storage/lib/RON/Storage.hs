@@ -24,10 +24,12 @@ module RON.Storage (
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String (fromString)
+import qualified Data.Text as Text
 import qualified Text.Show
 
 import           RON.Data (ReplicatedAsObject, reduceObject)
-import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorString)
+import           RON.Error (Error (Error), MonadE, errorContext, liftMaybe,
+                            throwErrorString)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
 import           RON.Types (Object (Object), UUID, objectFrame, objectId)
@@ -92,7 +94,7 @@ readVersion
     => Collection a => DocId a -> DocVersion -> m (Object a, IsTouched)
 readVersion docid version = do
     (isObjectIdValid, objectId) <-
-        liftMaybe ("Bad Base32 UUID " ++ show docid) $
+        liftMaybe ("Bad Base32 UUID " <> show docid) $
         decodeDocId docid
     unless isObjectIdValid $
         throwErrorString $ "Not a Base32 UUID " ++ show docid
@@ -141,18 +143,18 @@ loadDocument docid = loadRetry (3 :: Int)
                         errorContext ("document " <> show docid) $
                         for versions $ \ver ->
                             try $
-                            errorContext ("version " <> ver) $
+                            errorContext ("version " <> Text.pack ver) $
                             readVersion docid ver
                     liftEither $ wrapDoc <$> vsconcat readResults
         | otherwise = throwError "Maximum retries exceeded"
 
 -- | Validation-like version of 'sconcat'.
 vsconcat
-    :: NonEmpty (Either String (Object a, IsTouched))
-    -> Either String (Object a, IsTouched)
+    :: NonEmpty (Either Error (Object a, IsTouched))
+    -> Either Error (Object a, IsTouched)
 vsconcat = foldr1 vappend
   where
-    vappend    (Left  e1)    (Left  e2) = Left $ "vappend: " ++ show [e1, e2]
+    vappend    (Left  e1)    (Left  e2) = Left $ Error "vappend" [e1, e2]
     vappend e1@(Left  _ )    (Right _ ) = e1
     vappend    (Right _ ) e2@(Left  _ ) = e2
     vappend    (Right r1)    (Right r2) =
