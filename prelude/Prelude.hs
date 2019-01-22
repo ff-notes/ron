@@ -10,6 +10,7 @@ module Prelude (
     maximumDef,
     maxOn,
     minOn,
+    show,
     whenJust,
     (?:),
 ) where
@@ -68,7 +69,7 @@ import           GHC.Real as X (Integral, fromIntegral, mod, realToFrac, round,
                                 (^), (^^))
 import           GHC.Stack as X (HasCallStack)
 import           System.IO as X (FilePath, IO)
-import           Text.Show as X (Show, show)
+import           Text.Show as X (Show)
 
 #ifdef VERSION_bytestring
 import           Data.ByteString as X (ByteString)
@@ -120,9 +121,14 @@ import           Data.HashMap.Strict as X (HashMap)
 
 import qualified Data.Foldable
 import           Data.List (last, maximum)
+import           Data.String (IsString, fromString)
+import qualified Text.Show
 
 fmapL :: (a -> b) -> Either a c -> Either b c
 fmapL f = either (Left . f) Right
+
+foldr1 :: (a -> a -> a) -> NonEmpty a -> a
+foldr1 = Data.Foldable.foldr1
 
 identity :: a -> a
 identity x = x
@@ -144,6 +150,9 @@ maxOn f x y = if f x < f y then y else x
 minOn :: Ord b => (a -> b) -> a -> a -> a
 minOn f x y = if f x < f y then x else y
 
+show :: (Show a, IsString s) => a -> s
+show = fromString . Text.Show.show
+
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust m f = maybe (pure ()) f m
 
@@ -152,6 +161,3 @@ whenJust m f = maybe (pure ()) f m
 maybeA ?: b = fromMaybe b maybeA
 {-# INLINABLE (?:) #-}
 infixr 0 ?:
-
-foldr1 :: (a -> a -> a) -> NonEmpty a -> a
-foldr1 = Data.Foldable.foldr1

@@ -24,6 +24,7 @@ module RON.Storage (
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String (fromString)
+import qualified Text.Show
 
 import           RON.Data (ReplicatedAsObject, reduceObject)
 import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorString)

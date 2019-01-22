@@ -21,6 +21,7 @@ import           System.Environment (getEnv, lookupEnv, setEnv)
 import           System.Info (os)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.TH (defaultMainGenerator)
+import qualified Text.Show
 
 import qualified RON.Base64 as Base64
 import qualified RON.Binary.Parse as RB

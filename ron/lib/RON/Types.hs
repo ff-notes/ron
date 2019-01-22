@@ -22,6 +22,8 @@ module RON.Types
     , WireReducedChunk (..)
     ) where
 
+import qualified Text.Show
+
 import           RON.UUID (UUID (..))
 
 -- | Atom — a payload element

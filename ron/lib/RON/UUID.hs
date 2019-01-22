@@ -31,6 +31,7 @@ module RON.UUID
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
 import           Language.Haskell.TH.Syntax (Exp, Q, liftData)
+import qualified Text.Show
 
 import qualified RON.Base64 as Base64
 import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
