@@ -24,6 +24,7 @@ import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
                                     mkStateChunk, newRon, objectOpType,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
+import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
@@ -65,48 +66,43 @@ newObject fields = collectFrame $ do
 
 -- | Decode field value
 viewField
-    :: Replicated a
+    :: (Replicated a, MonadE m)
     => UUID        -- ^ Field name
     -> StateChunk  -- ^ LWW object chunk
     -> StateFrame
-    -> Either String a
+    -> m a
 viewField field StateChunk{..} frame =
-    fmapL (("LWW.viewField " <> show field <> ":\n") <>) $ do
+    errorContext ("LWW.viewField " <> show field) $ do
         let ops = filter ((field ==) . opRef) stateBody
         Op{..} <- case ops of
-            []   -> Left $ unwords ["no field", show field, "in lww chunk"]
+            []   -> throwError "no field in lww chunk"
             [op] -> pure op
-            _    -> Left "unreduced state"
+            _    -> throwError "unreduced state"
         fromRon opPayload frame
 
 -- | Decode field value
 readField
-    ::  ( MonadError String m
-        , MonadState (Object a) m
-        , ReplicatedAsObject a
-        , Replicated b
-        )
+    :: (MonadE m, MonadState (Object a) m, ReplicatedAsObject a, Replicated b)
     => UUID  -- ^ Field name
     -> m b
 readField field = do
     obj@Object{..} <- get
-    liftEither $ do
-        stateChunk <- getObjectStateChunk obj
-        viewField field stateChunk objectFrame
+    stateChunk <- getObjectStateChunk obj
+    viewField field stateChunk objectFrame
 
 -- | Assign a value to a field
 assignField
     :: forall a b m
     .   ( ReplicatedAsObject a
         , Replicated b
-        , ReplicaClock m, MonadError String m, MonadState (Object a) m
+        , ReplicaClock m, MonadE m, MonadState (Object a) m
         )
     => UUID  -- ^ Field name
     -> b     -- ^ Value (from untyped world)
     -> m ()
 assignField field value = do
     obj@Object{..} <- get
-    StateChunk{..} <- liftEither $ getObjectStateChunk obj
+    StateChunk{..} <- getObjectStateChunk obj
     advanceToUuid stateVersion
     let chunk = filter ((field /=) . opRef) stateBody
     e <- getEventUuid
@@ -122,23 +118,24 @@ assignField field value = do
 
 -- | Anti-lens to an object inside a specified field
 zoomField
-    :: (ReplicatedAsObject outer, MonadError String m)
+    :: (ReplicatedAsObject outer, MonadE m)
     => UUID                       -- ^ Field name
     -> StateT (Object inner) m a  -- ^ Nested object modifier
     -> StateT (Object outer) m a
-zoomField field innerModifier = do
-    obj@Object{..} <- get
-    StateChunk{..} <- liftEither $ getObjectStateChunk obj
-    let ops = filter ((field ==) . opRef) stateBody
-    Op{..} <- case ops of
-        []   -> throwError $ unwords ["no field", show field, "in lww chunk"]
-        [op] -> pure op
-        _    -> throwError "unreduced state"
-    innerObjectId <- case opPayload of
-        [AUuid oid] -> pure oid
-        _           -> throwError "bad payload"
-    let innerObject = Object innerObjectId objectFrame
-    (a, Object{objectFrame = objectFrame'}) <-
-        lift $ runStateT innerModifier innerObject
-    put Object{objectFrame = objectFrame', ..}
-    pure a
+zoomField field innerModifier =
+    errorContext ("LWW.zoomField" <> show field) $ do
+        obj@Object{..} <- get
+        StateChunk{..} <- getObjectStateChunk obj
+        let ops = filter ((field ==) . opRef) stateBody
+        Op{..} <- case ops of
+            []   -> throwError "empty chunk"
+            [op] -> pure op
+            _    -> throwError "unreduced state"
+        innerObjectId <- errorContext "inner object" $ case opPayload of
+            [AUuid oid] -> pure oid
+            _           -> throwError "Expected object UUID"
+        let innerObject = Object innerObjectId objectFrame
+        (a, Object{objectFrame = objectFrame'}) <-
+            lift $ runStateT innerModifier innerObject
+        put Object{objectFrame = objectFrame', ..}
+        pure a

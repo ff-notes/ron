@@ -11,7 +11,8 @@ import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Maybe (fromJust)
 import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
-                           annotateShow, forAll, property, tripping, (===))
+                           annotateShow, evalEither, forAll, property, tripping,
+                           (===))
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -262,7 +263,7 @@ prop_RGA_edit_idempotency = property $ do
     textX <- forAll Gen.shortText
     textY <- forAll Gen.shortText
     rgaY <-
-        evalEitherS $
+        evalEither $
         runNetworkSim $
         runReplicaSim (applicationSpecific 271) $
         runExceptT $ do
@@ -274,7 +275,7 @@ prop_RGA_edit_idempotency_back = property $ do
     textX <- forAll Gen.shortText
     textY <- forAll Gen.shortText
     rgaX' <-
-        evalEitherS $
+        evalEither $
         runNetworkSim $
         runReplicaSim (applicationSpecific 271) $
         runExceptT $ do
@@ -316,7 +317,7 @@ prop_RGA_delete_deleted = let
     in
     property $ do
         (rga0, rga1, rga2) <-
-            evalEitherS $
+            evalEither $
             runNetworkSim $
             runReplicaSim (applicationSpecific 234) $
             runExceptT $ do

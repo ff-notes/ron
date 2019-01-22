@@ -42,6 +42,7 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing,
 import           System.IO.Error (isDoesNotExistError)
 
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
+import           RON.Error (throwErrorString)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId, advance,
                             applicationSpecific, getEvents, getPid)
 
@@ -109,7 +110,7 @@ instance MonadStorage Storage where
             when pathsDiffer $ do
                 newPathExists <- liftIO $ doesPathExist newPath
                 when newPathExists $
-                    throwError $ unwords
+                    throwErrorString $ unwords
                         [ "changeDocId"
                         , show old, "[", oldPath, "->", oldPathCanon, "]"
                         , show new, "[", newPath, "->", newPathCanon, "]"

@@ -23,4 +23,4 @@ instance ReplicatedAsPayload Day where
     fromPayload = \case
         [AInteger y, AInteger m, AInteger d] -> pure $
             fromGregorian (fromIntegral y) (fromIntegral m) (fromIntegral d)
-        _ -> Left "bad Day"
+        _ -> throwError "bad Day"

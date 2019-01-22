@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module RON.Data.Internal (
     ReducedChunk (..),
@@ -30,9 +32,11 @@ module RON.Data.Internal (
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
+import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock)
-import           RON.Types (Atom (..), Object (..), Op (..), StateChunk (..),
-                            StateFrame, UUID (..), WireChunk)
+import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
+                            Op (Op), StateChunk (StateChunk), StateFrame,
+                            UUID (UUID), WireChunk, opEvent)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -121,7 +125,7 @@ class Replicated a where
 data Encoding a = Encoding
     { encodingNewRon
         :: forall m . ReplicaClock m => a -> WriterT StateFrame m [Atom]
-    , encodingFromRon :: [Atom] -> StateFrame -> Either String a
+    , encodingFromRon :: forall m . MonadE m => [Atom] -> StateFrame -> m a
     }
 
 -- | Encode typed data to a payload with possible addition objects
@@ -130,7 +134,7 @@ newRon = encodingNewRon encoding
 
 -- | Decode typed data from a payload.
 -- The implementation may use other objects in the frame to resolve references.
-fromRon :: Replicated a => [Atom] -> StateFrame -> Either String a
+fromRon :: (MonadE m, Replicated a) => [Atom] -> StateFrame -> m a
 fromRon = encodingFromRon encoding
 
 -- | Standard implementation of 'Replicated' for 'ReplicatedAsObject' types.
@@ -157,41 +161,39 @@ class ReplicatedAsPayload a where
     toPayload :: a -> [Atom]
 
     -- | Decode data
-    fromPayload :: [Atom] -> Either String a
+    fromPayload :: MonadE m => [Atom] -> m a
 
 instance Replicated Int64 where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Int64 where
     toPayload int = [AInteger int]
-    fromPayload atoms = case atoms of
+    fromPayload atoms = errorContext "Integer" $ case atoms of
         [AInteger int] -> pure int
-        _ -> Left "Int64: bad payload"
+        _              -> throwError "Expected Integer syntax"
 
 instance Replicated UUID where encoding = payloadEncoding
 
 instance ReplicatedAsPayload UUID where
     toPayload u = [AUuid u]
-    fromPayload atoms = case atoms of
+    fromPayload atoms = errorContext "UUID" $ case atoms of
         [AUuid u] -> pure u
-        _ -> Left "UUID: bad payload"
+        _         -> throwError "Expected UUID syntax"
 
 instance Replicated Text where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Text where
     toPayload t = [AString t]
-    fromPayload atoms = case atoms of
+    fromPayload atoms = errorContext "String" $ case atoms of
         [AString t] -> pure t
-        _           -> Left "String: bad payload"
+        _           -> throwError "Expected string syntax"
 
 instance Replicated Char where encoding = payloadEncoding
 
 instance ReplicatedAsPayload Char where
     toPayload c = [AString $ Text.singleton c]
-    fromPayload atoms = case atoms of
-        [AString s] -> case Text.uncons s of
-            Just (c, "") -> pure c
-            _            -> Left "too long string to encode a single character"
-        _ -> Left "Char: bad payload"
+    fromPayload atoms = errorContext "Char" $ case atoms of
+        [AString (Text.uncons -> Just (c, ""))] -> pure c
+        _ -> throwError "Expected one-character string"
 
 -- | Instances of this class are encoded as objects.
 -- An enclosing object's payload will be filled with this object's id.
@@ -204,22 +206,21 @@ class ReplicatedAsObject a where
     newObject :: ReplicaClock m => a -> m (Object a)
 
     -- | Decode data
-    getObject :: Object a -> Either String a
+    getObject :: MonadE m => Object a -> m a
 
-objectFromRon
-    :: (Object a -> Either String a) -> [Atom] -> StateFrame -> Either String a
+objectFromRon :: MonadE m => (Object a -> m a) -> [Atom] -> StateFrame -> m a
 objectFromRon handler atoms frame = case atoms of
     [AUuid oid] -> handler $ Object oid frame
-    _           -> Left "bad payload"
+    _           -> throwError "Expected object UUID"
 
 -- | Helper to build an object frame using arbitrarily nested serializers.
 collectFrame :: Functor m => WriterT StateFrame m UUID -> m (Object a)
 collectFrame = fmap (uncurry Object) . runWriterT
 
 getObjectStateChunk
-    :: forall a . ReplicatedAsObject a => Object a -> Either String StateChunk
+    :: forall a m . (ReplicatedAsObject a, MonadE m) => Object a -> m StateChunk
 getObjectStateChunk (Object oid frame) =
-    maybe (Left "no such object in chunk") Right $
+    liftMaybe "no such object in chunk" $
     Map.lookup (objectOpType @a, oid) frame
 
 eqRef :: Object a -> [Atom] -> Bool
@@ -241,26 +242,27 @@ instance Replicated a => Replicated (Maybe a) where
         { encodingNewRon = \case
             Just a  -> (Some :) <$> newRon a
             Nothing -> pure [None]
-        , encodingFromRon = \atoms frame -> case atoms of
-            Some : atoms' -> Just <$> fromRon atoms' frame
-            [None]        -> pure Nothing
-            _             -> Left "Bad Option"
+        , encodingFromRon = \atoms frame ->
+            errorContext "Option" $ case atoms of
+                Some : atoms' -> Just <$> fromRon atoms' frame
+                [None]        -> pure Nothing
+                _             -> throwError "Bad Option"
         }
 
 instance ReplicatedAsPayload a => ReplicatedAsPayload (Maybe a) where
     toPayload = \case
         Just a  -> Some : toPayload a
         Nothing -> [None]
-    fromPayload = \case
+    fromPayload = errorContext "Option" . \case
         Some : atoms -> Just <$> fromPayload atoms
         [None]       -> pure Nothing
-        _            -> Left "Bad Option"
+        _            -> throwError "Bad Option"
 
 pattern ATrue :: Atom
-pattern ATrue  = AUuid (UUID 0xe36e69000000000 0)
+pattern ATrue = AUuid (UUID 0xe36e69000000000 0)  -- true
 
 pattern AFalse :: Atom
-pattern AFalse = AUuid (UUID 0xaa5c37a40000000 0)
+pattern AFalse = AUuid (UUID 0xaa5c37a40000000 0)  -- false
 
 instance Replicated Bool where encoding = payloadEncoding
 
@@ -269,7 +271,7 @@ instance ReplicatedAsPayload Bool where
         | b         = [ATrue]
         | otherwise = [AFalse]
 
-    fromPayload = \case
+    fromPayload = errorContext "Boole" . \case
         [ATrue]  -> pure True
         [AFalse] -> pure False
-        _        -> Left "Expected single UUID"
+        _        -> throwError "Expected single UUID `true` or `false`"
