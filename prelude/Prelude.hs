@@ -18,7 +18,7 @@ module Prelude (
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
                                            many, optional, pure, some, (*>),
                                            (<*), (<*>), (<|>))
-import           Control.Exception as X (catch, evaluate, throwIO)
+import           Control.Exception as X (Exception, catch, evaluate, throwIO)
 import           Control.Monad as X (Monad, filterM, guard, unless, void, when,
                                      (<=<), (=<<), (>=>), (>>=))
 import           Control.Monad.Fail as X (MonadFail, fail)
