@@ -7,12 +7,19 @@ and this project adheres to
 
 ## [Unreleased]
 ### Added
-- `RON.UUID.liftName`
+- `RON.UUID.liftName` function to create name UUIDs in compile time.
+- `RON.Util.ByteStringL` type.
+- `RON.Error` module with unified pretty errors.
 
 ### Changed
 - Extracted `ron-storage` package.
 - Extracted `ron-schema` package.
 - Extracted `ron-rdt` package.
+- Switched from `Either String a` to `MonadError String m => m a` in failable
+  procedures.
+
+### Fixed
+- Error handling in Boole decoder.
 
 ## [0.4] - 2019-01-09
 ### Added
