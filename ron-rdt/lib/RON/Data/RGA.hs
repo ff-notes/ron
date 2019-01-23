@@ -227,7 +227,8 @@ applyPatch
     -> HashMap UUID VertexListItem
     -> Maybe (HashMap UUID VertexListItem)
 applyPatch parent patch targetItems = case parent of
-    Zero -> undefined
+    Zero ->
+        error "chunk with zero ref mustn't be considered a state, not a patch"
     _ -> do
         item@VertexListItem{itemNext} <- HashMap.lookup parent targetItems
         let VertexList next' newItems = case itemNext of
