@@ -28,7 +28,6 @@ import           Data.Algorithm.Diff (Diff (Both, First, Second),
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
 
 import           RON.Data.Internal
@@ -62,10 +61,8 @@ data VertexList = VertexList
 instance Semigroup VertexList where
     (<>) = merge
 
-vertexListToOps :: Maybe VertexList -> [Vertex]
-vertexListToOps mv = case mv of
-    Nothing -> []
-    Just VertexList{..} -> go listHead listItems
+vertexListToOps :: VertexList -> [Vertex]
+vertexListToOps v@VertexList{..} = go listHead listItems
   where
     go root items = let
         VertexListItem{..} =
@@ -73,7 +70,7 @@ vertexListToOps mv = case mv of
                 (error $ unlines
                     $  ["Cannot find vertex id", show root, "in array"]
                     ++ map show (HashMap.toList items)
-                    ++ ["Original array is", show $ fromJust mv])
+                    ++ ["Original array is", show v])
                 root
                 items
         rest = case itemNext of
@@ -152,7 +149,7 @@ instance Reducible RgaRaw where
     stateFromChunk = RgaRaw . vertexListFromOps
 
     stateToChunk (RgaRaw rga) = StateChunk (chunkVersion ops) ops where
-        ops = vertexListToOps rga
+        ops = maybe [] vertexListToOps rga
 
     applyPatches rga (patches, ops) =
         bimap identity patchSetToChunks . reapplyPatchSetToState rga $
@@ -166,7 +163,7 @@ patchSetToChunks :: PatchSet -> Unapplied
 patchSetToChunks PatchSet{..} =
     (   [ ReducedChunk{rcVersion = chunkVersion rcBody, ..}
         | (rcRef, vertices) <- Map.assocs psPatches
-        , let rcBody = vertexListToOps $ Just vertices
+        , let rcBody = vertexListToOps vertices
         ]
     ,   [ Op{opEvent = tombstone, opRef = vid, opPayload = []}
         | (vid, tombstone) <- Map.assocs psRemovals
@@ -279,9 +276,10 @@ applyRemoval parent tombstone targetItems = do
     pure $ HashMap.insert parent item' targetItems
 
 merge :: VertexList -> VertexList -> VertexList
-merge v1 v2 =
-    fromMaybe undefined . vertexListFromOps $
-    (merge' `on` vertexListToOps . Just) v1 v2
+merge v1 v2
+    = fromMaybe (error "merge of non-empty lists cannot be empty")
+    $ vertexListFromOps
+    $ (merge' `on` vertexListToOps) v1 v2
 
 merge' :: [Vertex] -> [Vertex] -> [Vertex]
 merge' [] vs2 = vs2
