@@ -340,7 +340,7 @@ edit
     => [a] -> m ()
 edit newItems = do
     obj@Object{..} <- get
-    StateChunk{..} <- liftEither $ getObjectStateChunk obj
+    StateChunk{..} <- getObjectStateChunk obj
     advanceToUuid stateVersion
 
     let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]

@@ -120,7 +120,7 @@ add :: (ReplicatedAsObject a, ReplicatedAsPayload b, ReplicaClock m, MonadE m)
     => b -> StateT (Object a) m ()
 add item = do
     obj@Object{..} <- get
-    StateChunk{..} <- liftEither $ getObjectStateChunk obj
+    StateChunk{..} <- getObjectStateChunk obj
     e <- getEventUuid
     let p = toPayload item
     let newOp = Op e Zero p
