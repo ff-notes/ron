@@ -13,11 +13,16 @@ common language
 library
     import: language
     build-depends:
+        -- global
+        hedgehog,
+        mtl,
         -- project
         ron,
         ron-rdt,
         ron-schema
-    exposed-modules: LwwStruct.Types
+    exposed-modules:
+        LwwStruct.Types
+        Orphans
     hs-source-dirs: lib
 
 test-suite common
