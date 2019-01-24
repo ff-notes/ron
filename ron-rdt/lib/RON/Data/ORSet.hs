@@ -13,8 +13,8 @@ module RON.Data.ORSet
     , addNewRef
     , addRef
     , addValue
-    , removeRef
-    , removeValue
+    -- , removeRef
+    -- , removeValue
     ) where
 
 import qualified Data.Map.Strict as Map
@@ -22,7 +22,9 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, getEventUuid)
-import           RON.Types (Atom, Object (..), Op (..), StateChunk (..), UUID)
+import           RON.Types (Object (Object), Op (Op), StateChunk (StateChunk),
+                            UUID, objectFrame, objectId, opEvent, opPayload,
+                            opRef, stateBody)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -151,13 +153,13 @@ addNewRef item = do
     modify' $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
     addRef itemObj
 
-removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSet a)) m ()
-removeBy = undefined
+-- removeBy :: ([Atom] -> Bool) -> StateT (Object (ORSet a)) m ()
+-- removeBy = undefined
 
--- | Remove an atomic value from the OR-Set
-removeValue :: ReplicatedAsPayload a => a -> StateT (Object (ORSet a)) m ()
-removeValue = removeBy . eqPayload
+-- -- | Remove an atomic value from the OR-Set
+-- removeValue :: ReplicatedAsPayload a => a -> StateT (Object (ORSet a)) m ()
+-- removeValue = removeBy . eqPayload
 
--- | Remove an object reference from the OR-Set
-removeRef :: Object a -> StateT (Object (ORSet a)) m ()
-removeRef = removeBy . eqRef
+-- -- | Remove an object reference from the OR-Set
+-- removeRef :: Object a -> StateT (Object (ObjectORSet a)) m ()
+-- removeRef = removeBy . eqRef
