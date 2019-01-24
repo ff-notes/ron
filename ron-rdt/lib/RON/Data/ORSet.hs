@@ -138,7 +138,9 @@ addValue = add
 addRef
     :: (ReplicatedAsObject a, ReplicaClock m, MonadE m)
     => Object a -> StateT (Object (ObjectORSet a)) m ()
-addRef = add . objectId
+addRef Object{objectId = itemId, objectFrame = itemFrame} = do
+    modify' $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
+    add itemId
 
 -- | Encode an object and add a reference to it to the OR-Set
 addNewRef
