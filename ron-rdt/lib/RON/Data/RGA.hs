@@ -334,7 +334,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
 -- | Replace content of the RGA throug introducing changes detected by
 -- 'getGroupedDiffBy'.
 edit
-    ::  ( Replicated a, ReplicatedAsPayload a
+    ::  ( ReplicatedAsPayload a
         , ReplicaClock m, MonadE m, MonadState (Object (RGA a)) m
         )
     => [a] -> m ()

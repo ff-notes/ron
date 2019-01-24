@@ -155,7 +155,7 @@ payloadEncoding = Encoding
     }
 
 -- | Instances of this class are encoded as payload only.
-class ReplicatedAsPayload a where
+class Replicated a => ReplicatedAsPayload a where
 
     -- | Encode data
     toPayload :: a -> [Atom]
@@ -197,7 +197,7 @@ instance ReplicatedAsPayload Char where
 
 -- | Instances of this class are encoded as objects.
 -- An enclosing object's payload will be filled with this object's id.
-class ReplicatedAsObject a where
+class Replicated a => ReplicatedAsObject a where
 
     -- | UUID of the type
     objectOpType :: UUID
