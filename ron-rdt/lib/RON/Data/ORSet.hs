@@ -34,6 +34,11 @@ import qualified RON.UUID as UUID
 newtype ORSetRaw = ORSetRaw (Map UUID Op)
     deriving (Eq, Show)
 
+opKey :: Op -> UUID
+opKey Op{..} = case opRef of
+    Zero -> opEvent  -- alive
+    _    -> opRef    -- tombstone
+
 observedRemove :: Op -> Op -> Op
 observedRemove = maxOn opRef
 
@@ -47,10 +52,8 @@ instance Monoid ORSetRaw where
 instance Reducible ORSetRaw where
     reducibleOpType = setType
 
-    stateFromChunk ops = ORSetRaw $
-        Map.fromListWith
-            observedRemove
-            [(case opRef of Zero -> opEvent; _ -> opRef, op) | op@Op{..} <- ops]
+    stateFromChunk ops =
+        ORSetRaw $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
 
     stateToChunk (ORSetRaw set) = mkStateChunk . sortOn opEvent $ Map.elems set
 
