@@ -75,8 +75,8 @@ instance ReplicatedAsPayload a => ReplicatedAsObject (ORSet a) where
 
     newObject (ORSet items) = collectFrame $ do
         ops <- for items $ \item -> do
-            e <- lift getEventUuid
-            pure $ Op e Zero $ toPayload item
+            event <- lift getEventUuid
+            pure $ Op event Zero $ toPayload item
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell $ Map.singleton (setType, oid) $ StateChunk version ops
@@ -97,9 +97,9 @@ instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
 
     newObject (ObjectORSet items) = collectFrame $ do
         ops <- for items $ \item -> do
-            e <- lift getEventUuid
+            event <- lift getEventUuid
             Object{objectId = itemId} <- lift $ newObject item
-            pure . Op e Zero $ toPayload itemId
+            pure . Op event Zero $ toPayload itemId
         oid <- lift getEventUuid
         let version = maximumDef oid $ map opEvent ops
         tell . Map.singleton (setType, oid) $ StateChunk version ops
@@ -120,11 +120,11 @@ add :: (ReplicatedAsObject a, ReplicatedAsPayload b, ReplicaClock m, MonadE m)
 add item = do
     obj@Object{..} <- get
     StateChunk{..} <- getObjectStateChunk obj
-    e <- getEventUuid
-    let p = toPayload item
-    let newOp = Op e Zero p
+    event <- getEventUuid
+    let payload = toPayload item
+    let newOp = Op event Zero payload
     let chunk' = stateBody ++ [newOp]
-    let state' = StateChunk e chunk'
+    let state' = StateChunk event chunk'
     put Object
         {objectFrame = Map.insert (setType, objectId) state' objectFrame, ..}
 
