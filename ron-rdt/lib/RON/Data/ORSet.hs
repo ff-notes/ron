@@ -28,26 +28,18 @@ import           RON.Types (Object (Object), Op (Op), StateChunk (StateChunk),
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
-data SetItem = SetItem{itemIsAlive :: Bool, itemOriginalOp :: Op}
-    deriving (Eq, Show)
-
-instance Semigroup SetItem where
-    (<>) = minOn itemIsAlive
-
-itemFromOp :: Op -> (UUID, SetItem)
-itemFromOp itemOriginalOp@Op{..} = (itemId, item) where
-    itemIsAlive = opRef == Zero
-    itemId = if itemIsAlive then opEvent else opRef
-    item = SetItem{..}
-
 -- | Untyped OR-Set.
 -- Implementation:
 -- a map from the last change (creation or deletion) to the original op.
-newtype ORSetRaw = ORSetRaw (Map UUID SetItem)
+newtype ORSetRaw = ORSetRaw (Map UUID Op)
     deriving (Eq, Show)
 
+observedRemove :: Op -> Op -> Op
+observedRemove = maxOn opRef
+
 instance Semigroup ORSetRaw where
-    ORSetRaw set1 <> ORSetRaw set2 = ORSetRaw $ Map.unionWith (<>) set1 set2
+    ORSetRaw set1 <> ORSetRaw set2 =
+        ORSetRaw $ Map.unionWith observedRemove set1 set2
 
 instance Monoid ORSetRaw where
     mempty = ORSetRaw mempty
@@ -55,10 +47,12 @@ instance Monoid ORSetRaw where
 instance Reducible ORSetRaw where
     reducibleOpType = setType
 
-    stateFromChunk = ORSetRaw . Map.fromListWith (<>) . map itemFromOp
+    stateFromChunk ops = ORSetRaw $
+        Map.fromListWith
+            observedRemove
+            [(case opRef of Zero -> opEvent; _ -> opRef, op) | op@Op{..} <- ops]
 
-    stateToChunk (ORSetRaw set) =
-        mkStateChunk . sortOn opEvent . map itemOriginalOp $ Map.elems set
+    stateToChunk (ORSetRaw set) = mkStateChunk . sortOn opEvent $ Map.elems set
 
 -- | Name-UUID to use as OR-Set type marker.
 setType :: UUID
