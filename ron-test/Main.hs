@@ -3,6 +3,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -11,8 +12,8 @@ import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Maybe (fromJust)
 import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
-                           annotateShow, evalEither, forAll, property, tripping,
-                           (===))
+                           annotateShow, evalEither, evalExceptT, forAll,
+                           property, tripping, (===))
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -26,12 +27,17 @@ import qualified Text.Show
 import qualified RON.Base64 as Base64
 import qualified RON.Binary.Parse as RB
 import qualified RON.Binary.Serialize as RB
+import           RON.Data (newObject)
+import           RON.Data.ORSet (ORSet (ORSet), ObjectORSet (ObjectORSet))
+import qualified RON.Data.ORSet as ORSet
+import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
 import           RON.Event (CalendarEvent (CalendarEvent), Naming (TrieForked),
                             ReplicaId (ReplicaId), applicationSpecific,
                             decodeEvent, encodeEvent, fromCalendarEvent,
                             mkCalendarDateTime)
-import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
+import           RON.Event.Simulation (runNetworkSim, runNetworkSimT,
+                                       runReplicaSim, runReplicaSimT)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
@@ -45,6 +51,7 @@ import qualified RON.UUID as UUID
 import qualified Gen
 import           HexDump (hexdump)
 import qualified LwwStruct
+import           Orphans ()
 
 main :: IO ()
 main = do
@@ -335,10 +342,68 @@ prop_RGA_delete_deleted = let
         rga2expect === prep rga2
 
 prop_base64_isLetter = property $ do
-        c <- forAll $ Gen.word8 Range.constantBounded
-        (c `BS.elem` Base64.alphabet) === Base64.isLetter c
+    c <- forAll $ Gen.word8 Range.constantBounded
+    (c `BS.elem` Base64.alphabet) === Base64.isLetter c
 
 data ShowAs a = ShowAs a String
 
 instance Show (ShowAs a) where
     show (ShowAs _ s) = s
+
+prop_ORSet = let
+    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    set0expect = [["*set", "#B/000000000d+000000005j", "@`", "!"], ["."]]
+    set1expect =
+        [ ["*set", "#B/000000000d+000000005j", "@`]1F", "!"]
+        , ["@", "=370"]
+        , ["."]
+        ]
+    set2expect =
+        [["*set", "#B/000000000d+000000005j", "@`]1p", "!"], [":`)F"], ["."]]
+    in
+    property $ evalExceptT $
+    runNetworkSimT $ runReplicaSimT (applicationSpecific 366) $ do
+        set0 <- newObject $ ORSet @Int64 []
+        set0expect === prep set0
+        (`evalStateT` set0) $ do
+            ORSet.addValue 370
+            set1 <- get
+            set1expect === prep set1
+            ORSet.removeValue 370
+            set2 <- get
+            set2expect === prep set2
+
+prop_ObjectORSet = let
+    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    set0expect = [["*set", "#B/000000000X+000000006G", "@`", "!"], ["."]]
+    set1expect =
+        [ ["*rga", "#B/000000001B+000000006G", "@`]0z", "!"]
+            , ["@)x", "'4'"]
+            , ["@)y", "'0'"]
+            , ["@)z", "'3'"]
+        , ["*set", "#]0X", "@]1a", "!"]
+            , ["@", ">]1B"]
+        , ["."]
+        ]
+    set2expect =
+        [ ["*rga", "#B/000000001B+000000006G", "@`]0z", "!"]
+            , ["@)x", "'4'"]
+            , ["@)y", "'0'"]
+            , ["@)z", "'3'"]
+        , ["*set", "#]0X", "@]1l", "!"]
+            , [":`)a"]
+        , ["."]
+        ]
+    in
+    property $ evalExceptT $
+    runNetworkSimT $ runReplicaSimT (applicationSpecific 400) $ do
+        set0 <- newObject $ ObjectORSet @RgaString []
+        set0expect === prep set0
+        rga0 <- RGA.newFromText "403"
+        (`evalStateT` set0) $ do
+            ORSet.addRef rga0
+            set1 <- get
+            set1expect === prep set1
+            ORSet.removeRef rga0
+            set2 <- get
+            set2expect === prep set2
