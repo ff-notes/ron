@@ -12,8 +12,8 @@ import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Maybe (fromJust)
 import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
-                           annotateShow, evalEither, evalExceptT, forAll,
-                           property, tripping, (===))
+                           annotateShow, evalExceptT, forAll, property,
+                           tripping, (===))
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -36,8 +36,7 @@ import           RON.Event (CalendarEvent (CalendarEvent), Naming (TrieForked),
                             ReplicaId (ReplicaId), applicationSpecific,
                             decodeEvent, encodeEvent, fromCalendarEvent,
                             mkCalendarDateTime)
-import           RON.Event.Simulation (runNetworkSim, runNetworkSimT,
-                                       runReplicaSim, runReplicaSimT)
+import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
@@ -201,11 +200,6 @@ prop_uuid_abbreviations = property $ do
         ]
     aLed = either error identity $ RT.parseUuid "A/LED"
 
--- evalMaybeS :: (MonadTest m, HasCallStack) => Maybe a -> m a
--- evalMaybeS = \case
---     Nothing -> withFrozenCallStack $ failWith Nothing ""
---     Just a  -> pure a
-
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = \case
     Left  x -> withFrozenCallStack $ failWith Nothing x
@@ -270,27 +264,21 @@ prop_lwwStruct = LwwStruct.prop_lwwStruct
 prop_RGA_edit_idempotency = property $ do
     textX <- forAll Gen.shortText
     textY <- forAll Gen.shortText
-    rgaY <-
-        evalEither $
-        runNetworkSim $
-        runReplicaSim (applicationSpecific 271) $
-        runExceptT $ do
-            rgaX <-               RGA.newFromText textX
-            (`execStateT` rgaX) $ RGA.editText    textY
-    Right textY === RGA.getText rgaY
+    evalExceptT $
+        runNetworkSimT $ runReplicaSimT (applicationSpecific 271) $ do
+            rgaX <-                       RGA.newFromText textX
+            rgaY <- (`execStateT` rgaX) $ RGA.editText    textY
+            Right textY === RGA.getText rgaY
 
 prop_RGA_edit_idempotency_back = property $ do
     textX <- forAll Gen.shortText
     textY <- forAll Gen.shortText
-    rgaX' <-
-        evalEither $
-        runNetworkSim $
-        runReplicaSim (applicationSpecific 271) $
-        runExceptT $ do
-            rgaX <-                       RGA.newFromText textX
-            rgaY <- (`execStateT` rgaX) $ RGA.editText    textY
-            (        `execStateT` rgaY) $ RGA.editText    textX
-    Right textX === RGA.getText rgaX'
+    evalExceptT $
+        runNetworkSimT $ runReplicaSimT (applicationSpecific 271) $ do
+            rgaX  <-                       RGA.newFromText textX
+            rgaY  <- (`execStateT` rgaX) $ RGA.editText    textY
+            rgaX' <- (`execStateT` rgaY) $ RGA.editText    textX
+            Right textX === RGA.getText rgaX'
 
 prop_RGA_delete_deleted = let
     prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
@@ -323,23 +311,17 @@ prop_RGA_delete_deleted = let
         , ["."]
         ]
     in
-    property $ do
-        (rga0, rga1, rga2) <-
-            evalEither $
-            runNetworkSim $
-            runReplicaSim (applicationSpecific 234) $
-            runExceptT $ do
-                rga0 <- RGA.newFromText "hello"
-                (rga1, rga2) <- (`evalStateT` rga0) $ do
-                    RGA.editText "hell"
-                    rga1 <- get
-                    RGA.editText "help"
-                    rga2 <- get
-                    pure (rga1, rga2)
-                pure (rga0, rga1, rga2)
+    property $ evalExceptT $
+    runNetworkSimT $ runReplicaSimT (applicationSpecific 234) $ do
+        rga0 <- RGA.newFromText "hello"
         rga0expect === prep rga0
-        rga1expect === prep rga1
-        rga2expect === prep rga2
+        (`evalStateT` rga0) $ do
+            RGA.editText "hell"
+            rga1 <- get
+            rga1expect === prep rga1
+            RGA.editText "help"
+            rga2 <- get
+            rga2expect === prep rga2
 
 prop_base64_isLetter = property $ do
     c <- forAll $ Gen.word8 Range.constantBounded
