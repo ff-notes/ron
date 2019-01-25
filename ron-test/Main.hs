@@ -1,5 +1,4 @@
 {-# OPTIONS -Wno-missing-signatures #-}
-{-# OPTIONS -Wno-orphans #-}
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,7 +13,7 @@ import           Data.Maybe (fromJust)
 import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
                            annotateShow, evalEither, evalExceptT, forAll,
-                           liftTest, property, tripping, (===))
+                           property, tripping, (===))
 import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
@@ -37,9 +36,8 @@ import           RON.Event (CalendarEvent (CalendarEvent), Naming (TrieForked),
                             ReplicaId (ReplicaId), applicationSpecific,
                             decodeEvent, encodeEvent, fromCalendarEvent,
                             mkCalendarDateTime)
-import           RON.Event.Simulation (ReplicaSimT, runNetworkSim,
-                                       runNetworkSimT, runReplicaSim,
-                                       runReplicaSimT)
+import           RON.Event.Simulation (runNetworkSim, runNetworkSimT,
+                                       runReplicaSim, runReplicaSimT)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
@@ -53,6 +51,7 @@ import qualified RON.UUID as UUID
 import qualified Gen
 import           HexDump (hexdump)
 import qualified LwwStruct
+import           Orphans ()
 
 main :: IO ()
 main = do
@@ -408,6 +407,3 @@ prop_ObjectORSet = let
             ORSet.removeRef rga0
             set2 <- get
             set2expect === prep set2
-
-instance MonadTest m => MonadTest (ReplicaSimT m) where
-    liftTest = lift . liftTest
