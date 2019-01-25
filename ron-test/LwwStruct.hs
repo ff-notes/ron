@@ -38,57 +38,57 @@ replica = applicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
 ex1expect = [i|
-    *lww    #B/000000000y+r3pl1c4   @`          !
-                                        :int1   =275
-                                        :opt5   >none
-                                        :opt6   >some =74
-                                        :set4   >)3
-                                        :str2   >)T
-                                        :str3   '190'
+    *lww    #B/00009ISodW+r3pl1c4   @`                  !
+                                                :int1   =275
+                                                :opt5   >none
+                                                :opt6   >some =74
+                                                :set4   >(1KqirW
+                                                :str2   >(6FAycW
+                                                :str3   '190'
 
-    *rga    #)T                     @)D :0      !
-                                    @)B         '2'
-                                    @)C         '7'
-                                    @)D         '5'
+    *rga    #(6FAycW                @(4pX_g8    :0      !
+                                    @)6                 '2'
+                                    @)7                 '7'
+                                    @)8                 '5'
 
-    *set    #)3                     @`          !
+    *set    #(1KqirW                @`                  !
     .
     |]
 
 ex4expect :: ByteStringL
 ex4expect = [i|
-    *lww    #B/000000000y+r3pl1c4   @`]5w           !
-                                    @]1K    :int1   =166
-                                    @`      :opt5   >none
-                                    @]5w    :opt6   >none
-                                    @`      :set4   >)3
-                                            :str2   >)T
-                                    @]36    :str3   '206'
+    *lww    #B/00009ISodW+r3pl1c4   @`(c1l2MW               !
+                                    @(D81V2W    :int1       =166
+                                    @`          :opt5       >none
+                                    @(c1l2MW    :opt6       >none
+                                    @`          :set4       >(1KqirW
+                                                :str2       >(6FAycW
+                                    @(PEddUW    :str3       '206'
 
-            #]4z                    @`      :0      !
-                                            :int1   =135
-                                            :opt5   >none
-                                            :opt6   >none
-                                            :set4   >]3g
-                                            :str2   >)i
-                                            :str3   '137'
+            #(YD2ZdW                @`          :0          !
+                                                :int1       =135
+                                                :opt5       >none
+                                                :opt6       >none
+                                                :set4       >(T6VGUW
+                                                :str2       >(XvcLcW
+                                                :str3       '137'
 
-    *rga    #]0T                    @]2V    :0      !
-                                    @]0B    :`]1P   '2'
-                                    @)C     :)Z     '7'
-                                    @]1s    :0      '1'
-                                    @]2V            '4'
-                                    @]0D            '5'
+    *rga    #(6FAycW                @(LxA_UW    :0          !
+                                    @(4pX_g6    :`(E4W2MW   '2'
+                                    @)7         :(HTTXUW    '7'
+                                    @(LJJfUW    :0          '1'
+                                    @[xA_UW                 '4'
+                                    @(4pX_g8                '5'
 
-            #]4i                    @]4G            !
-                                    @)E             '1'
-                                    @)F             '3'
-                                    @)G             '6'
+            #(XvcLcW                @(X530g8                !
+                                    @)6                     '1'
+                                    @)7                     '3'
+                                    @)8                     '6'
 
-    *set    #]03                    @]5W            !
-                                    @               >]4z
+    *set    #(1KqirW                @(asoV2W                !
+                                    @                       >(YD2ZdW
 
-            #]3g                    @`              !
+            #(T6VGUW                @`                      !
     .
     |]
 

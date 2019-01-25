@@ -281,31 +281,31 @@ prop_RGA_edit_idempotency_back = property $ do
 prop_RGA_delete_deleted = let
     prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
     rga0expect =
-        [ ["*rga", "#B/0000000014+000000003f", "@`]0c", "!"]
-        , ["@)Z", "'h'"]
-        , ["@)_", "'e'"]
-        , ["@)a", "'l'"]
-        , ["@)b", "'l'"]
-        , ["@)c", "'o'"]
+        [ ["*rga", "#B/000015NGPU+000000003f", "@`(0kmiUz", "!"]
+        , ["@)v", "'h'"]
+        , ["@)w", "'e'"]
+        , ["@)x", "'l'"]
+        , ["@)y", "'l'"]
+        , ["@)z", "'o'"]
         , ["."]
         ]
     rga1expect =
-        [ ["*rga", "#B/0000000014+000000003f", "@`)L", "!"]
-        , ["@]0Z", "'h'"]
-        , ["@)_", "'e'"]
-        , ["@)a", "'l'"]
-        , ["@)b", "'l'"]
-        , ["@)c", ":`]1L", "'o'"]
+        [ ["*rga", "#B/000015NGPU+000000003f", "@`(4Q8IxU", "!"]
+        , ["@(0kmiUv",          "'h'"]
+        , ["@)w",               "'e'"]
+        , ["@)x",               "'l'"]
+        , ["@)y",               "'l'"]
+        , ["@)z", ":`(4Q8IxU",  "'o'"]
         , ["."]
         ]
     rga2expect =
-        [ ["*rga", "#B/0000000014+000000003f", "@`]2I", "!"]
-        , ["@]0Z", "'h'"]
-        , ["@)_", "'e'"]
-        , ["@)a", "'l'"]
-        , ["@)b", ":`]1s", "'l'"]
-        , ["@)c", ":)L", "'o'"]
-        , ["@]2I", ":0", "'p'"]
+        [ ["*rga", "#B/000015NGPU+000000003f", "@`(AVmKxU", "!"]
+        , ["@(0kmiUv",                  "'h'"]
+        , ["@)w",                       "'e'"]
+        , ["@)x",                       "'l'"]
+        , ["@)y",       ":`(75FOxU",    "'l'"]
+        , ["@)z",       ":(4Q8IxU",     "'o'"]
+        , ["@(AVmKxU",  ":0",           "'p'"]
         , ["."]
         ]
     in
@@ -332,14 +332,17 @@ instance Show (ShowAs a) where
 
 prop_ORSet = let
     prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
-    set0expect = [["*set", "#B/000000000d+000000005j", "@`", "!"], ["."]]
+    set0expect = [["*set", "#B/00000omion+000000005j", "@`", "!"], ["."]]
     set1expect =
-        [ ["*set", "#B/000000000d+000000005j", "@`]1F", "!"]
+        [ ["*set", "#B/00000omion+000000005j", "@`(2xPmJ2", "!"]
         , ["@", "=370"]
         , ["."]
         ]
     set2expect =
-        [["*set", "#B/000000000d+000000005j", "@`]1p", "!"], [":`)F"], ["."]]
+        [ ["*set", "#B/00000omion+000000005j", "@`(3Jlz_Y", "!"]
+        , [":`(2xPmJ2"]
+        , ["."]
+        ]
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 366) $ do
@@ -355,23 +358,23 @@ prop_ORSet = let
 
 prop_ObjectORSet = let
     prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
-    set0expect = [["*set", "#B/000000000X+000000006G", "@`", "!"], ["."]]
+    set0expect = [["*set", "#B/00000omilG+000000006G", "@`", "!"], ["."]]
     set1expect =
-        [ ["*rga", "#B/000000001B+000000006G", "@`]0z", "!"]
-            , ["@)x", "'4'"]
-            , ["@)y", "'0'"]
-            , ["@)z", "'3'"]
-        , ["*set", "#]0X", "@]1a", "!"]
-            , ["@", ">]1B"]
+        [ ["*rga", "#B/00005~K_SG+000000006G", "@`(2lqPwO", "!"]
+            , ["@)M", "'4'"]
+            , ["@)N", "'0'"]
+            , ["@)O", "'3'"]
+        , ["*set", "#(0omilG", "@(6Io4NG", "!"]
+            , ["@", ">(5~K_SG"]
         , ["."]
         ]
     set2expect =
-        [ ["*rga", "#B/000000001B+000000006G", "@`]0z", "!"]
-            , ["@)x", "'4'"]
-            , ["@)y", "'0'"]
-            , ["@)z", "'3'"]
-        , ["*set", "#]0X", "@]1l", "!"]
-            , [":`)a"]
+        [ ["*rga", "#B/00005~K_SG+000000006G", "@`(2lqPwO", "!"]
+            , ["@)M", "'4'"]
+            , ["@)N", "'0'"]
+            , ["@)O", "'3'"]
+        , ["*set", "#(0omilG", "@(8QQEHG", "!"]
+            , [":`(6Io4NG"]
         , ["."]
         ]
     in
@@ -392,21 +395,21 @@ prop_ObjectORSet_recursive = let
     prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
     set0 = TestRecursiveORSet{testRecSet = []}
     set1expect =
-        [ ["*lww", "#B/000000000v+000000006G", "@`", "!"]
-            , [":testRecSet", ">)X"]
-        , ["*set", "#)X", "@`", ":0", "!"]
+        [ ["*lww", "#B/00004bfsbH+000000006P", "@`", "!"]
+            , [":testRecSet", ">(0omil7"]
+        , ["*set", "#(0omil7", "@`", ":0", "!"]
         , ["."]
         ]
     set2expect =
-        [ ["*lww", "#B/000000000v+000000006G", "@`", "!"]
-            , [":testRecSet", ">)X"]
-        , ["*set", "#)X", "@]13", ":0", "!"]
-            , ["@", ">)v"]
+        [ ["*lww", "#B/00004bfsbH+000000006P", "@`", "!"]
+            , [":testRecSet", ">(0omil7"]
+        , ["*set", "#(0omil7", "@(6yT_gy", ":0", "!"]
+            , ["@", ">(4bfsbH"]
         , ["."]
         ]
     in
     property $ evalExceptT $
-    runNetworkSimT $ runReplicaSimT (applicationSpecific 400) $ do
+    runNetworkSimT $ runReplicaSimT (applicationSpecific 409) $ do
         set1 <- newObject set0
         set1expect === prep set1
         (`evalStateT` set1) $ do

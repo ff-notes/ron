@@ -19,7 +19,7 @@ import qualified Data.HashMap.Strict as HM
 
 import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,
                             ReplicaId (ReplicaId), advance, getEvents, getPid)
-import           RON.Util.Word (Word60, ls60, safeCast, word60add)
+import           RON.Util.Word (Word60, ls60, word60add)
 
 -- | Lamport clock simulation. Key is 'ReplicaId'.
 -- Non-present value is equivalent to (0, initial).
@@ -50,7 +50,7 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
                 t0orig = HM.lookupDefault (ls60 0) rid replicaStates
                 ReplicaId _ r = rid
                 randomLeap =
-                    ls60 $ (safeCast t0orig + safeCast n + safeCast r) `mod` 41
+                    ls60 . fromIntegral $ hash (t0orig, n, r) `mod` 0x100000000
                 t0 = t0orig `word60add` randomLeap
                 t1 = t0 `word60add` n
                 in ((t0, t1), HM.insert rid t1 replicaStates)
