@@ -10,12 +10,10 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Maybe (fromJust)
-import           GHC.Stack (withFrozenCallStack)
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
                            annotateShow, evalExceptT, forAll, property,
                            tripping, (===))
 import qualified Hedgehog.Gen as Gen
-import           Hedgehog.Internal.Property (failWith)
 import qualified Hedgehog.Range as Range
 import           System.Directory (getCurrentDirectory)
 import           System.Environment (getEnv, lookupEnv, setEnv)
@@ -201,9 +199,7 @@ prop_uuid_abbreviations = property $ do
     aLed = either error identity $ RT.parseUuid "A/LED"
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
-evalEitherS = \case
-    Left  x -> withFrozenCallStack $ failWith Nothing x
-    Right a -> pure a
+evalEitherS = evalExceptT . liftEither
 
 prop_event_roundtrip = property $ do
     event <- forAll Gen.event
