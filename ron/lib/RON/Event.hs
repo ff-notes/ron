@@ -32,6 +32,7 @@ module RON.Event
     ) where
 
 import           Data.Bits (shiftL, shiftR, (.|.))
+import           Data.Hashable (hashUsing, hashWithSalt)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word16, Word2, Word24,

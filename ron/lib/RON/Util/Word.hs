@@ -49,6 +49,7 @@ module RON.Util.Word
 
 import           Data.Bits ((.&.))
 import           Data.Fixed (Fixed, HasResolution)
+import           Data.Hashable (hashUsing, hashWithSalt)
 
 newtype Word2 = W2 Word8
     deriving (Eq, Ord, Show)

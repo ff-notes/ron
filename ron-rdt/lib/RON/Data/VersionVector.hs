@@ -7,6 +7,7 @@ module RON.Data.VersionVector
     ( VersionVector
     ) where
 
+import           Data.Hashable (hashWithSalt)
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal

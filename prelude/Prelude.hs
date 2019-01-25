@@ -88,7 +88,7 @@ import           System.FilePath as X ((</>))
 #endif
 
 #ifdef VERSION_hashable
-import           Data.Hashable as X (Hashable, hashUsing, hashWithSalt)
+import           Data.Hashable as X (Hashable, hash)
 #endif
 
 #ifdef VERSION_mtl
