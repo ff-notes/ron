@@ -10,6 +10,9 @@ and this project adheres to
 - `RON.UUID.liftName` function to create name UUIDs in compile time.
 - `RON.Util.ByteStringL` type.
 - `RON.Error` module with unified pretty errors.
+- Organize `Replicated`, `ReplicatedAsPayload`, and `ReplicatedAsObject` in
+  class hierarchy.
+- Add `ORSet.removeValue` and `removeRef` implementation.
 
 ### Changed
 - Extracted `ron-storage` package.
@@ -17,6 +20,8 @@ and this project adheres to
 - Extracted `ron-rdt` package.
 - Switched from `Either String a` to `MonadError String m => m a` in failable
   procedures.
+- `ORSet.addRef` now adds item's frame, too.
+- `ORSet.addNewRef` now returns the reference to the freshly created object.
 
 ### Fixed
 - Error handling in Boole decoder.
