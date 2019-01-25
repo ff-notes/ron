@@ -61,6 +61,7 @@ test-suite test
         -- project
         ron,
         ron-rdt,
+        ron-schema,
         -- package
         ron-test
     hs-source-dirs: .
@@ -69,6 +70,7 @@ test-suite test
         Gen
         HexDump
         LwwStruct
+        Types
     type: exitcode-stdio-1.0
 
 executable words

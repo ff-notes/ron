@@ -49,6 +49,8 @@ import qualified Gen
 import           HexDump (hexdump)
 import qualified LwwStruct
 import           Orphans ()
+import           Types (TestRecursiveORSet (TestRecursiveORSet), testRecSet,
+                        testRecSet_zoom)
 
 main :: IO ()
 main = do
@@ -383,5 +385,31 @@ prop_ObjectORSet = let
             set1 <- get
             set1expect === prep set1
             ORSet.removeRef rga0
+            set2 <- get
+            set2expect === prep set2
+
+prop_ObjectORSet_recursive = let
+    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    set0 = TestRecursiveORSet{testRecSet = []}
+    set1expect =
+        [ ["*lww", "#B/000000000v+000000006G", "@`", "!"]
+            , [":testRecSet", ">)X"]
+        , ["*set", "#)X", "@`", ":0", "!"]
+        , ["."]
+        ]
+    set2expect =
+        [ ["*lww", "#B/000000000v+000000006G", "@`", "!"]
+            , [":testRecSet", ">)X"]
+        , ["*set", "#)X", "@]13", ":0", "!"]
+            , ["@", ">)v"]
+        , ["."]
+        ]
+    in
+    property $ evalExceptT $
+    runNetworkSimT $ runReplicaSimT (applicationSpecific 400) $ do
+        set1 <- newObject set0
+        set1expect === prep set1
+        (`evalStateT` set1) $ do
+            testRecSet_zoom $ ORSet.addRef set1
             set2 <- get
             set2expect === prep set2
