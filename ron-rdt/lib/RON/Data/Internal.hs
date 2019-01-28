@@ -36,9 +36,9 @@ import qualified Data.Text as Text
 import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
-                            Op (Op), StateChunk (StateChunk), StateFrame,
-                            UUID (UUID), WireChunk, opId, stateBody, stateType,
-                            stateVersion)
+                            Op (Op, opId),
+                            StateChunk (StateChunk, stateBody, stateType, stateVersion),
+                            StateFrame, UUID (UUID), WireChunk)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame

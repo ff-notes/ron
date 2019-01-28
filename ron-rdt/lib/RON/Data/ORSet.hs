@@ -24,9 +24,10 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, getEventUuid)
-import           RON.Types (Atom, Object (Object), Op (Op),
-                            StateChunk (StateChunk), UUID, frame, id, opId,
-                            payload, refId, stateBody, stateType, stateVersion)
+import           RON.Types (Atom, Object (Object, frame, id),
+                            Op (Op, opId, payload, refId),
+                            StateChunk (StateChunk, stateBody, stateType, stateVersion),
+                            UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 

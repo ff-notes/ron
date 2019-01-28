@@ -32,7 +32,7 @@ import           RON.Error (Error (Error), MonadE, errorContext, liftMaybe,
                             throwErrorString)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
-import           RON.Types (Object (Object), UUID, frame, id)
+import           RON.Types (Object (Object, frame, id), UUID)
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
