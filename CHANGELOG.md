@@ -13,6 +13,7 @@ and this project adheres to
 - Organize `Replicated`, `ReplicatedAsPayload`, and `ReplicatedAsObject` in
   class hierarchy.
 - Add `ORSet.removeValue` and `removeRef` implementation.
+- Op "patterns" and patterns.
 
 ### Removed
 - Type alias `ObjectId` since objects are identified by UUID.
@@ -26,6 +27,7 @@ and this project adheres to
 - `ORSet.addRef` now adds item's frame, too.
 - `ORSet.addNewRef` now returns the reference to the freshly created object.
 - Change `StateFrame` key to UUID since objects are identified by UUID.
+- Renamed `RawOp` to `ClosedOp` according to the fresh spec.
 
 ### Fixed
 - Error handling in Boole decoder.

@@ -4,26 +4,38 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 -- | RON model types
-module RON.Types
-    ( Atom (..)
-    , Object (..)
-    , ObjectPart (..)
-    , Op (..)
-    , OpTerm (..)
-    , ClosedOp (..)
-    , StateChunk (..)
-    , StateFrame
-    , UUID (..)
-    , WireChunk (..)
-    , WireFrame
-    , WireReducedChunk (..)
-    ) where
+module RON.Types (
+    pattern AckP,
+    pattern AnnotationDerivedP,
+    pattern AnnotationP,
+    pattern CreateP,
+    pattern DeleteP,
+    pattern RegularP,
+    pattern UndeleteP,
+    Atom (..),
+    ClosedOp (..),
+    Object (..),
+    ObjectPart (..),
+    Op (..),
+    OpPattern (..),
+    OpTerm (..),
+    StateChunk (..),
+    StateFrame,
+    UUID (..),
+    WireChunk (..),
+    WireFrame,
+    WireReducedChunk (..),
+    opPattern,
+) where
 
 import qualified Text.Show
 
-import           RON.UUID (UUID (..))
+import           RON.Util.Word (pattern B00, pattern B10, pattern B11, Word2)
+import           RON.UUID (UUID (UUID), uuidVersion)
+import qualified RON.UUID as UUID
 
 -- | Atom — a payload element
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
@@ -103,3 +115,36 @@ data Object a = Object{id :: UUID, frame :: StateFrame}
 -- | Specific field or item in an object, identified by UUID.
 data ObjectPart obj part = ObjectPart
     {partObject :: UUID, partLocation :: UUID, partFrame :: StateFrame}
+
+data OpPattern =
+    Regular | Delete | Undelete | Create | Ack | Annotation | AnnotationDerived
+
+pattern AnnotationP         :: (Word2, Word2)
+pattern AnnotationP         =  (B00,   B10)
+pattern AnnotationDerivedP  :: (Word2, Word2)
+pattern AnnotationDerivedP  =  (B00,   B11)
+pattern CreateP             :: (Word2, Word2)
+pattern CreateP             =  (B10,   B00)
+pattern RegularP            :: (Word2, Word2)
+pattern RegularP            =  (B10,   B10)
+pattern AckP                :: (Word2, Word2)
+pattern AckP                =  (B10,   B11)
+pattern DeleteP             :: (Word2, Word2)
+pattern DeleteP             =  (B11,   B10)
+pattern UndeleteP           :: (Word2, Word2)
+pattern UndeleteP           =  (B11,   B11)
+
+opPattern :: Op -> Maybe OpPattern
+opPattern Op{opId, refId} =
+    case mapBoth (uuidVersion . UUID.split) (opId, refId) of
+        (B00, B10) -> Just Annotation
+        (B00, B11) -> Just AnnotationDerived
+        (B10, B00) -> Just Create
+        (B10, B10) -> Just Regular
+        (B10, B11) -> Just Ack
+        (B11, B10) -> Just Delete
+        (B11, B11) -> Just Undelete
+        _          -> Nothing
+
+mapBoth :: (a -> b) -> (a, a) -> (b, b)
+mapBoth f (x, y) = (f x, f y)
