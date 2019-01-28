@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
@@ -36,7 +37,8 @@ import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             Op (Op), StateChunk (StateChunk), StateFrame,
-                            UUID (UUID), WireChunk, opEvent)
+                            UUID (UUID), WireChunk, opEvent, stateBody,
+                            stateType, stateVersion)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -93,8 +95,9 @@ data ReducedChunk = ReducedChunk
 mkChunkVersion :: [Op] -> UUID
 mkChunkVersion = maximumDef zero . map opEvent
 
-mkStateChunk :: [Op] -> StateChunk
-mkStateChunk ops = StateChunk (mkChunkVersion ops) ops
+mkStateChunk :: UUID -> [Op] -> StateChunk
+mkStateChunk stateType ops =
+    StateChunk{stateType, stateVersion = mkChunkVersion ops, stateBody = ops}
 
 data Patch a = Patch{patchRef :: UUID, patchValue :: a}
 
@@ -112,9 +115,10 @@ patchFromChunk ReducedChunk{..} =
     Patch{patchRef = rcRef, patchValue = stateFromChunk rcBody}
 
 patchToChunk :: Reducible a => Patch a -> ReducedChunk
-patchToChunk Patch{..} = ReducedChunk{..} where
-    rcRef = patchRef
-    StateChunk rcVersion rcBody = stateToChunk patchValue
+patchToChunk Patch{patchRef, patchValue} =
+    ReducedChunk{rcRef = patchRef, rcVersion = stateVersion, rcBody = stateBody}
+  where
+    StateChunk{stateVersion, stateBody} = stateToChunk patchValue
 
 -- | Base class for typed encoding
 class Replicated a where
@@ -217,11 +221,9 @@ objectFromRon handler atoms frame = case atoms of
 collectFrame :: Functor m => WriterT StateFrame m UUID -> m (Object a)
 collectFrame = fmap (uncurry Object) . runWriterT
 
-getObjectStateChunk
-    :: forall a m . (ReplicatedAsObject a, MonadE m) => Object a -> m StateChunk
+getObjectStateChunk :: MonadE m => Object a -> m StateChunk
 getObjectStateChunk (Object oid frame) =
-    liftMaybe "no such object in chunk" $
-    Map.lookup (objectOpType @a, oid) frame
+    liftMaybe "no such object in chunk" $ Map.lookup oid frame
 
 eqRef :: Object a -> [Atom] -> Bool
 eqRef (Object oid _) atoms = case atoms of

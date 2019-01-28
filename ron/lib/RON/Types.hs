@@ -9,7 +9,6 @@
 module RON.Types
     ( Atom (..)
     , Object (..)
-    , ObjectId
     , ObjectPart (..)
     , Op (..)
     , OpTerm (..)
@@ -85,18 +84,16 @@ type WireFrame = [WireChunk]
 data OpTerm = TRaw | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
--- | A pair of (type, object)
-type ObjectId = (UUID, UUID)
-
 -- | Reduced chunk representing an object state (i. e. high-level value)
 data StateChunk = StateChunk
-    { stateVersion :: UUID
+    { stateType    :: UUID
+    , stateVersion :: UUID
     , stateBody    :: [Op]
     }
     deriving (Eq, Show)
 
 -- | Frame containing only state chunks
-type StateFrame = Map ObjectId StateChunk
+type StateFrame = Map UUID StateChunk
 
 -- | Reference to an object inside a frame.
 data Object a = Object{objectId :: UUID, objectFrame :: StateFrame}

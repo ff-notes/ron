@@ -148,8 +148,10 @@ instance Reducible RgaRaw where
 
     stateFromChunk = RgaRaw . vertexListFromOps
 
-    stateToChunk (RgaRaw rga) = StateChunk (chunkVersion ops) ops where
-        ops = maybe [] vertexListToOps rga
+    stateToChunk (RgaRaw rga) = StateChunk
+        {stateType = rgaType, stateVersion = chunkVersion stateBody, stateBody}
+      where
+        stateBody = maybe [] vertexListToOps rga
 
     applyPatches rga (patches, ops) =
         bimap identity patchSetToChunks . reapplyPatchSetToState rga $
@@ -320,8 +322,10 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
             payload <- newRon item
             pure $ Op vertexId Zero payload
         oid <- lift getEventUuid
-        let version = maximumDef oid $ map opEvent ops
-        tell $ Map.singleton (rgaType, oid) $ StateChunk version ops
+        let stateVersion = maximumDef oid $ map opEvent ops
+        tell $
+            Map.singleton oid $
+            StateChunk{stateType = rgaType, stateVersion, stateBody = ops}
         pure oid
 
     getObject obj@Object{..} = do
@@ -364,12 +368,12 @@ edit newItems = do
     case lastEvent of
         Nothing -> pure ()
         Just stateVersion' -> do
-            let state' = StateChunk stateVersion' stateBody'
-            put Object
-                { objectFrame =
-                    Map.insert (rgaType, objectId) state' objectFrame
-                , ..
-                }
+            let state' = StateChunk
+                    { stateType    = rgaType
+                    , stateVersion = stateVersion'
+                    , stateBody    = stateBody'
+                    }
+            put obj{objectFrame = Map.insert objectId state' objectFrame}
 
   where
     eqAliveOnPayload

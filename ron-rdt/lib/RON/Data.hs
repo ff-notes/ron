@@ -93,7 +93,10 @@ mkWireReducer obj chunks = chunks' <> leftovers where
         Just nStates -> let
             nState = sconcat $ fmap snd nStates
             (reducedState, unapplied') = applyPatches nState (patches, rawops)
-            StateChunk reducedStateVersion reducedStateBody =
+            StateChunk
+                    { stateVersion = reducedStateVersion
+                    , stateBody = reducedStateBody
+                    } =
                 stateToChunk @a reducedState
             MaxOnFst (seenStateVersion, seenState) =
                 sconcat $ fmap MaxOnFst nStates
@@ -156,13 +159,15 @@ reduceState s1 s2 =
 
 reduceStateFrame :: MonadE m => StateFrame -> StateFrame -> m StateFrame
 reduceStateFrame s1 s2 =
-    (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid@(typ, _) chunk ->
-        case reducers !? typ of
+    (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid chunk -> let
+        StateChunk{stateType} = chunk
+        in
+        case reducers !? stateType of
             Just Reducer{stateReducer} ->
                 modify' $ Map.insertWith stateReducer oid chunk
             Nothing ->
                 throwErrorString $
-                "Cannot reduce StateFrame of unknown type " ++ show typ
+                "Cannot reduce StateFrame of unknown type " ++ show stateType
 
 unsafeReduceObject :: MonadE m => Object a -> StateFrame -> m (Object a)
 unsafeReduceObject Object{objectId, objectFrame = s1} s2 = do

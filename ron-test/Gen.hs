@@ -73,11 +73,12 @@ wireFrame size = list (Range.exponential 0 size) (wireChunk size)
 stateFrame :: MonadGen gen => Int -> gen StateFrame
 stateFrame size
     = Gen.map (Range.exponential 0 size)
-    $ (,) <$> ((,) <$> uuid <*> uuid) <*> stateChunk size
+    $ (,) <$> uuid <*> stateChunk size
 
 stateChunk :: MonadGen gen => Int -> gen StateChunk
 stateChunk size = StateChunk
     <$> choice [pure UUID.zero, uuid]
+    <*> choice [pure UUID.zero, uuid]
     <*> choice
         [ pure [Op UUID.zero UUID.zero []]
         , list (Range.exponential 0 size) $ reducedOp size

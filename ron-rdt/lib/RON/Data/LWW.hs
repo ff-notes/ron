@@ -19,10 +19,9 @@ module RON.Data.LWW
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible, Replicated, ReplicatedAsObject,
-                                    collectFrame, fromRon, getObjectStateChunk,
-                                    mkStateChunk, newRon, objectOpType,
-                                    reducibleOpType, stateFromChunk,
+import           RON.Data.Internal (Reducible, Replicated, collectFrame,
+                                    fromRon, getObjectStateChunk, mkStateChunk,
+                                    newRon, reducibleOpType, stateFromChunk,
                                     stateToChunk)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
@@ -49,7 +48,7 @@ instance Reducible LwwPerField where
     stateFromChunk ops =
         LwwPerField $ Map.fromListWith lww [(opRef op, op) | op <- ops]
 
-    stateToChunk (LwwPerField fields) = mkStateChunk $ Map.elems fields
+    stateToChunk (LwwPerField fields) = mkStateChunk lwwType $ Map.elems fields
 
 -- | Name-UUID to use as LWW type marker.
 lwwType :: UUID
@@ -59,10 +58,16 @@ lwwType = $(UUID.liftName "lww")
 newObject :: ReplicaClock m => [(UUID, Instance Replicated)] -> m (Object a)
 newObject fields = collectFrame $ do
     payloads <- for fields $ \(_, Instance value) -> newRon value
-    e <- lift getEventUuid
-    tell $ Map.singleton (lwwType, e) $ StateChunk e
-        [Op e name p | ((name, _), p) <- zip fields payloads]
-    pure e
+    event <- lift getEventUuid
+    tell $
+        Map.singleton event $
+        StateChunk
+            { stateType = lwwType
+            , stateVersion = event
+            , stateBody =
+                [Op event name p | ((name, _), p) <- zip fields payloads]
+            }
+    pure event
 
 -- | Decode field value
 viewField
@@ -82,7 +87,7 @@ viewField field StateChunk{..} frame =
 
 -- | Decode field value
 readField
-    :: (MonadE m, MonadState (Object a) m, ReplicatedAsObject a, Replicated b)
+    :: (MonadE m, MonadState (Object a) m, Replicated b)
     => UUID  -- ^ Field name
     -> m b
 readField field = do
@@ -93,10 +98,7 @@ readField field = do
 -- | Assign a value to a field
 assignField
     :: forall a b m
-    .   ( ReplicatedAsObject a
-        , Replicated b
-        , ReplicaClock m, MonadE m, MonadState (Object a) m
-        )
+    . (Replicated b, ReplicaClock m, MonadE m, MonadState (Object a) m)
     => UUID  -- ^ Field name
     -> b     -- ^ Value (from untyped world)
     -> m ()
@@ -105,20 +107,17 @@ assignField field value = do
     StateChunk{..} <- getObjectStateChunk obj
     advanceToUuid stateVersion
     let chunk = filter ((field /=) . opRef) stateBody
-    e <- getEventUuid
+    event <- getEventUuid
     (p, frame') <- runWriterT $ newRon value
-    let newOp = Op e field p
+    let newOp = Op event field p
     let chunk' = sortOn opRef $ newOp : chunk
-    let state' = StateChunk e chunk'
-    put Object
-        { objectFrame =
-            Map.insert (objectOpType @a, objectId) state' objectFrame <> frame'
-        , ..
-        }
+    let state' = StateChunk
+            {stateVersion = event, stateBody = chunk', stateType = lwwType}
+    put obj{objectFrame = Map.insert objectId state' objectFrame <> frame'}
 
 -- | Anti-lens to an object inside a specified field
 zoomField
-    :: (ReplicatedAsObject outer, MonadE m)
+    :: MonadE m
     => UUID                       -- ^ Field name
     -> StateT (Object inner) m a  -- ^ Nested object modifier
     -> StateT (Object outer) m a

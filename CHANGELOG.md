@@ -14,6 +14,9 @@ and this project adheres to
   class hierarchy.
 - Add `ORSet.removeValue` and `removeRef` implementation.
 
+### Removed
+- Type alias `ObjectId` since objects are identified by UUID.
+
 ### Changed
 - Extracted `ron-storage` package.
 - Extracted `ron-schema` package.
@@ -22,6 +25,7 @@ and this project adheres to
   procedures.
 - `ORSet.addRef` now adds item's frame, too.
 - `ORSet.addNewRef` now returns the reference to the freshly created object.
+- Change `StateFrame` key to UUID since objects are identified by UUID.
 
 ### Fixed
 - Error handling in Boole decoder.

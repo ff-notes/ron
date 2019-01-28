@@ -27,7 +27,7 @@ import           Control.Monad.IO.Class as X (MonadIO, liftIO)
 import           Data.Bifunctor as X (bimap)
 import           Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import           Data.Char as X (Char, chr, ord, toLower, toUpper)
-import           Data.Coerce as X (coerce)
+import           Data.Coerce as X (Coercible, coerce)
 import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
@@ -102,7 +102,8 @@ import           Control.Monad.State.Strict as X (MonadState, State, StateT,
                                                   modify', put, runState,
                                                   runStateT, state)
 import           Control.Monad.Trans as X (MonadTrans, lift)
-import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
+import           Control.Monad.Writer.Strict as X (MonadWriter, WriterT,
+                                                   runWriterT, tell)
 #endif
 
 #ifdef VERSION_text

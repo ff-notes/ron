@@ -5,6 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet
@@ -25,7 +26,8 @@ import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom, Object (Object), Op (Op),
                             StateChunk (StateChunk), UUID, objectFrame,
-                            objectId, opEvent, opPayload, opRef, stateBody)
+                            objectId, opEvent, opPayload, opRef, stateBody,
+                            stateType, stateVersion)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -56,7 +58,8 @@ instance Reducible ORSetRaw where
     stateFromChunk ops =
         ORSetRaw $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
 
-    stateToChunk (ORSetRaw set) = mkStateChunk . sortOn opEvent $ Map.elems set
+    stateToChunk (ORSetRaw set) =
+        mkStateChunk setType . sortOn opEvent $ Map.elems set
 
 -- | Name-UUID to use as OR-Set type marker.
 setType :: UUID
@@ -73,75 +76,74 @@ instance ReplicatedAsPayload a => Replicated (ORSet a) where
 
 instance ReplicatedAsPayload a => ReplicatedAsObject (ORSet a) where
     objectOpType = setType
-
-    newObject (ORSet items) = collectFrame $ do
-        ops <- for items $ \item -> do
-            event <- lift getEventUuid
-            pure $ Op event Zero $ toPayload item
-        oid <- lift getEventUuid
-        let version = maximumDef oid $ map opEvent ops
-        tell $ Map.singleton (setType, oid) $ StateChunk version ops
-        pure oid
-
-    getObject obj@Object{..} = do
-        StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op{..} -> case opRef of
-            Zero -> Just <$> fromPayload opPayload
-            _    -> pure Nothing
-        pure . ORSet $ catMaybes mItems
+    newObject = commonNewObject pure
+    getObject = commonGetObject pure
 
 instance ReplicatedAsObject a => Replicated (ObjectORSet a) where
     encoding = objectEncoding
 
 instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
     objectOpType = setType
+    newObject = commonNewObject $ fmap objectId . newObject
+    getObject obj@Object{objectFrame} =
+        commonGetObject (\itemId -> getObject (Object itemId objectFrame)) obj
 
-    newObject (ObjectORSet items) = collectFrame $ do
-        ops <- for items $ \item -> do
-            event <- lift getEventUuid
-            Object{objectId = itemId} <- lift $ newObject item
-            pure . Op event Zero $ toPayload itemId
-        oid <- lift getEventUuid
-        let version = maximumDef oid $ map opEvent ops
-        tell . Map.singleton (setType, oid) $ StateChunk version ops
-        pure oid
+commonNewObject
+    ::  ( Coercible (orset item) [item]
+        , ReplicaClock m
+        , ReplicatedAsPayload itemRep
+        )
+    => (item -> m itemRep) -> orset item -> m (Object (orset item))
+commonNewObject newItem items = collectFrame $ do
+    ops <- for (coerce items) $ \item -> do
+        event <- lift getEventUuid
+        payload <- lift $ newItem item
+        pure . Op event Zero $ toPayload payload
+    oid <- lift getEventUuid
+    let stateVersion = maximumDef oid $ map opEvent ops
+    tell $
+        Map.singleton oid $
+        StateChunk{stateType = setType, stateVersion, stateBody = ops}
+    pure oid
 
-    getObject obj@Object{..} = do
-        StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op{..} -> case opRef of
-            Zero -> do
-                oid <- fromPayload opPayload
-                Just <$> getObject (Object oid objectFrame)
-            _    -> pure Nothing
-        pure . ObjectORSet $ catMaybes mItems
+commonGetObject
+    :: forall item m orset itemRep
+    . (Coercible (orset item) [item], MonadE m, ReplicatedAsPayload itemRep)
+    => (itemRep -> m item) -> Object (orset item) -> m (orset item)
+commonGetObject getItem obj@Object{..} = do
+    StateChunk{..} <- getObjectStateChunk obj
+    mItems <- for stateBody $ \Op{..} -> case opRef of
+        Zero -> Just <$> (fromPayload opPayload >>= getItem)
+        _    -> pure Nothing
+    pure . coerce @[item] $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
-add :: (ReplicatedAsObject a, ReplicatedAsPayload b, ReplicaClock m, MonadE m)
+commonAdd :: (ReplicatedAsPayload b, ReplicaClock m, MonadE m)
     => b -> StateT (Object a) m ()
-add item = do
+commonAdd item = do
     obj@Object{..} <- get
     StateChunk{..} <- getObjectStateChunk obj
     event <- getEventUuid
     let payload = toPayload item
     let newOp = Op event Zero payload
     let chunk' = stateBody ++ [newOp]
-    let state' = StateChunk event chunk'
-    put Object
-        {objectFrame = Map.insert (setType, objectId) state' objectFrame, ..}
+    let state' = StateChunk
+            {stateType = setType, stateVersion = event, stateBody = chunk'}
+    put obj{objectFrame = Map.insert objectId state' objectFrame}
 
 -- | Add atomic value to the OR-Set
 addValue
     :: (ReplicatedAsPayload a, ReplicaClock m, MonadE m)
     => a -> StateT (Object (ORSet a)) m ()
-addValue = add
+addValue = commonAdd
 
 -- | Add a reference to the object to the OR-Set
 addRef
-    :: (ReplicatedAsObject a, ReplicaClock m, MonadE m)
+    :: (ReplicaClock m, MonadE m)
     => Object a -> StateT (Object (ObjectORSet a)) m ()
 addRef Object{objectId = itemId, objectFrame = itemFrame} = do
     modify' $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
-    add itemId
+    commonAdd itemId
 
 -- | Encode an object and add a reference to it to the OR-Set
 addNewRef
@@ -155,10 +157,10 @@ addNewRef item = do
     pure itemObj
 
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
-removeBy
-    :: (ReplicatedAsObject (orset a), MonadE m, ReplicaClock m)
+commonRemove
+    :: (MonadE m, ReplicaClock m)
     => ([Atom] -> Bool) -> StateT (Object (orset a)) m ()
-removeBy isTarget = do
+commonRemove isTarget = do
     obj@Object{..} <- get
     StateChunk{..} <- getObjectStateChunk obj
     let state0@(ORSetRaw opMap) = stateFromChunk stateBody
@@ -178,20 +180,16 @@ removeBy isTarget = do
                     ]
             let chunk' = state0 <> stateFromChunk patch
             let state' = stateToChunk chunk'
-            put Object
-                { objectFrame =
-                    Map.insert (setType, objectId) state' objectFrame
-                , ..
-                }
+            put obj{objectFrame = Map.insert objectId state' objectFrame}
 
 -- | Remove an atomic value from the OR-Set
 removeValue
     :: (ReplicatedAsPayload a, MonadE m, ReplicaClock m)
     => a -> StateT (Object (ORSet a)) m ()
-removeValue = removeBy . eqPayload
+removeValue = commonRemove . eqPayload
 
 -- | Remove an object reference from the OR-Set
 removeRef
-    :: (ReplicatedAsObject a, MonadE m, ReplicaClock m)
+    :: (MonadE m, ReplicaClock m)
     => Object a -> StateT (Object (ObjectORSet a)) m ()
-removeRef = removeBy . eqRef
+removeRef = commonRemove . eqRef

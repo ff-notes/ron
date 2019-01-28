@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -45,7 +46,7 @@ instance Reducible VersionVector where
     stateFromChunk ops =
         VersionVector $ Map.fromListWith latter [(opOrigin op, op) | op <- ops]
 
-    stateToChunk (VersionVector vv) = mkStateChunk $ Map.elems vv
+    stateToChunk (VersionVector vv) = mkStateChunk vvType $ Map.elems vv
 
 -- | Name-UUID to use as Version Vector type marker.
 vvType :: UUID
@@ -60,8 +61,10 @@ instance ReplicatedAsObject VersionVector where
     newObject (VersionVector vv) = collectFrame $ do
         oid <- lift getEventUuid
         let ops = Map.elems vv
-        let version = maximumDef oid $ map opEvent ops
-        tell $ Map.singleton (vvType, oid) $ StateChunk version ops
+        let stateVersion = maximumDef oid $ map opEvent ops
+        tell $
+            Map.singleton oid $
+            StateChunk{stateType = vvType, stateVersion, stateBody = ops}
         pure oid
 
     getObject obj = do

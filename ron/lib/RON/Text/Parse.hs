@@ -387,7 +387,8 @@ findObjects = fmap Map.fromList . traverse loadBody where
             let Op{..} = op
             let stateVersion = opEvent
             let stateBody = wrcBody
-            pure ((opType, opObject), StateChunk{..})
+            let stateType = opType
+            pure (opObject, StateChunk{..})
         _ -> Left "expected reduced chunk"
 
 opZero :: RawOp
