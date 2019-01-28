@@ -19,7 +19,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Language.Haskell.TH (Exp (VarE), Loc (Loc), bindS, conE, conP,
-                                      conT, doE, lamCaseE, letS, listE, noBindS,
+                                      conT, doE, lamCaseE, listE, noBindS,
                                       normalB, recC, recConE, sigD, varE, varP,
                                       varT)
 import qualified Language.Haskell.TH as TH
@@ -39,7 +39,8 @@ import           RON.Error (MonadE, errorContext, throwErrorString)
 import           RON.Event (ReplicaClock)
 import           RON.Schema as X
 import qualified RON.Schema.EDN as EDN
-import           RON.Types (Object (..), UUID)
+import           RON.Types (Object (Object), UUID)
+import qualified RON.Types as Object (frame)
 import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
 
@@ -156,12 +157,10 @@ mkReplicatedStructLww struct = do
                         fieldWrapperC field'Type
                 ]
         let getObjectImpl = doE
-                $   letS
-                        [valD
-                            (TH.recP
-                                'Object
-                                [TH.fieldPat 'RON.Types.frame $ varP frame])
-                            (varE obj)]
+                $   let1S
+                        (TH.recP
+                            'Object [TH.fieldPat 'Object.frame $ varP frame])
+                        (varE obj)
                 :   bindS (varP ops) [| getObjectStateChunk $(varE obj) |]
                 :   fieldsToUnpack
                 ++  [noBindS [| pure $consE |]]
@@ -316,3 +315,6 @@ mkEnum Enum{enumName, enumItems} = do
 
 liftText :: Text -> TH.ExpQ
 liftText t = [| Text.pack $(liftString $ Text.unpack t) |]
+
+let1S :: TH.PatQ -> TH.ExpQ -> TH.StmtQ
+let1S pat exp = TH.letS [valD pat exp]
