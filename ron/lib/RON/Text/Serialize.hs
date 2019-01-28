@@ -78,16 +78,16 @@ serializeRawOpZip this = state $ \prev -> let
     prev' = op prev
     typ = serializeUuidKey (opType   prev)  zero             (opType   this)
     obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
-    evt = serializeUuidKey (opEvent  prev') (opObject this)  (opEvent  this')
-    ref = serializeUuidKey (opRef    prev') (opEvent  this') (opRef    this')
-    payload = serializePayload (opObject this) (opPayload this')
+    evt = serializeUuidKey (opId     prev') (opObject this)  (opId     this')
+    ref = serializeUuidKey (refId    prev') (opId     this') (refId    this')
+    payloadAtoms = serializePayload (opObject this) (payload this')
     in
     ( BSLC.unwords
         $   key '*' typ
         ++  key '#' obj
         ++  key '@' evt
         ++  key ':' ref
-        ++  [payload | not $ BSL.null payload]
+        ++  [payloadAtoms | not $ BSL.null payloadAtoms]
     , this
     )
   where
@@ -100,15 +100,15 @@ serializeReducedOpZip
     -> Op
     -> State Op ByteStringL
 serializeReducedOpZip opObject this = state $ \prev -> let
-    evt = serializeUuidKey (opEvent  prev) opObject       (opEvent this)
-    ref = serializeUuidKey (opRef    prev) (opEvent this) (opRef   this)
-    payload = serializePayload opObject (opPayload this)
+    evt = serializeUuidKey (opId  prev) opObject    (opId  this)
+    ref = serializeUuidKey (refId prev) (opId this) (refId this)
+    payloadAtoms = serializePayload opObject (payload this)
     in
     (   BSLC.unwords
             $   (if BSL.null evt && BSL.null ref
                     then ["@"]
                     else key '@' evt ++ key ':' ref)
-            ++  [payload | not $ BSL.null payload]
+            ++  [payloadAtoms | not $ BSL.null payloadAtoms]
     ,   this
     )
   where
@@ -158,10 +158,12 @@ serializeStateFrame =
   where
     wrapChunk (opObject, StateChunk{..}) = Value WireReducedChunk{..}
       where
-        wrcHeader = RawOp{op = Op{opRef = zero, opPayload = [], ..}, ..}
+        wrcHeader = RawOp
+            { opType = stateType
+            , opObject
+            , op = Op{opId = stateVersion, refId = zero, payload = []}
+            }
         wrcBody = stateBody
-        opEvent = stateVersion
-        opType  = stateType
 
 -- | Serialize an object. Return object id that must be stored separately.
 serializeObject :: Object a -> (UUID, ByteStringL)
@@ -171,5 +173,5 @@ opZero :: RawOp
 opZero = RawOp
     { opType   = zero
     , opObject = zero
-    , op       = Op{opEvent = zero, opRef = zero, opPayload = []}
+    , op       = Op{opId = zero, refId = zero, payload = []}
     }

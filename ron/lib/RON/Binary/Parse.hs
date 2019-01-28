@@ -152,9 +152,9 @@ parseRawOp = label "RawOp" $ do
 -- | 'Parser' for reduced op without terminator
 parseReducedOp :: Parser Op
 parseReducedOp = label "Op" $ do
-    opEvent   <- parseOpKey DUuidEvent
-    opRef     <- parseOpKey DUuidRef
-    opPayload <- parsePayload
+    opId    <- parseOpKey DUuidEvent
+    refId   <- parseOpKey DUuidRef
+    payload <- parsePayload
     pure Op{..}
 
 -- | 'Parser' for an op key (type, object, event, or reference)

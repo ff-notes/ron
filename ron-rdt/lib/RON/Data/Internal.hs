@@ -37,8 +37,8 @@ import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             Op (Op), StateChunk (StateChunk), StateFrame,
-                            UUID (UUID), WireChunk, opEvent, stateBody,
-                            stateType, stateVersion)
+                            UUID (UUID), WireChunk, opId, stateBody, stateType,
+                            stateVersion)
 import           RON.UUID (zero)
 
 -- | Reduce all chunks of specific type and object in the frame
@@ -93,7 +93,7 @@ data ReducedChunk = ReducedChunk
     deriving (Show)
 
 mkChunkVersion :: [Op] -> UUID
-mkChunkVersion = maximumDef zero . map opEvent
+mkChunkVersion = maximumDef zero . map opId
 
 mkStateChunk :: UUID -> [Op] -> StateChunk
 mkStateChunk stateType ops =
@@ -105,8 +105,8 @@ instance Semigroup a => Semigroup (Patch a) where
     Patch ref1 a1 <> Patch ref2 a2 = Patch (min ref1 ref2) (a1 <> a2)
 
 patchFromRawOp :: Reducible a => Op -> Patch a
-patchFromRawOp op@Op{..} = Patch
-    { patchRef = opEvent
+patchFromRawOp op@Op{opId} = Patch
+    { patchRef = opId
     , patchValue = stateFromChunk [op]
     }
 

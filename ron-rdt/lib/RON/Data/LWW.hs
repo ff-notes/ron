@@ -33,7 +33,7 @@ import qualified RON.UUID as UUID
 
 -- | Last-Write-Wins: select an op with latter event
 lww :: Op -> Op -> Op
-lww = maxOn opEvent
+lww = maxOn opId
 
 -- | Untyped LWW. Implementation: a map from 'opRef' to the original op.
 newtype LwwPerField = LwwPerField (Map UUID Op)
@@ -47,7 +47,7 @@ instance Reducible LwwPerField where
     reducibleOpType = lwwType
 
     stateFromChunk ops =
-        LwwPerField $ Map.fromListWith lww [(opRef op, op) | op <- ops]
+        LwwPerField $ Map.fromListWith lww [(refId, op) | op@Op{refId} <- ops]
 
     stateToChunk (LwwPerField fields) = mkStateChunk lwwType $ Map.elems fields
 
@@ -79,12 +79,12 @@ viewField
     -> m a
 viewField field StateChunk{..} frame =
     errorContext ("LWW.viewField " <> show field) $ do
-        let ops = filter ((field ==) . opRef) stateBody
-        Op{..} <- case ops of
+        let ops = filter (\Op{refId} -> refId == field) stateBody
+        Op{payload} <- case ops of
             []   -> throwError "no field in lww chunk"
             [op] -> pure op
             _    -> throwError "unreduced state"
-        fromRon opPayload frame
+        fromRon payload frame
 
 -- | Decode field value
 readField
@@ -107,11 +107,11 @@ assignField field value = do
     obj@Object{id, frame} <- get
     StateChunk{..} <- getObjectStateChunk obj
     advanceToUuid stateVersion
-    let chunk = filter ((field /=) . opRef) stateBody
+    let chunk = filter (\Op{refId} -> refId /= field) stateBody
     event <- getEventUuid
     (p, frame') <- runWriterT $ newRon value
     let newOp = Op event field p
-    let chunk' = sortOn opRef $ newOp : chunk
+    let chunk' = sortOn refId $ newOp : chunk
     let state' = StateChunk
             {stateVersion = event, stateBody = chunk', stateType = lwwType}
     put obj{frame = Map.insert id state' frame <> frame'}
@@ -126,12 +126,12 @@ zoomField field innerModifier =
     errorContext ("LWW.zoomField" <> show field) $ do
         obj@Object{..} <- get
         StateChunk{..} <- getObjectStateChunk obj
-        let ops = filter ((field ==) . opRef) stateBody
-        Op{..} <- case ops of
+        let ops = filter (\Op{refId} -> refId == field) stateBody
+        Op{payload} <- case ops of
             []   -> throwError "empty chunk"
             [op] -> pure op
             _    -> throwError "unreduced state"
-        innerObjectId <- errorContext "inner object" $ case opPayload of
+        innerObjectId <- errorContext "inner object" $ case payload of
             [AUuid oid] -> pure oid
             _           -> throwError "Expected object UUID"
         let innerObject = Object innerObjectId frame

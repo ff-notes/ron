@@ -141,12 +141,12 @@ rawOp :: RawOp -> Parser (Bool, RawOp)
 rawOp prev = label "RawOp-cont" $ do
     (hasTyp, opType)   <- key "type"   '*' (opType   prev)  UUID.zero
     (hasObj, opObject) <- key "object" '#' (opObject prev)  opType
-    (hasEvt, opEvent)  <- key "event"  '@' (opEvent  prev') opObject
-    (hasLoc, opRef)    <- key "ref"    ':' (opRef    prev') opEvent
-    opPayload <- payload opObject
+    (hasEvt, opId)     <- key "event"  '@' (opId     prev') opObject
+    (hasLoc, refId)    <- key "ref"    ':' (refId    prev') opId
+    payload <- payloadP opObject
     let op = Op{..}
     pure
-        ( hasTyp || hasObj || hasEvt || hasLoc || not (null opPayload)
+        ( hasTyp || hasObj || hasEvt || hasLoc || not (null payload)
         , RawOp{..}
         )
   where
@@ -154,11 +154,11 @@ rawOp prev = label "RawOp-cont" $ do
 
 reducedOp :: UUID -> Op -> Parser (Bool, Op)
 reducedOp opObject prev = label "Op-cont" $ do
-    (hasEvt, opEvent) <- key "event" '@' (opEvent prev) opObject
-    (hasLoc, opRef)   <- key "ref"   ':' (opRef   prev) opEvent
-    opPayload <- payload opObject
-    let op = Op{..}
-    pure (hasEvt || hasLoc || not (null opPayload), op)
+    (hasEvt, opId)  <- key "event" '@' (opId  prev) opObject
+    (hasLoc, refId) <- key "ref"   ':' (refId prev) opId
+    payload <- payloadP opObject
+    let op = Op{opId, refId, payload}
+    pure (hasEvt || hasLoc || not (null payload), op)
 
 key :: String -> Char -> UUID -> UUID -> Parser (Bool, UUID)
 key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
@@ -300,8 +300,8 @@ pUuidVersion = label "UUID-version" $
         '-' -> pure b11
         _   -> fail "not a UUID-version"
 
-payload :: UUID -> Parser [Atom]
-payload = label "payload" . go
+payloadP :: UUID -> Parser [Atom]
+payloadP = label "payload" . go
   where
     go prevUuid = do
         ma <- optional $ atom prevUuid
@@ -385,8 +385,8 @@ findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value WireReducedChunk{..} -> do
             let RawOp{..} = wrcHeader
-            let Op{..} = op
-            let stateVersion = opEvent
+            let Op{opId} = op
+            let stateVersion = opId
             let stateBody = wrcBody
             let stateType = opType
             pure (opObject, StateChunk{..})
@@ -396,5 +396,5 @@ opZero :: RawOp
 opZero = RawOp
     { opType   = UUID.zero
     , opObject = UUID.zero
-    , op       = Op{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
+    , op       = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
     }

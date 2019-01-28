@@ -40,7 +40,6 @@ import           RON.Event (ReplicaClock)
 import           RON.Schema as X
 import qualified RON.Schema.EDN as EDN
 import           RON.Types (Object (Object), UUID)
-import qualified RON.Types as Object (frame)
 import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
 
@@ -157,7 +156,7 @@ mkReplicatedStructLww struct = do
                         fieldWrapperC field'Type
                 ]
         let getObjectImpl = doE
-                $   let1S [p| Object{frame = $(varP frame)} |] (varE obj)
+                $   let1S [p| Object _ $(varP frame) |] (varE obj)
                 :   bindS (varP ops) [| getObjectStateChunk $(varE obj) |]
                 :   fieldsToUnpack
                 ++  [noBindS [| pure $consE |]]

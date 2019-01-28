@@ -121,11 +121,11 @@ mkWireReducer obj chunks = chunks' <> leftovers where
             pure ([], [], [op], [])
         Value WireReducedChunk{wrcHeader, wrcBody} -> do
             guardSameObject wrcHeader
-            let ref = opRef $ op wrcHeader
+            let ref = refId $ op wrcHeader
             case ref of
                 Zero ->  -- state
                     pure
-                        ( [ ( opEvent $ op wrcHeader
+                        ( [ ( opId $ op wrcHeader
                             , stateFromChunk wrcBody
                             ) ]
                         , []
@@ -136,7 +136,7 @@ mkWireReducer obj chunks = chunks' <> leftovers where
                     pure
                         ( []
                         ,   [ ReducedChunk
-                                { rcVersion = opEvent $ op wrcHeader
+                                { rcVersion = opId $ op wrcHeader
                                 , rcRef = ref
                                 , rcBody = wrcBody
                                 }
@@ -148,9 +148,8 @@ mkWireReducer obj chunks = chunks' <> leftovers where
     guardSameObject RawOp{opType, opObject} =
         guard $ opType == typ && opObject == obj
     wrapRChunk ReducedChunk{..} = WireReducedChunk
-        { wrcHeader = wrapOp
-            Op{opEvent = rcVersion, opRef = rcRef, opPayload = []}
-        , wrcBody = rcBody
+        { wrcHeader = wrapOp Op{opId = rcVersion, refId = rcRef, payload = []}
+        , wrcBody   = rcBody
         }
 
 reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk

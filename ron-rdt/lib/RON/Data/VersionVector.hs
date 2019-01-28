@@ -19,10 +19,10 @@ import qualified RON.UUID as UUID
 type Origin = Word64
 
 opTime :: Op -> Word64
-opTime Op{opEvent = UUID time _} = time
+opTime Op{opId = UUID time _} = time
 
 opOrigin :: Op -> Word64
-opOrigin Op{opEvent = UUID _ origin} = origin
+opOrigin Op{opId = UUID _ origin} = origin
 
 latter :: Op -> Op -> Op
 latter = maxOn opTime
@@ -61,7 +61,7 @@ instance ReplicatedAsObject VersionVector where
     newObject (VersionVector vv) = collectFrame $ do
         oid <- lift getEventUuid
         let ops = Map.elems vv
-        let stateVersion = maximumDef oid $ map opEvent ops
+        let stateVersion = maximumDef oid $ map opId ops
         tell $
             Map.singleton oid $
             StateChunk{stateType = vvType, stateVersion, stateBody = ops}

@@ -25,9 +25,8 @@ import           RON.Data.Internal
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom, Object (Object), Op (Op),
-                            StateChunk (StateChunk), UUID, frame, id, opEvent,
-                            opPayload, opRef, stateBody, stateType,
-                            stateVersion)
+                            StateChunk (StateChunk), UUID, frame, id, opId,
+                            payload, refId, stateBody, stateType, stateVersion)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -38,12 +37,12 @@ newtype ORSetRaw = ORSetRaw (Map UUID Op)
     deriving (Eq, Show)
 
 opKey :: Op -> UUID
-opKey Op{..} = case opRef of
-    Zero -> opEvent  -- alive
-    _    -> opRef    -- tombstone
+opKey Op{opId, refId} = case refId of
+    Zero -> opId   -- alive
+    _    -> refId  -- tombstone
 
 observedRemove :: Op -> Op -> Op
-observedRemove = maxOn opRef
+observedRemove = maxOn refId
 
 instance Semigroup ORSetRaw where
     ORSetRaw set1 <> ORSetRaw set2 =
@@ -59,7 +58,7 @@ instance Reducible ORSetRaw where
         ORSetRaw $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
 
     stateToChunk (ORSetRaw set) =
-        mkStateChunk setType . sortOn opEvent $ Map.elems set
+        mkStateChunk setType . sortOn opId $ Map.elems set
 
 -- | Name-UUID to use as OR-Set type marker.
 setType :: UUID
@@ -100,7 +99,7 @@ commonNewObject newItem items = collectFrame $ do
         payload <- lift $ newItem item
         pure . Op event Zero $ toPayload payload
     oid <- lift getEventUuid
-    let stateVersion = maximumDef oid $ map opEvent ops
+    let stateVersion = maximumDef oid $ map opId ops
     tell $
         Map.singleton oid $
         StateChunk{stateType = setType, stateVersion, stateBody = ops}
@@ -112,8 +111,8 @@ commonGetObject
     => (itemRep -> m item) -> Object (orset item) -> m (orset item)
 commonGetObject getItem obj@Object{..} = do
     StateChunk{..} <- getObjectStateChunk obj
-    mItems <- for stateBody $ \Op{..} -> case opRef of
-        Zero -> Just <$> (fromPayload opPayload >>= getItem)
+    mItems <- for stateBody $ \Op{refId, payload} -> case refId of
+        Zero -> Just <$> (fromPayload payload >>= getItem)
         _    -> pure Nothing
     pure . coerce @[item] $ catMaybes mItems
 
@@ -165,18 +164,18 @@ commonRemove isTarget = do
     StateChunk{..} <- getObjectStateChunk obj
     let state0@(ORSetRaw opMap) = stateFromChunk stateBody
     let targetEvents =
-            [ opEvent
-            | Op{..} <- toList opMap
-            , opRef == Zero  -- is alive
-            , isTarget opPayload
+            [ opId
+            | Op{opId, refId, payload} <- toList opMap
+            , refId == Zero  -- is alive
+            , isTarget payload
             ]
     case targetEvents of
         [] -> pure ()
         _  -> do
             tombstone <- getEventUuid
             let patch =
-                    [ Op{opEvent = tombstone, opRef = event, opPayload = []}
-                    | event <- targetEvents
+                    [ Op{opId = tombstone, refId, payload = []}
+                    | refId <- targetEvents
                     ]
             let chunk' = state0 <> stateFromChunk patch
             let state' = stateToChunk chunk'

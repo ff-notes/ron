@@ -1,9 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE StrictData #-}
 
 -- | RON model types
 module RON.Types
@@ -29,7 +29,7 @@ import           RON.UUID (UUID (..))
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Data, Eq, Generic, Hashable, Show)
 
--- | Raw op
+-- | Closed op
 data RawOp = RawOp
     { opType   :: UUID
         -- ^ type
@@ -40,26 +40,26 @@ data RawOp = RawOp
     }
     deriving (Data, Eq, Generic)
 
--- | “Reduced” op (op from reduced chunk)
+-- | Open op (operation)
 data Op = Op
-    { opEvent   :: UUID
+    { opId      :: UUID
         -- ^ event id (usually timestamp)
-    , opRef     :: UUID
+    , refId     :: UUID
         -- ^ reference to other op; actual semantics depends on the type
-    , opPayload :: [Atom]
+    , payload :: [Atom]
         -- ^ payload
     }
     deriving (Data, Eq, Generic, Hashable, Show)
 
 instance Show RawOp where
-    show RawOp{opType, opObject, op = Op{opEvent, opRef, opPayload}} =
+    show RawOp{opType, opObject, op = Op{opId, refId, payload}} =
         unwords
             [ "RawOp"
             , insert '*' $ show opType
             , insert '#' $ show opObject
-            , insert '@' $ show opEvent
-            , insert ':' $ show opRef
-            , show opPayload
+            , insert '@' $ show opId
+            , insert ':' $ show refId
+            , show payload
             ]
       where
         insert k = \case

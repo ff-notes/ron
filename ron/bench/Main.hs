@@ -28,7 +28,7 @@ main = do
         [bench (show n) $ nf parseWireFrames batch | (n, batch) <- serialized]
   where
     rawop = RawOp{opType = UUID.zero, opObject = UUID.zero, op}
-    op = Op{opEvent = UUID.zero, opRef = UUID.zero, opPayload = []}
+    op = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
     frame n = replicate n $ Raw rawop
 
     serialized =

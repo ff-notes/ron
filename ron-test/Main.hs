@@ -40,8 +40,8 @@ import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid), Op (Op), RawOp (RawOp),
-                            UUID (UUID), WireChunk (Raw), op, opEvent, opObject,
-                            opPayload, opRef, opType)
+                            UUID (UUID), WireChunk (Raw), op, opId, opObject,
+                            refId, opType, payload)
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
@@ -232,12 +232,12 @@ prop_ron_json_example = let
         [ Raw RawOp
             { opType = lwwType
             , opObject = bar
-            , op = Op{opEvent = bar, opRef = barName, opPayload = [AInteger 1]}
+            , op = Op{opId = bar, refId = barName, payload = [AInteger 1]}
             }
         , Raw RawOp
             { opType = lwwType
             , opObject = foo
-            , op = Op{opEvent = foo, opRef = fooName, opPayload = [AUuid bar]}
+            , op = Op{opId = foo, refId = fooName, payload = [AUuid bar]}
             }
         ]
     barName = $(UUID.liftName "bar")

@@ -63,16 +63,16 @@ serializeRawOp desc RawOp{..} = do
     keys <- sequenceA
         [ serializeUuidType   opType
         , serializeUuidObject opObject
-        , serializeUuidEvent  opEvent
-        , serializeUuidRef    opRef
+        , serializeUuidOpId   opId
+        , serializeUuidRef    refId
         ]
-    payload <- traverse serializeAtom opPayload
-    serializeWithDesc desc $ fold $ keys ++ payload
+    payloadValue <- traverse serializeAtom payload
+    serializeWithDesc desc $ fold $ keys ++ payloadValue
   where
-    Op{..} = op
+    Op{opId, refId, payload} = op
     serializeUuidType   = serializeWithDesc DUuidType   . serializeUuid
     serializeUuidObject = serializeWithDesc DUuidObject . serializeUuid
-    serializeUuidEvent  = serializeWithDesc DUuidEvent  . serializeUuid
+    serializeUuidOpId   = serializeWithDesc DUuidEvent  . serializeUuid
     serializeUuidRef    = serializeWithDesc DUuidRef    . serializeUuid
 
 -- | Serialize a reduced op

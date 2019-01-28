@@ -39,11 +39,11 @@ import           RON.Util.Word (pattern B11, ls60)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
 
--- | opEvent = vertex id
---   opRef:
+-- | opId = vertex id
+--   refId:
 --      0 = value is alive,
 --      _ = tombstone event, value is backup for undo
---   opPayload: the value
+--   payload: the value
 type Vertex = Op
 
 data VertexListItem = VertexListItem
@@ -80,14 +80,13 @@ vertexListToOps v@VertexList{..} = go listHead listItems
 
 vertexListFromOps :: [Vertex] -> Maybe VertexList
 vertexListFromOps = foldr go mempty where
-    go v@Op{opEvent = vid} vlist =
-        Just $ VertexList{listHead = vid, listItems = vlist'}
+    go v@Op{opId} vlist = Just $ VertexList{listHead = opId, listItems = vlist'}
       where
         item itemNext = VertexListItem{itemValue = v, itemNext}
         vlist' = case vlist of
-            Nothing -> HashMap.singleton vid (item Nothing)
+            Nothing -> HashMap.singleton opId (item Nothing)
             Just VertexList{listHead, listItems} ->
-                HashMap.insert vid (item $ Just listHead) listItems
+                HashMap.insert opId (item $ Just listHead) listItems
 
 -- | Untyped RGA
 newtype RgaRaw = RgaRaw (Maybe VertexList)
@@ -112,21 +111,21 @@ instance Monoid PatchSet where
     mempty = PatchSet{psPatches = mempty, psRemovals = mempty}
 
 patchSetFromRawOp :: Op -> PatchSet
-patchSetFromRawOp op@Op{opEvent, opRef, opPayload} = case opPayload of
+patchSetFromRawOp op@Op{opId, refId, payload} = case payload of
     [] ->  -- remove op
-        mempty{psRemovals = Map.singleton opRef opEvent}
+        mempty{psRemovals = Map.singleton refId opId}
     _:_ ->  -- append op
         mempty
             { psPatches =
                 Map.singleton
-                    opRef
+                    refId
                     VertexList
-                        { listHead = opEvent
+                        { listHead = opId
                         , listItems =
                             HashMap.singleton
-                                opEvent
+                                opId
                                 VertexListItem
-                                    { itemValue = op{opRef = Zero}
+                                    { itemValue = op{refId = Zero}
                                     , itemNext  = Nothing
                                     }
                         }
@@ -167,15 +166,15 @@ patchSetToChunks PatchSet{..} =
         | (rcRef, vertices) <- Map.assocs psPatches
         , let rcBody = vertexListToOps vertices
         ]
-    ,   [ Op{opEvent = tombstone, opRef = vid, opPayload = []}
-        | (vid, tombstone) <- Map.assocs psRemovals
+    ,   [ Op{opId = tombstone, refId, payload = []}
+        | (refId, tombstone) <- Map.assocs psRemovals
         ]
     )
 
 chunkVersion :: [Op] -> UUID
 chunkVersion ops = maximumDef Zero
     [ max vertexId tombstone
-    | Op{opEvent = vertexId, opRef = tombstone} <- ops
+    | Op{opId = vertexId, refId = tombstone} <- ops
     ]
 
 reapplyPatchSet :: PatchSet -> PatchSet
@@ -273,9 +272,9 @@ applyRemoval
     -> HashMap UUID VertexListItem
     -> Maybe (HashMap UUID VertexListItem)
 applyRemoval parent tombstone targetItems = do
-    item@VertexListItem{itemValue = v@Op{opRef}} <-
+    item@VertexListItem{itemValue = v@Op{refId}} <-
         HashMap.lookup parent targetItems
-    let item' = item{itemValue = v{opRef = max opRef tombstone}}
+    let item' = item{itemValue = v{refId = max refId tombstone}}
     pure $ HashMap.insert parent item' targetItems
 
 merge :: VertexList -> VertexList -> VertexList
@@ -293,14 +292,14 @@ merge' w1@(v1 : vs1) w2@(v2 : vs2) =
         GT -> v1 : merge' vs1 w2
         EQ -> mergeVertices : merge' vs1 vs2
   where
-    Op{opEvent = e1, opRef = tombstone1, opPayload = p1} = v1
-    Op{opEvent = e2, opRef = tombstone2, opPayload = p2} = v2
+    Op{opId = e1, refId = tombstone1, payload = p1} = v1
+    Op{opId = e2, refId = tombstone2, payload = p2} = v2
 
     -- priority of deletion
     mergeVertices = Op
-        { opEvent   = e1
-        , opRef     = max tombstone1 tombstone2
-        , opPayload = maxOn length p1 p2
+        { opId    = e1
+        , refId   = max tombstone1 tombstone2
+        , payload = maxOn length p1 p2
         }
 
 -- | Name-UUID to use as RGA type marker.
@@ -322,7 +321,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
             payload <- newRon item
             pure $ Op vertexId Zero payload
         oid <- lift getEventUuid
-        let stateVersion = maximumDef oid $ map opEvent ops
+        let stateVersion = maximumDef oid $ map opId ops
         tell $
             Map.singleton oid $
             StateChunk{stateType = rgaType, stateVersion, stateBody = ops}
@@ -330,8 +329,8 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
 
     getObject obj@Object{frame} = do
         StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op{..} -> case opRef of
-            Zero -> Just <$> fromRon opPayload frame
+        mItems <- for stateBody $ \Op{..} -> case refId of
+            Zero -> Just <$> fromRon payload frame
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems
 
@@ -351,19 +350,19 @@ edit newItems = do
     let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
     (stateBody', Last lastEvent) <- runWriterT . fmap fold . for diff $ \case
         First removed -> for removed $ \case
-            op@Op{opRef = Zero} -> do  -- not deleted yet
+            op@Op{refId = Zero} -> do  -- not deleted yet
                 -- TODO(2018-11-03, #15, cblp) get sequential ids
                 tombstone <- lift getEventUuid
                 tell . Last $ Just tombstone
-                pure op{opRef = tombstone}
+                pure op{refId = tombstone}
             op ->  -- deleted already
                 pure op
         Both v _      -> pure v
         Second added  -> for added $ \op -> do
             -- TODO(2018-11-03, #15, cblp) get sequential ids
-            opEvent <- lift getEventUuid
-            tell . Last $ Just opEvent
-            pure op{opEvent}
+            opId <- lift getEventUuid
+            tell . Last $ Just opId
+            pure op{opId}
 
     case lastEvent of
         Nothing -> pure ()
@@ -377,8 +376,8 @@ edit newItems = do
 
   where
     eqAliveOnPayload
-            Op{opRef = Zero, opPayload = p1}
-            Op{opRef = Zero, opPayload = p2}
+            Op{refId = Zero, payload = p1}
+            Op{refId = Zero, payload = p2}
         = p1 == p2
     eqAliveOnPayload _ _ = False
 
