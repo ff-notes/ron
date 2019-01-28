@@ -1,4 +1,5 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -36,7 +37,7 @@ import           Data.Maybe (isJust, isNothing)
 
 import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Object (..), Op (..),
+                            Object (Object), Op (..),
                             OpTerm (THeader, TQuery, TRaw, TReduced),
                             RawOp (..), StateChunk (..), StateFrame,
                             UUID (UUID), WireChunk (Query, Raw, Value),

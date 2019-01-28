@@ -156,7 +156,12 @@ mkReplicatedStructLww struct = do
                         fieldWrapperC field'Type
                 ]
         let getObjectImpl = doE
-                $   letS [valD' frame [| objectFrame $(varE obj) |]]
+                $   letS
+                        [valD
+                            (TH.recP
+                                'Object
+                                [TH.fieldPat 'RON.Types.frame $ varP frame])
+                            (varE obj)]
                 :   bindS (varP ops) [| getObjectStateChunk $(varE obj) |]
                 :   fieldsToUnpack
                 ++  [noBindS [| pure $consE |]]
@@ -199,14 +204,14 @@ mkReplicatedStructLww struct = do
                     (ReplicaClock $m, MonadE $m, MonadState $objectT $m)
                     => $fieldViewType -> $m ()
                     |]
-                , valD' assign
+                , valDP assign
                     [| LWW.assignField $(liftData field'RonName) . $guide |]
                 ]
             readF =
                 [ sigD read [t|
                     (MonadE $m, MonadState $objectT $m) => $m $fieldViewType
                     |]
-                , valD' read
+                , valDP read
                     [| $unguide <$> LWW.readField $(liftData field'RonName) |]
                 ]
             zoomF =
@@ -215,7 +220,7 @@ mkReplicatedStructLww struct = do
                     => StateT (Object $(mkGuideType field'Type)) $m $a
                     -> StateT $objectT $m $a
                     |]
-                , valD' zoom [| LWW.zoomField $(liftData field'RonName) |]
+                , valDP zoom [| LWW.zoomField $(liftData field'RonName) |]
                 ]
         sequenceA $ assignF ++ readF ++ zoomF
       where
@@ -256,8 +261,11 @@ mkViewType = \case
   where
     wrapList a = [t| [$(mkViewType a)] |]
 
-valD' :: TH.Name -> TH.ExpQ -> TH.DecQ
-valD' name body = TH.valD (varP name) (normalB body) []
+valD :: TH.PatQ -> TH.ExpQ -> TH.DecQ
+valD pat body = TH.valD pat (normalB body) []
+
+valDP :: TH.Name -> TH.ExpQ -> TH.DecQ
+valDP = valD . varP
 
 isObjectType :: RonType -> Bool
 isObjectType = \case

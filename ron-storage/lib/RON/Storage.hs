@@ -32,7 +32,7 @@ import           RON.Error (Error (Error), MonadE, errorContext, liftMaybe,
                             throwErrorString)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
-import           RON.Types (Object (Object), UUID, objectFrame, objectId)
+import           RON.Types (Object (Object), UUID, frame, id)
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
@@ -93,17 +93,17 @@ readVersion
     :: MonadStorage m
     => Collection a => DocId a -> DocVersion -> m (Object a, IsTouched)
 readVersion docid version = do
-    (isObjectIdValid, objectId) <-
+    (isObjectIdValid, id) <-
         liftMaybe ("Bad Base32 UUID " <> show docid) $
         decodeDocId docid
     unless isObjectIdValid $
         throwErrorString $ "Not a Base32 UUID " ++ show docid
     contents <- loadVersionContent docid version
     case parseStateFrame contents of
-        Right objectFrame ->
-            pure (Object{objectId, objectFrame}, IsTouched False)
+        Right frame ->
+            pure (Object{id, frame}, IsTouched False)
         Left ronError ->
-            do  object <- fallbackParse objectId contents
+            do  object <- fallbackParse id contents
                 pure (object, IsTouched True)
             `catchError` \fallbackError ->
                 throwError $ case BSLC.head contents of
@@ -185,18 +185,18 @@ createVersion
     -> Object a
     -> m ()
 createVersion mDoc newObj = case mDoc of
-    Nothing -> save (DocId @a $ UUID.encodeBase32 objectId) []
+    Nothing -> save (DocId @a $ UUID.encodeBase32 id) []
     Just (docid, oldDoc) -> do
         let Document{value = oldObj, versions, isTouched = IsTouched isTouched}
                 = oldDoc
         when (newObj /= oldObj || length versions /= 1 || isTouched) $
             save docid versions
   where
-    Object{objectId, objectFrame} = newObj
+    Object{id, frame} = newObj
 
     save docid oldVersions = do
         newVersion <- UUID.encodeBase32 <$> getEventUuid
-        saveVersionContent docid newVersion (serializeStateFrame objectFrame)
+        saveVersionContent docid newVersion (serializeStateFrame frame)
         for_ oldVersions $ deleteVersion docid
 
 -- | Create document assuming it doesn't exist yet.

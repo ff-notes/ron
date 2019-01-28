@@ -25,9 +25,9 @@ import           RON.Data.Internal
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom, Object (Object), Op (Op),
-                            StateChunk (StateChunk), UUID, objectFrame,
-                            objectId, opEvent, opPayload, opRef, stateBody,
-                            stateType, stateVersion)
+                            StateChunk (StateChunk), UUID, frame, id, opEvent,
+                            opPayload, opRef, stateBody, stateType,
+                            stateVersion)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -84,9 +84,9 @@ instance ReplicatedAsObject a => Replicated (ObjectORSet a) where
 
 instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
     objectOpType = setType
-    newObject = commonNewObject $ fmap objectId . newObject
-    getObject obj@Object{objectFrame} =
-        commonGetObject (\itemId -> getObject (Object itemId objectFrame)) obj
+    newObject = commonNewObject $ fmap (\Object{id} -> id) . newObject
+    getObject obj@Object{frame} =
+        commonGetObject (\itemId -> getObject (Object itemId frame)) obj
 
 commonNewObject
     ::  ( Coercible (orset item) [item]
@@ -121,7 +121,7 @@ commonGetObject getItem obj@Object{..} = do
 commonAdd :: (ReplicatedAsPayload b, ReplicaClock m, MonadE m)
     => b -> StateT (Object a) m ()
 commonAdd item = do
-    obj@Object{..} <- get
+    obj@Object{id, frame} <- get
     StateChunk{..} <- getObjectStateChunk obj
     event <- getEventUuid
     let payload = toPayload item
@@ -129,7 +129,7 @@ commonAdd item = do
     let chunk' = stateBody ++ [newOp]
     let state' = StateChunk
             {stateType = setType, stateVersion = event, stateBody = chunk'}
-    put obj{objectFrame = Map.insert objectId state' objectFrame}
+    put obj{frame = Map.insert id state' frame}
 
 -- | Add atomic value to the OR-Set
 addValue
@@ -141,8 +141,8 @@ addValue = commonAdd
 addRef
     :: (ReplicaClock m, MonadE m)
     => Object a -> StateT (Object (ObjectORSet a)) m ()
-addRef Object{objectId = itemId, objectFrame = itemFrame} = do
-    modify' $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
+addRef Object{id = itemId, frame = itemFrame} = do
+    modify' $ \Object{..} -> Object{frame = frame <> itemFrame, ..}
     commonAdd itemId
 
 -- | Encode an object and add a reference to it to the OR-Set
@@ -152,7 +152,7 @@ addNewRef
     => a -> StateT (Object (ObjectORSet a)) m (Object a)
 addNewRef item = do
     itemObj@(Object _ itemFrame) <- lift $ newObject item
-    modify' $ \Object{..} -> Object{objectFrame = objectFrame <> itemFrame, ..}
+    modify' $ \Object{..} -> Object{frame = frame <> itemFrame, ..}
     addRef itemObj
     pure itemObj
 
@@ -161,7 +161,7 @@ commonRemove
     :: (MonadE m, ReplicaClock m)
     => ([Atom] -> Bool) -> StateT (Object (orset a)) m ()
 commonRemove isTarget = do
-    obj@Object{..} <- get
+    obj@Object{id, frame} <- get
     StateChunk{..} <- getObjectStateChunk obj
     let state0@(ORSetRaw opMap) = stateFromChunk stateBody
     let targetEvents =
@@ -180,7 +180,7 @@ commonRemove isTarget = do
                     ]
             let chunk' = state0 <> stateFromChunk patch
             let state' = stateToChunk chunk'
-            put obj{objectFrame = Map.insert objectId state' objectFrame}
+            put obj{frame = Map.insert id state' frame}
 
 -- | Remove an atomic value from the OR-Set
 removeValue

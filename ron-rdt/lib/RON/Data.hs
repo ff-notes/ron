@@ -170,18 +170,15 @@ reduceStateFrame s1 s2 =
                 "Cannot reduce StateFrame of unknown type " ++ show stateType
 
 unsafeReduceObject :: MonadE m => Object a -> StateFrame -> m (Object a)
-unsafeReduceObject Object{objectId, objectFrame = s1} s2 = do
-    objectFrame <- reduceStateFrame s1 s2
-    pure Object{..}
+unsafeReduceObject obj@Object{frame = s1} s2 = do
+    frame' <- reduceStateFrame s1 s2
+    pure obj{frame = frame'}
 
 -- | Reduce object with frame from another version of the same object.
 reduceObject :: MonadE m => Object a -> Object a -> m (Object a)
-reduceObject o1 o2
-    | id1 == id2 = unsafeReduceObject o1 $ objectFrame o2
+reduceObject o1@Object{id = id1} Object{id = id2, frame = frame2}
+    | id1 == id2 = unsafeReduceObject o1 frame2
     | otherwise  = throwErrorString $ "Object ids differ: " ++ show (id1, id2)
-  where
-    id1 = objectId o1
-    id2 = objectId o2
 
 newtype MaxOnFst a b = MaxOnFst (a, b)
 

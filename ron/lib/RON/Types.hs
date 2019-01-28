@@ -96,7 +96,7 @@ data StateChunk = StateChunk
 type StateFrame = Map UUID StateChunk
 
 -- | Reference to an object inside a frame.
-data Object a = Object{objectId :: UUID, objectFrame :: StateFrame}
+data Object a = Object{id :: UUID, frame :: StateFrame}
     deriving (Eq, Show)
 
 -- | Specific field or item in an object, identified by UUID.

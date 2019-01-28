@@ -40,8 +40,8 @@ import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid), Op (Op), RawOp (RawOp),
-                            UUID (UUID), WireChunk (Raw), objectFrame, op,
-                            opEvent, opObject, opPayload, opRef, opType)
+                            UUID (UUID), WireChunk (Raw), op, opEvent, opObject,
+                            opPayload, opRef, opType)
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
@@ -279,7 +279,7 @@ prop_RGA_edit_idempotency_back = property $ do
             Right textX === RGA.getText rgaX'
 
 prop_RGA_delete_deleted = let
-    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
     rga0expect =
         [ ["*rga", "#B/000015NGPU+000000003f", "@`(0kmiUz", "!"]
         , ["@)v", "'h'"]
@@ -331,7 +331,7 @@ instance Show (ShowAs a) where
     show (ShowAs _ s) = s
 
 prop_ORSet = let
-    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
     set0expect = [["*set", "#B/00000omion+000000005j", "@`", "!"], ["."]]
     set1expect =
         [ ["*set", "#B/00000omion+000000005j", "@`(2xPmJ2", "!"]
@@ -357,7 +357,7 @@ prop_ORSet = let
             set2expect === prep set2
 
 prop_ObjectORSet = let
-    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
     set0expect = [["*set", "#B/00000omilG+000000006G", "@`", "!"], ["."]]
     set1expect =
         [ ["*rga", "#B/00005~K_SG+000000006G", "@`(2lqPwO", "!"]
@@ -392,7 +392,7 @@ prop_ObjectORSet = let
             set2expect === prep set2
 
 prop_ObjectORSet_recursive = let
-    prep = map BSLC.words . BSLC.lines . RT.serializeStateFrame . objectFrame
+    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
     set0 = TestRecursiveORSet{testRecSet = []}
     set1expect =
         [ ["*lww", "#B/00004bfsbH+000000006P", "@`", "!"]

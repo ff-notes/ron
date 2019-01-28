@@ -328,10 +328,10 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
             StateChunk{stateType = rgaType, stateVersion, stateBody = ops}
         pure oid
 
-    getObject obj@Object{..} = do
+    getObject obj@Object{frame} = do
         StateChunk{..} <- getObjectStateChunk obj
         mItems <- for stateBody $ \Op{..} -> case opRef of
-            Zero -> Just <$> fromRon opPayload objectFrame
+            Zero -> Just <$> fromRon opPayload frame
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems
 
@@ -343,7 +343,7 @@ edit
         )
     => [a] -> m ()
 edit newItems = do
-    obj@Object{..} <- get
+    obj@Object{id, frame} <- get
     StateChunk{..} <- getObjectStateChunk obj
     advanceToUuid stateVersion
 
@@ -373,7 +373,7 @@ edit newItems = do
                     , stateVersion = stateVersion'
                     , stateBody    = stateBody'
                     }
-            put obj{objectFrame = Map.insert objectId state' objectFrame}
+            put obj{frame = Map.insert id state' frame}
 
   where
     eqAliveOnPayload

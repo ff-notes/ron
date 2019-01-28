@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -93,7 +94,7 @@ readField
 readField field = do
     obj@Object{..} <- get
     stateChunk <- getObjectStateChunk obj
-    viewField field stateChunk objectFrame
+    viewField field stateChunk frame
 
 -- | Assign a value to a field
 assignField
@@ -103,7 +104,7 @@ assignField
     -> b     -- ^ Value (from untyped world)
     -> m ()
 assignField field value = do
-    obj@Object{..} <- get
+    obj@Object{id, frame} <- get
     StateChunk{..} <- getObjectStateChunk obj
     advanceToUuid stateVersion
     let chunk = filter ((field /=) . opRef) stateBody
@@ -113,7 +114,7 @@ assignField field value = do
     let chunk' = sortOn opRef $ newOp : chunk
     let state' = StateChunk
             {stateVersion = event, stateBody = chunk', stateType = lwwType}
-    put obj{objectFrame = Map.insert objectId state' objectFrame <> frame'}
+    put obj{frame = Map.insert id state' frame <> frame'}
 
 -- | Anti-lens to an object inside a specified field
 zoomField
@@ -133,8 +134,8 @@ zoomField field innerModifier =
         innerObjectId <- errorContext "inner object" $ case opPayload of
             [AUuid oid] -> pure oid
             _           -> throwError "Expected object UUID"
-        let innerObject = Object innerObjectId objectFrame
-        (a, Object{objectFrame = objectFrame'}) <-
+        let innerObject = Object innerObjectId frame
+        (a, Object{frame = frame'}) <-
             lift $ runStateT innerModifier innerObject
-        put Object{objectFrame = objectFrame', ..}
+        put obj{frame = frame'}
         pure a
