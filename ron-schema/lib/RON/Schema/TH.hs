@@ -157,10 +157,7 @@ mkReplicatedStructLww struct = do
                         fieldWrapperC field'Type
                 ]
         let getObjectImpl = doE
-                $   let1S
-                        (TH.recP
-                            'Object [TH.fieldPat 'Object.frame $ varP frame])
-                        (varE obj)
+                $   let1S [p| Object{frame = $(varP frame)} |] (varE obj)
                 :   bindS (varP ops) [| getObjectStateChunk $(varE obj) |]
                 :   fieldsToUnpack
                 ++  [noBindS [| pure $consE |]]
