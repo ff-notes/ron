@@ -77,17 +77,17 @@ sortChunkOps chunk = case chunk of
     _ -> chunk
 
 chunkObject :: WireChunk -> UUID
-chunkObject = opObject . \case
-    Closed op                    -> op
+chunkObject = objectId . \case
+    Closed op                         -> op
     Value WireReducedChunk{wrcHeader} -> wrcHeader
     Query WireReducedChunk{wrcHeader} -> wrcHeader
 
 isRelevant :: WireChunk -> Bool
 isRelevant = \case
     Query _ -> False
-    Value WireReducedChunk{wrcHeader = ClosedOp{opType}} ->
-        opType /= $(UUID.liftName "~")
-    _       -> True
+    Value WireReducedChunk{wrcHeader = ClosedOp{reducerId}} ->
+        reducerId /= $(UUID.liftName "~")
+    _ -> True
 
 collectLefts :: (Either a b, Either a b) -> Either [(String, a)] (b, b)
 collectLefts = \case

@@ -61,23 +61,24 @@ serializeChunk = \case
 serializeClosedOp :: Desc -> ClosedOp -> Either String ByteStringL
 serializeClosedOp desc ClosedOp{..} = do
     keys <- sequenceA
-        [ serializeUuidType   opType
-        , serializeUuidObject opObject
-        , serializeUuidOpId   opId
-        , serializeUuidRef    refId
+        [ serializeUuidReducer reducerId
+        , serializeUuidObject  objectId
+        , serializeUuidOpId    opId
+        , serializeUuidRef     refId
         ]
     payloadValue <- traverse serializeAtom payload
     serializeWithDesc desc $ fold $ keys ++ payloadValue
   where
     Op{opId, refId, payload} = op
-    serializeUuidType   = serializeWithDesc DUuidType   . serializeUuid
-    serializeUuidObject = serializeWithDesc DUuidObject . serializeUuid
-    serializeUuidOpId   = serializeWithDesc DUuidEvent  . serializeUuid
-    serializeUuidRef    = serializeWithDesc DUuidRef    . serializeUuid
+    serializeUuidReducer = serializeWithDesc DUuidReducer . serializeUuid
+    serializeUuidObject  = serializeWithDesc DUuidObject  . serializeUuid
+    serializeUuidOpId    = serializeWithDesc DUuidOp      . serializeUuid
+    serializeUuidRef     = serializeWithDesc DUuidRef     . serializeUuid
 
 -- | Serialize a reduced op
 serializeReducedOp :: Desc -> UUID -> UUID -> Op -> Either String ByteStringL
-serializeReducedOp d opType opObject op = serializeClosedOp d ClosedOp{..}
+serializeReducedOp d reducerId objectId op =
+    serializeClosedOp d ClosedOp{reducerId, objectId, op}
 
 -- | Serialize a 'UUID'
 serializeUuid :: UUID -> ByteStringL
@@ -134,7 +135,7 @@ serializeReducedChunk :: Bool -> WireReducedChunk -> Either String ByteStringL
 serializeReducedChunk isQuery WireReducedChunk{..} = do
     header <-
         serializeClosedOp (if isQuery then DOpQueryHeader else DOpHeader) wrcHeader
-    body <- foldMapA (serializeReducedOp DOpReduced opType opObject) wrcBody
+    body <- foldMapA (serializeReducedOp DOpReduced reducerId objectId) wrcBody
     pure $ header <> body
   where
     ClosedOp{..} = wrcHeader

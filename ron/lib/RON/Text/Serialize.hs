@@ -63,7 +63,7 @@ serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
         (body, opAfter) =
             (`runState` opBefore) $
             for wrcBody $
-            fmap ("\t" <>) . serializeReducedOpZip opObject
+            fmap ("\t" <>) . serializeReducedOpZip objectId
         in
         ( body
         , ClosedOp{op = opAfter, ..}
@@ -77,11 +77,11 @@ serializeRawOp op = evalState (serializeClosedOpZip op) opZero
 serializeClosedOpZip :: ClosedOp -> State ClosedOp ByteStringL
 serializeClosedOpZip this = state $ \prev -> let
     prev' = op prev
-    typ = serializeUuidKey (opType   prev)  zero             (opType   this)
-    obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
-    evt = serializeUuidKey (opId     prev') (opObject this)  (opId     this')
-    ref = serializeUuidKey (refId    prev') (opId     this') (refId    this')
-    payloadAtoms = serializePayload (opObject this) (payload this')
+    typ = serializeUuidKey (reducerId prev)  zero              (reducerId this)
+    obj = serializeUuidKey (objectId  prev)  (reducerId this)  (objectId  this)
+    evt = serializeUuidKey (opId      prev') (objectId  this)  (opId      this')
+    ref = serializeUuidKey (refId     prev') (opId      this') (refId     this')
+    payloadAtoms = serializePayload (objectId this) (payload this')
     in
     ( BSLC.unwords
         $   key '*' typ
@@ -157,11 +157,11 @@ serializeStateFrame =
     serializeWireFrame . map wrapChunk . sortOn (stateType . snd) . Map.assocs
     -- TODO(2019-01-28, cblp) remove sortOn type
   where
-    wrapChunk (opObject, StateChunk{..}) = Value WireReducedChunk{..}
+    wrapChunk (objectId, StateChunk{..}) = Value WireReducedChunk{..}
       where
         wrcHeader = ClosedOp
-            { opType = stateType
-            , opObject
+            { reducerId = stateType
+            , objectId
             , op = Op{opId = stateVersion, refId = zero, payload = []}
             }
         wrcBody = stateBody
@@ -172,7 +172,7 @@ serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
 
 opZero :: ClosedOp
 opZero = ClosedOp
-    { opType   = zero
-    , opObject = zero
-    , op       = Op{opId = zero, refId = zero, payload = []}
+    { reducerId = zero
+    , objectId  = zero
+    , op        = Op{opId = zero, refId = zero, payload = []}
     }

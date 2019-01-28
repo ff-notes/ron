@@ -82,7 +82,7 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
     (wrcHeader, isQuery) <- header prev
     let reducedOps y = do
             skipSpace
-            (isNotEmpty, x) <- reducedOp (opObject wrcHeader) y
+            (isNotEmpty, x) <- reducedOp (objectId wrcHeader) y
             t <- optional term
             unless (t == Just TReduced || isNothing t) $
                 fail "reduced op may end with `,` only"
@@ -92,7 +92,7 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
     wrcBody <- reducedOps (op wrcHeader) <|> stop
     let lastOp = lastDef (op wrcHeader) wrcBody
         wrap op = ClosedOp
-            {opType = opType wrcHeader, opObject = opObject wrcHeader, op}
+            {reducerId = reducerId wrcHeader, objectId = objectId wrcHeader, op}
     pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
   where
     stop = pure []
@@ -139,11 +139,11 @@ endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 closedOp :: ClosedOp -> Parser (Bool, ClosedOp)
 closedOp prev = label "ClosedOp-cont" $ do
-    (hasTyp, opType)   <- key "type"   '*' (opType   prev)  UUID.zero
-    (hasObj, opObject) <- key "object" '#' (opObject prev)  opType
-    (hasEvt, opId)     <- key "event"  '@' (opId     prev') opObject
-    (hasLoc, refId)    <- key "ref"    ':' (refId    prev') opId
-    payload <- payloadP opObject
+    (hasTyp, reducerId) <- key "reducer" '*' (reducerId prev)  UUID.zero
+    (hasObj, objectId)  <- key "object"  '#' (objectId  prev)  reducerId
+    (hasEvt, opId)      <- key "opId"    '@' (opId      prev') objectId
+    (hasLoc, refId)     <- key "ref"     ':' (refId     prev') opId
+    payload <- payloadP objectId
     let op = Op{..}
     pure
         ( hasTyp || hasObj || hasEvt || hasLoc || not (null payload)
@@ -384,17 +384,17 @@ findObjects :: WireFrame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value WireReducedChunk{..} -> do
-            let ClosedOp{..} = wrcHeader
+            let ClosedOp{reducerId, objectId, op} = wrcHeader
             let Op{opId} = op
             let stateVersion = opId
             let stateBody = wrcBody
-            let stateType = opType
-            pure (opObject, StateChunk{..})
+            let stateType = reducerId
+            pure (objectId, StateChunk{..})
         _ -> Left "expected reduced chunk"
 
 opZero :: ClosedOp
 opZero = ClosedOp
-    { opType   = UUID.zero
-    , opObject = UUID.zero
-    , op       = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
+    { reducerId = UUID.zero
+    , objectId  = UUID.zero
+    , op        = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
     }

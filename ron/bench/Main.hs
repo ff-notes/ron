@@ -27,7 +27,7 @@ main = do
         defaultConfig{timeLimit = 1}
         [bench (show n) $ nf parseWireFrames batch | (n, batch) <- serialized]
   where
-    closedOp = ClosedOp{opType = UUID.zero, opObject = UUID.zero, op}
+    closedOp = ClosedOp{reducerId = UUID.zero, objectId = UUID.zero, op}
     op = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
     frame n = replicate n $ Closed closedOp
 

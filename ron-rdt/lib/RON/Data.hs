@@ -56,7 +56,7 @@ reduceWireFrame chunks = values' ++ queries where
         Closed                             op  -> op
         Value WireReducedChunk{wrcHeader = op} -> op
         Query WireReducedChunk{wrcHeader = op} -> op
-    opTypeAndObject ClosedOp{..} = (opType, opObject)
+    opTypeAndObject ClosedOp{..} = (reducerId, objectId)
     (queries, values) = partition isQuery chunks
     values' =
         fold $
@@ -147,8 +147,8 @@ mkWireReducer obj chunks = chunks' <> leftovers where
                         , []
                         )
         _ -> Nothing
-    guardSameObject ClosedOp{opType, opObject} =
-        guard $ opType == typ && opObject == obj
+    guardSameObject ClosedOp{reducerId, objectId} =
+        guard $ reducerId == typ && objectId == obj
     wrapRChunk ReducedChunk{..} = WireReducedChunk
         { wrcHeader = wrapOp Op{opId = rcVersion, refId = rcRef, payload = []}
         , wrcBody   = rcBody

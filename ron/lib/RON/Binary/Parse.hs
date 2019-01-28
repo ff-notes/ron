@@ -138,21 +138,21 @@ parseDescAndReducedOp = label "d+ClosedOp" $ do
     unless (size == 0) $
         fail $ "desc = " ++ show desc ++ ", size = " ++ show size
     case desc of
-        DOpReduced      -> (TReduced,)  <$> parseReducedOp
+        DOpReduced      -> (TReduced,)  <$> parseOpenOp
         _               -> fail $ "unimplemented " ++ show desc
 
 -- | 'Parser' for closed op without terminator
 parseClosedOp :: Parser ClosedOp
 parseClosedOp = label "ClosedOp" $ do
-    opType   <- parseOpKey DUuidType
-    opObject <- parseOpKey DUuidObject
-    op       <- parseReducedOp
+    reducerId <- parseOpKey DUuidReducer
+    objectId  <- parseOpKey DUuidObject
+    op        <- parseOpenOp
     pure ClosedOp{..}
 
 -- | 'Parser' for reduced op without terminator
-parseReducedOp :: Parser Op
-parseReducedOp = label "Op" $ do
-    opId    <- parseOpKey DUuidEvent
+parseOpenOp :: Parser Op
+parseOpenOp = label "Op" $ do
+    opId    <- parseOpKey DUuidOp
     refId   <- parseOpKey DUuidRef
     payload <- parsePayload
     pure Op{..}
@@ -165,11 +165,11 @@ parseOpKey expectedType = label "OpKey" $ do
             guard $ desc == expectedType
             uuid size
     case desc of
-        DUuidType   -> go
-        DUuidObject -> go
-        DUuidEvent  -> go
-        DUuidRef    -> go
-        _           -> fail $ show desc
+        DUuidReducer -> go
+        DUuidObject  -> go
+        DUuidOp      -> go
+        DUuidRef     -> go
+        _            -> fail $ show desc
 
 -- | 'Parser' for UUID
 uuid

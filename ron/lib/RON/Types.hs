@@ -31,11 +31,11 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
 
 -- | Closed op
 data ClosedOp = ClosedOp
-    { opType   :: UUID
+    { reducerId :: UUID
         -- ^ type
-    , opObject :: UUID
+    , objectId  :: UUID
         -- ^ object id
-    , op       :: Op
+    , op        :: Op
         -- ^ other keys and payload, that are common with reduced op
     }
     deriving (Data, Eq, Generic)
@@ -52,11 +52,11 @@ data Op = Op
     deriving (Data, Eq, Generic, Hashable, Show)
 
 instance Show ClosedOp where
-    show ClosedOp{opType, opObject, op = Op{opId, refId, payload}} =
+    show ClosedOp{reducerId, objectId, op = Op{opId, refId, payload}} =
         unwords
             [ "ClosedOp"
-            , insert '*' $ show opType
-            , insert '#' $ show opObject
+            , insert '*' $ show reducerId
+            , insert '#' $ show objectId
             , insert '@' $ show opId
             , insert ':' $ show refId
             , show payload

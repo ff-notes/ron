@@ -13,14 +13,14 @@ data Desc
     | DOpHeader
     | DOpQueryHeader
 
-    | DUuidType
+    | DUuidReducer
     | DUuidObject
-    | DUuidEvent
+    | DUuidOp
     | DUuidRef
 
     | DAtomUuidZip
     | DUuidZipObject
-    | DUuidZipEvent
+    | DUuidZipOp
     | DUuidZipRef
 
     | DAtomUuid

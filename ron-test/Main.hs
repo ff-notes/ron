@@ -40,7 +40,7 @@ import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid),
-                            ClosedOp (ClosedOp, op, opObject, opType),
+                            ClosedOp (ClosedOp, objectId, op, reducerId),
                             Op (Op, opId, payload, refId), UUID (UUID),
                             WireChunk (Closed))
 import           RON.Util (ByteStringL)
@@ -231,13 +231,13 @@ prop_ron_json_example = let
         \     #(R            @`   :foo > (Q ;"
     output =
         [ Closed ClosedOp
-            { opType = lwwType
-            , opObject = bar
+            { reducerId = lwwType
+            , objectId = bar
             , op = Op{opId = bar, refId = barName, payload = [AInteger 1]}
             }
         , Closed ClosedOp
-            { opType = lwwType
-            , opObject = foo
+            { reducerId = lwwType
+            , objectId = foo
             , op = Op{opId = foo, refId = fooName, payload = [AUuid bar]}
             }
         ]
