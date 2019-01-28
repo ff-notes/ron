@@ -20,9 +20,9 @@ import           Data.Text.Encoding (encodeUtf8)
 import           Data.ZigZag (zzEncode)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
-                            RawOp (..), UUID (UUID),
-                            WireChunk (Query, Raw, Value), WireFrame,
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            ClosedOp (..), Op (..), UUID (UUID),
+                            WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word4, b0000, leastSignificant4, safeCast)
@@ -53,13 +53,13 @@ serialize chunks = ("RON2" <>) <$> serializeBody
 -- | Serialize a chunk
 serializeChunk :: WireChunk -> Either String ByteStringL
 serializeChunk = \case
-    Raw op       -> serializeRawOp DOpRaw op
+    Closed op    -> serializeClosedOp DOpClosed op
     Value rchunk -> serializeReducedChunk False rchunk
     Query rchunk -> serializeReducedChunk True  rchunk
 
--- | Serialize a raw op
-serializeRawOp :: Desc -> RawOp -> Either String ByteStringL
-serializeRawOp desc RawOp{..} = do
+-- | Serialize a closed op
+serializeClosedOp :: Desc -> ClosedOp -> Either String ByteStringL
+serializeClosedOp desc ClosedOp{..} = do
     keys <- sequenceA
         [ serializeUuidType   opType
         , serializeUuidObject opObject
@@ -77,7 +77,7 @@ serializeRawOp desc RawOp{..} = do
 
 -- | Serialize a reduced op
 serializeReducedOp :: Desc -> UUID -> UUID -> Op -> Either String ByteStringL
-serializeReducedOp d opType opObject op = serializeRawOp d RawOp{..}
+serializeReducedOp d opType opObject op = serializeClosedOp d ClosedOp{..}
 
 -- | Serialize a 'UUID'
 serializeUuid :: UUID -> ByteStringL
@@ -133,11 +133,11 @@ serializeFloat = runPut . putDoublebe
 serializeReducedChunk :: Bool -> WireReducedChunk -> Either String ByteStringL
 serializeReducedChunk isQuery WireReducedChunk{..} = do
     header <-
-        serializeRawOp (if isQuery then DOpQueryHeader else DOpHeader) wrcHeader
+        serializeClosedOp (if isQuery then DOpQueryHeader else DOpHeader) wrcHeader
     body <- foldMapA (serializeReducedOp DOpReduced opType opObject) wrcBody
     pure $ header <> body
   where
-    RawOp{..} = wrcHeader
+    ClosedOp{..} = wrcHeader
 
 -- | Serialize a string atom
 serializeString :: Text -> ByteStringL

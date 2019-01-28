@@ -12,7 +12,7 @@ module RON.Types
     , ObjectPart (..)
     , Op (..)
     , OpTerm (..)
-    , RawOp (..)
+    , ClosedOp (..)
     , StateChunk (..)
     , StateFrame
     , UUID (..)
@@ -30,7 +30,7 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
     deriving (Data, Eq, Generic, Hashable, Show)
 
 -- | Closed op
-data RawOp = RawOp
+data ClosedOp = ClosedOp
     { opType   :: UUID
         -- ^ type
     , opObject :: UUID
@@ -51,10 +51,10 @@ data Op = Op
     }
     deriving (Data, Eq, Generic, Hashable, Show)
 
-instance Show RawOp where
-    show RawOp{opType, opObject, op = Op{opId, refId, payload}} =
+instance Show ClosedOp where
+    show ClosedOp{opType, opObject, op = Op{opId, refId, payload}} =
         unwords
-            [ "RawOp"
+            [ "ClosedOp"
             , insert '*' $ show opType
             , insert '#' $ show opObject
             , insert '@' $ show opId
@@ -68,20 +68,21 @@ instance Show RawOp where
 
 -- | Common reduced chunk
 data WireReducedChunk = WireReducedChunk
-    { wrcHeader :: RawOp
+    { wrcHeader :: ClosedOp
     , wrcBody   :: [Op]
     }
     deriving (Data, Eq, Generic, Show)
 
 -- | Common chunk
-data WireChunk = Raw RawOp | Value WireReducedChunk | Query WireReducedChunk
+data WireChunk =
+    Closed ClosedOp | Value WireReducedChunk | Query WireReducedChunk
     deriving (Data, Eq, Generic, Show)
 
 -- | Common frame
 type WireFrame = [WireChunk]
 
 -- | Op terminator
-data OpTerm = TRaw | TReduced | THeader | TQuery
+data OpTerm = TClosed | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
 -- | Reduced chunk representing an object state (i. e. high-level value)

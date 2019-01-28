@@ -25,11 +25,11 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.ZigZag (zzDecode64)
 
 import           RON.Binary.Types (Desc (..), Size, descIsOp)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (..),
-                            OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RawOp (..), UUID (UUID),
-                            WireChunk (Query, Raw, Value), WireFrame,
-                            WireReducedChunk (..))
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            ClosedOp (..), Op (..),
+                            OpTerm (TClosed, THeader, TQuery, TReduced),
+                            UUID (UUID), WireChunk (Closed, Query, Value),
+                            WireFrame, WireReducedChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.Util.Word (safeCast)
 
@@ -89,7 +89,7 @@ parseChunk
     :: Size  -- ^ expected input length
     -> Parser WireChunk
 parseChunk size = label "WireChunk" $ do
-    (consumed0, (term, op)) <- withInputSize parseDescAndRawOp
+    (consumed0, (term, op)) <- withInputSize parseDescAndClosedOp
     let parseReducedChunk wrcHeader isQuery = do
             wrcBody <- parseReducedOps $ fromIntegral size - consumed0
             pure $ (if isQuery then Query else Value) WireReducedChunk{..}
@@ -97,7 +97,7 @@ parseChunk size = label "WireChunk" $ do
         THeader  -> parseReducedChunk op False
         TQuery   -> parseReducedChunk op True
         TReduced -> fail "reduced op without a chunk"
-        TRaw     -> assertSize size consumed0 $> Raw op
+        TClosed  -> assertSize size consumed0 $> Closed op
 
 -- | Assert that is such as expected
 assertSize :: MonadFail f => Size -> Int -> f ()
@@ -119,21 +119,21 @@ parseReducedOps = label "[Op]" . go
                 EQ -> pure [op]
                 GT -> fail "impossible"
 
--- | 'Parser' for raw op, returning the op's terminator along with the op
-parseDescAndRawOp :: Parser (OpTerm, RawOp)
-parseDescAndRawOp = label "d+RawOp" $ do
+-- | 'Parser' for closed op, returning the op's terminator along with the op
+parseDescAndClosedOp :: Parser (OpTerm, ClosedOp)
+parseDescAndClosedOp = label "d+ClosedOp" $ do
     (desc, size) <- parseDesc
     unless (size == 0) $
         fail $ "desc = " ++ show desc ++ ", size = " ++ show size
     case desc of
-        DOpRaw          -> (TRaw,)      <$> parseRawOp
-        DOpHeader       -> (THeader,)   <$> parseRawOp
-        DOpQueryHeader  -> (TQuery,)    <$> parseRawOp
+        DOpClosed       -> (TClosed,)   <$> parseClosedOp
+        DOpHeader       -> (THeader,)   <$> parseClosedOp
+        DOpQueryHeader  -> (TQuery,)    <$> parseClosedOp
         _               -> fail $ "unimplemented " ++ show desc
 
 -- | 'Parser' for reduced op, returning the op's terminator along with the op
 parseDescAndReducedOp :: Parser (OpTerm, Op)
-parseDescAndReducedOp = label "d+RawOp" $ do
+parseDescAndReducedOp = label "d+ClosedOp" $ do
     (desc, size) <- parseDesc
     unless (size == 0) $
         fail $ "desc = " ++ show desc ++ ", size = " ++ show size
@@ -141,13 +141,13 @@ parseDescAndReducedOp = label "d+RawOp" $ do
         DOpReduced      -> (TReduced,)  <$> parseReducedOp
         _               -> fail $ "unimplemented " ++ show desc
 
--- | 'Parser' for raw op without terminator
-parseRawOp :: Parser RawOp
-parseRawOp = label "RawOp" $ do
+-- | 'Parser' for closed op without terminator
+parseClosedOp :: Parser ClosedOp
+parseClosedOp = label "ClosedOp" $ do
     opType   <- parseOpKey DUuidType
     opObject <- parseOpKey DUuidObject
     op       <- parseReducedOp
-    pure RawOp{..}
+    pure ClosedOp{..}
 
 -- | 'Parser' for reduced op without terminator
 parseReducedOp :: Parser Op

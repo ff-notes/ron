@@ -35,9 +35,10 @@ import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
-import           RON.Types (Object (..), Op (..), RawOp (..), StateChunk (..),
-                            StateFrame, UUID, WireChunk (Query, Raw, Value),
-                            WireFrame, WireReducedChunk (..))
+import           RON.Types (ClosedOp (..), Object (..), Op (..),
+                            StateChunk (..), StateFrame, UUID,
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -52,10 +53,10 @@ reducers = Map.fromList
 reduceWireFrame :: WireFrame -> WireFrame
 reduceWireFrame chunks = values' ++ queries where
     chunkTypeAndObject = opTypeAndObject . \case
-        Raw                                op  -> op
+        Closed                             op  -> op
         Value WireReducedChunk{wrcHeader = op} -> op
         Query WireReducedChunk{wrcHeader = op} -> op
-    opTypeAndObject RawOp{..} = (opType, opObject)
+    opTypeAndObject ClosedOp{..} = (opType, opObject)
     (queries, values) = partition isQuery chunks
     values' =
         fold $
@@ -86,13 +87,14 @@ mkWireReducer obj chunks = chunks' <> leftovers where
     chunks'
         =  maybeToList stateChunk'
         ++ map (Value . wrapRChunk) unappliedPatches
-        ++ map (Raw . wrapOp) unappliedOps
+        ++ map (Closed . wrapOp) unappliedOps
     mStates = nonEmpty states
     (stateChunk', (unappliedPatches, unappliedOps)) = case mStates of
-        Nothing -> (Nothing, reduceUnappliedPatches @a (patches, rawops))
+        Nothing -> (Nothing, reduceUnappliedPatches @a (patches, closedOps))
         Just nStates -> let
             nState = sconcat $ fmap snd nStates
-            (reducedState, unapplied') = applyPatches nState (patches, rawops)
+            (reducedState, unapplied') =
+                applyPatches nState (patches, closedOps)
             StateChunk
                     { stateVersion = reducedStateVersion
                     , stateBody = reducedStateBody
@@ -112,12 +114,12 @@ mkWireReducer obj chunks = chunks' <> leftovers where
             in
             (Just $ Value $ wrapRChunk rc, reduceUnappliedPatches @a unapplied')
     typ = reducibleOpType @a
-    wrapOp = RawOp typ obj
-    (states, patches, rawops, leftovers) = foldMap load chunks
+    wrapOp = ClosedOp typ obj
+    (states, patches, closedOps, leftovers) = foldMap load chunks
     load chunk = fromMaybe ([], [], [], [chunk]) $ load' chunk
     load' chunk = case chunk of
-        Raw rawop@RawOp{op} -> do
-            guardSameObject rawop
+        Closed closedOp@ClosedOp{op} -> do
+            guardSameObject closedOp
             pure ([], [], [op], [])
         Value WireReducedChunk{wrcHeader, wrcBody} -> do
             guardSameObject wrcHeader
@@ -145,7 +147,7 @@ mkWireReducer obj chunks = chunks' <> leftovers where
                         , []
                         )
         _ -> Nothing
-    guardSameObject RawOp{opType, opObject} =
+    guardSameObject ClosedOp{opType, opObject} =
         guard $ opType == typ && opObject == obj
     wrapRChunk ReducedChunk{..} = WireReducedChunk
         { wrcHeader = wrapOp Op{opId = rcVersion, refId = rcRef, payload = []}

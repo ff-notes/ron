@@ -37,11 +37,11 @@ import           Data.Maybe (isJust, isNothing)
 
 import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Object (Object), Op (..),
-                            OpTerm (THeader, TQuery, TRaw, TReduced),
-                            RawOp (..), StateChunk (..), StateFrame,
-                            UUID (UUID), WireChunk (Query, Raw, Value),
-                            WireFrame, WireReducedChunk (..))
+                            ClosedOp (..), Object (Object), Op (..),
+                            OpTerm (TClosed, THeader, TQuery, TReduced),
+                            StateChunk (..), StateFrame, UUID (UUID),
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word2, Word4, Word60, b00, b0000, b01, b10, b11,
                                 ls60, safeCast)
@@ -65,19 +65,19 @@ chunksTill end = label "[WireChunk]" $ go opZero
             (ch :) <$> go lastOp
 
 -- | Returns a chunk and the last op in it
-pChunk :: RawOp -> Parser (WireChunk, RawOp)
-pChunk prev = label "WireChunk" $ wireStateChunk prev <+> chunkRaw prev
+pChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
+pChunk prev = label "WireChunk" $ wireStateChunk prev <+> chunkClosed prev
 
-chunkRaw :: RawOp -> Parser (WireChunk, RawOp)
-chunkRaw prev = label "WireChunk-raw" $ do
+chunkClosed :: ClosedOp -> Parser (WireChunk, ClosedOp)
+chunkClosed prev = label "WireChunk-closed" $ do
     skipSpace
-    (_, x) <- rawOp prev
+    (_, x) <- closedOp prev
     skipSpace
     void $ char ';'
-    pure (Raw x, x)
+    pure (Closed x, x)
 
--- | Returns a chunk and the last op (converted to raw) in it
-wireStateChunk :: RawOp -> Parser (WireChunk, RawOp)
+-- | Returns a chunk and the last op (converted to closed) in it
+wireStateChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
 wireStateChunk prev = label "WireChunk-reduced" $ do
     (wrcHeader, isQuery) <- header prev
     let reducedOps y = do
@@ -91,7 +91,7 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
             pure $ x : xs
     wrcBody <- reducedOps (op wrcHeader) <|> stop
     let lastOp = lastDef (op wrcHeader) wrcBody
-        wrap op = RawOp
+        wrap op = ClosedOp
             {opType = opType wrcHeader, opObject = opObject wrcHeader, op}
     pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
   where
@@ -108,9 +108,9 @@ frameInStream :: Parser WireFrame
 frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
 
 -- | Parse a single context-free op
-parseOp :: ByteStringL -> Either String RawOp
+parseOp :: ByteStringL -> Either String ClosedOp
 parseOp = parseOnlyL $ do
-    (_, x) <- rawOp opZero <* skipSpace <* endOfInputEx
+    (_, x) <- closedOp opZero <* skipSpace <* endOfInputEx
     pure x
 
 -- | Parse a single context-free UUID
@@ -137,8 +137,8 @@ parseUuidAtom prev = parseOnlyL $ uuidAtom prev <* skipSpace <* endOfInputEx
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
-rawOp :: RawOp -> Parser (Bool, RawOp)
-rawOp prev = label "RawOp-cont" $ do
+closedOp :: ClosedOp -> Parser (Bool, ClosedOp)
+closedOp prev = label "ClosedOp-cont" $ do
     (hasTyp, opType)   <- key "type"   '*' (opType   prev)  UUID.zero
     (hasObj, opObject) <- key "object" '#' (opObject prev)  opType
     (hasEvt, opId)     <- key "event"  '@' (opId     prev') opObject
@@ -147,7 +147,7 @@ rawOp prev = label "RawOp-cont" $ do
     let op = Op{..}
     pure
         ( hasTyp || hasObj || hasEvt || hasLoc || not (null payload)
-        , RawOp{..}
+        , ClosedOp{..}
         )
   where
     prev' = op prev
@@ -351,10 +351,10 @@ string = do
 parseString :: ByteStringL -> Either String Text
 parseString = parseOnlyL $ string <* endOfInputEx
 
--- | Return 'RawOp' and 'chunkIsQuery'
-header :: RawOp -> Parser (RawOp, Bool)
+-- | Return 'ClosedOp' and 'chunkIsQuery'
+header :: ClosedOp -> Parser (ClosedOp, Bool)
 header prev = do
-    (_, x) <- rawOp prev
+    (_, x) <- closedOp prev
     t <- term
     case t of
         THeader -> pure (x, False)
@@ -368,7 +368,7 @@ term = do
         '!' -> pure THeader
         '?' -> pure TQuery
         ',' -> pure TReduced
-        ';' -> pure TRaw
+        ';' -> pure TClosed
         _   -> fail "not a term"
 
 -- | Parse a state frame
@@ -384,7 +384,7 @@ findObjects :: WireFrame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case
         Value WireReducedChunk{..} -> do
-            let RawOp{..} = wrcHeader
+            let ClosedOp{..} = wrcHeader
             let Op{opId} = op
             let stateVersion = opId
             let stateBody = wrcBody
@@ -392,8 +392,8 @@ findObjects = fmap Map.fromList . traverse loadBody where
             pure (opObject, StateChunk{..})
         _ -> Left "expected reduced chunk"
 
-opZero :: RawOp
-opZero = RawOp
+opZero :: ClosedOp
+opZero = ClosedOp
     { opType   = UUID.zero
     , opObject = UUID.zero
     , op       = Op{opId = UUID.zero, refId = UUID.zero, payload = []}

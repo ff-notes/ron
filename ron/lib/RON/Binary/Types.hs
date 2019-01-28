@@ -8,7 +8,7 @@ type Size = Word32
 -- | Data block descriptor
 data Desc
 
-    = DOpRaw
+    = DOpClosed
     | DOpReduced
     | DOpHeader
     | DOpQueryHeader
@@ -33,7 +33,7 @@ data Desc
 -- | Does the descriptor refer to an op
 descIsOp :: Desc -> Bool
 descIsOp = \case
-    DOpRaw          -> True
+    DOpClosed       -> True
     DOpReduced      -> True
     DOpHeader       -> True
     DOpQueryHeader  -> True

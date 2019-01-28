@@ -40,9 +40,9 @@ import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid),
-                            Op (Op, opId, payload, refId),
-                            RawOp (RawOp, op, opObject, opType), UUID (UUID),
-                            WireChunk (Raw))
+                            ClosedOp (ClosedOp, op, opObject, opType),
+                            Op (Op, opId, payload, refId), UUID (UUID),
+                            WireChunk (Closed))
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
@@ -136,7 +136,7 @@ prop_text_roundtrip_atom =
 
 prop_text_roundtrip_op =
     -- TODO(2018-11-08, cblp, #4) increase limits
-    property $ textRoundtrip (Gen.rawOp 100) RT.serializeRawOp RT.parseOp
+    property $ textRoundtrip (Gen.closedOp 100) RT.serializeRawOp RT.parseOp
 
 prop_text_roundtrip_wireFrame = property $
     -- TODO(2018-11-08, cblp, #4) increase limits
@@ -230,12 +230,12 @@ prop_ron_json_example = let
         "*lww #1TUAQ+gritzko @`   :bar = 1  ;\n\
         \     #(R            @`   :foo > (Q ;"
     output =
-        [ Raw RawOp
+        [ Closed ClosedOp
             { opType = lwwType
             , opObject = bar
             , op = Op{opId = bar, refId = barName, payload = [AInteger 1]}
             }
-        , Raw RawOp
+        , Closed ClosedOp
             { opType = lwwType
             , opObject = foo
             , op = Op{opId = foo, refId = fooName, payload = [AUuid bar]}

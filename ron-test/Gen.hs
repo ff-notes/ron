@@ -5,7 +5,7 @@
 module Gen (
     atom,
     event,
-    rawOp,
+    closedOp,
     shortText,
     stateFrame,
     uuid,
@@ -25,9 +25,10 @@ import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
                             ReplicaId (ReplicaId), days, hours, minutes, months,
                             nanosecHundreds, seconds)
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid), Op (Op),
-                            RawOp (RawOp), StateChunk (StateChunk), StateFrame,
-                            UUID, WireChunk (Query, Raw, Value), WireFrame,
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            ClosedOp (ClosedOp), Op (Op),
+                            StateChunk (StateChunk), StateFrame, UUID,
+                            WireChunk (Query, Closed, Value), WireFrame,
                             WireReducedChunk (WireReducedChunk))
 import           RON.Util.Word (Word60, leastSignificant2, leastSignificant4,
                                 ls12, ls24, ls6, ls60)
@@ -52,19 +53,20 @@ uuidFields = UuidFields
     <*> (leastSignificant2 <$> word8 (Range.constant 0 3))
     <*> choice [pure $ ls60 42, word60]
 
-rawOp :: MonadGen gen => Int -> gen RawOp
-rawOp size = RawOp <$> uuid <*> uuid <*> reducedOp size
+closedOp :: MonadGen gen => Int -> gen ClosedOp
+closedOp size = ClosedOp <$> uuid <*> uuid <*> reducedOp size
 
 reducedOp :: MonadGen gen => Int -> gen Op
 reducedOp size = Op <$> uuid <*> uuid <*> payload size
 
 wireChunk :: MonadGen gen => Int -> gen WireChunk
 wireChunk size =
-    choice [Raw <$> rawOp size, Value <$> rchunk size, Query <$> rchunk size]
+    choice
+        [Closed <$> closedOp size, Value <$> rchunk size, Query <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen WireReducedChunk
 rchunk size = WireReducedChunk
-    <$> rawOp size
+    <$> closedOp size
     <*> list (Range.exponential 0 size) (reducedOp size)
 
 wireFrame :: MonadGen gen => Int -> gen WireFrame

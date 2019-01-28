@@ -25,9 +25,10 @@ import qualified Data.Map.Strict as Map
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            Object (..), Op (..), RawOp (..), StateChunk (..),
-                            StateFrame, WireChunk (Query, Raw, Value),
-                            WireFrame, WireReducedChunk (..))
+                            ClosedOp (..), Object (..), Op (..),
+                            StateChunk (..), StateFrame,
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.UUID (UUID, zero)
 
@@ -44,37 +45,37 @@ serializeWireFrames :: [WireFrame] -> ByteStringL
 serializeWireFrames = foldMap serializeWireFrame
 
 -- | Serialize a common chunk
-serializeChunk :: WireChunk -> State RawOp ByteStringL
+serializeChunk :: WireChunk -> State ClosedOp ByteStringL
 serializeChunk = \case
-    Raw op      -> (<> " ;\n") <$> serializeRawOpZip op
+    Closed op   -> (<> " ;\n") <$> serializeClosedOpZip op
     Value chunk -> serializeReducedChunk False chunk
     Query chunk -> serializeReducedChunk True  chunk
 
 -- | Serialize a reduced chunk
-serializeReducedChunk :: Bool -> WireReducedChunk -> State RawOp ByteStringL
+serializeReducedChunk :: Bool -> WireReducedChunk -> State ClosedOp ByteStringL
 serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
     BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
     serializeHeader = do
-        h <- serializeRawOpZip wrcHeader
+        h <- serializeClosedOpZip wrcHeader
         pure $ BSLC.unwords [h, if isQuery then "?" else "!"]
-    serializeBody = state $ \RawOp{op = opBefore, ..} -> let
+    serializeBody = state $ \ClosedOp{op = opBefore, ..} -> let
         (body, opAfter) =
             (`runState` opBefore) $
             for wrcBody $
             fmap ("\t" <>) . serializeReducedOpZip opObject
         in
         ( body
-        , RawOp{op = opAfter, ..}
+        , ClosedOp{op = opAfter, ..}
         )
 
 -- | Serialize a context-free raw op
-serializeRawOp :: RawOp -> ByteStringL
-serializeRawOp op = evalState (serializeRawOpZip op) opZero
+serializeRawOp :: ClosedOp -> ByteStringL
+serializeRawOp op = evalState (serializeClosedOpZip op) opZero
 
 -- | Serialize a raw op with compression in stream context
-serializeRawOpZip :: RawOp -> State RawOp ByteStringL
-serializeRawOpZip this = state $ \prev -> let
+serializeClosedOpZip :: ClosedOp -> State ClosedOp ByteStringL
+serializeClosedOpZip this = state $ \prev -> let
     prev' = op prev
     typ = serializeUuidKey (opType   prev)  zero             (opType   this)
     obj = serializeUuidKey (opObject prev)  (opType   this)  (opObject this)
@@ -158,7 +159,7 @@ serializeStateFrame =
   where
     wrapChunk (opObject, StateChunk{..}) = Value WireReducedChunk{..}
       where
-        wrcHeader = RawOp
+        wrcHeader = ClosedOp
             { opType = stateType
             , opObject
             , op = Op{opId = stateVersion, refId = zero, payload = []}
@@ -169,8 +170,8 @@ serializeStateFrame =
 serializeObject :: Object a -> (UUID, ByteStringL)
 serializeObject (Object oid frame) = (oid, serializeStateFrame frame)
 
-opZero :: RawOp
-opZero = RawOp
+opZero :: ClosedOp
+opZero = ClosedOp
     { opType   = zero
     , opObject = zero
     , op       = Op{opId = zero, refId = zero, payload = []}

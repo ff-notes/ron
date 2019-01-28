@@ -19,7 +19,8 @@ import           Test.Tasty.HUnit (assertFailure, testCase)
 import           RON.Data (reduceWireFrame)
 import qualified RON.Text as RT
 import qualified RON.Text.Serialize as RT
-import           RON.Types (RawOp (..), UUID, WireChunk (Query, Raw, Value),
+import           RON.Types (ClosedOp (..), UUID,
+                            WireChunk (Closed, Query, Value),
                             WireReducedChunk (..))
 import qualified RON.UUID as UUID
 
@@ -77,14 +78,14 @@ sortChunkOps chunk = case chunk of
 
 chunkObject :: WireChunk -> UUID
 chunkObject = opObject . \case
-    Raw op                    -> op
+    Closed op                    -> op
     Value WireReducedChunk{wrcHeader} -> wrcHeader
     Query WireReducedChunk{wrcHeader} -> wrcHeader
 
 isRelevant :: WireChunk -> Bool
 isRelevant = \case
     Query _ -> False
-    Value WireReducedChunk{wrcHeader = RawOp{opType}} ->
+    Value WireReducedChunk{wrcHeader = ClosedOp{opType}} ->
         opType /= $(UUID.liftName "~")
     _       -> True
 
