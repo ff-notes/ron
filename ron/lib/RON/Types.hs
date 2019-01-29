@@ -137,14 +137,14 @@ pattern UndeleteP           =  (B11,   B11)
 opPattern :: Op -> Maybe OpPattern
 opPattern Op{opId, refId} =
     case mapBoth (uuidVersion . UUID.split) (opId, refId) of
-        (B00, B10) -> Just Annotation
-        (B00, B11) -> Just AnnotationDerived
-        (B10, B00) -> Just Create
-        (B10, B10) -> Just Regular
-        (B10, B11) -> Just Ack
-        (B11, B10) -> Just Delete
-        (B11, B11) -> Just Undelete
-        _          -> Nothing
+        AnnotationP         -> Just Annotation
+        AnnotationDerivedP  -> Just AnnotationDerived
+        CreateP             -> Just Create
+        RegularP            -> Just Regular
+        AckP                -> Just Ack
+        DeleteP             -> Just Delete
+        UndeleteP           -> Just Undelete
+        _                   -> Nothing
 
 mapBoth :: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (x, y) = (f x, f y)
