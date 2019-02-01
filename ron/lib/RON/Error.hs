@@ -33,4 +33,4 @@ throwErrorText :: MonadE m => Text -> m a
 throwErrorText msg = throwError $ Error msg []
 
 throwErrorString :: (MonadError e m, IsString e) => String -> m a
-throwErrorString msg = throwError $ fromString msg
+throwErrorString = throwError . fromString
