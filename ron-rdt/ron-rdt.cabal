@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron-rdt
-version:        0.4
+version:        0.5
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database

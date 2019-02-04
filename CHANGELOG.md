@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.5] - 2019-02-04
 ### Added
 - `RON.UUID.liftName` function to create name UUIDs in compile time.
 - `RON.Util.ByteStringL` type.
