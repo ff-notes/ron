@@ -6,6 +6,10 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `RON.Error`:
+  - `liftEither`
+  - `liftEitherString`
 
 ## [0.5] - 2019-02-04
 ### Added

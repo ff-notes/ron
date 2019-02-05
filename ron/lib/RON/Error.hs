@@ -6,6 +6,8 @@ module RON.Error (
     Error (..),
     MonadE,
     errorContext,
+    liftEither,
+    liftEitherString,
     liftMaybe,
     throwErrorString,
     throwErrorText,
@@ -28,6 +30,9 @@ errorContext ctx action = action `catchError` (throwError . ErrorContext ctx)
 
 liftMaybe :: MonadE m => Text -> Maybe a -> m a
 liftMaybe msg = maybe (throwErrorText msg) pure
+
+liftEitherString :: (MonadError e m, IsString e) => Either String a -> m a
+liftEitherString = either throwErrorString pure
 
 throwErrorText :: MonadE m => Text -> m a
 throwErrorText msg = throwError $ Error msg []
