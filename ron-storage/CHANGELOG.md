@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - `CollectionDocId` type
+- `subscriveForever` function
 
 ### Changed
 - `hOnDocumentChanged` type changed from `IORef (Maybe OnDocumentChanged)` to

@@ -29,10 +29,12 @@ module RON.Storage.IO (
     -- * Storage
     Storage,
     runStorage,
+    subscribeForever,
 ) where
 
 import           Control.Concurrent.STM (TChan, atomically, newBroadcastTChanIO,
-                                         writeTChan)
+                                         readTChan, writeTChan)
+import           Control.Monad (forever)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
@@ -171,3 +173,9 @@ getMacAddress = decodeMac <$> getMac where
         + fromIntegral b2 `shiftL` 16
         + fromIntegral b1 `shiftL` 8
         + fromIntegral b0
+
+subscribeForever :: Handle -> (CollectionDocId -> IO ()) -> IO ()
+subscribeForever Handle{hOnDocumentChanged} action =
+    forever $ do
+        docId <- atomically $ readTChan hOnDocumentChanged
+        action docId
