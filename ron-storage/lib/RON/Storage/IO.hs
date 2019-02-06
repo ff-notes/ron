@@ -27,7 +27,6 @@ module RON.Storage.IO (
     Handle,
     OnDocumentChanged (..),
     newHandle,
-    setOnDocumentChanged,
     -- * Storage
     Storage,
     runStorage,
@@ -125,7 +124,7 @@ data Handle = Handle
     { hClock             :: IORef EpochTime
     , hDataDir           :: FilePath
     , hReplica           :: ReplicaId
-    , hOnDocumentChanged :: IORef (Maybe OnDocumentChanged)
+    , hOnDocumentChanged :: OnDocumentChanged
     }
 
 -- | The handler is called as @onDocumentChanged docid@, where
@@ -135,11 +134,8 @@ newtype OnDocumentChanged =
 
 emitDocumentChanged :: Collection a => DocId a -> Storage ()
 emitDocumentChanged docid = Storage $ do
-    Handle{hOnDocumentChanged} <- ask
-    liftIO $ do
-        mOnDocumentChanged <- readIORef hOnDocumentChanged
-        whenJust mOnDocumentChanged $ \(OnDocumentChanged onDocumentChanged) ->
-            onDocumentChanged docid
+    Handle{hOnDocumentChanged = OnDocumentChanged onDocumentChanged} <- ask
+    liftIO $ onDocumentChanged docid
 
 -- | Create new storage handle
 newHandle :: FilePath -> IO Handle
@@ -147,12 +143,8 @@ newHandle hDataDir = do
     time <- getCurrentEpochTime
     hClock <- newIORef time
     hReplica <- applicationSpecific <$> getMacAddress
-    hOnDocumentChanged <- newIORef Nothing
+    let hOnDocumentChanged = OnDocumentChanged $ \_ -> pure ()
     pure Handle{hDataDir, hClock, hReplica, hOnDocumentChanged}
-
-setOnDocumentChanged :: Handle -> OnDocumentChanged -> IO ()
-setOnDocumentChanged h handler =
-    writeIORef (hOnDocumentChanged h) $ Just handler
 
 listDirectoryIfExists :: FilePath -> Storage [FilePath]
 listDirectoryIfExists relpath = Storage $ do

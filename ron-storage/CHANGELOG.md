@@ -6,6 +6,12 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- `RON.Storage.IO.hOnDocumentChanged` type changed
+  from `IORef (Maybe OnDocumentChanged)` to `OnDocumentChanged`.
+
+### Removed
+- `RON.Storage.IO.setOnDocumentChanged`
 
 ## [0.5] - 2019-02-04
 ### Added
