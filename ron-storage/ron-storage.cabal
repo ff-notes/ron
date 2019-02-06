@@ -58,6 +58,7 @@ library
         filepath,
         mtl,
         network-info,
+        stm,
         text,
         transformers,
         -- project

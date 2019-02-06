@@ -25,13 +25,14 @@ module RON.Storage.IO (
     module X,
     -- * Handle
     Handle,
-    OnDocumentChanged (..),
     newHandle,
     -- * Storage
     Storage,
     runStorage,
 ) where
 
+import           Control.Concurrent.STM (TChan, atomically, newBroadcastTChanIO,
+                                         writeTChan)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
@@ -124,18 +125,13 @@ data Handle = Handle
     { hClock             :: IORef EpochTime
     , hDataDir           :: FilePath
     , hReplica           :: ReplicaId
-    , hOnDocumentChanged :: OnDocumentChanged
+    , hOnDocumentChanged :: TChan CollectionDocId
     }
-
--- | The handler is called as @onDocumentChanged docid@, where
--- @docid@ is the changed document id.
-newtype OnDocumentChanged =
-    OnDocumentChanged (forall a . Collection a => DocId a -> IO ())
 
 emitDocumentChanged :: Collection a => DocId a -> Storage ()
 emitDocumentChanged docid = Storage $ do
-    Handle{hOnDocumentChanged = OnDocumentChanged onDocumentChanged} <- ask
-    liftIO $ onDocumentChanged docid
+    Handle{hOnDocumentChanged} <- ask
+    liftIO . atomically $ writeTChan hOnDocumentChanged $ CollectionDocId docid
 
 -- | Create new storage handle
 newHandle :: FilePath -> IO Handle
@@ -143,7 +139,7 @@ newHandle hDataDir = do
     time <- getCurrentEpochTime
     hClock <- newIORef time
     hReplica <- applicationSpecific <$> getMacAddress
-    let hOnDocumentChanged = OnDocumentChanged $ \_ -> pure ()
+    hOnDocumentChanged <- newBroadcastTChanIO
     pure Handle{hDataDir, hClock, hReplica, hOnDocumentChanged}
 
 listDirectoryIfExists :: FilePath -> Storage [FilePath]

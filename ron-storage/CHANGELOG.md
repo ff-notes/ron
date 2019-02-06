@@ -6,12 +6,17 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `CollectionDocId` type
+
 ### Changed
-- `RON.Storage.IO.hOnDocumentChanged` type changed
-  from `IORef (Maybe OnDocumentChanged)` to `OnDocumentChanged`.
+- `hOnDocumentChanged` type changed from `IORef (Maybe OnDocumentChanged)` to
+  `TChan CollectionDocId`.
+  Now, to subscribe to changes you need to `dupTChan` this.
 
 ### Removed
-- `RON.Storage.IO.setOnDocumentChanged`
+- `setOnDocumentChanged` function
+- `OnDocumentChanged` type
 
 ## [0.5] - 2019-02-04
 ### Added

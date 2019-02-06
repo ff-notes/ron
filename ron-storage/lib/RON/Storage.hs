@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
@@ -9,6 +10,7 @@
 -- | RON File Storage. For usage, see "RON.Storage.IO".
 module RON.Storage (
     Collection (..),
+    CollectionDocId (..),
     CollectionName,
     DocId (..),
     Document (..),
@@ -46,6 +48,8 @@ newtype DocId a = DocId FilePath
 
 instance Collection a => Show (DocId a) where
     show (DocId file) = collectionName @a </> file
+
+data CollectionDocId = forall a. Collection a => CollectionDocId (DocId a)
 
 -- | Collection (directory name)
 type CollectionName = FilePath
@@ -190,7 +194,7 @@ createVersion mDoc newObj = case mDoc of
         let Document{value = oldObj, versions, isTouched = IsTouched isTouched}
                 = oldDoc
         when (newObj /= oldObj || length versions /= 1 || isTouched) $
-            save docid versions
+            save docid $ toList versions
   where
     Object{id, frame} = newObj
 
