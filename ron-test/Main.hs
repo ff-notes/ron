@@ -76,7 +76,7 @@ prepareEnv = do
     libraryPathVar = case os of
         "darwin" -> "DYLD_LIBRARY_PATH"
         "linux"  -> "LD_LIBRARY_PATH"
-        _ -> error $ os ++ " is not supported"
+        _        -> error $ os ++ " is not supported"
 
 binaryRoundtrip
     :: (Eq a, Show a)

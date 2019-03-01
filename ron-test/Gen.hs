@@ -36,8 +36,7 @@ import           RON.UUID (UuidFields (UuidFields))
 import qualified RON.UUID as UUID
 
 word60 :: MonadGen gen => gen Word60
-word60 =
-    ls60 <$> word64 (Range.exponential 0 $ 2 ^ (60 :: Int) - 1)
+word60 = ls60 <$> word64 (Range.exponential 0 $ 2 ^ (60 :: Int) - 1)
 
 word64' :: MonadGen gen => gen Word64
 word64' = word64 Range.linearBounded
