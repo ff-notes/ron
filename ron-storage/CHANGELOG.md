@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Rename `RON.Storage.{IO -> FS}`
 
 ## [0.6] - 2019-03-01
 ### Added

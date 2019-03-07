@@ -7,7 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
--- | RON File Storage. For usage, see "RON.Storage.IO".
+-- | RON Storage interface. For usage, see "RON.Storage.FS".
 module RON.Storage (
     Collection (..),
     CollectionDocId (..),

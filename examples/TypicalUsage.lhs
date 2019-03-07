@@ -5,7 +5,7 @@
 >
 > import RON.Data
 > import RON.Schema.TH
-> import RON.Storage.IO as Storage
+> import RON.Storage.FS as Storage
 >
 > [mkReplicated|
 >     (struct_lww Note

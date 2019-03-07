@@ -12,7 +12,7 @@
 -- Typical usage:
 --
 -- @
--- import RON.Storage.IO as Storage
+-- import RON.Storage.FS as Storage
 --
 -- main = do
 --     let dataDir = ".\/data\/"
@@ -21,7 +21,7 @@
 --         obj <- 'newObject' Note{active = True, text = "Write an example"}
 --         'createDocument' obj
 -- @
-module RON.Storage.IO (
+module RON.Storage.FS (
     module X,
     -- * Handle
     Handle,
