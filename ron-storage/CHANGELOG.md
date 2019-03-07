@@ -6,8 +6,11 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Module `RON.Storage.Rocks`
+
 ### Changed
-- Rename `RON.Storage.{IO -> FS}`
+- Rename module `RON.Storage.{IO -> FS}`
 
 ## [0.6] - 2019-03-01
 ### Added

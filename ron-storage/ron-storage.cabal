@@ -67,5 +67,6 @@ library
     exposed-modules:
         RON.Storage
         RON.Storage.FS
+        RON.Storage.Rocks
         RON.Storage.Test
     hs-source-dirs: lib
