@@ -66,6 +66,7 @@ library
         ron-rdt
     exposed-modules:
         RON.Storage
+        RON.Storage.Backend
         RON.Storage.FS
         RON.Storage.Rocks
         RON.Storage.Test

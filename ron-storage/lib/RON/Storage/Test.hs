@@ -17,11 +17,12 @@ import           RON.Event (ReplicaClock, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSim, runNetworkSim, runReplicaSim)
 import           RON.Util (ByteStringL)
 
-import           RON.Storage (Collection, CollectionName, DocId (DocId),
-                              DocVersion, MonadStorage, changeDocId,
-                              collectionName, deleteVersion, getCollections,
-                              getDocumentVersions, getDocuments,
-                              loadVersionContent, saveVersionContent)
+import           RON.Storage (Collection, CollectionName, collectionName)
+import           RON.Storage.Backend (DocId (DocId), DocVersion, MonadStorage,
+                                      changeDocId, deleteVersion,
+                                      getCollections, getDocumentVersions,
+                                      getDocuments, loadVersionContent,
+                                      saveVersionContent)
 
 type TestDB = Map CollectionName (Map DocumentId (Map DocVersion Document))
 

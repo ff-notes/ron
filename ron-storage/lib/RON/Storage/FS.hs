@@ -50,6 +50,10 @@ import           RON.Event (EpochTime, ReplicaClock, ReplicaId, advance,
                             applicationSpecific, getEvents, getPid)
 
 import           RON.Storage as X
+import           RON.Storage.Backend (DocId (DocId), MonadStorage, changeDocId,
+                                      deleteVersion, getCollections,
+                                      getDocumentVersions, getDocuments,
+                                      loadVersionContent, saveVersionContent)
 
 -- | Environment is the dataDir
 newtype Storage a = Storage (ExceptT Error (ReaderT Handle EpochClock) a)
