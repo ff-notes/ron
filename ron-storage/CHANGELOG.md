@@ -11,6 +11,13 @@ and this project adheres to
 
 ### Changed
 - Rename module `RON.Storage.{IO -> FS}`
+- Moved from `RON.Storage` to `RON.Storage.Backend`:
+  - `DocId` data constructor
+    (the type is still available via `RON.Storage` module)
+  - `Document` type
+  - `DocVersion` type
+  - `MonadStorage` class
+  - `readVersion` function
 
 ## [0.6] - 2019-03-01
 ### Added
