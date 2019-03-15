@@ -25,6 +25,7 @@ library
         -- project
         ron,
     cc-options: -std=c++11 -Wall -Wextra -pedantic -Werror
+    cxx-options: -std=c++11 -Wall -Wextra -pedantic -Werror
     include-dirs:
         _artifacts/include
         /usr/include/botan-2
