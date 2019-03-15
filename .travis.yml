@@ -30,7 +30,7 @@ before_install:
     || (travis_retry curl -L https://www.stackage.org/stack/linux-x86_64
     | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack')
   - export STACK="stack --no-terminal --install-ghc"
-  - export EXPORTED_PACKAGES="ron ron-rdt ron-schema ron-storage ron-test"
+  - export EXPORTED_PACKAGES="ron ron-rdt ron-schema ron-storage"
   - >
     function build_deps {
       # (cd _build && cmake .. && make) &&
