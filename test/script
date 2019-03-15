@@ -20,4 +20,4 @@ packages=(
     examples
 )
 
-${STACK:-stack} test --ghc-options="${ghc_options[*]}"
+${STACK:-stack} test --ghc-options="${ghc_options[*]}" ${packages[*]}
