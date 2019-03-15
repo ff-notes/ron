@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 include(ExternalProject)
 
-set(RON_CXX_INSTALL_DIR "${CMAKE_SOURCE_DIR}/_artifacts/")
+set(RON_CXX_INSTALL_DIR "${CMAKE_SOURCE_DIR}/swarm/_artifacts/")
 ExternalProject_Add(
     ron-cxx
     GIT_REPOSITORY https://github.com/gritzko/ron-cxx.git
