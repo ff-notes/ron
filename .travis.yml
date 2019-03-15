@@ -11,6 +11,7 @@ language: generic
 # Caching so the next build will be fast too.
 cache:
   directories:
+    - _build
     - $HOME/.local/bin
     - $HOME/.stack
 
@@ -29,7 +30,12 @@ before_install:
     || (travis_retry curl -L https://www.stackage.org/stack/linux-x86_64
     | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack')
   - export STACK="stack --no-terminal --install-ghc"
-  - export STACK_BUILD_DEPS="$STACK build --test --only-dependencies"
+  - export EXPORTED_PACKAGES="ron ron-rdt ron-schema ron-storage"
+  - >
+    function build_deps {
+      # (cd _build && cmake .. && make) &&
+      $STACK build --test --only-dependencies
+    }
 
 script:
   # Build the package, its tests, and its docs and run the tests
@@ -38,15 +44,15 @@ script:
 matrix:
   include:
     - compiler: GHC 8.6
-      install: $STACK_BUILD_DEPS
+      install: build_deps
     - compiler: GHC 8.4
       env: STACK_YAML="ghc-8.4.yaml"
-      install: $STACK_BUILD_DEPS
+      install: build_deps
     - name: hlint
       install: $STACK build hlint
       script: $STACK exec -- hlint .
     - name: haddock
-      script: $STACK haddock --no-haddock-deps
+      script: $STACK haddock --no-haddock-deps $EXPORTED_PACKAGES
     - name: 'cabal check: ron'
       install: $STACK install cabal-install
       script: cd ron && cabal check
@@ -59,6 +65,9 @@ matrix:
     - name: 'cabal check: ron-storage'
       install: $STACK install cabal-install
       script: cd ron-storage && cabal check
+    # - name: 'cabal check: swarm'
+    #   install: $STACK install cabal-install
+    #   script: cd swarm && cabal check
     - name: weeder
       install: $STACK build weeder
       script: $STACK exec -- weeder

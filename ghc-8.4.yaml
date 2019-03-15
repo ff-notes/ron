@@ -6,11 +6,15 @@ packages:
   - ron-schema
   - ron-storage
   - ron-test
+  - swarm
   - examples
 
 extra-deps:
   # ron-schema:
   - hedn-0.2.0.0
+
+  # swarm:
+  - inline-c-cpp-0.3.0.1
 
   # hedn:
   - megaparsec-7.0.4
