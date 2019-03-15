@@ -9,18 +9,11 @@ module Swarm.RON.Status (
 ) where
 
 import           Data.ByteString (ByteString)
-import qualified Data.Map.Strict as Map
-import           Data.Word (Word64)
-import           Language.C.Inline.Context (ctxTypesTable)
 import qualified Language.C.Inline.Cpp as Cpp
-import           Language.C.Types (TypeSpecifier (TypeName))
 
 import           RON.UUID (UUID (UUID))
 
-$(Cpp.context
-    $ Cpp.cppCtx
-    <> mempty{ctxTypesTable = Map.singleton (TypeName "uint64_t") [t| Word64 |]}
-    )
+Cpp.context Cpp.cppCtx
 Cpp.include "<cstdint>"
 Cpp.include "<swarm/ron/status.hpp>"
 
