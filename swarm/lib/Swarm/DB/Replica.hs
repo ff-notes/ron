@@ -1,11 +1,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UnboxedTuples #-}
 
 module Swarm.DB.Replica (
     Replica (get),
@@ -22,7 +19,7 @@ import           Language.C.Types (TypeSpecifier (TypeName))
 
 import           RON.UUID (UUID (UUID))
 
-import           Swarm.RON.Status (Status (Status), StatusC)
+import           Swarm.RON.Status (Status (Status, code, comment), StatusC)
 import qualified Swarm.RON.Status as Status
 import           Swarm.RON.Text (TextFrame (TextFrame), TextFrameC)
 
