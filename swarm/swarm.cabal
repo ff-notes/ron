@@ -17,7 +17,7 @@ build-type: Simple
 library
     build-depends:
         -- global
-        base,
+        base >= 4.10 && < 4.13,
         bytestring,
         containers,
         inline-c,
