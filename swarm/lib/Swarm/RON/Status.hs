@@ -14,7 +14,6 @@ import qualified Language.C.Inline.Cpp as Cpp
 import           RON.UUID (UUID (UUID))
 
 Cpp.context Cpp.cppCtx
-Cpp.include "<cstdint>"
 Cpp.include "<swarm/ron/status.hpp>"
 
 -- | Tag for 'Ptr' to @ron::Status@

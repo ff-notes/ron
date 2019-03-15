@@ -40,7 +40,6 @@ $(Cpp.context
             ]
         }
     )
-Cpp.include "<cstddef>"
 Cpp.include "<swarm/db/replica.hpp>"
 Cpp.include "<swarm/ron/status.hpp>"
 Cpp.include "<swarm/ron/text.hpp>"
