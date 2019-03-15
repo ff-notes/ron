@@ -30,9 +30,10 @@ before_install:
     || (travis_retry curl -L https://www.stackage.org/stack/linux-x86_64
     | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack')
   - export STACK="stack --no-terminal --install-ghc"
-  - function build_deps {
-      (cd _build && cmake .. && make)
-      && $STACK build --test --only-dependencies;
+  - >
+    function build_deps {
+      # (cd _build && cmake .. && make) &&
+      $STACK build --test --only-dependencies
     }
 
 script:
@@ -63,6 +64,9 @@ matrix:
     - name: 'cabal check: ron-storage'
       install: $STACK install cabal-install
       script: cd ron-storage && cabal check
+    - name: 'cabal check: swarm'
+      install: $STACK install cabal-install
+      script: cd swarm && cabal check
     - name: weeder
       install: $STACK build weeder
       script: $STACK exec -- weeder

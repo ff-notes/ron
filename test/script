@@ -10,4 +10,14 @@ ghc_warnings=(
 )
 ghc_options=(${ghc_warnings[*]} -Werror)
 
+packages=(
+    ron
+    ron-rdt
+    ron-schema
+    ron-storage
+    ron-test
+    # swarm
+    examples
+)
+
 ${STACK:-stack} test --ghc-options="${ghc_options[*]}"
