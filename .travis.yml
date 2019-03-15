@@ -65,9 +65,9 @@ matrix:
     - name: 'cabal check: ron-storage'
       install: $STACK install cabal-install
       script: cd ron-storage && cabal check
-    - name: 'cabal check: swarm'
-      install: $STACK install cabal-install
-      script: cd swarm && cabal check
+    # - name: 'cabal check: swarm'
+    #   install: $STACK install cabal-install
+    #   script: cd swarm && cabal check
     - name: weeder
       install: $STACK build weeder
       script: $STACK exec -- weeder
