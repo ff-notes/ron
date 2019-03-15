@@ -11,6 +11,7 @@ language: generic
 # Caching so the next build will be fast too.
 cache:
   directories:
+    - _build
     - $HOME/.local/bin
     - $HOME/.stack
 
