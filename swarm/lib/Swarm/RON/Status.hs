@@ -17,6 +17,7 @@ Cpp.include "<swarm/ron/status.hpp>"
 
 -- | Class @ron::Status@
 data Status = Status{code :: UUID, comment :: ByteString}
+    deriving Show
 
 ok :: UUID
 ok = UUID

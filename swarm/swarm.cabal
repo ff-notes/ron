@@ -35,9 +35,16 @@ library
         Swarm.DB.Replica
         Swarm.RON.Status
         Swarm.RON.Text
+    extra-libraries: stdc++ swarmdb
     hs-source-dirs: lib
 
 executable swarm
     import: language
+    build-depends:
+        -- project
+        ron,
+        -- package
+        swarm,
+    ghc-options: -dynamic
     hs-source-dirs: exe
     main-is: Main.hs

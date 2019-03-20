@@ -5,7 +5,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Swarm.DB.Replica (
-    Replica (get),
+    Replica (get, new),
+    TextReplica,
 ) where
 
 import           Control.Exception (mask_)
@@ -48,10 +49,15 @@ Cpp.verbatim "typedef ron::Replica<ron::TextFrame> TextReplica;"
 -- | Template class @ron::Replica<>@
 class Replica replica frame | frame -> replica, replica -> frame where
 
+    -- | Constructor
+    new :: IO replica
+
     -- | Method @ron::Replica::Get()@
     get :: UUID -> replica -> IO (Either Status frame)
 
 instance Replica TextReplica TextFrame where
+
+    new = TextReplica <$> newTextReplica
 
     get (UUID x y) (TextReplica replica) = do
         frame <- newTextFrame
@@ -93,6 +99,13 @@ instance Replica TextReplica TextFrame where
 newTextFrame :: IO (ForeignPtr (Proxy TextFrame))
 newTextFrame = mask_ $ do
     p <- [Cpp.exp| TextFrame * { new(malloc(sizeof(TextFrame))) TextFrame } |]
+    newForeignPtr free p
+
+newTextReplica :: IO (ForeignPtr (Proxy TextReplica))
+newTextReplica = mask_ $ do
+    p <- [Cpp.exp| TextReplica * {
+        new(malloc(sizeof(TextReplica))) TextReplica
+    } |]
     newForeignPtr free p
 
 foreign import ccall "&free" free :: FinalizerPtr a

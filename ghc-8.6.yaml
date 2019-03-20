@@ -12,3 +12,6 @@ packages:
 extra-deps:
   # ron-test:
   - tasty-hedgehog-0.2.0.0
+
+extra-lib-dirs:
+  - swarm/_artifacts/lib
