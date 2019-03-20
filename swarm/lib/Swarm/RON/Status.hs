@@ -4,7 +4,6 @@
 
 module Swarm.RON.Status (
     Status (..),
-    StatusC,
     ok,
 ) where
 
@@ -16,10 +15,7 @@ import           RON.UUID (UUID (UUID))
 Cpp.context Cpp.cppCtx
 Cpp.include "<swarm/ron/status.hpp>"
 
--- | Tag for 'Ptr' to @ron::Status@
-data StatusC
-
--- | Equivalent of @ron::Status@
+-- | Class @ron::Status@
 data Status = Status{code :: UUID, comment :: ByteString}
 
 ok :: UUID

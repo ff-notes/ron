@@ -1,12 +1,9 @@
 module Swarm.RON.Text (
     TextFrame (..),
-    TextFrameC,
 ) where
 
+import           Data.Proxy (Proxy)
 import           Foreign (ForeignPtr)
 
--- | Tag for 'Ptr' to @ron::TextFrame@
-data TextFrameC
-
--- | Equivalent of @ron::TextFrame@
-newtype TextFrame = TextFrame (ForeignPtr TextFrameC)
+-- | Class @ron::TextFrame@
+newtype TextFrame = TextFrame (ForeignPtr (Proxy TextFrame))

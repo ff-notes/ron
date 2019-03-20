@@ -11,6 +11,7 @@ module Swarm.DB.Replica (
 import           Control.Exception (mask_)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
+import           Data.Proxy (Proxy)
 import           Foreign (FinalizerPtr, ForeignPtr, Ptr, allocaArray,
                           newForeignPtr, peekElemOff, wordPtrToPtr)
 import           Language.C.Inline.Context (ctxTypesTable)
@@ -19,24 +20,21 @@ import           Language.C.Types (TypeSpecifier (TypeName))
 
 import           RON.UUID (UUID (UUID))
 
-import           Swarm.RON.Status (Status (Status, code, comment), StatusC)
+import           Swarm.RON.Status (Status (Status, code, comment))
 import qualified Swarm.RON.Status as Status
-import           Swarm.RON.Text (TextFrame (TextFrame), TextFrameC)
+import           Swarm.RON.Text (TextFrame (TextFrame))
 
--- | Tag for 'Ptr' to @ron::Replica<TextFrame>@
-data TextReplicaC
-
--- | Equivalent of @ron::Replica<TextFrame>@
-newtype TextReplica = TextReplica (Ptr TextReplicaC)
+-- | Class @ron::Replica<TextFrame>@
+newtype TextReplica = TextReplica (Ptr (Proxy TextReplica))
 
 $(Cpp.context
     $   Cpp.cppCtx
     <>  Cpp.fptrCtx
     <>  mempty
         { ctxTypesTable = Map.fromList
-            [ (TypeName "Status"     , [t| StatusC      |])
-            , (TypeName "TextFrame"  , [t| TextFrameC   |])
-            , (TypeName "TextReplica", [t| TextReplicaC |])
+            [ (TypeName "Status"     , [t| Proxy Status      |])
+            , (TypeName "TextFrame"  , [t| Proxy TextFrame   |])
+            , (TypeName "TextReplica", [t| Proxy TextReplica |])
             ]
         }
     )
@@ -47,10 +45,10 @@ Cpp.verbatim "typedef ron::Status Status;"
 Cpp.verbatim "typedef ron::TextFrame TextFrame;"
 Cpp.verbatim "typedef ron::Replica<ron::TextFrame> TextReplica;"
 
--- | @class ron::Replica<>@
+-- | Template class @ron::Replica<>@
 class Replica replica frame | frame -> replica, replica -> frame where
 
-    -- | @ron::Replica::Get()@
+    -- | Method @ron::Replica::Get()@
     get :: UUID -> replica -> IO (Either Status frame)
 
 instance Replica TextReplica TextFrame where
@@ -91,12 +89,12 @@ instance Replica TextReplica TextFrame where
             Status code _ | code == Status.ok -> Right $ TextFrame frameFP
             _                                 -> Left status
 
-newTextFrame :: IO (ForeignPtr TextFrameC)
+newTextFrame :: IO (ForeignPtr (Proxy TextFrame))
 newTextFrame = mask_ $ do
     p <- [Cpp.exp| TextFrame * { new TextFrame } |]
     newForeignPtr deleteTextFrame p
 
-foreign import ccall "&deleteStatus" deleteStatus :: FinalizerPtr StatusC
+foreign import ccall "&deleteStatus" deleteStatus :: FinalizerPtr (Proxy Status)
 
 foreign import ccall "&deleteTextFrame" deleteTextFrame
-    :: FinalizerPtr TextFrameC
+    :: FinalizerPtr (Proxy TextFrame)
