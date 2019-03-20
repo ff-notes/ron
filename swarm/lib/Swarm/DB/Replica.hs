@@ -12,7 +12,7 @@ import           Control.Exception (mask_)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy)
-import           Foreign (FinalizerPtr, ForeignPtr, Ptr, allocaArray,
+import           Foreign (FinalizerPtr, ForeignPtr, allocaArray,
                           newForeignPtr, peekElemOff, wordPtrToPtr)
 import           Language.C.Inline.Context (ctxTypesTable)
 import qualified Language.C.Inline.Cpp as Cpp
@@ -25,7 +25,7 @@ import qualified Swarm.RON.Status as Status
 import           Swarm.RON.Text (TextFrame (TextFrame))
 
 -- | Class @ron::Replica<TextFrame>@
-newtype TextReplica = TextReplica (Ptr (Proxy TextReplica))
+newtype TextReplica = TextReplica (ForeignPtr (Proxy TextReplica))
 
 $(Cpp.context
     $   Cpp.cppCtx
@@ -53,20 +53,21 @@ class Replica replica frame | frame -> replica, replica -> frame where
 
 instance Replica TextReplica TextFrame where
 
-    get (UUID x y) (TextReplica replicaP) = do
-        frameFP <- newTextFrame
+    get (UUID x y) (TextReplica replica) = do
+        frame <- newTextFrame
         status <- do
             statusFP <- mask_ $ do
                 statusP <- [Cpp.exp| Status * {
-                    new Status(
-                        $(TextReplica * replicaP)
+                    new(malloc(sizeof(Status)))
+                    Status(
+                        $fptr-ptr:(TextReplica * replica)
                         ->Get(
-                            * $fptr-ptr:(TextFrame * frameFP),
+                            * $fptr-ptr:(TextFrame * frame),
                             {$(uint64_t x), $(uint64_t y)}
                         )
                     )
                 } |]
-                newForeignPtr deleteStatus statusP
+                newForeignPtr free statusP
             allocaArray 4 $ \arena -> do
                 [Cpp.block| void {
                     uint64_t * const arena = $(uint64_t * arena);
@@ -86,15 +87,12 @@ instance Replica TextReplica TextFrame where
                 comment <- BS.packCStringLen (ptr, len)
                 pure Status{code, comment}
         pure $ case status of
-            Status code _ | code == Status.ok -> Right $ TextFrame frameFP
+            Status code _ | code == Status.ok -> Right $ TextFrame frame
             _                                 -> Left status
 
 newTextFrame :: IO (ForeignPtr (Proxy TextFrame))
 newTextFrame = mask_ $ do
-    p <- [Cpp.exp| TextFrame * { new TextFrame } |]
-    newForeignPtr deleteTextFrame p
+    p <- [Cpp.exp| TextFrame * { new(malloc(sizeof(TextFrame))) TextFrame } |]
+    newForeignPtr free p
 
-foreign import ccall "&deleteStatus" deleteStatus :: FinalizerPtr (Proxy Status)
-
-foreign import ccall "&deleteTextFrame" deleteTextFrame
-    :: FinalizerPtr (Proxy TextFrame)
+foreign import ccall "&free" free :: FinalizerPtr a
