@@ -14,10 +14,14 @@ description:
 
 build-type: Simple
 
+common language
+    build-depends: base >= 4.10 && < 4.13
+    default-language: Haskell2010
+
 library
+    import: language
     build-depends:
         -- global
-        base >= 4.10 && < 4.13,
         bytestring,
         containers,
         inline-c,
@@ -27,9 +31,13 @@ library
     include-dirs:
         _artifacts/include
         /usr/include/botan-2
-    default-language: Haskell2010
     exposed-modules:
         Swarm.DB.Replica
         Swarm.RON.Status
         Swarm.RON.Text
     hs-source-dirs: lib
+
+executable swarm
+    import: language
+    hs-source-dirs: exe
+    main-is: Main.hs
