@@ -28,6 +28,7 @@ library
         inline-c-cpp,
         -- project
         ron,
+    ghc-options: -optc=-std=c++11
     include-dirs:
         _artifacts/include
         /usr/include/botan-2
@@ -37,6 +38,11 @@ library
         Swarm.RON.Text
     extra-libraries: stdc++ swarmdb
     hs-source-dirs: lib
+
+    if os(osx)
+        include-dirs:
+            /usr/local/opt/botan/include/botan-2
+            /usr/local/opt/rocksdb/include
 
 executable swarm
     import: language
