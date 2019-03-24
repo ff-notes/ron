@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Swarm.DB.Replica (
-    Replica (create, get),
+    Replica (create, open, get),
     TextReplica,
     newTextReplica,
 ) where
@@ -55,6 +55,12 @@ class Replica replica frame | frame -> replica, replica -> frame where
         -> replica
         -> IO Status
 
+    -- | Method @Create(std::string home)@
+    open
+        :: ByteString  -- ^ path to db dir
+        -> replica
+        -> IO Status
+
     -- | Method @Get()@
     get :: UUID  -- ^ object id
         -> replica
@@ -63,6 +69,13 @@ class Replica replica frame | frame -> replica, replica -> frame where
 instance Replica TextReplica TextFrame where
 
     create home (TextReplica replica) =
+        Status.decoding
+            [Cpp.exp| Status * {
+                new(malloc(sizeof(Status)))
+                Status($fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home))
+            } |]
+
+    open home (TextReplica replica) =
         Status.decoding
             [Cpp.exp| Status * {
                 new(malloc(sizeof(Status)))
