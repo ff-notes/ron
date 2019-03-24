@@ -7,6 +7,8 @@ module Swarm.RON.Status (
     Status (..),
     decode,
     decoding,
+    decoding_,
+    newForeign,
     -- * Statuses
     ok,
 ) where
@@ -70,38 +72,41 @@ ok = UUID
 --     | REORDER
 
 decode :: ForeignPtr (Proxy Status) -> IO Status
-decode statusFP =
-    allocaArray 4 $ \arena -> do
-        [Cpp.block| void {
-            uint64_t * const arena = $(uint64_t * arena);
-            uint64_t & x   = arena[0];
-            uint64_t & y   = arena[1];
-            uint64_t & ptr = arena[2];
-            uint64_t & len = arena[3];
-            Status & status = * $fptr-ptr:(Status * statusFP);
-            x   = uint64_t(status.code().value());
-            y   = uint64_t(status.code().origin());
-            ptr = uintptr_t(status.comment().data());
-            len = status.comment().length();
-        } |]
-        x   <- peekElemOff arena 0
-        y   <- peekElemOff arena 1
-        ptr <- peekElemOff arena 2
-        len <- peekElemOff arena 3
-        comment <-
-            BS.packCStringLen
-                (wordPtrToPtr $ fromIntegral ptr, fromIntegral len)
-        pure Status{code = UUID x y, comment}
+decode statusFP = allocaArray 4 $ \arena -> do
+    [Cpp.block| void {
+        uint64_t * const arena = $(uint64_t * arena);
+        uint64_t & x   = arena[0];
+        uint64_t & y   = arena[1];
+        uint64_t & ptr = arena[2];
+        uint64_t & len = arena[3];
+        Status & status = * $fptr-ptr:(Status * statusFP);
+        x   = uint64_t(status.code().value());
+        y   = uint64_t(status.code().origin());
+        ptr = uintptr_t(status.comment().data());
+        len = status.comment().length();
+    } |]
+    x   <- peekElemOff arena 0
+    y   <- peekElemOff arena 1
+    ptr <- peekElemOff arena 2
+    len <- peekElemOff arena 3
+    comment <-
+        BS.packCStringLen
+            (wordPtrToPtr $ fromIntegral ptr, fromIntegral len)
+    pure Status{code = UUID x y, comment}
 
-newForeignStatus :: IO (ForeignPtr (Proxy Status))
-newForeignStatus = mask_ $ do
+newForeign :: IO (ForeignPtr (Proxy Status))
+newForeign = mask_ $ do
     p <- [Cpp.exp| Status * { new Status } |]
     newForeignPtr free p
 
-decoding :: (ForeignPtr (Proxy Status) -> IO ()) -> IO Status
+decoding :: (ForeignPtr (Proxy Status) -> IO a) -> IO (Status, a)
 decoding action = do
-    fptr <- newForeignStatus
-    action fptr
-    decode fptr
+    fptr <- newForeign
+    a <- action fptr
+    status <- decode fptr
+    pure (status, a)
+
+decoding_ :: (ForeignPtr (Proxy Status) -> IO ()) -> IO Status
+decoding_ = fmap fst . decoding
 
 foreign import ccall "&free" free :: FinalizerPtr a

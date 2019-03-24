@@ -29,14 +29,8 @@ library
         -- project
         ron,
     ghc-options: -optc=-std=c++11
-    include-dirs: _artifacts/include
-    exposed-modules:
-        Swarm.DB.Replica
-        Swarm.RON.Status
-        Swarm.RON.Text
-    extra-libraries: stdc++ swarmdb
-    hs-source-dirs: lib
 
+    include-dirs: _artifacts/include
     if os(linux)
         include-dirs:
             /usr/include/botan-2
@@ -44,6 +38,16 @@ library
         include-dirs:
             /usr/local/opt/botan/include/botan-2
             /usr/local/opt/rocksdb/include
+
+    exposed-modules:
+        Swarm.DB.Replica
+        Swarm.RON.Status
+        Swarm.RON.Text
+    extra-libraries: stdc++ swarmdb
+    hs-source-dirs: lib
+    other-modules:
+        Cxx.Std
+        Cxx.Std.String
 
 executable swarm
     import: language
