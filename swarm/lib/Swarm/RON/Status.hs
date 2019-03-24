@@ -84,11 +84,14 @@ decode statusFP =
             ptr = uintptr_t(status.comment().data());
             len = status.comment().length();
         } |]
-        code <- UUID <$> peekElemOff arena 0 <*> peekElemOff arena 1
-        ptr <- wordPtrToPtr . fromIntegral <$> peekElemOff arena 2
-        len <- fromIntegral <$> peekElemOff arena 3
-        comment <- BS.packCStringLen (ptr, len)
-        pure Status{code, comment}
+        x   <- peekElemOff arena 0
+        y   <- peekElemOff arena 1
+        ptr <- peekElemOff arena 2
+        len <- peekElemOff arena 3
+        comment <-
+            BS.packCStringLen
+                (wordPtrToPtr $ fromIntegral ptr, fromIntegral len)
+        pure Status{code = UUID x y, comment}
 
 newForeignStatus :: IO (ForeignPtr (Proxy Status))
 newForeignStatus = mask_ $ do
