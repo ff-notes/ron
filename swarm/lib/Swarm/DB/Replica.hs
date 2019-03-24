@@ -5,32 +5,32 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Swarm.DB.Replica (
-    Replica (get),
+    Replica (create, get),
     TextReplica,
     newTextReplica,
 ) where
 
 import           Control.Exception (mask_)
-import qualified Data.ByteString as BS
+import           Data.ByteString (ByteString)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy)
-import           Foreign (FinalizerPtr, ForeignPtr, allocaArray,
-                          newForeignPtr, peekElemOff, wordPtrToPtr)
+import           Foreign (FinalizerPtr, ForeignPtr, newForeignPtr)
 import           Language.C.Inline.Context (ctxTypesTable)
 import qualified Language.C.Inline.Cpp as Cpp
 import           Language.C.Types (TypeSpecifier (TypeName))
 
 import           RON.UUID (UUID (UUID))
 
-import           Swarm.RON.Status (Status (Status, code, comment))
+import           Swarm.RON.Status (Status (Status))
 import qualified Swarm.RON.Status as Status
 import           Swarm.RON.Text (TextFrame (TextFrame))
 
 -- | Class @ron::Replica<TextFrame>@
 newtype TextReplica = TextReplica (ForeignPtr (Proxy TextReplica))
 
-$(Cpp.context
+Cpp.context
     $   Cpp.cppCtx
+    <>  Cpp.bsCtx
     <>  Cpp.fptrCtx
     <>  mempty
         { ctxTypesTable = Map.fromList
@@ -39,7 +39,6 @@ $(Cpp.context
             , (TypeName "TextReplica", [t| Proxy TextReplica |])
             ]
         }
-    )
 Cpp.include "<swarm/db/replica.hpp>"
 Cpp.include "<swarm/ron/status.hpp>"
 Cpp.include "<swarm/ron/text.hpp>"
@@ -50,16 +49,31 @@ Cpp.verbatim "typedef ron::Replica<ron::TextFrame> TextReplica;"
 -- | Template class @ron::Replica<>@
 class Replica replica frame | frame -> replica, replica -> frame where
 
-    -- | Method @ron::Replica::Get()@
-    get :: UUID -> replica -> IO (Either Status frame)
+    -- | Method @Create(std::string home)@
+    create
+        :: ByteString  -- ^ path to db dir
+        -> replica
+        -> IO Status
+
+    -- | Method @Get()@
+    get :: UUID  -- ^ object id
+        -> replica
+        -> IO (Either Status frame)
 
 instance Replica TextReplica TextFrame where
 
+    create home (TextReplica replica) =
+        Status.decoding
+            [Cpp.exp| Status * {
+                new(malloc(sizeof(Status)))
+                Status($fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home))
+            } |]
+
     get (UUID x y) (TextReplica replica) = do
         frame <- newForeignTextFrame
-        status <- do
-            statusFP <- mask_ $ do
-                statusP <- [Cpp.exp| Status * {
+        status <-
+            Status.decoding
+                [Cpp.exp| Status * {
                     new(malloc(sizeof(Status)))
                     Status(
                         $fptr-ptr:(TextReplica * replica)
@@ -69,25 +83,6 @@ instance Replica TextReplica TextFrame where
                         )
                     )
                 } |]
-                newForeignPtr free statusP
-            allocaArray 4 $ \arena -> do
-                [Cpp.block| void {
-                    uint64_t * const arena = $(uint64_t * arena);
-                    uint64_t & x   = arena[0];
-                    uint64_t & y   = arena[1];
-                    uint64_t & ptr = arena[2];
-                    uint64_t & len = arena[3];
-                    Status & status = * $fptr-ptr:(Status * statusFP);
-                    x = uint64_t(status.code().value());
-                    y = uint64_t(status.code().origin());
-                    ptr = uintptr_t(status.comment().data());
-                    len = status.comment().length();
-                } |]
-                code <- UUID <$> peekElemOff arena 0 <*> peekElemOff arena 1
-                ptr <- wordPtrToPtr . fromIntegral <$> peekElemOff arena 2
-                len <- fromIntegral <$> peekElemOff arena 3
-                comment <- BS.packCStringLen (ptr, len)
-                pure Status{code, comment}
         pure $ case status of
             Status code _ | code == Status.ok -> Right $ TextFrame frame
             _                                 -> Left status
