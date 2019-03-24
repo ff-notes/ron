@@ -16,8 +16,8 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy)
-import           Foreign (FinalizerPtr, ForeignPtr, Ptr, allocaArray,
-                          newForeignPtr, peekElemOff, wordPtrToPtr)
+import           Foreign (FinalizerPtr, ForeignPtr, allocaArray, newForeignPtr,
+                          peekElemOff, wordPtrToPtr)
 import           Language.C.Inline.Context (ctxTypesTable)
 import qualified Language.C.Inline.Cpp as Cpp
 import           Language.C.Types (TypeSpecifier (TypeName))
@@ -90,11 +90,15 @@ decode statusFP =
         comment <- BS.packCStringLen (ptr, len)
         pure Status{code, comment}
 
-decoding :: IO (Ptr (Proxy Status)) -> IO Status
+newForeignStatus :: IO (ForeignPtr (Proxy Status))
+newForeignStatus = mask_ $ do
+    p <- [Cpp.exp| Status * { new Status } |]
+    newForeignPtr free p
+
+decoding :: (ForeignPtr (Proxy Status) -> IO ()) -> IO Status
 decoding action = do
-    fptr <- mask_ $ do
-        ptr <- action
-        newForeignPtr free ptr
+    fptr <- newForeignStatus
+    action fptr
     decode fptr
 
 foreign import ccall "&free" free :: FinalizerPtr a

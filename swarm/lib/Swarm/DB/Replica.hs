@@ -69,50 +69,46 @@ class Replica replica frame | frame -> replica, replica -> frame where
 instance Replica TextReplica TextFrame where
 
     create home (TextReplica replica) =
-        Status.decoding
-            [Cpp.exp| Status * {
-                new(malloc(sizeof(Status)))
-                Status($fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home))
-            } |]
+        Status.decoding $ \statusFP -> [Cpp.block| void {
+            * $fptr-ptr:(Status * statusFP) =
+                $fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home);
+        } |]
 
     open home (TextReplica replica) =
-        Status.decoding
-            [Cpp.exp| Status * {
-                new(malloc(sizeof(Status)))
-                Status($fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home))
+        Status.decoding $ \statusFP ->
+            [Cpp.block| void {
+                * $fptr-ptr:(Status * statusFP) =
+                    $fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home);
             } |]
 
     get (UUID x y) (TextReplica replica) = do
         frame <- newForeignTextFrame
         status <-
-            Status.decoding
-                [Cpp.exp| Status * {
-                    new(malloc(sizeof(Status)))
-                    Status(
-                        $fptr-ptr:(TextReplica * replica)
-                        ->Get(
-                            * $fptr-ptr:(TextFrame * frame),
-                            {$(uint64_t x), $(uint64_t y)}
-                        )
-                    )
-                } |]
+            Status.decoding $ \statusFP -> [Cpp.block| void {
+                * $fptr-ptr:(Status * statusFP) =
+                    $fptr-ptr:(TextReplica * replica)
+                    ->Get(
+                        * $fptr-ptr:(TextFrame * frame),
+                        {$(uint64_t x), $(uint64_t y)}
+                    );
+            } |]
         pure $ case status of
             Status code _ | code == Status.ok -> Right $ TextFrame frame
             _                                 -> Left status
 
 newForeignTextFrame :: IO (ForeignPtr (Proxy TextFrame))
 newForeignTextFrame = mask_ $ do
-    p <- [Cpp.exp| TextFrame * { new(malloc(sizeof(TextFrame))) TextFrame } |]
-    newForeignPtr free p
+    p <- [Cpp.exp| TextFrame * { new TextFrame } |]
+    newForeignPtr deleteTextFrame p
 
 newForeignTextReplica :: IO (ForeignPtr (Proxy TextReplica))
 newForeignTextReplica = mask_ $ do
-    p <- [Cpp.exp| TextReplica * {
-        new(malloc(sizeof(TextReplica))) TextReplica
-    } |]
-    newForeignPtr free p
+    p <- [Cpp.exp| TextReplica * { new TextReplica } |]
+    newForeignPtr deleteTextReplica p
 
 newTextReplica :: IO TextReplica
 newTextReplica = TextReplica <$> newForeignTextReplica
 
-foreign import ccall "&free" free :: FinalizerPtr a
+foreign import ccall "&deleteTextFrame" deleteTextFrame :: FinalizerPtr a
+
+foreign import ccall "&deleteTextReplica" deleteTextReplica :: FinalizerPtr a
