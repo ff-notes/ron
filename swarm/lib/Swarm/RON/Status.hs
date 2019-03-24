@@ -79,8 +79,8 @@ decode statusFP =
             uint64_t & ptr = arena[2];
             uint64_t & len = arena[3];
             Status & status = * $fptr-ptr:(Status * statusFP);
-            x = uint64_t(status.code().value());
-            y = uint64_t(status.code().origin());
+            x   = uint64_t(status.code().value());
+            y   = uint64_t(status.code().origin());
             ptr = uintptr_t(status.comment().data());
             len = status.comment().length();
         } |]
