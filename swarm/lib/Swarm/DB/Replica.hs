@@ -46,6 +46,12 @@ Cpp.verbatim "typedef ron::Status Status;"
 Cpp.verbatim "typedef ron::TextFrame TextFrame;"
 Cpp.verbatim "typedef ron::Replica<ron::TextFrame> TextReplica;"
 
+Cpp.verbatim "extern \"C\" void deleteTextFrame(TextFrame * p) { delete p; }"
+foreign import ccall "&deleteTextFrame" deleteTextFrame :: FinalizerPtr a
+
+Cpp.verbatim "extern \"C\" void deleteTextReplica(TextReplica * p) {delete p;}"
+foreign import ccall "&deleteTextReplica" deleteTextReplica :: FinalizerPtr a
+
 -- | Template class @ron::Replica<>@
 class Replica replica frame | frame -> replica, replica -> frame where
 
@@ -108,7 +114,3 @@ newForeignTextReplica = mask_ $ do
 
 newTextReplica :: IO TextReplica
 newTextReplica = TextReplica <$> newForeignTextReplica
-
-foreign import ccall "&deleteTextFrame" deleteTextFrame :: FinalizerPtr a
-
-foreign import ccall "&deleteTextReplica" deleteTextReplica :: FinalizerPtr a
