@@ -59,3 +59,9 @@ executable swarm
     ghc-options: -dynamic
     hs-source-dirs: exe
     main-is: Main.hs
+
+test-suite test
+    import: language
+    hs-source-dirs: test
+    main-is: Main.hs
+    type: exitcode-stdio-1.0
