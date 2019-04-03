@@ -1,12 +1,29 @@
+{-# OPTIONS -Wno-missing-signatures #-}
+
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main (main) where
 
-import qualified RON.UUID as UUID
-import           Swarm.DB.Replica (get, newTextReplica)
+import           Control.Monad.IO.Class (liftIO)
+import           Hedgehog (failure, forAll, property, success, (===))
+import           Test.Tasty.Hedgehog (testProperty)
+import           Test.Tasty.TH (defaultMainGenerator)
 
-main :: IO ()
-main = do
-    replica <- newTextReplica
-    got <- get UUID.zero replica
+import qualified Gen
+
+import           Swarm.DB.Replica (get, newTextReplica)
+import           Swarm.RON.Status (Status (Status), code, notOpen)
+
+main = $defaultMainGenerator
+
+prop_uninitialized_replica = property $ do
+    replica <- liftIO newTextReplica
+    key <- forAll Gen.uuid
+    got <- liftIO $ get key replica
     case got of
-        Left errorStatus -> print errorStatus
-        Right _frame -> putStrLn "got some frame"
+        Left status@Status{code}
+            | code == notOpen -> success
+            | otherwise       -> status === Status notOpen ""
+        Right _ -> failure

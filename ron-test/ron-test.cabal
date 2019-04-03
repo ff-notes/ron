@@ -16,11 +16,13 @@ library
         -- global
         hedgehog,
         mtl,
+        text,
         -- project
         ron,
         ron-rdt,
         ron-schema
     exposed-modules:
+        Gen
         LwwStruct.Types
         Orphans
     hs-source-dirs: lib
@@ -67,7 +69,6 @@ test-suite test
     hs-source-dirs: .
     main-is: Main.hs
     other-modules:
-        Gen
         HexDump
         LwwStruct
         Types

@@ -91,70 +91,79 @@ class Replica replica frame | frame -> replica, replica -> frame where
 instance Replica TextReplica TextFrame where
 
     create home (TextReplica replica) =
-        Status.decoding_ $ \statusFP -> [Cpp.block| void {
-            * $fptr-ptr:(Status * statusFP) =
+        Status.decoding_ $ \statusPtr -> [Cpp.block| void {
+            * $(Status * statusPtr) =
                 $fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home);
         } |]
 
     open home (TextReplica replica) =
-        Status.decoding_ $ \statusFP ->
+        Status.decoding_ $ \statusPtr ->
             [Cpp.block| void {
-                * $fptr-ptr:(Status * statusFP) =
+                * $(Status * statusPtr) =
                     $fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home);
             } |]
 
     get (UUID x y) (TextReplica replica) = do
-        frame <- newForeignTextFrame
-        status <-
-            Status.decoding_ $ \statusFP -> [Cpp.block| void {
-                * $fptr-ptr:(Status * statusFP) =
-                    $fptr-ptr:(TextReplica * replica)
-                    ->Get(
-                        * $fptr-ptr:(TextFrame * frame),
-                        {$(uint64_t x), $(uint64_t y)}
-                    );
-            } |]
+        framePtr <- newForeignTextFrame
+        status <- Status.decoding_ $ \statusPtr -> [Cpp.block| void {
+            * $(Status * statusPtr) =
+                $fptr-ptr:(TextReplica * replica)
+                ->Get(
+                    * $fptr-ptr:(TextFrame * framePtr),
+                    {$(uint64_t x), $(uint64_t y)}
+                );
+        } |]
         pure $ case status of
-            Status code _ | code == Status.ok -> Right $ TextFrame frame
+            Status code _ | code == Status.ok -> Right $ TextFrame framePtr
             _                                 -> Left status
 
-    receiveQuery _objectStore query (TextReplica replicaFP) = do
-        statusFP <- Status.newForeign
-        resultDataFP <- String.newForeign
-        [Cpp.block| void {
-            Status & status = * $fptr-ptr:(Status * statusFP);
-            std::string termd{$bs-cstr:query};
-            if (termd.empty()) {
-                status = Status::BADARGS;
-                return;
-            }
-            ron::Uuid id{}, rdt{};
-            size_t dot;
-            if (termd.find('?') == -1)
-                termd.push_back('?');
-            TextFrame::Cursor cur{termd};
-            if (!cur.valid()) {
-                status = Status::BADARGS.comment("need a query op");
-                return;
-            }
-            id = cur.id();
-            rdt = cur.ref();
-            if (id == ron::Uuid::FATAL || rdt == ron::Uuid::FATAL) {
-                status = Status::BADARGS.comment("not an UUID");
-                return;
-            }
-            TextFrame::Builder result;
-            status =
-                $fptr-ptr:(TextReplica * replicaFP)
-                ->ReceiveQuery(result, ron::Uuid::NIL, cur);
-            if (status)
-                * $fptr-ptr:(std_string * resultDataFP) = result.data();
-        } |]
-        status <- Status.decode statusFP
-        case status of
-            Status code _ | code == Status.ok ->
-                Right <$> String.decode resultDataFP
-            _ -> pure $ Left status
+    receiveQuery _objectStore query (TextReplica replicaPtr) =
+        Status.with $ \statusPtr ->
+        String.with $ \resultDataPtr -> do
+            [Cpp.block| void {
+                Status & status = * $(Status * statusPtr);
+                std::string termd{$bs-cstr:query};
+                if (termd.empty()) {
+                    status = Status::BADARGS;
+                    return;
+                }
+                ron::Uuid id{}, rdt{};
+                size_t dot;
+                if (termd.find('?') == -1)
+                    termd.push_back('?');
+                TextFrame::Cursor cur{termd};
+                if (!cur.valid()) {
+                    status = Status::BADARGS.comment("need a query op");
+                    return;
+                }
+                id = cur.id();
+                rdt = cur.ref();
+                if (id == ron::Uuid::FATAL || rdt == ron::Uuid::FATAL) {
+                    status = Status::BADARGS.comment("not an UUID");
+                    return;
+                }
+                TextFrame::Builder result;
+                status =
+                    $fptr-ptr:(TextReplica * replicaPtr)
+                    ->ReceiveQuery(result, ron::Uuid::NIL, cur);
+                if (status)
+                    * $(std_string * resultDataPtr) = result.data();
+            } |]
+            status <- Status.decode statusPtr
+            case status of
+                Status code _ | code == Status.ok ->
+                    Right <$> String.decode resultDataPtr
+                _ -> pure $ Left status
+
+-- withTextFrame :: (Ptr (Proxy TextFrame) -> IO a) -> IO a
+-- withTextFrame = bracket
+--     [Cpp.exp| TextFrame * { new TextFrame } |]
+--     (\p -> [Cpp.block| void { delete $(TextFrame * p); } |])
+
+-- withTextReplica :: (TextReplica -> IO a) -> IO a
+-- withTextReplica = bracket
+--     (TextReplica <$> [Cpp.exp| TextReplica * { new TextReplica } |])
+--     (\(TextReplica p) -> [Cpp.block| void { delete $(TextReplica * p); } |])
 
 newForeignTextFrame :: IO (ForeignPtr (Proxy TextFrame))
 newForeignTextFrame = mask_ $ do

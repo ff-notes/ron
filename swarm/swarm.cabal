@@ -52,8 +52,13 @@ library
 test-suite test
     import: language
     build-depends:
+        -- global
+        hedgehog,
+        tasty-hedgehog,
+        tasty-th,
         -- project
         ron,
+        ron-test,
         -- package
         swarm,
     ghc-options: -dynamic

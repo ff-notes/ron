@@ -8,18 +8,19 @@ module Swarm.RON.Status (
     decode,
     decoding,
     decoding_,
-    newForeign,
+    with,
     -- * Statuses
     ok,
+    noType,
+    notOpen,
 ) where
 
-import           Control.Exception (mask_)
+import           Control.Exception (bracket)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy)
-import           Foreign (FinalizerPtr, ForeignPtr, allocaArray, newForeignPtr,
-                          peekElemOff, wordPtrToPtr)
+import           Foreign (Ptr, allocaArray, peekElemOff, wordPtrToPtr)
 import           Language.C.Inline.Context (ctxTypesTable)
 import qualified Language.C.Inline.Cpp as Cpp
 import           Language.C.Types (TypeSpecifier (TypeName))
@@ -28,11 +29,10 @@ import           RON.UUID (UUID (UUID))
 
 -- | Class @ron::Status@
 data Status = Status{code :: UUID, comment :: ByteString}
-    deriving Show
+    deriving (Eq, Show)
 
 Cpp.context
     $   Cpp.cppCtx
-    <>  Cpp.fptrCtx
     <>  mempty
         { ctxTypesTable = Map.singleton (TypeName "Status") [t| Proxy Status |]
         }
@@ -41,8 +41,8 @@ Cpp.verbatim "typedef ron::Status Status;"
 
 ok :: UUID
 ok = UUID
-    [Cpp.pure| uint64_t { uint64_t(ron::Status::OK.code().value ()) } |]
-    [Cpp.pure| uint64_t { uint64_t(ron::Status::OK.code().origin()) } |]
+    [Cpp.pure| uint64_t { uint64_t(Status::OK.code().value ()) } |]
+    [Cpp.pure| uint64_t { uint64_t(Status::OK.code().origin()) } |]
 
 --     | ENDOFFRAME
 --     | NOT_IMPLEMENTED
@@ -57,8 +57,15 @@ ok = UUID
 --     | BADREF
 --     | BADVALUE
 
---     | NOTYPE
---     | NOTOPEN
+noType :: UUID
+noType = UUID
+    [Cpp.pure| uint64_t { uint64_t(Status::NOTYPE.code().value ()) } |]
+    [Cpp.pure| uint64_t { uint64_t(Status::NOTYPE.code().origin()) } |]
+
+notOpen :: UUID
+notOpen = UUID
+    [Cpp.pure| uint64_t { uint64_t(Status::NOTOPEN.code().value ()) } |]
+    [Cpp.pure| uint64_t { uint64_t(Status::NOTOPEN.code().origin()) } |]
 
 --     | CHAINBREAK
 --     | HASHBREAK
@@ -71,15 +78,15 @@ ok = UUID
 --     | REPEAT
 --     | REORDER
 
-decode :: ForeignPtr (Proxy Status) -> IO Status
-decode statusFP = allocaArray 4 $ \arena -> do
+decode :: Ptr (Proxy Status) -> IO Status
+decode statusPtr = allocaArray 4 $ \arena -> do
     [Cpp.block| void {
         uint64_t * const arena = $(uint64_t * arena);
         uint64_t & x   = arena[0];
         uint64_t & y   = arena[1];
         uint64_t & ptr = arena[2];
         uint64_t & len = arena[3];
-        Status & status = * $fptr-ptr:(Status * statusFP);
+        Status & status = * $(Status * statusPtr);
         x   = uint64_t(status.code().value());
         y   = uint64_t(status.code().origin());
         ptr = uintptr_t(status.comment().data());
@@ -94,19 +101,17 @@ decode statusFP = allocaArray 4 $ \arena -> do
             (wordPtrToPtr $ fromIntegral ptr, fromIntegral len)
     pure Status{code = UUID x y, comment}
 
-newForeign :: IO (ForeignPtr (Proxy Status))
-newForeign = mask_ $ do
-    p <- [Cpp.exp| Status * { new Status } |]
-    newForeignPtr free p
+with :: (Ptr (Proxy Status) -> IO a) -> IO a
+with = bracket
+    [Cpp.exp| Status * { new Status } |]
+    (\p -> [Cpp.block| void { delete $(Status * p); } |])
 
-decoding :: (ForeignPtr (Proxy Status) -> IO a) -> IO (Status, a)
-decoding action = do
-    fptr <- newForeign
-    a <- action fptr
-    status <- decode fptr
-    pure (status, a)
+decoding :: (Ptr (Proxy Status) -> IO a) -> IO (Status, a)
+decoding action =
+    with $ \ptr -> do
+        a <- action ptr
+        status <- decode ptr
+        pure (status, a)
 
-decoding_ :: (ForeignPtr (Proxy Status) -> IO ()) -> IO Status
+decoding_ :: (Ptr (Proxy Status) -> IO ()) -> IO Status
 decoding_ = fmap fst . decoding
-
-foreign import ccall "&free" free :: FinalizerPtr a
