@@ -1,5 +1,6 @@
 {-# OPTIONS -Wno-missing-signatures #-}
 
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -21,8 +22,7 @@ main = $defaultMainGenerator
 prop_uninitialized_replica = property $ do
     replica <- liftIO newTextReplica
     key <- forAll Gen.uuid
-    got <- liftIO $ get key replica
-    case got of
+    liftIO (get key replica) >>= \case
         Left status@Status{code}
             | code == notOpen -> success
             | otherwise       -> status === Status notOpen ""
