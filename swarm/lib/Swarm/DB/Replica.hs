@@ -97,11 +97,10 @@ instance Replica TextReplica TextFrame where
         } |]
 
     open home (TextReplica replica) =
-        Status.decoding_ $ \statusPtr ->
-            [Cpp.block| void {
-                * $(Status * statusPtr) =
-                    $fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home);
-            } |]
+        Status.decoding_ $ \statusPtr -> [Cpp.block| void {
+            * $(Status * statusPtr) =
+                $fptr-ptr:(TextReplica * replica)->Open($bs-cstr:home);
+        } |]
 
     get (UUID x y) (TextReplica replica) = do
         framePtr <- newForeignTextFrame
