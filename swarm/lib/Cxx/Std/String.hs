@@ -12,7 +12,6 @@ import           Prelude hiding (String)
 import           Control.Exception (bracket)
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
-import           Data.Proxy (Proxy)
 import           Foreign (Ptr)
 import qualified Language.C.Inline.Cpp as Cpp
 
@@ -22,12 +21,12 @@ Cpp.context $ Cpp.cppCtx <> stdCtx
 Cpp.include "<string>"
 Cpp.verbatim "typedef std::string std_string;"
 
-with :: (Ptr (Proxy String) -> IO a) -> IO a
+with :: (Ptr String -> IO a) -> IO a
 with = bracket
     [Cpp.exp| std_string * { new std::string } |]
     (\p -> [Cpp.block| void { delete $(std_string * p); } |])
 
-decode :: Ptr (Proxy String) -> IO ByteString
+decode :: Ptr String -> IO ByteString
 decode ptr = do
     (dat, len) <-
         (,) <$> [Cpp.exp| char const * { $(std_string * ptr)->data()   } |]
