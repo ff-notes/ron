@@ -21,6 +21,7 @@ flag swarm
 
 common language
     build-depends: base >= 4.10 && < 4.13
+    default-extensions: MonadFailDesugaring NoImplicitPrelude
     default-language: Haskell2010
     if flag(swarm)
         buildable: True
@@ -35,6 +36,8 @@ library
         containers,
         inline-c,
         inline-c-cpp,
+        named,
+        resourcet,
         -- project
         ron,
     ghc-options: -optc=-std=c++11
@@ -63,11 +66,15 @@ test-suite test
     build-depends:
         -- global
         hedgehog,
+        mmorph,
+        monad-control,
+        mtl,
+        resourcet,
         tasty-hedgehog,
         tasty-th,
+        unliftio-core,
         -- project
         ron,
-        ron-rdt,
         ron-test,
         -- package
         swarm,

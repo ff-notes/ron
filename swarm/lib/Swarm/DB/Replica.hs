@@ -1,12 +1,19 @@
+{-# OPTIONS -Wno-unused-imports #-}
+
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Swarm.DB.Replica
   ( TextReplica,
     createReplica,
+    getObject,
     newTextReplica,
     open,
     receive,
@@ -30,7 +37,7 @@ import qualified Swarm.RON.Status as Status
 import Swarm.RON.Text (TextFrame)
 
 -- | Class @ron::Replica<TextFrame>@
-newtype TextReplica = TextReplica (ForeignPtr (Proxy TextReplica))
+newtype TextReplica = TextReplica (Ptr (Proxy TextReplica))
 
 do
   context $
