@@ -6,6 +6,7 @@ module Gen (
     atom,
     event,
     closedOp,
+    replicaId,
     shortText,
     stateFrame,
     uuid,
