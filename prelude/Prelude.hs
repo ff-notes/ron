@@ -5,13 +5,16 @@ module Prelude (
     module X,
     fmapL,
     foldr1,
+    headMay,
     identity,
     lastDef,
     maximumDef,
     maxOn,
     minOn,
+    note,
     show,
     whenJust,
+    (!!),
     (?:),
 ) where
 
@@ -40,10 +43,11 @@ import           Data.Functor.Identity as X (Identity)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef,
                                   readIORef, writeIORef)
-import           Data.List as X (filter, genericLength, intercalate, isPrefixOf,
-                                 isSuffixOf, lookup, map, partition, repeat,
-                                 replicate, sortBy, sortOn, span, splitAt, take,
-                                 takeWhile, unlines, unwords, zip, (++))
+import           Data.List as X (drop, filter, genericLength, intercalate,
+                                 isPrefixOf, isSuffixOf, lookup, map, partition,
+                                 repeat, replicate, sortBy, sortOn, span,
+                                 splitAt, take, takeWhile, unlines, unwords,
+                                 zip, (++))
 import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
 import           Data.Maybe as X (Maybe (Just, Nothing), catMaybes, fromMaybe,
                                   listToMaybe, maybe, maybeToList)
@@ -131,6 +135,11 @@ fmapL f = either (Left . f) Right
 foldr1 :: (a -> a -> a) -> NonEmpty a -> a
 foldr1 = Data.Foldable.foldr1
 
+headMay :: [a] -> Maybe a
+headMay = \case
+    []  -> Nothing
+    a:_ -> Just a
+
 identity :: a -> a
 identity x = x
 
@@ -151,11 +160,19 @@ maxOn f x y = if f x < f y then y else x
 minOn :: Ord b => (a -> b) -> a -> a -> a
 minOn f x y = if f x < f y then x else y
 
+note :: e -> Maybe a -> Either e a
+note e = maybe (Left e) Right
+
 show :: (Show a, IsString s) => a -> s
 show = fromString . Text.Show.show
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust m f = maybe (pure ()) f m
+
+(!!) :: [a] -> Int -> Maybe a
+xs !! i
+    | i < 0     = Nothing
+    | otherwise = headMay $ drop i xs
 
 -- | An infix form of 'fromMaybe' with arguments flipped.
 (?:) :: Maybe a -> a -> a
