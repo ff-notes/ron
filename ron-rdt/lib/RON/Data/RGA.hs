@@ -400,7 +400,7 @@ newFromText :: ReplicaClock m => Text -> m (Object RgaString)
 newFromText = newFromList . Text.unpack
 
 -- | Read elements from RGA
-getList :: forall a m . (Replicated a, MonadE m) => Object (RGA a) -> m [a]
+getList :: (Replicated a, MonadE m) => Object (RGA a) -> m [a]
 getList = fmap coerce . getObject
 
 -- | Read characters from 'RgaString'
