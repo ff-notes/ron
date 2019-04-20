@@ -334,8 +334,8 @@ prop_RGA_getAliveIndices = property $ do
 -- TODO(2019-04-17, #60, cblp) RGA objects are not random enough. Try to
 -- generate RGAs from a series of ops.
 prop_RGA_insertAfter = property $ do
-    (prefix, inset, suffix) <- forAll $ replicate3 Gen.shortText
-    (replica1, replica2)    <- forAll $ replicate2 Gen.replicaId
+    (prefix, inset, suffix) <- forAll $ replicateM3 Gen.shortText
+    (replica1, replica2)    <- forAll $ replicateM2 Gen.replicaId
     evalExceptT $ runNetworkSimT $ do
         rga1 <- runReplicaSimT replica1 $ RGA.newFromText $ prefix <> suffix
         rga1indices <- RGA.getAliveIndices rga1
