@@ -27,6 +27,7 @@ module RON.Data.RGA
     , insertTextAtBegin
     , newFromList
     , newFromText
+    , remove
     , rgaType
     ) where
 
@@ -493,3 +494,9 @@ insertTextAfter
     -> UUID  -- ^ position
     -> m ()
 insertTextAfter text = insertText text . Just
+
+-- | Record a removal of a specific item
+remove
+    :: UUID  -- ^ position
+    -> m ()
+remove = undefined
