@@ -347,8 +347,8 @@ prop_RGA_insertAfter = property $ do
         Right (prefix <> inset <> suffix) === RGA.getText rga2
 
 prop_RGA_remove = property $ do
-    text                 <- forAll Gen.shortText
-    i                    <- forAll $ Gen.int $ Range.linear 0 (Text.length text)
+    text <- forAll $ Gen.filter (not . Text.null) Gen.shortText
+    i <- forAll $ Gen.int $ Range.linear 0 (Text.length text - 1)
     (replica1, replica2) <- forAll $ replicateM2 Gen.replicaId
     evalExceptT $ runNetworkSimT $ do
         rga1 <- runReplicaSimT replica1 $ RGA.newFromText text

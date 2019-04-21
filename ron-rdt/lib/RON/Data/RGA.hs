@@ -39,13 +39,15 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           RON.Data.Internal
-import           RON.Error (MonadE, throwErrorText)
+import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
                             getEventUuids)
 import           RON.Types (Object (..), Op (..), StateChunk (..), UUID)
 import           RON.Util.Word (pattern B11, ls60)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
 -- | opId = vertex id
 --   refId:
@@ -351,7 +353,7 @@ edit
     => [a] -> m ()
 edit newItems = do
     obj@Object{id, frame} <- get
-    StateChunk{..} <- getObjectStateChunk obj
+    StateChunk{stateVersion, stateBody} <- getObjectStateChunk obj
     advanceToUuid stateVersion
 
     let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
@@ -497,6 +499,26 @@ insertTextAfter text = insertText text . Just
 
 -- | Record a removal of a specific item
 remove
-    :: UUID  -- ^ position
+    :: (MonadE m, MonadState (Object (RGA a)) m, ReplicaClock m)
+    => UUID  -- ^ position
     -> m ()
-remove = undefined
+remove position =
+    errorContext "RGA.remove" $
+    errorContext ("position = " <> show position) $ do
+        obj@Object{id, frame} <- get
+        stateChunk@StateChunk{stateVersion, stateBody} <-
+            getObjectStateChunk obj
+        advanceToUuid stateVersion
+
+        event <- getEventUuid
+        stateBody' <- findAndTombstone event stateBody
+        let stateChunk' =
+                stateChunk{stateVersion = event, stateBody = stateBody'}
+        put obj{frame = Map.insert id stateChunk' frame}
+  where
+    findAndTombstone event = go where
+        go = \case
+            []                     -> throwErrorText "Position not found"
+            op@Op{opId} : ops
+                | opId == position -> pure $ op{refId = event} : ops
+                | otherwise        -> (op :) <$> go ops
