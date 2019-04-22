@@ -326,8 +326,8 @@ prop_RGA_delete_deleted = let
 prop_RGA_getAliveIndices = property $ do
     text    <- forAll Gen.shortText
     replica <- forAll Gen.replicaId
-    evalExceptT $ runNetworkSimT $ runReplicaSimT replica $ do
-        rga     <- RGA.newFromText text
+    evalExceptT $ runNetworkSimT $ do
+        rga     <- runReplicaSimT replica $ RGA.newFromText text
         indices <- RGA.getAliveIndices rga
         Text.length text === length indices
 
@@ -345,6 +345,20 @@ prop_RGA_insertAfter = property $ do
         rga2 <- runReplicaSimT replica2 $
             (`execStateT` rga1) $ RGA.insertText inset pos
         Right (prefix <> inset <> suffix) === RGA.getText rga2
+
+prop_RGA_remove = property $ do
+    text <- forAll $ Gen.filter (not . Text.null) Gen.shortText
+    i <- forAll $ Gen.int $ Range.linear 0 (Text.length text - 1)
+    (replica1, replica2) <- forAll $ replicateM2 Gen.replicaId
+    evalExceptT $ runNetworkSimT $ do
+        rga1 <- runReplicaSimT replica1 $ RGA.newFromText text
+        indices <- RGA.getAliveIndices rga1
+        let u = fromJust $ indices !! i
+        rga2 <- runReplicaSimT replica2 $ (`execStateT` rga1) $ RGA.remove u
+        Right (text_delete i text) === RGA.getText rga2
+  where
+    text_delete i t =
+        let (before, after) = Text.splitAt i t in before <> Text.tail after
 
 prop_base64_isLetter = property $ do
     c <- forAll $ Gen.word8 Range.constantBounded
