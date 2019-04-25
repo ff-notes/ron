@@ -47,7 +47,7 @@ prelude = Map.fromList
     , ("VersionVector", Type0 $ TObject TVersionVector)
     , ("Option",        Type1 $ TComposite . TOption)
     , ("ORSet",         Type1 $ TObject . TORSet)
-    , ("Rga",           Type1 $ TObject . TRga)
+    , ("RGA",           Type1 $ TObject . TRga)
     ]
   where
     char = opaqueAtoms "Char" OpaqueAnnotations{oaHaskellType = Just "Char"}
