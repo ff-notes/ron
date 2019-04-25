@@ -9,6 +9,7 @@ and this project adheres to
 ### Added
 - Module `RON.Storage.Rocks`
 
+## [0.7] - 2019-04-25
 ### Changed
 - Rename module `RON.Storage.{IO -> FS}`
 - Moved from `RON.Storage` to `RON.Storage.Backend`:

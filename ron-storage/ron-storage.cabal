@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron-storage
-version:        0.6
+version:        0.7
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
@@ -71,6 +71,6 @@ library
         RON.Storage
         RON.Storage.Backend
         RON.Storage.FS
-        RON.Storage.Rocks
+        -- RON.Storage.Rocks
         RON.Storage.Test
     hs-source-dirs: lib
