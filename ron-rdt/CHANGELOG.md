@@ -6,6 +6,16 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `RON.Data.RGA`:
+  - `getAliveIndices`
+  - `insert`
+  - `insertAfter`
+  - `insertAtBegin`
+  - `insertText`
+  - `insertTextAfter`
+  - `insertTextAtBegin`
+  - `remove`
 
 ## [0.5] - 2019-02-04
 ### Added
