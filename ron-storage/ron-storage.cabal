@@ -41,6 +41,9 @@ description:
 
 build-type:     Simple
 
+extra-source-files:
+    CHANGELOG.md
+
 common language
     build-depends: base >= 4.10 && < 4.13, integer-gmp
     default-extensions: MonadFailDesugaring StrictData
