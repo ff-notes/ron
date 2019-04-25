@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.6] - 2019-04-25
 ### Added
 - `RON.Data.RGA`:
   - `getAliveIndices`
@@ -101,7 +103,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ff/compare/v0.5...HEAD
+[Unreleased]: https://github.com/ff-notes/ff/compare/ron-rdt-0.6...HEAD
+[0.6]: https://github.com/ff-notes/ff/compare/v0.5...ron-rdt-0.6
 [0.5]: https://github.com/ff-notes/ff/compare/v0.4...v0.5
 [0.4]: https://github.com/ff-notes/ff/compare/v0.3...v0.4
 [0.3]: https://github.com/ff-notes/ff/compare/v0.2...v0.3
