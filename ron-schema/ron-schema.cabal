@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron-schema
-version:        0.5
+version:        0.6
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
