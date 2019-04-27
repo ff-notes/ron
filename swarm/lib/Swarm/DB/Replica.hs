@@ -5,7 +5,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Swarm.DB.Replica (
-    Replica (create, open, get, receiveQuery),
+    Replica (createReplica, open, receive),
     TextReplica,
     newTextReplica,
 ) where
@@ -25,7 +25,7 @@ import           Cxx.Std (stdCtx)
 import qualified Cxx.Std.String as String
 import           Swarm.RON.Status (Status (Status))
 import qualified Swarm.RON.Status as Status
-import           Swarm.RON.Text (TextFrame (TextFrame))
+import           Swarm.RON.Text (TextFrame)
 
 -- | Class @ron::Replica<TextFrame>@
 newtype TextReplica = TextReplica (ForeignPtr (Proxy TextReplica))
@@ -49,13 +49,15 @@ Cpp.include "<swarm/ron/uuid.hpp>"
 Cpp.verbatim "typedef ron::Replica<ron::TextFrame> TextReplica;"
 Cpp.verbatim "typedef ron::Status Status;"
 Cpp.verbatim "typedef ron::TextFrame TextFrame;"
+Cpp.verbatim "typedef ron::Uuid Uuid;"
 Cpp.verbatim "typedef std::string std_string;"
 
-Cpp.verbatim "extern \"C\" void deleteTextFrame(TextFrame * p) { delete p; }"
-foreign import ccall "&deleteTextFrame"
-    deleteTextFrame :: FinalizerPtr (Proxy TextFrame)
+-- Cpp.verbatim "extern \"C\" void deleteTextFrame(TextFrame * p) { delete p; }"
+-- foreign import ccall "&deleteTextFrame"
+--     deleteTextFrame :: FinalizerPtr (Proxy TextFrame)
 
-Cpp.verbatim "extern \"C\" void deleteTextReplica(TextReplica * p) {delete p;}"
+Cpp.verbatim
+    "extern \"C\" void deleteTextReplica(TextReplica * p) { delete p; }"
 foreign import ccall "&deleteTextReplica"
     deleteTextReplica :: FinalizerPtr (Proxy TextReplica)
 
@@ -63,88 +65,50 @@ foreign import ccall "&deleteTextReplica"
 class Replica replica frame | frame -> replica, replica -> frame where
 
     -- | Method @Status Create(std::string home)@
-    create
-        :: ByteString  -- ^ path to db dir
-        -> replica
+    createReplica
+        :: replica
         -> IO Status
 
     -- | Method @Status Create(std::string home)@
     open
-        :: ByteString  -- ^ path to db dir
-        -> replica
+        :: replica
         -> IO Status
 
-    -- | Method @Status Get(Frame& object, Uuid id)@
-    get :: UUID  -- ^ object id
-        -> replica
-        -> IO (Either Status frame)
-
-    -- | Method
-    -- @Status
-    -- ReceiveQuery(Builder& response, Uuid object_store, Cursor& query)@
-    receiveQuery
-        :: UUID        -- ^ object store
-        -> ByteString  -- ^ query
+    -- | Method @Status Receive(Builder& response, Cursor& query)@
+    receive
+        :: UUID  -- ^ object id
+        -> UUID  -- ^ type
         -> replica
         -> IO (Either Status ByteString)
 
 instance Replica TextReplica TextFrame where
 
-    create home (TextReplica replica) =
+    createReplica (TextReplica replica) =
         Status.decoding_ $ \statusPtr -> [Cpp.block| void {
             * $(Status * statusPtr) =
-                $fptr-ptr:(TextReplica * replica)->Create($bs-cstr:home);
+                $fptr-ptr:(TextReplica * replica)->CreateReplica();
         } |]
 
-    open home (TextReplica replica) =
+    open (TextReplica replica) =
         Status.decoding_ $ \statusPtr -> [Cpp.block| void {
-            * $(Status * statusPtr) =
-                $fptr-ptr:(TextReplica * replica)->Open($bs-cstr:home);
+            * $(Status * statusPtr) = $fptr-ptr:(TextReplica * replica)->Open();
         } |]
 
-    get (UUID x y) (TextReplica replica) = do
-        framePtr <- newForeignTextFrame
-        status <- Status.decoding_ $ \statusPtr -> [Cpp.block| void {
-            * $(Status * statusPtr) =
-                $fptr-ptr:(TextReplica * replica)
-                ->Get(
-                    * $fptr-ptr:(TextFrame * framePtr),
-                    {$(uint64_t x), $(uint64_t y)}
-                );
-        } |]
-        pure $ case status of
-            Status code _ | code == Status.ok -> Right $ TextFrame framePtr
-            _                                 -> Left status
-
-    receiveQuery _objectStore query (TextReplica replicaPtr) =
+    receive (UUID objectIdX objectIdY)
+            (UUID rdtX      rdtY     )
+            (TextReplica replicaPtr) =
         Status.with $ \statusPtr ->
         String.with $ \resultDataPtr -> do
             [Cpp.block| void {
                 Status & status = * $(Status * statusPtr);
-                std::string termd{$bs-cstr:query};
-                if (termd.empty()) {
-                    status = Status::BADARGS;
-                    return;
-                }
-                ron::Uuid id{}, rdt{};
-                size_t dot;
-                if (termd.find('?') == -1)
-                    termd.push_back('?');
-                TextFrame::Cursor cur{termd};
-                if (!cur.valid()) {
-                    status = Status::BADARGS.comment("need a query op");
-                    return;
-                }
-                id = cur.id();
-                rdt = cur.ref();
-                if (id == ron::Uuid::FATAL || rdt == ron::Uuid::FATAL) {
-                    status = Status::BADARGS.comment("not an UUID");
-                    return;
-                }
                 TextFrame::Builder result;
+                TextFrame query = ron::Query<TextFrame>(
+                    Uuid{$(uint64_t objectIdX), $(uint64_t objectIdY)},
+                    Uuid{$(uint64_t rdtX     ), $(uint64_t rdtY     )}
+                );
+                TextFrame::Cursor qc{query};
                 status =
-                    $fptr-ptr:(TextReplica * replicaPtr)
-                    ->ReceiveQuery(result, ron::Uuid::NIL, cur);
+                    $fptr-ptr:(TextReplica * replicaPtr)->Receive(result, qc);
                 if (status)
                     * $(std_string * resultDataPtr) = result.data();
             } |]
@@ -164,10 +128,10 @@ instance Replica TextReplica TextFrame where
 --     (TextReplica <$> [Cpp.exp| TextReplica * { new TextReplica } |])
 --     (\(TextReplica p) -> [Cpp.block| void { delete $(TextReplica * p); } |])
 
-newForeignTextFrame :: IO (ForeignPtr (Proxy TextFrame))
-newForeignTextFrame = mask_ $ do
-    p <- [Cpp.exp| TextFrame * { new TextFrame } |]
-    newForeignPtr deleteTextFrame p
+-- newForeignTextFrame :: IO (ForeignPtr (Proxy TextFrame))
+-- newForeignTextFrame = mask_ $ do
+--     p <- [Cpp.exp| TextFrame * { new TextFrame } |]
+--     newForeignPtr deleteTextFrame p
 
 newForeignTextReplica :: IO (ForeignPtr (Proxy TextReplica))
 newForeignTextReplica = mask_ $ do

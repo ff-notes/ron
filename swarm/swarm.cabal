@@ -58,6 +58,7 @@ test-suite test
         tasty-th,
         -- project
         ron,
+        ron-rdt,
         ron-test,
         -- package
         swarm,

@@ -12,6 +12,7 @@ module Swarm.RON.Status (
     -- * Statuses
     ok,
     noType,
+    notFound,
     notOpen,
 ) where
 
@@ -46,7 +47,12 @@ ok = UUID
 
 --     | ENDOFFRAME
 --     | NOT_IMPLEMENTED
---     | NOT_FOUND
+
+notFound :: UUID
+notFound = UUID
+    [Cpp.pure| uint64_t { uint64_t(Status::NOT_FOUND.code().value ()) } |]
+    [Cpp.pure| uint64_t { uint64_t(Status::NOT_FOUND.code().origin()) } |]
+
 --     | BAD_STATE
 --     | BADARGS
 --     | BADSYNTAX

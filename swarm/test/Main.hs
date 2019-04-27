@@ -13,17 +13,18 @@ import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.TH (defaultMainGenerator)
 
 import qualified Gen
+import           RON.Data.LWW (lwwType)
 
-import           Swarm.DB.Replica (get, newTextReplica)
-import           Swarm.RON.Status (Status (Status), code, notOpen)
+import           Swarm.DB.Replica (newTextReplica, receive)
+import           Swarm.RON.Status (Status (Status), code, notFound)
 
 main = $defaultMainGenerator
 
 prop_uninitialized_replica = property $ do
     replica <- liftIO newTextReplica
     key <- forAll Gen.uuid
-    liftIO (get key replica) >>= \case
+    liftIO (receive key lwwType replica) >>= \case
         Left status@Status{code}
-            | code == notOpen -> success
-            | otherwise       -> status === Status notOpen ""
+            | code == notFound -> success
+            | otherwise        -> status === Status notFound ""
         Right _ -> failure
