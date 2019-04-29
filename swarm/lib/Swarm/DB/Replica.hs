@@ -5,9 +5,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Swarm.DB.Replica (
-    Replica (createReplica, open, receive),
     TextReplica,
+    createReplica,
     newTextReplica,
+    open,
+    receive,
 ) where
 
 import           Control.Exception (mask_)
@@ -62,62 +64,47 @@ Cpp.verbatim
 foreign import ccall "&deleteTextReplica"
     deleteTextReplica :: FinalizerPtr (Proxy TextReplica)
 
--- | Template class @ron::Replica<>@
-class Replica replica frame | frame -> replica, replica -> frame where
+-- | Method @Status CreateReplica()@
+createReplica :: TextReplica -> IO Status
+createReplica (TextReplica replica) =
+    Status.decoding_ $ \statusPtr -> [Cpp.block| void {
+        * $(Status * statusPtr) =
+            $fptr-ptr:(TextReplica * replica)->CreateReplica();
+    } |]
 
-    -- | Method @Status Create(std::string home)@
-    createReplica
-        :: replica
-        -> IO Status
+-- | Method @Status Open()@
+open :: TextReplica -> IO Status
+open (TextReplica replica) =
+    Status.decoding_ $ \statusPtr -> [Cpp.block| void {
+        * $(Status * statusPtr) = $fptr-ptr:(TextReplica * replica)->Open();
+    } |]
 
-    -- | Method @Status Create(std::string home)@
-    open
-        :: replica
-        -> IO Status
-
-    -- | Method @Status Receive(Builder& response, Cursor& query)@
-    receive
-        :: UUID  -- ^ object id
-        -> UUID  -- ^ type
-        -> replica
-        -> IO (Either Status ByteString)
-
-instance Replica TextReplica TextFrame where
-
-    createReplica (TextReplica replica) =
-        Status.decoding_ $ \statusPtr -> [Cpp.block| void {
-            * $(Status * statusPtr) =
-                $fptr-ptr:(TextReplica * replica)->CreateReplica();
+-- | Method @Status Receive(Builder& response, Cursor& query)@
+receive
+    :: UUID  -- ^ object id
+    -> UUID  -- ^ type
+    -> TextReplica
+    -> IO (Either Status ByteString)
+receive (UUID objectIdX objectIdY) (UUID rdtX rdtY) (TextReplica replicaPtr) =
+    Status.with $ \statusPtr ->
+    String.with $ \resultDataPtr -> do
+        [Cpp.block| void {
+            Status & status = * $(Status * statusPtr);
+            TextFrame::Builder result;
+            TextFrame query = ron::Query<TextFrame>(
+                Uuid{$(uint64_t objectIdX), $(uint64_t objectIdY)},
+                Uuid{$(uint64_t rdtX     ), $(uint64_t rdtY     )}
+            );
+            TextFrame::Cursor qc{query};
+            status = $fptr-ptr:(TextReplica * replicaPtr)->Receive(result, qc);
+            if (status)
+                * $(std_string * resultDataPtr) = result.data();
         } |]
-
-    open (TextReplica replica) =
-        Status.decoding_ $ \statusPtr -> [Cpp.block| void {
-            * $(Status * statusPtr) = $fptr-ptr:(TextReplica * replica)->Open();
-        } |]
-
-    receive (UUID objectIdX objectIdY)
-            (UUID rdtX      rdtY     )
-            (TextReplica replicaPtr) =
-        Status.with $ \statusPtr ->
-        String.with $ \resultDataPtr -> do
-            [Cpp.block| void {
-                Status & status = * $(Status * statusPtr);
-                TextFrame::Builder result;
-                TextFrame query = ron::Query<TextFrame>(
-                    Uuid{$(uint64_t objectIdX), $(uint64_t objectIdY)},
-                    Uuid{$(uint64_t rdtX     ), $(uint64_t rdtY     )}
-                );
-                TextFrame::Cursor qc{query};
-                status =
-                    $fptr-ptr:(TextReplica * replicaPtr)->Receive(result, qc);
-                if (status)
-                    * $(std_string * resultDataPtr) = result.data();
-            } |]
-            status <- Status.decode statusPtr
-            case status of
-                Status code _ | code == Status.ok ->
-                    Right <$> String.decode resultDataPtr
-                _ -> pure $ Left status
+        status <- Status.decode statusPtr
+        case status of
+            Status code _ | code == Status.ok ->
+                Right <$> String.decode resultDataPtr
+            _ -> pure $ Left status
 
 -- withTextFrame :: (Ptr (Proxy TextFrame) -> IO a) -> IO a
 -- withTextFrame = bracket
