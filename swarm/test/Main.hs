@@ -16,7 +16,7 @@ import qualified Gen
 import           RON.Data.LWW (lwwType)
 
 import           Swarm.DB.Replica (newTextReplica, receive)
-import           Swarm.RON.Status (Status (Status), code, notFound)
+import           Swarm.RON.Status (Status (Status), code, notOpen)
 
 main = $defaultMainGenerator
 
@@ -25,6 +25,6 @@ prop_uninitialized_replica = property $ do
     key <- forAll Gen.uuid
     liftIO (receive key lwwType replica) >>= \case
         Left status@Status{code}
-            | code == notFound -> success
-            | otherwise        -> status === Status notFound ""
+            | code == notOpen -> success
+            | otherwise        -> status === Status notOpen ""
         Right _ -> failure
