@@ -136,7 +136,7 @@ leastSignificant24 = W24 . (0xFFFFFF .&.) . fromIntegral
 
 -- | 'leastSignificant24' specialized for 'Word32'
 ls24 :: Word32 -> Word24
-ls24 = W24 . (0xFFF .&.)
+ls24 = W24 . (0xFFFFFF .&.)
 
 newtype Word60 = W60 Word64
     deriving (Enum, Eq, Ord, Show)
