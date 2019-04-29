@@ -289,7 +289,7 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
     validateDateTime =
         let day = fromGregorianValid (fromIntegral y) (fromIntegral m) (fromIntegral d)
             time = hh < 25 && mm < 61 && ss < 61
-        in isJust day && time && y > 2009 && ns < 10^9
+        in isJust day && time && y > 2009 && ns < 10^(9::Int)
 
 -- | Make an 'ApplicationSpecific' replica id from arbitrary number
 applicationSpecific :: Word64 -> ReplicaId
