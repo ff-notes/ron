@@ -21,8 +21,9 @@ import           Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 import           Data.Proxy (Proxy)
-import           Foreign (Ptr, allocaArray, peekElemOff, wordPtrToPtr)
+import           Foreign (Ptr)
 import           Language.C.Inline.Context (ctxTypesTable)
+import           Language.C.Inline.Cpp (withPtrs_)
 import qualified Language.C.Inline.Cpp as Cpp
 import           Language.C.Types (TypeSpecifier (TypeName))
 
@@ -85,26 +86,15 @@ notOpen = UUID
 --     | REORDER
 
 decode :: Ptr (Proxy Status) -> IO Status
-decode statusPtr = allocaArray 4 $ \arena -> do
-    [Cpp.block| void {
-        uint64_t * const arena = $(uint64_t * arena);
-        uint64_t & x   = arena[0];
-        uint64_t & y   = arena[1];
-        uint64_t & ptr = arena[2];
-        uint64_t & len = arena[3];
+decode statusPtr = do
+    (x, y, ptr, len) <- withPtrs_ $ \(x, y, ptr, len) -> [Cpp.block| void {
         Status & status = * $(Status * statusPtr);
-        x   = uint64_t(status.code().value());
-        y   = uint64_t(status.code().origin());
-        ptr = uintptr_t(status.comment().data());
-        len = status.comment().length();
+        * $(uint64_t * x)      = uint64_t(status.code().value());
+        * $(uint64_t * y)      = uint64_t(status.code().origin());
+        * $(char const ** ptr) = status.comment().data();
+        * $(size_t * len)      = status.comment().length();
     } |]
-    x   <- peekElemOff arena 0
-    y   <- peekElemOff arena 1
-    ptr <- peekElemOff arena 2
-    len <- peekElemOff arena 3
-    comment <-
-        BS.packCStringLen
-            (wordPtrToPtr $ fromIntegral ptr, fromIntegral len)
+    comment <- BS.packCStringLen (ptr, fromIntegral len)
     pure Status{code = UUID x y, comment}
 
 with :: (Ptr (Proxy Status) -> IO a) -> IO a
