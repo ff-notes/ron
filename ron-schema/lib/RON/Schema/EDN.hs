@@ -66,9 +66,10 @@ instance FromEDN (Declaration 'Parsed) where
 
 instance FromEDN TEnum where
     parseEDN = withNoTag . withList $ \case
-        name : items -> Enum
-            <$> parseSymbol' name
-            <*> traverse parseSymbol' items
+        name : items -> do
+            enumName  <- parseSymbol' name
+            enumItems <- traverse parseSymbol' items
+            pure Enum{..}
         [] -> fail
             "Expected declaration in the form\
             \ (enum <name:symbol> <item:symbol>...)"
@@ -81,8 +82,10 @@ instance FromEDN Opaque where
                 "object" -> go True
                 _        -> fail "opaque kind must be either atoms or object"
             where
-            go isObject =
-                Opaque isObject <$> parseSymbol' name <*> parseAnnotations
+            go opaqueIsObject = do
+                opaqueName        <- parseSymbol' name
+                opaqueAnnotations <- parseAnnotations
+                pure Opaque{..}
             parseAnnotations = case annotations of
                 [] -> pure defaultOpaqueAnnotations
                 _  -> fail "opaque annotations are not implemented yet"
@@ -111,10 +114,10 @@ instance FromEDN (StructLww 'Parsed) where
     parseEDN = withNoTag . withList $ \case
         name : body -> do
             let (annotations, fields) = span isTagged body
-            StructLww
-                <$> parseSymbol' name
-                <*> parseFields fields
-                <*> parseList annotations
+            structName        <- parseSymbol' name
+            structFields      <- parseFields fields
+            structAnnotations <- parseList annotations
+            pure StructLww{..}
         [] -> fail
             "Expected declaration in the form\
             \ (struct_lww <name:symbol> <annotations>... <fields>...)"

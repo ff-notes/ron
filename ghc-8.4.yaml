@@ -18,3 +18,6 @@ extra-deps:
 
   # hedn:
   - megaparsec-7.0.4
+
+extra-lib-dirs:
+  - swarm/_artifacts/lib

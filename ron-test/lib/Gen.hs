@@ -29,10 +29,12 @@ import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             ReplicaId (ReplicaId), days, hours, minutes, months,
                             nanosecHundreds, seconds)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            ClosedOp (ClosedOp), Op (Op),
-                            StateChunk (StateChunk), StateFrame, UUID,
-                            WireChunk (Query, Closed, Value), WireFrame,
-                            WireReducedChunk (WireReducedChunk))
+                            ClosedOp (ClosedOp, objectId, op, reducerId),
+                            Op (Op, opId, payload, refId),
+                            StateChunk (StateChunk, stateBody, stateType, stateVersion),
+                            StateFrame, UUID, WireChunk (Closed, Query, Value),
+                            WireFrame,
+                            WireReducedChunk (WireReducedChunk, wrcBody, wrcHeader))
 import           RON.Util.Word (Word60, leastSignificant2, leastSignificant4,
                                 ls12, ls24, ls6, ls60)
 import           RON.UUID (UuidFields (UuidFields))
@@ -48,18 +50,27 @@ uuid :: MonadGen gen => gen UUID
 uuid = UUID.build <$> uuidFields
 
 uuidFields :: MonadGen gen => gen UuidFields
-uuidFields = UuidFields
-    <$> (leastSignificant4 <$> word8 (Range.constant 0 15))
-    <*> word60
-    <*> (leastSignificant2 <$> word8 (Range.constant 0 3))
-    <*> (leastSignificant2 <$> word8 (Range.constant 0 3))
-    <*> choice [pure $ ls60 42, word60]
+uuidFields = do
+    uuidVariety <- leastSignificant4 <$> word8 (Range.constant 0 15)
+    uuidValue   <- word60
+    uuidVariant <- leastSignificant2 <$> word8 (Range.constant 0 3)
+    uuidVersion <- leastSignificant2 <$> word8 (Range.constant 0 3)
+    uuidOrigin  <- choice [pure $ ls60 42, word60]
+    pure UuidFields{..}
 
 closedOp :: MonadGen gen => Int -> gen ClosedOp
-closedOp size = ClosedOp <$> uuid <*> uuid <*> reducedOp size
+closedOp size = do
+    reducerId <- uuid
+    objectId  <- uuid
+    op        <- reducedOp size
+    pure ClosedOp{..}
 
 reducedOp :: MonadGen gen => Int -> gen Op
-reducedOp size = Op <$> uuid <*> uuid <*> payload size
+reducedOp size = do
+    opId    <- uuid
+    refId   <- uuid
+    payload <- genPayload size
+    pure Op{..}
 
 wireChunk :: MonadGen gen => Int -> gen WireChunk
 wireChunk size =
@@ -67,26 +78,27 @@ wireChunk size =
         [Closed <$> closedOp size, Value <$> rchunk size, Query <$> rchunk size]
 
 rchunk :: MonadGen gen => Int -> gen WireReducedChunk
-rchunk size = WireReducedChunk
-    <$> closedOp size
-    <*> list (Range.exponential 0 size) (reducedOp size)
+rchunk size = do
+    wrcHeader <- closedOp size
+    wrcBody   <- list (Range.exponential 0 size) (reducedOp size)
+    pure WireReducedChunk{..}
 
 wireFrame :: MonadGen gen => Int -> gen WireFrame
 wireFrame size = list (Range.exponential 0 size) (wireChunk size)
 
 stateFrame :: MonadGen gen => Int -> gen StateFrame
-stateFrame size
-    = Gen.map (Range.exponential 0 size)
-    $ (,) <$> uuid <*> stateChunk size
+stateFrame size =
+    Gen.map (Range.exponential 0 size) $ (,) <$> uuid <*> stateChunk size
 
 stateChunk :: MonadGen gen => Int -> gen StateChunk
-stateChunk size = StateChunk
-    <$> choice [pure UUID.zero, uuid]
-    <*> choice [pure UUID.zero, uuid]
-    <*> choice
+stateChunk size = do
+    stateType    <- choice [pure UUID.zero, uuid]
+    stateVersion <- choice [pure UUID.zero, uuid]
+    stateBody    <- choice
         [ pure [Op UUID.zero UUID.zero []]
         , list (Range.exponential 0 size) $ reducedOp size
         ]
+    pure StateChunk{..}
 
 wireFrames :: MonadGen gen => Int -> gen [WireFrame]
 wireFrames size = list (Range.exponential 0 size) (wireFrame size)
@@ -109,8 +121,8 @@ eventTime = choice
     , TUnknown  <$> word60
     ]
 
-payload :: MonadGen gen => Int -> gen [Atom]
-payload size = list (Range.exponential 0 size) (atom size)
+genPayload :: MonadGen gen => Int -> gen [Atom]
+genPayload size = list (Range.exponential 0 size) (atom size)
 
 atom :: MonadGen gen => Int -> gen Atom
 atom size = choice
