@@ -19,6 +19,8 @@ module RON.Data.ORSet
     , removeValue
     ) where
 
+import           RON.Prelude
+
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal

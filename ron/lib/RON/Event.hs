@@ -31,6 +31,8 @@ module RON.Event
     , toEpochEvent
     ) where
 
+import           RON.Prelude
+
 import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (hashUsing, hashWithSalt)
 

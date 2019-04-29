@@ -6,6 +6,8 @@
 -- | 'Day' instances
 module RON.Data.Time (Day) where
 
+import           RON.Prelude
+
 import           Data.Time (Day, fromGregorian, toGregorian)
 
 import           RON.Data (Replicated (..), ReplicatedAsPayload (..),

@@ -31,6 +31,8 @@ module RON.Types (
     opPattern,
 ) where
 
+import           RON.Prelude
+
 import qualified Text.Show
 
 import           RON.Util.Word (pattern B00, pattern B10, pattern B11, Word2)

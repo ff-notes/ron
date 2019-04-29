@@ -32,6 +32,8 @@ module RON.Storage.FS (
     subscribeForever,
 ) where
 
+import           RON.Prelude
+
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO, readTChan,
                                          writeTChan)
@@ -42,6 +44,7 @@ import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                                    doesDirectoryExist, doesPathExist,
                                    listDirectory, removeFile, renameDirectory)
+import           System.FilePath ((</>))
 import           System.IO.Error (isDoesNotExistError)
 
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)

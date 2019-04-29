@@ -20,7 +20,7 @@ module RON.Text.Parse
     , parseWireFrames
     ) where
 
-import           Prelude hiding (takeWhile)
+import           RON.Prelude hiding (takeWhile)
 
 import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
                                    label, manyTill, parseOnlyL, satisfy, (<+>),

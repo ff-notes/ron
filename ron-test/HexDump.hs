@@ -2,6 +2,8 @@
 
 module HexDump where
 
+import           RON.Prelude
+
 import qualified Data.ByteString.Lazy as BSL
 import           Data.List (init, tail)
 import           Numeric (showHex)

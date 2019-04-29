@@ -4,6 +4,8 @@
 
 module LwwStruct (prop_lwwStruct) where
 
+import           RON.Prelude
+
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (withFrozenCallStack)

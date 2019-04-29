@@ -11,6 +11,8 @@ module RON.Text.Serialize.UUID
     , serializeUuidKey
     ) where
 
+import           RON.Prelude
+
 import           Data.Bits (countLeadingZeros, shiftL, xor)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC

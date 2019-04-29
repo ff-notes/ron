@@ -28,6 +28,8 @@ module RON.UUID
     , encodeBase32
     ) where
 
+import           RON.Prelude
+
 import           Data.Bits (shiftL, shiftR, (.|.))
 import qualified Data.ByteString.Char8 as BSC
 import           Language.Haskell.TH.Syntax (Exp, Q, liftData)

@@ -16,6 +16,8 @@ module Gen (
     word64',
 ) where
 
+import           RON.Prelude
+
 import           Hedgehog (MonadGen)
 import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
                                text, unicodeAll, word64, word8)

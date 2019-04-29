@@ -1,7 +1,6 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE LambdaCase #-}
 
-module Prelude (
+module RON.Prelude (
     module X,
     fmapL,
     foldr1,
@@ -27,10 +26,23 @@ import           Control.Applicative as X (Alternative, Applicative, liftA2,
 import           Control.Exception as X (Exception, catch, evaluate, throwIO)
 import           Control.Monad as X (Monad, filterM, guard, unless, void, when,
                                      (<=<), (=<<), (>=>), (>>=))
+import           Control.Monad.Except as X (ExceptT, MonadError, catchError,
+                                            liftEither, runExceptT, throwError)
 import           Control.Monad.Fail as X (MonadFail, fail)
 import           Control.Monad.IO.Class as X (MonadIO, liftIO)
+import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
+                                            runReaderT)
+import           Control.Monad.State.Strict as X (MonadState, State, StateT,
+                                                  evalState, evalStateT,
+                                                  execStateT, get, gets,
+                                                  modify', put, runState,
+                                                  runStateT, state)
+import           Control.Monad.Trans as X (MonadTrans, lift)
+import           Control.Monad.Writer.Strict as X (MonadWriter, WriterT,
+                                                   runWriterT, tell)
 import           Data.Bifunctor as X (bimap)
 import           Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
+import           Data.ByteString as X (ByteString)
 import           Data.Char as X (Char, chr, ord, toLower, toUpper)
 import           Data.Coerce as X (Coercible, coerce)
 import           Data.Data as X (Data)
@@ -42,6 +54,8 @@ import           Data.Foldable as X (Foldable, and, asum, fold, foldMap, foldl',
 import           Data.Function as X (const, flip, on, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>))
 import           Data.Functor.Identity as X (Identity)
+import           Data.Hashable as X (Hashable, hash)
+import           Data.HashMap.Strict as X (HashMap)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
 import           Data.IORef as X (IORef, atomicModifyIORef', newIORef,
                                   readIORef, writeIORef)
@@ -51,6 +65,7 @@ import           Data.List as X (drop, filter, genericLength, intercalate,
                                  splitAt, take, takeWhile, unlines, unwords,
                                  zip, (++))
 import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
+import           Data.Map.Strict as X (Map)
 import           Data.Maybe as X (Maybe (Just, Nothing), catMaybes, fromMaybe,
                                   listToMaybe, maybe, maybeToList)
 import           Data.Monoid as X (Last (Last), Monoid, mempty)
@@ -60,6 +75,8 @@ import           Data.Ord as X (Down (Down), Ord, Ordering (EQ, GT, LT),
 import           Data.Ratio as X ((%))
 import           Data.Semigroup as X (Semigroup, sconcat, (<>))
 import           Data.String as X (String)
+import           Data.Text as X (Text)
+import           Data.Time as X (UTCTime)
 import           Data.Traversable as X (for, sequence, sequenceA, traverse)
 import           Data.Tuple as X (fst, snd, uncurry)
 import           Data.Typeable as X (Typeable)
@@ -76,53 +93,6 @@ import           GHC.Real as X (Integral, fromIntegral, mod, realToFrac, round,
 import           GHC.Stack as X (HasCallStack)
 import           System.IO as X (FilePath, IO)
 import           Text.Show as X (Show)
-
-#ifdef VERSION_bytestring
-import           Data.ByteString as X (ByteString)
-#endif
-
-#ifdef VERSION_containers
-import           Data.Map.Strict as X (Map)
-#endif
-
-#ifdef VERSION_deepseq
-import           Control.DeepSeq as X (NFData, force)
-#endif
-
-#ifdef VERSION_filepath
-import           System.FilePath as X ((</>))
-#endif
-
-#ifdef VERSION_hashable
-import           Data.Hashable as X (Hashable, hash)
-#endif
-
-#ifdef VERSION_mtl
-import           Control.Monad.Except as X (ExceptT, MonadError, catchError,
-                                            liftEither, runExceptT, throwError)
-import           Control.Monad.Reader as X (ReaderT (ReaderT), ask, reader,
-                                            runReaderT)
-import           Control.Monad.State.Strict as X (MonadState, State, StateT,
-                                                  evalState, evalStateT,
-                                                  execStateT, get, gets,
-                                                  modify', put, runState,
-                                                  runStateT, state)
-import           Control.Monad.Trans as X (MonadTrans, lift)
-import           Control.Monad.Writer.Strict as X (MonadWriter, WriterT,
-                                                   runWriterT, tell)
-#endif
-
-#ifdef VERSION_text
-import           Data.Text as X (Text)
-#endif
-
-#ifdef VERSION_time
-import           Data.Time as X (UTCTime)
-#endif
-
-#ifdef VERSION_unordered_containers
-import           Data.HashMap.Strict as X (HashMap)
-#endif
 
 --------------------------------------------------------------------------------
 

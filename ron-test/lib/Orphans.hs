@@ -2,6 +2,8 @@
 
 module Orphans () where
 
+import           RON.Prelude
+
 import           Hedgehog (MonadTest, liftTest)
 
 import           RON.Event.Simulation (NetworkSimT, ReplicaSimT)

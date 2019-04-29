@@ -5,6 +5,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
+import           RON.Prelude
+
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)

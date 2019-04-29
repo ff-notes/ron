@@ -30,6 +30,8 @@ module RON.Data.Internal (
     payloadEncoding,
 ) where
 
+import           RON.Prelude
+
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 

@@ -7,6 +7,8 @@
 
 module RON.Storage.Test (TestDB, runStorageSim) where
 
+import           RON.Prelude
+
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Functor.Compose (Compose (Compose), getCompose)
 import           Data.Map.Strict ((!), (!?))

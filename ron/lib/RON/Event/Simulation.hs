@@ -15,6 +15,8 @@ module RON.Event.Simulation
     , runReplicaSimT
     ) where
 
+import           RON.Prelude
+
 import qualified Data.HashMap.Strict as HM
 
 import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,

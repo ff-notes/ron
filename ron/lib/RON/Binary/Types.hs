@@ -3,6 +3,8 @@
 -- | Common types for binary format (parser and serializer)
 module RON.Binary.Types where
 
+import           RON.Prelude
+
 type Size = Word32
 
 -- | Data block descriptor

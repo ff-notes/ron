@@ -30,6 +30,8 @@ module RON.Schema (
     opaqueObject,
 ) where
 
+import           RON.Prelude
+
 import qualified Data.Text as Text
 
 data Stage = Parsed | Resolved

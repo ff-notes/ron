@@ -13,6 +13,8 @@ module Attoparsec.Extra
     , (<+>)
     ) where
 
+import           RON.Prelude
+
 import           Data.Attoparsec.ByteString.Char8 (anyChar)
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec

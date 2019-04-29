@@ -25,6 +25,8 @@ module RON.Data (
     reduceWireFrame,
 ) where
 
+import           RON.Prelude
+
 import qualified Data.List.NonEmpty as NonEmpty
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map

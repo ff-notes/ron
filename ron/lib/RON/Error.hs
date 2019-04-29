@@ -13,6 +13,8 @@ module RON.Error (
     throwErrorText,
 ) where
 
+import           RON.Prelude
+
 import           Data.String (IsString, fromString)
 
 data Error

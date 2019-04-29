@@ -10,6 +10,8 @@
 
 module RON.Schema.EDN (readSchema) where
 
+import           RON.Prelude
+
 import           Data.EDN (FromEDN, Tagged (NoTag, Tagged),
                            Value (List, Symbol), mapGetSymbol, parseEDN,
                            renderText, unexpected, withList, withMap, withNoTag)

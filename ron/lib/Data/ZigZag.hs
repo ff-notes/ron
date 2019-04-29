@@ -5,6 +5,8 @@ module Data.ZigZag
     , zzDecode64
     ) where
 
+import           RON.Prelude
+
 import           Data.Bits (Bits, FiniteBits, finiteBitSize, shiftL, shiftR,
                             xor, (.&.))
 

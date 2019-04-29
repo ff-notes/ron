@@ -10,6 +10,8 @@ module RON.Epoch (
     runEpochClockFromCurrentTime,
 ) where
 
+import           RON.Prelude
+
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
                                         posixSecondsToUTCTime)
 

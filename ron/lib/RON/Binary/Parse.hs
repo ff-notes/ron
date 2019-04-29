@@ -13,6 +13,8 @@ module RON.Binary.Parse (
     parseString,
 ) where
 
+import           RON.Prelude
+
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
                                    parseOnlyL, takeL, withInputSize)
 import qualified Attoparsec.Extra as Atto

@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import           RON.Prelude
+
 import qualified Data.HashSet as HashSet
 import           Data.List (intersect, minimum, tails)
 import qualified Data.Text as Text

@@ -16,6 +16,8 @@ module RON.Storage (
     modify,
 ) where
 
+import           RON.Prelude
+
 import qualified Data.Text as Text
 
 import           RON.Data (reduceObject)

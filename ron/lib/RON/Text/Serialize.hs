@@ -17,6 +17,8 @@ module RON.Text.Serialize
     , serializeWireFrames
     ) where
 
+import           RON.Prelude
+
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC

@@ -19,8 +19,11 @@ module RON.Storage.Backend (
     readVersion,
 ) where
 
+import           RON.Prelude
+
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String (fromString)
+import           System.FilePath ((</>))
 import qualified Text.Show (show)
 
 import           RON.Data (ReplicatedAsObject)

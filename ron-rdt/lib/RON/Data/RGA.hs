@@ -31,6 +31,8 @@ module RON.Data.RGA
     , rgaType
     ) where
 
+import           RON.Prelude
+
 import           Data.Algorithm.Diff (Diff (Both, First, Second),
                                       getGroupedDiffBy)
 import qualified Data.HashMap.Strict as HashMap

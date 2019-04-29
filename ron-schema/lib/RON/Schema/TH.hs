@@ -11,7 +11,7 @@ module RON.Schema.TH(
     mkReplicated',
 ) where
 
-import           Prelude hiding (lift)
+import           RON.Prelude hiding (lift)
 
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toTitle)

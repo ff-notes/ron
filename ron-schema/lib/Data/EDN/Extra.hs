@@ -10,6 +10,8 @@ module Data.EDN.Extra (
     withSymbol',
 ) where
 
+import           RON.Prelude
+
 import qualified Data.EDN.AST.Lexer as EdnAst
 import qualified Data.EDN.AST.Parser as EdnAst
 import qualified Data.EDN.AST.Types as EdnAst

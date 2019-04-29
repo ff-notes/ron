@@ -32,6 +32,8 @@ module LwwStruct.Types (
     TestEnum (..),
 ) where
 
+import           RON.Prelude
+
 import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
                            fromPayload, payloadEncoding, toPayload)
 import           RON.Schema.TH (mkReplicated)

@@ -4,6 +4,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
+import           RON.Prelude
+
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Generics (gcompare)
@@ -12,6 +14,7 @@ import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import           Hedgehog (Property, property, (===))
 import           System.Directory (listDirectory)
+import           System.FilePath ((</>))
 import           Test.Tasty (TestTree, defaultMain, testGroup)
 import           Test.Tasty.Hedgehog (testProperty)
 import           Test.Tasty.HUnit (assertFailure, testCase)

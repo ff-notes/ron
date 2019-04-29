@@ -47,6 +47,8 @@ module RON.Util.Word
     , SafeCast (..)
     ) where
 
+import           RON.Prelude
+
 import           Data.Bits ((.&.))
 import           Data.Fixed (Fixed, HasResolution)
 import           Data.Hashable (hashUsing, hashWithSalt)

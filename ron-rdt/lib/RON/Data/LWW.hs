@@ -18,6 +18,8 @@ module RON.Data.LWW
     , zoomField
     ) where
 
+import           RON.Prelude
+
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducible, Replicated, collectFrame,
