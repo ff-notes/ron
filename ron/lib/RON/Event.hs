@@ -37,6 +37,7 @@ import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (hashUsing, hashWithSalt)
 import           Data.Maybe (isJust)
 import           Data.Time.Calendar (fromGregorianValid)
+import           Data.Time.LocalTime (makeTimeOfDayValid)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word16, Word2, Word24,
@@ -286,10 +287,12 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
             }
     else Nothing
   where
+    fi :: (Integral a, Num b) => a -> b
+    fi = fromIntegral
     validateDateTime =
-        let day = fromGregorianValid (fromIntegral y) (fromIntegral m) (fromIntegral d)
-            time = hh < 25 && mm < 61 && ss < 61
-        in isJust day && time && y > 2009 && ns < 10^(9::Int)
+        let day = fromGregorianValid (fi y) (fi m) (fi d)
+            time = makeTimeOfDayValid (fi hh) (fi mm) (MkFixed $ fi ss + fi ns)
+        in isJust day && isJust time && y > 2009
 
 -- | Make an 'ApplicationSpecific' replica id from arbitrary number
 applicationSpecific :: Word64 -> ReplicaId

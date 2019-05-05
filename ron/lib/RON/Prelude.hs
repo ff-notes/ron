@@ -48,6 +48,7 @@ import           Data.Coerce as X (Coercible, coerce)
 import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
+import           Data.Fixed as X (Fixed (MkFixed))
 import           Data.Foldable as X (Foldable, and, asum, fold, foldMap, foldl',
                                      foldr, for_, length, minimumBy, null, or,
                                      toList, traverse_)
