@@ -3,7 +3,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -281,7 +280,7 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) hns = do
     _ <- fromGregorianValid (fromIntegral y) (fromIntegral m) (fromIntegral d)
     _ <-
         makeTimeOfDayValid (fromIntegral hh) (fromIntegral mm) (fromIntegral ss)
-    guard $ hns < 10_000_000
+    guard $ hns < 10000000
     pure CalendarTime
         { months          = ls12 months
         , days            = ls6  $ d - 1
