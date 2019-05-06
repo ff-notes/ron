@@ -35,6 +35,7 @@ import           RON.Prelude
 
 import           Data.Bits (shiftL, shiftR, (.|.))
 import           Data.Hashable (hashUsing, hashWithSalt)
+import           Data.Time (fromGregorianValid, makeTimeOfDayValid)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word16, Word2, Word24,
@@ -272,15 +273,21 @@ mkCalendarDateTimeNano
     -> Word32                   -- ^ fraction of a second in hundreds of
                                 -- nanosecond
     -> Maybe CalendarTime
-mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) ns =
-    -- TODO(2018-08-19, cblp, #24) validate bounds
+mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) hns = do
+    guard $ y >= 2010
+    let months = (y - 2010) * 12 + m - 1
+    guard $ months < 4096
+    _ <- fromGregorianValid (fromIntegral y) (fromIntegral m) (fromIntegral d)
+    _ <-
+        makeTimeOfDayValid (fromIntegral hh) (fromIntegral mm) (fromIntegral ss)
+    guard $ hns < 10000000
     pure CalendarTime
-        { months          = ls12 $ (y - 2010) * 12 + m - 1
+        { months          = ls12 months
         , days            = ls6  $ d - 1
         , hours           = ls6  hh
         , minutes         = ls6  mm
         , seconds         = ls6  ss
-        , nanosecHundreds = ls24 ns
+        , nanosecHundreds = ls24 hns
         }
 
 -- | Make an 'ApplicationSpecific' replica id from arbitrary number
