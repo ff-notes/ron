@@ -14,9 +14,18 @@ description:
 
 build-type: Simple
 
+flag swarm
+    description: Build swarm package (experimental)
+    default: False
+    manual: True
+
 common language
     build-depends: base >= 4.10 && < 4.13
     default-language: Haskell2010
+    if flag(swarm)
+        buildable: True
+    else
+        buildable: False
 
 library
     import: language
