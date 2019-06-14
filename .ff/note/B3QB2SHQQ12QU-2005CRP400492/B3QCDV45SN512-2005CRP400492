@@ -3,14 +3,14 @@
 	:provider 'github'
 	:source 'ff-notes/ron'
 	:url 'https://github.com/ff-notes/ron/issues/57'
-#]iU @` :0 !
-	:end >none
+#]iU @B/7eZV_BntR6+00gDu8014Y :0 !
+	@` :end >none
 	:start =2019 =4 =17
-	:status >Active
-	:text >]dx
+	@B/7eZV_BntR6+00gDu8014Y :status >Archived
+	@` :text >]dx
 	:track >some >B/7eOjHqd8hh+00gDu8014Y
-*rga #]dx @]ZW :0 !
-	@]YE 'A'
+*rga #]dx @B/7eZV_BnuEp+00gDu8014Y :0 !
+	@`]YE 'A'
 	@)F 'd'
 	@)G 'd'
 	@)H ' '
@@ -42,8 +42,9 @@
 	@)g '-'
 	@)h ' '
 	@)i '['
-	@)j ' '
-	@)k ']'
+	@)j :B/7eZV_Bnu3Q+00gDu8014Y ' '
+	@B/7eZV_Bnu58+00gDu8014Y :0 'x'
+	@`]Yk ']'
 	@)l ' '
 	@)m 'a'
 	@)n 'd'
@@ -53,15 +54,22 @@
 	@)r 't'
 	@)s 'e'
 	@)t 'm'
-	@)u '\r'
+	@B/7eZV_Bnu5v+00gDu8014Y ' '
+	@]6Y '—'
+	@)r ' '
+	@]7K '#'
+	@)d '5'
+	@)x '8'
+	@`]Yu '\r'
 	@)v '\n'
 	@)w ' '
 	@)x ' '
 	@)y '-'
 	@)z ' '
 	@)~ '['
-	@]Z ' '
-	@)1 ']'
+	@]Z :B/7eZV_Bnu8j+00gDu8014Y ' '
+	@B/7eZV_Bnu9C+00gDu8014Y :0 'x'
+	@`]Z1 ']'
 	@)2 ' '
 	@)3 'i'
 	@)4 'n'
@@ -74,13 +82,20 @@
 	@)B 'E'
 	@)C 'n'
 	@)D 'd'
-	@)E '\r'
+	@B/7eZV_Bnu9p+00gDu8014Y ' '
+	@]A8 '—'
+	@)S ' '
+	@)l '#'
+	@]B4 '6'
+	@)Y '1'
+	@`]ZE '\r'
 	@)F '\n'
 	@)G '-'
 	@)H ' '
 	@)I '['
-	@)J ' '
-	@)K ']'
+	@)J :B/7eZV_BnuC+00gDu8014Y ' '
+	@B/7eZV_BnuCU+00gDu8014Y :0 'x'
+	@`]ZK ']'
 	@)L ' '
 	@)M 'r'
 	@)N 'e'
@@ -93,4 +108,10 @@
 	@)U 't'
 	@)V 'e'
 	@)W 'm'
+	@B/7eZV_BnuD6+00gDu8014Y ' '
+	@)Q '—'
+	@)j ' '
+	@]E2 '#'
+	@)M '6'
+	@)p '2'
 .
