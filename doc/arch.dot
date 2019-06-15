@@ -1,0 +1,71 @@
+digraph {
+    compound = true;
+
+    node [fontname = "sans-serif", shape = box];
+    graph [color = gray, fontcolor = gray, fontname = "sans-serif"];
+
+    apps [shape = ellipse];
+    ff;
+
+    subgraph cluster_db {
+        label = "databases";
+
+        ron_storage_hs [label = "ron-storage : lib : Haskell"];
+        swarm_bin [label = "Swarm : bin"];
+        swarm_lib [
+            label = "{Swarm : lib : C++ | embeddable database}",
+            shape = record,
+        ];
+    }
+
+    subgraph cluster_ron_implementations {
+        label = "RON & RON-RDT implementations";
+
+        // cluster_ron_implementations [shape = point, style = invis];
+
+        ron_cxx [label = "RON : lib : C++"];
+        ron_hs [label = "ron : lib : Haskell"];
+        ron_rdt_hs [label = "ron-rdt : lib : Haskell"];
+    }
+
+    subgraph cluster_spec {
+        label = "spec";
+
+        ron_rdt_spec [
+            label = "{RON-RDT : spec | algorithms}", shape = record
+        ];
+        ron_spec [
+            label =
+                "{RON : spec | {proto | repr | QL} | data model}",
+            shape = record,
+        ];
+    }
+
+    subgraph cluster_storage {
+        label = "storage";
+
+        RocksDB;
+        files;
+    }
+
+    subgraph cluster_replication {
+        label = "network/replication";
+
+        q [label = "?", shape = ellipse];
+        file_replication [
+            label = "{file replication services | {Dropbox | Yandex.Disk}}", shape = record
+        ];
+    }
+
+    ron_storage_hs -> ron_rdt_hs -> ron_hs;
+    ff -> ron_storage_hs -> files;
+    swarm_bin -> swarm_lib -> ron_cxx;
+    swarm_lib -> RocksDB [minlen = 3];
+    apps -> swarm_bin, swarm_lib, ron_storage_hs;
+    ron_hs -> ron_rdt_spec [
+        lhead = cluster_spec,
+        ltail = cluster_ron_implementations,
+        minlen = 2,
+    ];
+    ron_rdt_spec -> ron_spec;
+}
