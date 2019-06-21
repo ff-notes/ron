@@ -52,7 +52,7 @@ instance ReplicatedAsPayload Opaque49 where
         int1 Integer
         str2 RgaString
         str3 String
-        set4 (ORSet Struct51)
+        set4 TestAlias69
         opt5 (Option Struct51)
         opt6 (Option Integer))
 
@@ -65,6 +65,8 @@ instance ReplicatedAsPayload Opaque49 where
         innerField Integer)
 
     (enum Enum67 E67Item1 E67Item2)
+
+    (alias TestAlias69 (ORSet Struct51))
 |]
 
 deriving instance Eq   Struct51
