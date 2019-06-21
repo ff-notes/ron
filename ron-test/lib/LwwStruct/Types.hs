@@ -3,7 +3,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module LwwStruct.Types (
-    Example1 (..),
+    Struct51 (..),
     int1_assign,
     int1_read,
     int1_zoom,
@@ -29,7 +29,7 @@ module LwwStruct.Types (
     tfpatInnerField_assign,
     tfpatInnerField_read,
     tfpatInnerField_zoom,
-    TestEnum (..),
+    Enum67 (..),
 ) where
 
 import           RON.Prelude
@@ -38,34 +38,34 @@ import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
                            fromPayload, payloadEncoding, toPayload)
 import           RON.Schema.TH (mkReplicated)
 
-data TestOpaque = TestOpaque
+data Opaque49 = Opaque49
     deriving (Eq, Show)
-instance Replicated TestOpaque where encoding = payloadEncoding
-instance ReplicatedAsPayload TestOpaque where
+instance Replicated Opaque49 where encoding = payloadEncoding
+instance ReplicatedAsPayload Opaque49 where
     toPayload   = undefined
     fromPayload = undefined
 
 [mkReplicated|
-    (opaque atoms TestOpaque)
+    (opaque atoms Opaque49)
 
-    (struct_lww Example1
+    (struct_lww Struct51
         int1 Integer
         str2 RgaString
         str3 String
-        set4 (ORSet Example1)
-        opt5 (Option Example1)
+        set4 (ORSet Struct51)
+        opt5 (Option Struct51)
         opt6 (Option Integer))
 
     (struct_lww TestFieldPrefix
         #haskell {field_prefix "tfp_"}
-        field (Option TestOpaque))
+        field (Option Opaque49))
 
     (struct_lww TestFieldPrefixAndTitle
         #haskell {field_prefix "tfpat", field_case title}
         innerField Integer)
 
-    (enum TestEnum TEItem1 TEItem2)
+    (enum Enum67 E67Item1 E67Item2)
 |]
 
-deriving instance Eq   Example1
-deriving instance Show Example1
+deriving instance Eq   Struct51
+deriving instance Show Struct51
