@@ -64,7 +64,7 @@ instance ReplicatedAsPayload Opaque49 where
         #haskell {field_prefix "tfpat", field_case title}
         innerField Integer)
 
-    (enum Enum67 TEItem1 TEItem2)
+    (enum Enum67 E67Item1 E67Item2)
 
     (alias TestAlias69 (ORSet Struct51))
 |]
