@@ -1,0 +1,22 @@
+cabal-version: >= 1.2
+
+name: demo
+version: 2019
+
+build-type: Simple
+
+executable demo
+    build-depends:
+        base,
+        brick,
+        mtl,
+        ron,
+        ron-rdt,
+        ron-storage,
+        text,
+        text-zipper,
+        vty
+    default-language: Haskell2010
+    ghc-options: -threaded
+    main-is: Main.hs
+    other-modules: Types
