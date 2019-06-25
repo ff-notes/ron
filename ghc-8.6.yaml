@@ -12,7 +12,8 @@ packages:
 
 extra-deps:
   # ron-test:
-  - tasty-hedgehog-0.2.0.0
+  - hedgehog-1.0
+  - tasty-hedgehog-1.0.0.1
 
   # demo:
   - brick-0.47
