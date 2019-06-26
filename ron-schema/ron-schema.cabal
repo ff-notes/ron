@@ -70,4 +70,6 @@ library
     other-modules:
         Data.EDN.Extra
         RON.Schema.EDN
+        RON.Schema.TH.Common
+        RON.Schema.TH.Struct
     hs-source-dirs: lib
