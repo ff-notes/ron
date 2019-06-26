@@ -18,7 +18,6 @@ module RON.Types (
     Atom (..),
     ClosedOp (..),
     Object (..),
-    ObjectPart (..),
     Op (..),
     OpPattern (..),
     OpTerm (..),
@@ -113,10 +112,6 @@ type StateFrame = Map UUID StateChunk
 -- | Reference to an object inside a frame.
 data Object a = Object{id :: UUID, frame :: StateFrame}
     deriving (Eq, Show)
-
--- | Specific field or item in an object, identified by UUID.
-data ObjectPart obj part = ObjectPart
-    {partObject :: UUID, partLocation :: UUID, partFrame :: StateFrame}
 
 data OpPattern =
     Regular | Delete | Undelete | Create | Ack | Annotation | AnnotationDerived

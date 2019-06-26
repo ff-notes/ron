@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Removed
+- `ObjectPart` as not used in RON-RDT 2.1--3.0.
 
 ## [0.6] - 2019-03-01
 ### Added
