@@ -9,7 +9,7 @@
 >
 > [mkReplicated|
 >     (struct_lww Note
->         active Boole
+>         active Bool
 >         text RgaString)
 > |]
 >

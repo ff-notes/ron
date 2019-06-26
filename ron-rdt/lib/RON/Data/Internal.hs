@@ -275,7 +275,7 @@ instance ReplicatedAsPayload Bool where
         | b         = [ATrue]
         | otherwise = [AFalse]
 
-    fromPayload = errorContext "Boole" . \case
+    fromPayload = errorContext "Bool" . \case
         [ATrue]  -> pure True
         [AFalse] -> pure False
         _        -> throwError "Expected single UUID `true` or `false`"
