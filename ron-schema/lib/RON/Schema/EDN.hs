@@ -39,9 +39,9 @@ data RonTypeF = Type0 RonType | Type1 (RonType -> RonType)
 
 prelude :: Map TypeName RonTypeF
 prelude = Map.fromList
-    [ ("Boole",
+    [ ("Bool",
         Type0 $
-        opaqueAtoms "Boole" OpaqueAnnotations{oaHaskellType = Just "Bool"})
+        opaqueAtoms "Bool" OpaqueAnnotations{oaHaskellType = Just "Bool"})
     , ("Day",           Type0 day)
     , ("Integer",       Type0 $ TAtom TAInteger)
     , ("RgaString",     Type0 $ TObject $ TRga char)

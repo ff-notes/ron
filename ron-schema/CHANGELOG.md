@@ -9,6 +9,9 @@ and this project adheres to
 ### Added
 - Schema language: `alias` declaration.
 
+### Changed
+- Renamed `Boole` -> `Bool` due to tradition.
+
 ## [0.6] - 2019-04-25
 ### Added
 - Schema language: `RGA` type.
