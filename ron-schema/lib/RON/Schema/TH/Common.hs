@@ -37,15 +37,17 @@ mkViewType = \case
         TEnum   Enum{name} -> conT $ mkNameT name
         TOption u          -> [t| Maybe $(mkViewType u) |]
     TObject t -> case t of
-        TORSet     item            -> wrapList item
-        TRga       item            -> wrapList item
+        TORSet     item            -> list item
+        TORSetMap  key value       -> pairList key value
+        TRga       item            -> list item
         TStructLww StructLww{name} -> conT $ mkNameT name
         TVersionVector             -> [t| VersionVector |]
-    TOpaque Opaque{name, annotations} -> let
-        OpaqueAnnotations{haskellType} = annotations
-        in conT $ mkNameT $ fromMaybe name haskellType
+    TOpaque Opaque{opaqueName, opaqueAnnotations} -> let
+        OpaqueAnnotations{oaHaskellType} = opaqueAnnotations
+        in conT $ mkNameT $ fromMaybe opaqueName oaHaskellType
   where
-    wrapList a = [t| [$(mkViewType a)] |]
+    list     a   = [t| [  $(mkViewType a)                   ] |]
+    pairList a b = [t| [( $(mkViewType a), $(mkViewType b) )] |]
 
 valD :: TH.PatQ -> TH.ExpQ -> TH.DecQ
 valD pat body = TH.valD pat (normalB body) []

@@ -63,6 +63,7 @@ data TEnum = Enum {name :: Text, items :: [Text]}
 
 data TObject
     = TORSet     RonType
+    | TORSetMap  RonType RonType
     | TRga       RonType
     | TStructLww (StructLww 'Resolved)
     | TVersionVector

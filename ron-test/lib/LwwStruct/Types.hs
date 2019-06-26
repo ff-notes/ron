@@ -71,6 +71,8 @@ instance ReplicatedAsPayload Opaque49 where
     (enum Enum67 E67Item1 E67Item2)
 
     (alias Alias69 (ORSet Struct51))
+
+    (alias Alias71 (ORSet.Map String String))
 |]
 
 deriving instance Eq   Struct51

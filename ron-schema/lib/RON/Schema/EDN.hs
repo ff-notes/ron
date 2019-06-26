@@ -35,7 +35,10 @@ readSchema sourceName source = do
 newtype Env = Env{userTypes :: Map TypeName (Declaration 'Parsed)}
     deriving (Show)
 
-data RonTypeF = Type0 RonType | Type1 (RonType -> RonType)
+data RonTypeF
+    = Type0 RonType
+    | Type1 (RonType -> RonType)
+    | Type2 (RonType -> RonType -> RonType)
 
 prelude :: Map TypeName RonTypeF
 prelude = Map.fromList
@@ -48,6 +51,7 @@ prelude = Map.fromList
     , ("VersionVector", Type0 $ TObject TVersionVector)
     , ("Option",        Type1 $ TComposite . TOption)
     , ("ORSet",         Type1 $ TObject . TORSet)
+    , ("ORSet.Map",     Type2 $ \k v -> TObject $ TORSetMap k v)
     , ("RGA",           Type1 $ TObject . TRga)
     ]
   where
@@ -227,7 +231,7 @@ evalSchema env = fst <$> userTypes' where
     evalType = \case
         Use typ        -> case getType typ of
             Type0 t0   -> t0
-            Type1 _    -> error "type arity mismatch"
+            _          -> error "type arity mismatch"
         Apply typ args -> applyType typ $ evalType <$> args
 
     applyType name args = case getType name of
@@ -236,6 +240,11 @@ evalSchema env = fst <$> userTypes' where
             [a] -> t1 a
             _   -> error
                 $   Text.unpack name ++ " expects 1 argument, got "
+                ++  show (length args)
+        Type2 t2 -> case args of
+            [a, b] -> t2 a b
+            _   -> error
+                $   Text.unpack name ++ " expects 2 arguments, got "
                 ++  show (length args)
 
 instance FromEDN (Alias 'Parsed) where
