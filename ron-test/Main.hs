@@ -29,7 +29,7 @@ import qualified RON.Base64 as Base64
 import qualified RON.Binary.Parse as RB
 import qualified RON.Binary.Serialize as RB
 import           RON.Data (newObject)
-import           RON.Data.ORSet (ORSet (ORSet), ObjectORSet (ObjectORSet))
+import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
@@ -421,7 +421,7 @@ prop_ObjectORSet = let
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 400) $ do
-        set0 <- newObject $ ObjectORSet @RgaString []
+        set0 <- newObject $ ORSet @RgaString []
         set0expect === prep set0
         rga0 <- RGA.newFromText "403"
         (`evalStateT` set0) $ do

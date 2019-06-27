@@ -140,6 +140,7 @@ newRon = encodingNewRon encoding
 
 -- | Decode typed data from a payload.
 -- The implementation may use other objects in the frame to resolve references.
+-- TODO(2019-06-28, cblp) use 'ReaderT' for symmetry with 'newRon'
 fromRon :: (MonadE m, Replicated a) => [Atom] -> StateFrame -> m a
 fromRon = encodingFromRon encoding
 

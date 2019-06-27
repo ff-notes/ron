@@ -10,7 +10,6 @@
 -- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet
     ( ORSet (..)
-    , ObjectORSet (..)
     , ORSetRaw
     , addNewRef
     , addRef
@@ -67,57 +66,39 @@ instance Reducible ORSetRaw where
 setType :: UUID
 setType = $(UUID.liftName "set")
 
--- | Type-directing wrapper for typed OR-Set of atomic values
+-- | Type-directing wrapper for typed OR-Set
 newtype ORSet a = ORSet [a]
 
--- | Type-directing wrapper for typed OR-Set of objects
-newtype ObjectORSet a = ObjectORSet [a]
-
-instance ReplicatedAsPayload a => Replicated (ORSet a) where
+instance Replicated a => Replicated (ORSet a) where
     encoding = objectEncoding
 
-instance ReplicatedAsPayload a => ReplicatedAsObject (ORSet a) where
+instance Replicated a => ReplicatedAsObject (ORSet a) where
     objectOpType = setType
-    newObject = commonNewObject pure
-    getObject = commonGetObject pure
 
-instance ReplicatedAsObject a => Replicated (ObjectORSet a) where
-    encoding = objectEncoding
+    newObject (ORSet items) = collectFrame $ do
+        ops <- for items $ \item -> do
+            event <- lift getEventUuid
+            payload <- newRon item
+            pure $ Op event Zero payload
+        oid <- lift getEventUuid
+        let stateVersion = maximumDef oid $ map opId ops
+        tell $
+            Map.singleton oid $
+            StateChunk{stateType = setType, stateVersion, stateBody = ops}
+        pure oid
 
-instance ReplicatedAsObject a => ReplicatedAsObject (ObjectORSet a) where
-    objectOpType = setType
-    newObject = commonNewObject $ fmap (\Object{id} -> id) . newObject
-    getObject obj@Object{frame} =
-        commonGetObject (\itemId -> getObject (Object itemId frame)) obj
-
-commonNewObject
-    ::  ( Coercible (orset item) [item]
-        , ReplicaClock m
-        , ReplicatedAsPayload itemRep
-        )
-    => (item -> m itemRep) -> orset item -> m (Object (orset item))
-commonNewObject newItem items = collectFrame $ do
-    ops <- for (coerce items) $ \item -> do
-        event <- lift getEventUuid
-        payload <- lift $ newItem item
-        pure . Op event Zero $ toPayload payload
-    oid <- lift getEventUuid
-    let stateVersion = maximumDef oid $ map opId ops
-    tell $
-        Map.singleton oid $
-        StateChunk{stateType = setType, stateVersion, stateBody = ops}
-    pure oid
-
-commonGetObject
-    :: forall item m orset itemRep
-    . (Coercible (orset item) [item], MonadE m, ReplicatedAsPayload itemRep)
-    => (itemRep -> m item) -> Object (orset item) -> m (orset item)
-commonGetObject getItem obj@Object{..} = do
-    StateChunk{..} <- getObjectStateChunk obj
-    mItems <- for stateBody $ \Op{refId, payload} -> case refId of
-        Zero -> Just <$> (fromPayload payload >>= getItem)
-        _    -> pure Nothing
-    pure . coerce @[item] $ catMaybes mItems
+    -- getObject
+    --     :: forall item m orset itemRep
+    --     . (Coercible (orset item) [item], MonadE m, ReplicatedAsPayload itemRep)
+    --     => (itemRep -> m item) -> Object (orset item) -> m (orset item)
+    getObject obj@Object{frame} = do
+        StateChunk{stateBody} <- getObjectStateChunk obj
+        mItems <- for stateBody $ \Op{refId, payload} -> case refId of
+            Zero -> do
+                item <- fromRon payload frame
+                pure $ Just item
+            _    -> pure Nothing
+        pure . ORSet $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (ReplicatedAsPayload b, ReplicaClock m, MonadE m)
@@ -141,8 +122,7 @@ addValue = commonAdd
 
 -- | Add a reference to the object to the OR-Set
 addRef
-    :: (ReplicaClock m, MonadE m)
-    => Object a -> StateT (Object (ObjectORSet a)) m ()
+    :: (ReplicaClock m, MonadE m) => Object a -> StateT (Object (ORSet a)) m ()
 addRef Object{id = itemId, frame = itemFrame} = do
     modify' $ \Object{..} -> Object{frame = frame <> itemFrame, ..}
     commonAdd itemId
@@ -151,7 +131,7 @@ addRef Object{id = itemId, frame = itemFrame} = do
 addNewRef
     :: forall a m
     . (ReplicatedAsObject a, ReplicaClock m, MonadE m)
-    => a -> StateT (Object (ObjectORSet a)) m (Object a)
+    => a -> StateT (Object (ORSet a)) m (Object a)
 addNewRef item = do
     itemObj@(Object _ itemFrame) <- lift $ newObject item
     modify' $ \Object{..} -> Object{frame = frame <> itemFrame, ..}
@@ -192,6 +172,5 @@ removeValue = commonRemove . eqPayload
 
 -- | Remove an object reference from the OR-Set
 removeRef
-    :: (MonadE m, ReplicaClock m)
-    => Object a -> StateT (Object (ObjectORSet a)) m ()
+    :: (MonadE m, ReplicaClock m) => Object a -> StateT (Object (ORSet a)) m ()
 removeRef = commonRemove . eqRef

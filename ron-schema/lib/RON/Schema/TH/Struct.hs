@@ -22,13 +22,13 @@ import           RON.Data (Replicated (..), ReplicatedAsObject (..),
                            getObjectStateChunk, objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
+import           RON.Data.ORSet (ORSet (..))
 import           RON.Data.RGA (RGA (..))
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock)
 import           RON.Schema as X
-import           RON.Schema.TH.Common (isObjectType, let1S, liftText,
-                                       mkGuideType, mkNameT, mkViewType, valDP)
+import           RON.Schema.TH.Common (let1S, liftText, mkGuideType, mkNameT,
+                                       mkViewType, valDP)
 import           RON.Types (Object (Object), UUID)
 import           RON.Util (Instance (..))
 import qualified RON.UUID as UUID
@@ -182,9 +182,7 @@ fieldWrapperC typ = case typ of
     TAtom                   _ -> Nothing
     TComposite              _ -> Nothing
     TObject                 t -> case t of
-        TORSet              a
-            | isObjectType  a -> Just 'ObjectORSet
-            | otherwise       -> Just 'ORSet
+        TORSet              _ -> Just 'ORSet
         TRga                _ -> Just 'RGA
         TStructLww          _ -> Nothing
         TVersionVector        -> Nothing

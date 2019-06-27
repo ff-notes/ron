@@ -20,7 +20,7 @@ import           Language.Haskell.TH (conT, normalB, varP)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftString)
 
-import           RON.Data.ORSet (ORSet (..), ObjectORSet (..))
+import           RON.Data.ORSet (ORSet (..))
 import           RON.Data.RGA (RGA (..))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Schema as X
@@ -65,10 +65,8 @@ mkGuideType typ = case typ of
     TAtom                   _ -> view
     TComposite              _ -> view
     TObject                 t -> case t of
-        TORSet              a
-            | isObjectType  a -> wrap ''ObjectORSet a
-            | otherwise       -> wrap ''ORSet       a
-        TRga                a -> wrap ''RGA         a
+        TORSet              a -> wrap ''ORSet a
+        TRga                a -> wrap ''RGA   a
         TStructLww          _ -> view
         TVersionVector        -> view
     TOpaque                 _ -> view
