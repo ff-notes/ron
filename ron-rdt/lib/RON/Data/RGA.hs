@@ -327,7 +327,7 @@ instance Replicated a => Replicated (RGA a) where encoding = objectEncoding
 instance Replicated a => ReplicatedAsObject (RGA a) where
     objectOpType = rgaType
 
-    newObject (RGA items) = collectFrame $ do
+    newObjectW (RGA items) = do
         vertexIds <- lift $ getEventUuids $ ls60 $ genericLength items
         ops <- for (zip items vertexIds) $ \(item, vertexId) -> do
             payload <- newRon item

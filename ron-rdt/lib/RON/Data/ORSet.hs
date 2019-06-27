@@ -75,7 +75,7 @@ instance Replicated a => Replicated (ORSet a) where
 instance Replicated a => ReplicatedAsObject (ORSet a) where
     objectOpType = setType
 
-    newObject (ORSet items) = collectFrame $ do
+    newObjectW (ORSet items) = do
         ops <- for items $ \item -> do
             event <- lift getEventUuid
             payload <- newRon item
@@ -87,10 +87,6 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
             StateChunk{stateType = setType, stateVersion, stateBody = ops}
         pure oid
 
-    -- getObject
-    --     :: forall item m orset itemRep
-    --     . (Coercible (orset item) [item], MonadE m, ReplicatedAsPayload itemRep)
-    --     => (itemRep -> m item) -> Object (orset item) -> m (orset item)
     getObject obj@Object{frame} = do
         StateChunk{stateBody} <- getObjectStateChunk obj
         mItems <- for stateBody $ \Op{refId, payload} -> case refId of

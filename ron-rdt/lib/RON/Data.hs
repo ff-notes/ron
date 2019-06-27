@@ -17,6 +17,7 @@ module RON.Data (
     fromRon,
     getObjectStateChunk,
     mkStateChunk,
+    newObject,
     newRon,
     objectEncoding,
     payloadEncoding,

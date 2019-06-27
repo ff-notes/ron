@@ -6,6 +6,12 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Replcated method `ReplicatedAsObject.newObject` with `newObjectW`, which has
+  more specific type, and implementation doesn't need to call `collectFrame`.
+- Method `ReplicatedAsObject.newObject` is now a function `newObject` with the
+  same type.
+
 ### Removed
 - `ObjectORSet` is now merged into `ORSet`.
 

@@ -25,6 +25,7 @@ module RON.Data.Internal (
     fromRon,
     getObjectStateChunk,
     mkStateChunk,
+    newObject,
     newRon,
     objectEncoding,
     payloadEncoding,
@@ -209,8 +210,8 @@ class Replicated a => ReplicatedAsObject a where
     -- | UUID of the type
     objectOpType :: UUID
 
-    -- | Encode data
-    newObject :: ReplicaClock m => a -> m (Object a)
+    -- | Encode data. Write frame and return id.
+    newObjectW :: ReplicaClock m => a -> WriterT StateFrame m UUID
 
     -- | Decode data
     getObject :: MonadE m => Object a -> m a
@@ -223,6 +224,9 @@ objectFromRon handler atoms frame = case atoms of
 -- | Helper to build an object frame using arbitrarily nested serializers.
 collectFrame :: Functor m => WriterT StateFrame m UUID -> m (Object a)
 collectFrame = fmap (uncurry Object) . runWriterT
+
+newObject :: (ReplicatedAsObject a, ReplicaClock m) => a -> m (Object a)
+newObject = collectFrame . newObjectW
 
 getObjectStateChunk :: MonadE m => Object a -> m StateChunk
 getObjectStateChunk (Object oid frame) =

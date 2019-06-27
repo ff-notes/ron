@@ -60,7 +60,7 @@ instance Replicated VersionVector where
 instance ReplicatedAsObject VersionVector where
     objectOpType = vvType
 
-    newObject (VersionVector vv) = collectFrame $ do
+    newObjectW (VersionVector vv) = do
         oid <- lift getEventUuid
         let ops = Map.elems vv
         let stateVersion = maximumDef oid $ map opId ops

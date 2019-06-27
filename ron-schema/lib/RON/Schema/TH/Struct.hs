@@ -104,7 +104,7 @@ mkReplicatedStructLww struct = do
                 ++  [noBindS [| pure $consE |]]
         [d| instance ReplicatedAsObject $structT where
                 objectOpType = lwwType
-                newObject $consP = LWW.newObject $fieldsToPack
+                newObjectW $consP = LWW.newObjectW $fieldsToPack
                 getObject $(varP obj) =
                     errorContext $(liftText errCtx) $getObjectImpl
             |]

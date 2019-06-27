@@ -12,7 +12,7 @@ module RON.Data.LWW
     ( LwwPerField (..)
     , assignField
     , lwwType
-    , newObject
+    , newObjectW
     , readField
     , viewField
     , zoomField
@@ -22,9 +22,9 @@ import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible, Replicated, collectFrame,
-                                    fromRon, getObjectStateChunk, mkStateChunk,
-                                    newRon, reducibleOpType, stateFromChunk,
+import           RON.Data.Internal (Reducible, Replicated, fromRon,
+                                    getObjectStateChunk, mkStateChunk, newRon,
+                                    reducibleOpType, stateFromChunk,
                                     stateToChunk)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
@@ -58,8 +58,10 @@ lwwType :: UUID
 lwwType = $(UUID.liftName "lww")
 
 -- | Create LWW object from a list of named fields.
-newObject :: ReplicaClock m => [(UUID, Instance Replicated)] -> m (Object a)
-newObject fields = collectFrame $ do
+newObjectW
+    :: ReplicaClock m
+    => [(UUID, Instance Replicated)] -> WriterT StateFrame m UUID
+newObjectW fields = do
     payloads <- for fields $ \(_, Instance value) -> newRon value
     event <- lift getEventUuid
     tell $
