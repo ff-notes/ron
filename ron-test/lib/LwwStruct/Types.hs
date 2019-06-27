@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeOperators #-}
 
 module LwwStruct.Types (
     Struct51 (..),
@@ -33,6 +34,8 @@ module LwwStruct.Types (
 ) where
 
 import           RON.Prelude
+
+import           Data.Type.Equality ((:~:) (Refl))
 
 import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
                            fromPayload, payloadEncoding, toPayload)
@@ -71,3 +74,6 @@ instance ReplicatedAsPayload Opaque49 where
 
 deriving instance Eq   Struct51
 deriving instance Show Struct51
+
+_check_Alias69 :: Alias69 :~: [Struct51]
+_check_Alias69 = Refl

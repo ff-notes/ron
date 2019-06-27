@@ -26,7 +26,7 @@ import           RON.Data (Replicated (..), ReplicatedAsPayload (..))
 import           RON.Error (throwErrorString)
 import           RON.Schema as X
 import qualified RON.Schema.EDN as EDN
-import           RON.Schema.TH.Common (mkNameT)
+import           RON.Schema.TH.Common (mkNameT, mkViewType)
 import           RON.Schema.TH.Struct (mkReplicatedStructLww)
 import qualified RON.UUID as UUID
 
@@ -44,7 +44,7 @@ mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
 mkReplicated' :: HasCallStack => Schema 'Resolved -> TH.DecsQ
 mkReplicated' = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
-        DAlias     _ -> pure []
+        DAlias     a -> mkAlias a
         DEnum      e -> mkEnum e
         DOpaque    _ -> pure []
         DStructLww s -> mkReplicatedStructLww s
@@ -88,3 +88,7 @@ mkEnum Enum{enumName, enumItems} = do
                     [| throwErrorString "expected one of enum items" |]]
         liftDataP = dataToPatQ $ const Nothing
         match pat body = TH.match pat (normalB body) []
+
+mkAlias :: Alias Resolved -> TH.DecsQ
+mkAlias Alias{name, target} =
+    (:[]) <$> TH.tySynD (mkNameT name) [] (mkViewType target)
