@@ -6,6 +6,7 @@ ghc_warnings=(
     -Wcompat
     -Wincomplete-record-updates
     -Wincomplete-uni-patterns
+    -Wno-unticked-promoted-constructors
     -Wredundant-constraints
 )
 ghc_options=(${ghc_warnings[*]} -Werror)
