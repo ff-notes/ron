@@ -3,7 +3,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module RON.Schema.TH.Common (
-    isObjectType,
     let1S,
     liftText,
     mkGuideType,
@@ -46,13 +45,6 @@ mkViewType = \case
         in conT $ mkNameT $ fromMaybe opaqueName oaHaskellType
   where
     wrapList a = [t| [$(mkViewType a)] |]
-
-isObjectType :: RonType -> Bool
-isObjectType = \case
-    TAtom      _                      -> False
-    TComposite _                      -> False
-    TObject    _                      -> True
-    TOpaque    Opaque{opaqueIsObject} -> opaqueIsObject
 
 valD :: TH.PatQ -> TH.ExpQ -> TH.DecQ
 valD pat body = TH.valD pat (normalB body) []
