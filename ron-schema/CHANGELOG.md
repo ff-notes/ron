@@ -11,6 +11,8 @@ and this project adheres to
 
 ### Changed
 - Renamed `Boole` -> `Bool` due to tradition.
+- `ORSet` don't generate `ObjectORSet` wrapper since `ORSet` now manages
+  objects too.
 
 ## [0.6] - 2019-04-25
 ### Added

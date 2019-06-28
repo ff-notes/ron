@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Removed
+- `ObjectORSet` is now merged into `ORSet`.
 
 ## [0.6] - 2019-04-25
 ### Added
