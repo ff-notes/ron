@@ -340,8 +340,8 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
         pure oid
 
     getObject obj@Object{frame} = do
-        StateChunk{..} <- getObjectStateChunk obj
-        mItems <- for stateBody $ \Op{..} -> case refId of
+        StateChunk{stateBody} <- getObjectStateChunk obj
+        mItems <- for stateBody $ \Op{refId, payload} -> case refId of
             Zero -> Just <$> fromRon payload frame
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems

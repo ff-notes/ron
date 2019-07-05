@@ -24,7 +24,7 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Error (MonadE)
-import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom, Object (Object, frame, id),
                             Op (Op, opId, payload, refId),
                             StateChunk (StateChunk, stateBody, stateType, stateVersion),
@@ -96,12 +96,20 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
             _    -> pure Nothing
         pure . ORSet $ catMaybes mItems
 
+-- | XXX Internal. Common part of all modifying operations.
+prepareModify
+    :: (MonadE m, MonadState (Object a) m, ReplicaClock m) => m (Object a, [Op])
+prepareModify = do
+    obj <- get
+    StateChunk{stateVersion, stateBody} <- getObjectStateChunk obj
+    advanceToUuid stateVersion
+    pure (obj, stateBody)
+
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (ReplicatedAsPayload b, ReplicaClock m, MonadE m)
     => b -> StateT (Object a) m ()
 commonAdd item = do
-    obj@Object{id, frame} <- get
-    StateChunk{..} <- getObjectStateChunk obj
+    (obj@Object{id, frame}, stateBody) <- prepareModify
     event <- getEventUuid
     let payload = toPayload item
     let newOp = Op event Zero payload
@@ -139,8 +147,7 @@ commonRemove
     :: (MonadE m, ReplicaClock m)
     => ([Atom] -> Bool) -> StateT (Object (orset a)) m ()
 commonRemove isTarget = do
-    obj@Object{id, frame} <- get
-    StateChunk{..} <- getObjectStateChunk obj
+    (obj@Object{id, frame}, stateBody) <- prepareModify
     let state0@(ORSetRaw opMap) = stateFromChunk stateBody
     let targetEvents =
             [ opId
