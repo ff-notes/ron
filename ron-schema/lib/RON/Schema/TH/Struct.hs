@@ -18,8 +18,9 @@ import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT, doE,
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
-import           RON.Data (Replicated (..), ReplicatedAsObject (..),
-                           getObjectStateChunk, objectEncoding)
+import           RON.Data (MonadObjectState, ObjectStateT, Replicated (..),
+                           ReplicatedAsObject (..), getObjectStateChunk,
+                           objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSet (..))
@@ -29,7 +30,7 @@ import           RON.Event (ReplicaClock)
 import           RON.Schema as X
 import           RON.Schema.TH.Common (liftText, mkGuideType, mkNameT,
                                        mkViewType, valDP)
-import           RON.Types (Object (Object), StateFrame, UUID)
+import           RON.Types (Object (Object), UUID)
 import           RON.Util (Instance (..))
 import qualified RON.UUID as UUID
 
@@ -66,8 +67,6 @@ mkReplicatedStructLww struct = do
 
     structT = conT name
 
-    objectT = [t| Object $structT |]
-
     mkDataType = TH.dataD (TH.cxt []) name [] Nothing
         [recC name
             [ TH.varBangType (mkNameT $ mkHaskellFieldName fieldName) $
@@ -83,8 +82,7 @@ mkReplicatedStructLww struct = do
         |]
 
     mkInstanceReplicatedAsObject fields = do
-        obj   <- TH.newName "obj"
-        ops   <- TH.newName "ops"
+        ops <- TH.newName "ops"
         let fieldsToUnpack =
                 [ bindS var
                     [| LWW.viewField $(liftData field'RonName) $(varE ops) |]
@@ -95,13 +93,13 @@ mkReplicatedStructLww struct = do
                         fieldWrapperC field'Type
                 ]
         let getObjectImpl = doE
-                $   bindS (varP ops) [| getObjectStateChunk $(varE obj) |]
+                $   bindS (varP ops) [| getObjectStateChunk |]
                 :   fieldsToUnpack
                 ++  [noBindS [| pure $consE |]]
         [d| instance ReplicatedAsObject $structT where
                 objectOpType = lwwType
                 newObject $consP = Object <$> LWW.newObject $fieldsToPack
-                getObject $(varP obj) =
+                getObject =
                     errorContext $(liftText errCtx) $getObjectImpl
             |]
       where
@@ -134,27 +132,25 @@ mkReplicatedStructLww struct = do
         m <- varT <$> TH.newName "m"
         let assignF =
                 [ sigD assign [t|
-                    (ReplicaClock $m, MonadE $m, MonadState StateFrame $m)
-                    => $fieldViewType -> $objectT -> $m ()
+                    (ReplicaClock $m, MonadE $m, MonadObjectState $structT $m)
+                    => $fieldViewType -> $m ()
                     |]
                 , valDP assign
                     [| LWW.assignField $(liftData field'RonName) . $guide |]
                 ]
             readF =
                 [ sigD read [t|
-                    (MonadE $m, MonadState StateFrame $m)
-                    => $objectT -> $m $fieldViewType
+                    (MonadE $m, MonadObjectState $structT $m)
+                    => $m $fieldViewType
                     |]
                 , valDP read
-                    [| fmap $unguide . LWW.readField $(liftData field'RonName)
-                    |]
+                    [| $unguide <$> LWW.readField $(liftData field'RonName) |]
                 ]
             zoomF =
                 [ sigD zoom [t|
-                    (MonadE $m, MonadState StateFrame $m)
-                    => $objectT
-                    -> (Object $(mkGuideType field'Type) -> $m $a)
-                    -> $m $a
+                    MonadE $m
+                    => ObjectStateT $(mkGuideType field'Type) $m $a
+                    -> ObjectStateT $structT                  $m $a
                     |]
                 , valDP zoom [| LWW.zoomField $(liftData field'RonName) |]
                 ]

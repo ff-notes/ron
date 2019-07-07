@@ -20,7 +20,7 @@ import           RON.Prelude
 
 import qualified Data.Text as Text
 
-import           RON.Data (execObjectState, reduceObject)
+import           RON.Data (ObjectStateT, execObjectState, reduceObject)
 import           RON.Error (Error (Error), errorContext, throwErrorString)
 import           RON.Storage.Backend (Collection (..), CollectionName,
                                       DocId (DocId), Document (Document),
@@ -28,7 +28,7 @@ import           RON.Storage.Backend (Collection (..), CollectionName,
                                       createVersion, decodeDocId,
                                       getDocumentVersions, isTouched,
                                       readVersion, value, versions)
-import           RON.Types (Object, ObjectState, StateFrame, UUID)
+import           RON.Types (ObjectState, UUID)
 import qualified RON.UUID as UUID
 
 data CollectionDocId = forall a. Collection a => CollectionDocId (DocId a)
@@ -76,8 +76,7 @@ try ma = (Right <$> ma) `catchError` (pure . Left)
 
 -- | Load document, apply changes and put it back to storage
 modify
-    :: (Collection a, MonadStorage m)
-    => DocId a -> (Object a -> StateT StateFrame m ()) -> m ()
+    :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m () -> m ()
 modify docid f = do
     oldDoc <- loadDocument docid
     value' <- execObjectState (value oldDoc) f

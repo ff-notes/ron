@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -30,6 +31,9 @@ module RON.Data.Internal (
     --
     fromRon,
     newRon,
+    --
+    ObjectStateT,
+    MonadObjectState,
 ) where
 
 import           RON.Prelude
@@ -155,7 +159,7 @@ objectEncoding = Encoding
     { encodingNewRon = \a -> do
         Object oid <- newObject a
         pure [AUuid oid]
-    , encodingFromRon = objectFromRon getObject
+    , encodingFromRon = objectFromRon $ runReaderT getObject
     }
 
 -- | Standard implementation of 'Replicated' for 'ReplicatedAsPayload' types.
@@ -221,7 +225,7 @@ class Replicated a => ReplicatedAsObject a where
     newObject :: (ReplicaClock m, MonadState StateFrame m) => a -> m (Object a)
 
     -- | Decode data
-    getObject :: (MonadE m, MonadState StateFrame m) => Object a -> m a
+    getObject :: (MonadE m, MonadObjectState a m) => m a
 
 objectFromRon :: MonadE m => (Object a -> m a) -> [Atom] -> m a
 objectFromRon handler atoms = case atoms of
@@ -235,9 +239,9 @@ newObjectState a = do
     (Object id, frame) <- runStateT (newObject a) mempty
     pure $ ObjectState{id, frame}
 
-getObjectStateChunk
-    :: (MonadE m, MonadState StateFrame m) => Object a -> m StateChunk
-getObjectStateChunk (Object oid) = do
+getObjectStateChunk :: (MonadE m, MonadObjectState a m) => m StateChunk
+getObjectStateChunk = do
+    Object oid <- ask
     frame <- get
     liftMaybe "no such object in chunk" $ Map.lookup oid frame
 
@@ -293,3 +297,7 @@ instance ReplicatedAsPayload Bool where
         [ATrue]  -> pure True
         [AFalse] -> pure False
         _        -> throwError "Expected single UUID `true` or `false`"
+
+type ObjectStateT b m a = ReaderT (Object b) (StateT StateFrame m) a
+
+type MonadObjectState b m = (MonadReader (Object b) m, MonadState StateFrame m)

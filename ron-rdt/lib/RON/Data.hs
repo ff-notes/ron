@@ -24,6 +24,8 @@ module RON.Data (
     reduceStateFrame,
     reduceWireFrame,
     -- * 'ObjectState' monad
+    ObjectStateT,
+    MonadObjectState,
     evalObjectState,
     evalObjectState_,
     execObjectState,
@@ -202,10 +204,9 @@ instance Ord a => Semigroup (MaxOnFst a b) where
         | otherwise = mof1
 
 -- | Run ObjectState action
-evalObjectState
-    :: Monad m => ObjectState b -> (Object b -> StateT StateFrame m a) -> m a
+evalObjectState :: Monad m => ObjectState b -> ObjectStateT b m a -> m a
 evalObjectState ObjectState{id, frame} action =
-    evalStateT (action $ Object id) frame
+    evalStateT (runReaderT action $ Object id) frame
 
 -- | Run ObjectState action, starting with an empty frame
 evalObjectState_ :: Monad m => StateT StateFrame m a -> m a
@@ -213,10 +214,9 @@ evalObjectState_ action = evalStateT action mempty
 
 -- | Run ObjectState action
 execObjectState
-    :: Monad m
-    => ObjectState b -> (Object b -> StateT StateFrame m a) -> m (ObjectState b)
+    :: Monad m => ObjectState b -> ObjectStateT b m a -> m (ObjectState b)
 execObjectState ObjectState{id, frame} action = do
-    frame' <- execStateT (action $ Object id) frame
+    frame' <- execStateT (runReaderT action $ Object id) frame
     pure ObjectState{id, frame = frame'}
 
 -- | Run ObjectState action, starting with an empty frame
@@ -227,10 +227,10 @@ execObjectState_ action = execStateT action mempty
 runObjectState
     :: Functor m
     => ObjectState b
-    -> (Object b -> StateT StateFrame m a)
+    -> ObjectStateT b m a
     -> m (a, ObjectState b)
 runObjectState ObjectState{id, frame} action =
-    runStateT (action $ Object id) frame
+    runStateT (runReaderT action $ Object id) frame
     <&> \(a, frame') -> (a, ObjectState{id, frame = frame'})
 
 -- | Run ObjectState action, starting with an empty frame

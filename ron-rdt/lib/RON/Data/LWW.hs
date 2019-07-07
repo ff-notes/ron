@@ -22,10 +22,10 @@ import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible, Replicated, fromRon,
-                                    getObjectStateChunk, mkStateChunk, newRon,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk)
+import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
+                                    Replicated, fromRon, getObjectStateChunk,
+                                    mkStateChunk, newRon, reducibleOpType,
+                                    stateFromChunk, stateToChunk)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
@@ -91,23 +91,21 @@ viewField field StateChunk{..} =
 
 -- | Decode field value
 readField
-    :: (MonadE m, MonadState StateFrame m, Replicated field)
+    :: (MonadE m, MonadObjectState struct m, Replicated field)
     => UUID  -- ^ Field name
-    -> Object struct
     -> m field
-readField field self = do
-    stateChunk <- getObjectStateChunk self
+readField field = do
+    stateChunk <- getObjectStateChunk
     viewField field stateChunk
 
 -- | Assign a value to a field
 assignField
-    :: (Replicated field, ReplicaClock m, MonadE m, MonadState StateFrame m)
+    :: (Replicated field, ReplicaClock m, MonadE m, MonadObjectState struct m)
     => UUID   -- ^ Field name
     -> field  -- ^ Value
-    -> Object struct
     -> m ()
-assignField field value self@(Object selfUuid) = do
-    StateChunk{stateBody, stateVersion} <- getObjectStateChunk self
+assignField field value = do
+    StateChunk{stateBody, stateVersion} <- getObjectStateChunk
     advanceToUuid stateVersion
     let chunk = filter (\Op{refId} -> refId /= field) stateBody
     event <- getEventUuid
@@ -116,18 +114,18 @@ assignField field value self@(Object selfUuid) = do
     let chunk' = sortOn refId $ newOp : chunk
     let state' = StateChunk
             {stateVersion = event, stateBody = chunk', stateType = lwwType}
-    modify' $ Map.insert selfUuid state'
+    Object id <- ask
+    modify' $ Map.insert id state'
 
 -- | Pseudo-lens to an object inside a specified field
 zoomField
-    :: (MonadState StateFrame m, MonadE m)
-    => UUID                   -- ^ Field name
-    -> Object struct
-    -> (Object field -> m a)  -- ^ Inner object modifier
-    -> m a
-zoomField field self innerModifier =
+    :: MonadE m
+    => UUID                     -- ^ Field name
+    -> ObjectStateT field  m a  -- ^ Inner object modifier
+    -> ObjectStateT struct m a
+zoomField field innerModifier =
     errorContext ("LWW.zoomField" <> show field) $ do
-        StateChunk{stateBody} <- getObjectStateChunk self
+        StateChunk{stateBody} <- getObjectStateChunk
         let ops = filter (\Op{refId} -> refId == field) stateBody
         Op{payload} <- case ops of
             []   -> throwError "empty chunk"
@@ -136,4 +134,4 @@ zoomField field self innerModifier =
         fieldObjectId <- errorContext "inner object" $ case payload of
             [AUuid oid] -> pure oid
             _           -> throwError "Expected object UUID"
-        innerModifier $ Object fieldObjectId
+        lift $ runReaderT innerModifier $ Object fieldObjectId

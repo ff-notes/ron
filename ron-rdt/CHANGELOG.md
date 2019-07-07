@@ -9,6 +9,7 @@ and this project adheres to
 ### Added
 - `newObjectState`
 - `ObjectState` "monad":
+  - `ObjectStateT`, `MonadObjectState`
   - `evalObjectState`
   - `evalObjectState_`
   - `execObjectState`
@@ -27,7 +28,7 @@ and this project adheres to
   attached,
   and `Object` is just a type UUID --
   a typed reference to an object in a state frame passed in
-  `MonadState StateFrame` context.
+  `MonadObjectState` context.
   Object is now passed as an explicit argument.
 - `ORSet` now can contain objects.
 - `ORSet.addValue` now accepts objects.

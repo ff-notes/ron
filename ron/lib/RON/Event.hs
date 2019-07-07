@@ -161,6 +161,11 @@ instance ReplicaClock m => ReplicaClock (ExceptT e m) where
     getEvents = lift . getEvents
     advance   = lift . advance
 
+instance ReplicaClock m => ReplicaClock (ReaderT r m) where
+    getPid    = lift   getPid
+    getEvents = lift . getEvents
+    advance   = lift . advance
+
 instance ReplicaClock m => ReplicaClock (StateT s m) where
     getPid    = lift   getPid
     getEvents = lift . getEvents

@@ -348,9 +348,9 @@ prop_RGA_insertAfter = property $ do
         annotateShow pos
         text' <-
             runReplicaSimT replica2 $
-            evalObjectState rgaState $ \rga -> do
-                RGA.insertText inset pos rga
-                RGA.getText rga
+            evalObjectState rgaState $ do
+                RGA.insertText inset pos
+                RGA.getText
         prefix <> inset <> suffix === text'
 
 prop_RGA_remove = property $ do
@@ -363,9 +363,9 @@ prop_RGA_remove = property $ do
         indices <- evalObjectState rgaState RGA.getAliveIndices
         let u = fromJust $ indices !! i
         text' <-
-            runReplicaSimT replica2 $ evalObjectState rgaState $ \rga -> do
-                RGA.remove u rga
-                RGA.getText rga
+            runReplicaSimT replica2 $ evalObjectState rgaState $ do
+                RGA.remove u
+                RGA.getText
         text_delete i text === text'
   where
     text_delete i t =
@@ -432,9 +432,9 @@ prop_ObjectORSet = let
         state0 <- newObjectState $ ORSet @RgaString []
         state0expect === prep state0
 
-        (rga, state1) <- runObjectState state0 $ \set -> do
+        (rga, state1) <- runObjectState state0 $ do
             rga <- RGA.newFromText "403"
-            ORSet.addRef rga set
+            ORSet.addRef rga
             pure rga
         state1expect === prep state1
 
@@ -464,6 +464,7 @@ prop_ObjectORSet_recursive = let
         state1expect === prep state1
 
         state2 <-
-            execObjectState state1 $ \set ->
-                testRecSet_zoom set $ ORSet.addRef set
+            execObjectState state1 $ do
+                outerSet <- ask
+                testRecSet_zoom $ ORSet.addRef outerSet
         state2expect === prep state2

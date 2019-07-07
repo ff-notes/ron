@@ -70,6 +70,6 @@ instance ReplicatedAsObject VersionVector where
             StateChunk{stateType = vvType, stateVersion, stateBody = ops}
         pure $ Object oid
 
-    getObject obj = do
-        StateChunk{stateBody} <- getObjectStateChunk obj
+    getObject = do
+        StateChunk{stateBody} <- getObjectStateChunk
         pure $ stateFromChunk stateBody

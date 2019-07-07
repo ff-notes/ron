@@ -17,7 +17,7 @@ and this project adheres to
   attached,
   and `Object` is just a type UUID --
   a typed reference to an object in a state frame passed in
-  `MonadState StateFrame` context.
+  `MonadObjectState` context.
   Object is now passed as an explicit argument.
 
 ## [0.6] - 2019-04-25

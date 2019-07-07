@@ -132,13 +132,13 @@ prop_lwwStruct = property $ do
     ((str3Value, opt5Value, opt6Value), ex4state) <-
         evalEither $
         runNetworkSim $ runReplicaSim replica $ runExceptT $
-        runObjectState ex2state $ \ex2 -> do
+        runObjectState ex2state $ do
             -- plain field
-            int1_assign 166 ex2
-            str2_zoom ex2 $ RGA.edit "145"
-            str3Value <- str3_read ex2
-            str3_assign "206" ex2
-            set4_zoom ex2 $
+            int1_assign 166
+            str2_zoom $ RGA.edit "145"
+            str3Value <- str3_read
+            str3_assign "206"
+            set4_zoom $
                 ORSet.addValue
                     Struct51
                         { int1 = 135
@@ -148,9 +148,9 @@ prop_lwwStruct = property $ do
                         , opt5 = Nothing
                         , opt6 = Nothing
                         }
-            opt5Value <- opt5_read ex2
-            opt6Value <- opt6_read ex2
-            opt6_assign Nothing ex2
+            opt5Value <- opt5_read
+            opt6Value <- opt6_read
+            opt6_assign Nothing
             pure (str3Value, opt5Value, opt6Value)
     str3Value === "190"
     opt5Value === Nothing
