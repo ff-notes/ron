@@ -13,6 +13,12 @@ and this project adheres to
 - Renamed `Boole` -> `Bool` due to tradition.
 - `ORSet` don't generate `ObjectORSet` wrapper since `ORSet` now manages
   objects too.
+- Now `ObjectState` keeps a typed reference to an object with state frame
+  attached,
+  and `Object` is just a type UUID --
+  a typed reference to an object in a state frame passed in
+  `MonadState StateFrame` context.
+  Object is now passed as an explicit argument.
 
 ## [0.6] - 2019-04-25
 ### Added
