@@ -354,7 +354,7 @@ edit
         , ReplicaClock m, MonadE m, MonadState StateFrame m
         )
     => [a] -> Object (RGA a) -> m ()
-edit newItems self@(Object selfUuid) = do
+edit newItems self@(Object id) = do
     StateChunk{stateVersion, stateBody} <- getObjectStateChunk self
     advanceToUuid stateVersion
 
@@ -386,7 +386,7 @@ edit newItems self@(Object selfUuid) = do
                     , stateVersion = stateVersion'
                     , stateBody    = stateBody'
                     }
-            modify' $ Map.insert selfUuid state'
+            modify' $ Map.insert id state'
 
   where
     eqAliveOnPayload
@@ -448,7 +448,7 @@ insert
     -> Object (RGA a)
     -> m ()
 insert []    _         _                      = pure ()
-insert items mPosition self@(Object selfUuid) = do
+insert items mPosition self@(Object id) = do
     stateChunk@StateChunk{stateVersion, stateBody} <- getObjectStateChunk self
     advanceToUuid stateVersion
 
@@ -464,7 +464,7 @@ insert items mPosition self@(Object selfUuid) = do
         Just position -> findAndInsertAfter position ops stateBody
     let stateChunk' =
             stateChunk{stateVersion = stateVersion', stateBody = stateBody'}
-    modify' $ Map.insert selfUuid stateChunk'
+    modify' $ Map.insert id stateChunk'
   where
     findAndInsertAfter pos newOps = go where
         go = \case
@@ -515,7 +515,7 @@ remove
     => UUID  -- ^ position
     -> Object (RGA a)
     -> m ()
-remove position self@(Object selfUuid) =
+remove position self@(Object id) =
     errorContext "RGA.remove" $
     errorContext ("position = " <> show position) $ do
         stateChunk@StateChunk{stateVersion, stateBody} <-
@@ -526,7 +526,7 @@ remove position self@(Object selfUuid) =
         stateBody' <- findAndTombstone event stateBody
         let stateChunk' =
                 stateChunk{stateVersion = event, stateBody = stateBody'}
-        modify' $ Map.insert selfUuid stateChunk'
+        modify' $ Map.insert id stateChunk'
   where
     findAndTombstone event = go where
         go = \case
