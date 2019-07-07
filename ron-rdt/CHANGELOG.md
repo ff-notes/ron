@@ -6,14 +6,35 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `newObjectState`
+- `ObjectState` "monad":
+  - `evalObjectState`
+  - `evalObjectState_`
+  - `execObjectState`
+  - `execObjectState_`
+  - `newObjectState`
+  - `newObjectStateWith`
+  - `runObjectState`
+  - `runObjectState_`
+
 ### Changed
-- Replcated method `ReplicatedAsObject.newObject` with `newObjectW`, which has
-  more specific type, and implementation doesn't need to call `collectFrame`.
+- `ReplicatedAsObject.newObject` now has more specific type,
+  and implementation doesn't need to call `collectFrame`.
 - Method `ReplicatedAsObject.newObject` is now a function `newObject` with the
   same type.
+- Now `ObjectState` keeps a typed reference to an object with state frame
+  attached,
+  and `Object` is just a type UUID --
+  a typed reference to an object in a state frame passed in
+  `MonadState StateFrame` context.
+  Object is now passed as an explicit argument.
+- `ORSet` now can contain objects.
+- `ORSet.addValue` now accepts objects.
 
 ### Removed
-- `ObjectORSet` is now merged into `ORSet`.
+- `ObjectORSet` merged into `ORSet`.
+- `ORSet.addNewRef` merged into `addValue`.
 
 ## [0.6] - 2019-04-25
 ### Added
