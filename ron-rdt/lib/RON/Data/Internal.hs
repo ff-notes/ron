@@ -157,8 +157,8 @@ fromRon = encodingFromRon encoding
 objectEncoding :: ReplicatedAsObject a => Encoding a
 objectEncoding = Encoding
     { encodingNewRon = \a -> do
-        Object oid <- newObject a
-        pure [AUuid oid]
+        Object id <- newObject a
+        pure [AUuid id]
     , encodingFromRon = objectFromRon $ runReaderT getObject
     }
 
@@ -229,8 +229,8 @@ class Replicated a => ReplicatedAsObject a where
 
 objectFromRon :: MonadE m => (Object a -> m a) -> [Atom] -> m a
 objectFromRon handler atoms = case atoms of
-    [AUuid oid] -> handler $ Object oid
-    _           -> throwError "Expected object UUID"
+    [AUuid id] -> handler $ Object id
+    _          -> throwError "Expected object UUID"
 
 -- | Create new 'ObjectState' from a value
 newObjectState
@@ -241,13 +241,13 @@ newObjectState a = do
 
 getObjectStateChunk :: (MonadE m, MonadObjectState a m) => m StateChunk
 getObjectStateChunk = do
-    Object oid <- ask
+    Object id <- ask
     frame <- get
-    liftMaybe "no such object in chunk" $ Map.lookup oid frame
+    liftMaybe "no such object in chunk" $ Map.lookup id frame
 
 eqRef :: Object a -> [Atom] -> Bool
-eqRef (Object oid) atoms = case atoms of
-    [AUuid ref] -> oid == ref
+eqRef (Object id) atoms = case atoms of
+    [AUuid ref] -> id == ref
     _           -> False
 
 eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
