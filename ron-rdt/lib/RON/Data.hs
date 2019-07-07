@@ -47,9 +47,10 @@ import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
 import           RON.Types (ClosedOp (..), Object (Object),
-                            ObjectState (ObjectState), Op (..), StateChunk (..),
-                            StateFrame, UUID, WireChunk (Closed, Query, Value),
-                            WireFrame, WireReducedChunk (..), frame, id)
+                            ObjectState (ObjectState, frame, id), Op (..),
+                            StateChunk (..), StateFrame, UUID,
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
