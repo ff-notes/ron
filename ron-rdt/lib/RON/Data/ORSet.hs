@@ -96,18 +96,13 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
         pure . ORSet $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
--- commonAdd ::
--- commonAdd =
-
--- | Encode a value and add a it to the OR-Set
-addValue
-    :: (Replicated a, ReplicaClock m, MonadE m, MonadState StateFrame m)
-    => a -> Object (ORSet a) -> m ()
-addValue item self = do
+commonAdd
+    :: (MonadE m, MonadState StateFrame m, ReplicaClock m)
+    => [Atom] -> Object a -> m ()
+commonAdd payload self = do
     StateChunk{stateVersion, stateBody} <- getObjectStateChunk self
     advanceToUuid stateVersion
     event <- getEventUuid
-    payload <- newRon item
     let newOp = Op event Zero payload
     let chunk' = stateBody ++ [newOp]
     let state' = StateChunk
@@ -115,19 +110,18 @@ addValue item self = do
     let Object id = self
     modify' $ Map.insert id state'
 
+-- | Encode a value and add a it to the OR-Set
+addValue
+    :: (Replicated a, ReplicaClock m, MonadE m, MonadState StateFrame m)
+    => a -> Object (ORSet a) -> m ()
+addValue item self = do
+    payload <- newRon item
+    commonAdd payload self
+
 addRef
     :: (ReplicaClock m, MonadE m, MonadState StateFrame m)
     => Object a -> Object (ORSet a) -> m ()
-addRef (Object itemUuid) self = do
-    StateChunk{stateVersion, stateBody} <- getObjectStateChunk self
-    advanceToUuid stateVersion
-    event <- getEventUuid
-    let newOp = Op event Zero [AUuid itemUuid]
-    let chunk' = stateBody ++ [newOp]
-    let state' = StateChunk
-            {stateType = setType, stateVersion = event, stateBody = chunk'}
-    let Object id = self
-    modify' $ Map.insert id state'
+addRef (Object itemUuid) = commonAdd [AUuid itemUuid]
 
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
 commonRemove
@@ -161,7 +155,7 @@ removeValue
         , MonadE m, ReplicaClock m, MonadState StateFrame m
         )
     => a -> Object (ORSet a) -> m ()
-removeValue a self = commonRemove (eqPayload a) self
+removeValue = commonRemove . eqPayload
 
 -- | Remove an object reference from the OR-Set
 removeRef
