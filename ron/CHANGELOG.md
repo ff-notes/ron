@@ -9,6 +9,12 @@ and this project adheres to
 ### Added
 - Instance `ReplicaClock WriterT`.
 
+### Changed
+- Now `ObjectState` keeps a typed reference to an object with state frame
+  attached,
+  and `Object` is just a type UUID --
+  a typed reference to an object in a state frame passed in MonadState context.
+
 ### Removed
 - `ObjectPart` as not used in RON-RDT 2.1.
 - Support of space inside text UUID, as removed in RON 2.1.

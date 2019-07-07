@@ -18,7 +18,7 @@
 --     let dataDir = ".\/data\/"
 --     h <- Storage.'newHandle' dataDir
 --     'runStorage' h $ do
---         obj <- 'newObject' Note{active = True, text = "Write an example"}
+--         obj <- 'newObjectState' Note{active = True, text = "Write an example"}
 --         'createDocument' obj
 -- @
 module RON.Storage.FS (
