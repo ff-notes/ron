@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Instance `ReplicaClock WriterT`.
+
 ### Removed
 - `ObjectPart` as not used in RON-RDT 2.1.
 - Support of space inside text UUID, as removed in RON 2.1.
