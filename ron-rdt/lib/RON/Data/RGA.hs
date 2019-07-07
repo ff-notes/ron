@@ -42,8 +42,7 @@ import qualified Data.Text as Text
 
 import           RON.Data.Internal
 import           RON.Error (MonadE, errorContext, throwErrorText)
-import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid,
-                            getEventUuids)
+import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Types (Object (Object), Op (..), StateChunk (..),
                             StateFrame, UUID)
 import           RON.Util.Word (pattern B11, ls60)
@@ -354,41 +353,37 @@ edit
         , ReplicaClock m, MonadE m, MonadObjectState (RGA a) m
         )
     => [a] -> m ()
-edit newItems = do
-    StateChunk{stateVersion, stateBody} <- getObjectStateChunk
-    advanceToUuid stateVersion
-
-    let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
-        -- TODO(2019-04-17, #59, cblp) replace 'toPayload' with 'newRon' and
-        -- relax constraint on 'a' from 'ReplicatedAsPayload' to 'Replicated'
-    let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
-    (stateBody', Last lastEvent) <- runWriterT . fmap fold . for diff $ \case
-        First removed -> for removed $ \case
-            op@Op{refId = Zero} -> do  -- not deleted yet
-                -- TODO(2018-11-03, #15, cblp) get sequential ids
-                tombstone <- getEventUuid
-                tell . Last $ Just tombstone
-                pure op{refId = tombstone}
-            op ->  -- deleted already
-                pure op
-        Both v _      -> pure v
-        Second added  -> for added $ \op -> do
-            -- TODO(2018-11-03, #15, cblp) get sequential ids
-            opId <- getEventUuid
-            tell . Last $ Just opId
-            pure op{opId}
-
-    case lastEvent of
-        Nothing -> pure ()
-        Just stateVersion' -> do
-            let state' = StateChunk
+edit newItems =
+    modifyObjectStateChunk $ \chunk@StateChunk{stateBody} -> do
+        let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
+            -- TODO(2019-04-17, #59, cblp) replace 'toPayload' with 'newRon' and
+            -- relax constraint on 'a' from 'ReplicatedAsPayload' to
+            -- 'Replicated'
+        let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
+        (stateBody', Last lastEvent) <-
+            runWriterT . fmap fold . for diff $ \case
+                First removed -> for removed $ \case
+                    op@Op{refId = Zero} -> do  -- not deleted yet
+                        -- TODO(2018-11-03, #15, cblp) get sequential ids
+                        tombstone <- getEventUuid
+                        tell . Last $ Just tombstone
+                        pure op{refId = tombstone}
+                    op ->  -- deleted already
+                        pure op
+                Both v _      -> pure v
+                Second added  -> for added $ \op -> do
+                    -- TODO(2018-11-03, #15, cblp) get sequential ids
+                    opId <- getEventUuid
+                    tell . Last $ Just opId
+                    pure op{opId}
+        case lastEvent of
+            Nothing -> pure chunk
+            Just stateVersion' ->
+                pure StateChunk
                     { stateType    = rgaType
                     , stateVersion = stateVersion'
                     , stateBody    = stateBody'
                     }
-            Object id <- ask
-            modify' $ Map.insert id state'
-
   where
     eqAliveOnPayload
             Op{refId = Zero, payload = p1}
@@ -445,24 +440,19 @@ insert
     -> Maybe UUID  -- ^ position
     -> m ()
 insert []    _         = pure ()
-insert items mPosition = do
-    stateChunk@StateChunk{stateVersion, stateBody} <- getObjectStateChunk
-    advanceToUuid stateVersion
+insert items mPosition =
+    modifyObjectStateChunk $ \chunk@StateChunk{stateVersion, stateBody} -> do
+        vertexIds <- getEventUuids $ ls60 $ genericLength items
+        ops <-
+            for (zip items vertexIds) $ \(item, vertexId) -> do
+                payload <- newRon item
+                pure $ Op vertexId Zero payload
 
-    vertexIds <- getEventUuids $ ls60 $ genericLength items
-    ops <-
-        for (zip items vertexIds) $ \(item, vertexId) -> do
-            payload <- newRon item
-            pure $ Op vertexId Zero payload
-
-    let stateVersion' = maximumDef stateVersion $ map opId ops
-    stateBody' <- case mPosition of
-        Nothing -> pure $ ops <> stateBody
-        Just position -> findAndInsertAfter position ops stateBody
-    let stateChunk' =
-            stateChunk{stateVersion = stateVersion', stateBody = stateBody'}
-    Object id <- ask
-    modify' $ Map.insert id stateChunk'
+        let stateVersion' = maximumDef stateVersion $ map opId ops
+        stateBody' <- case mPosition of
+            Nothing -> pure $ ops <> stateBody
+            Just position -> findAndInsertAfter position ops stateBody
+        pure chunk{stateVersion = stateVersion', stateBody = stateBody'}
   where
     findAndInsertAfter pos newOps = go where
         go = \case
@@ -510,16 +500,11 @@ remove
     -> m ()
 remove position =
     errorContext "RGA.remove" $
-    errorContext ("position = " <> show position) $ do
-        stateChunk@StateChunk{stateVersion, stateBody} <- getObjectStateChunk
-        advanceToUuid stateVersion
-
+    errorContext ("position = " <> show position) $
+    modifyObjectStateChunk $ \chunk@StateChunk{stateBody} -> do
         event <- getEventUuid
         stateBody' <- findAndTombstone event stateBody
-        let stateChunk' =
-                stateChunk{stateVersion = event, stateBody = stateBody'}
-        Object id <- ask
-        modify' $ Map.insert id stateChunk'
+        pure chunk{stateVersion = event, stateBody = stateBody'}
   where
     findAndTombstone event = go where
         go = \case

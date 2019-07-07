@@ -2,7 +2,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,13 +20,20 @@ import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal
+import           RON.Data.Internal (MonadObjectState, Reducible, Replicated,
+                                    ReplicatedAsObject, ReplicatedAsPayload,
+                                    encoding, eqPayload, eqRef, fromRon,
+                                    getObject, getObjectStateChunk,
+                                    mkStateChunk, modifyObjectStateChunk,
+                                    newObject, newRon, objectEncoding,
+                                    objectOpType, reducibleOpType,
+                                    stateFromChunk, stateToChunk)
 import           RON.Error (MonadE)
-import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
+import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (Object),
                             Op (Op, opId, payload, refId),
-                            StateChunk (StateChunk), UUID, stateBody, stateType,
-                            stateVersion)
+                            StateChunk (StateChunk, stateBody, stateType, stateVersion),
+                            UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -97,16 +103,13 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => [Atom] -> m ()
-commonAdd payload = do
-    StateChunk{stateVersion, stateBody} <- getObjectStateChunk
-    advanceToUuid stateVersion
-    event <- getEventUuid
-    let newOp = Op event Zero payload
-    let chunk' = stateBody ++ [newOp]
-    let state' = StateChunk
+commonAdd payload =
+    modifyObjectStateChunk $ \StateChunk{stateBody} -> do
+        event <- getEventUuid
+        let newOp = Op event Zero payload
+        let chunk' = stateBody ++ [newOp]
+        pure StateChunk
             {stateType = setType, stateVersion = event, stateBody = chunk'}
-    Object id <- ask
-    modify' $ Map.insert id state'
 
 -- | Encode a value and add a it to the OR-Set
 addValue
@@ -125,28 +128,25 @@ addRef (Object itemUuid) = commonAdd [AUuid itemUuid]
 commonRemove
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
     => ([Atom] -> Bool) -> m ()
-commonRemove isTarget = do
-    StateChunk{stateVersion, stateBody} <- getObjectStateChunk
-    advanceToUuid stateVersion
-    let state0@(ORSetRaw opMap) = stateFromChunk stateBody
-    let targetEvents =
-            [ opId
-            | Op{opId, refId, payload} <- toList opMap
-            , refId == Zero  -- is alive
-            , isTarget payload
-            ]
-    case targetEvents of
-        [] -> pure ()
-        _  -> do
-            tombstone <- getEventUuid
-            let patch =
-                    [ Op{opId = tombstone, refId, payload = []}
-                    | refId <- targetEvents
-                    ]
-            let chunk' = state0 <> stateFromChunk patch
-            let state' = stateToChunk chunk'
-            Object id <- ask
-            modify' $ Map.insert id state'
+commonRemove isTarget =
+    modifyObjectStateChunk $ \chunk@StateChunk{stateBody} -> do
+        let state0@(ORSetRaw opMap) = stateFromChunk stateBody
+        let targetEvents =
+                [ opId
+                | Op{opId, refId, payload} <- toList opMap
+                , refId == Zero  -- is alive
+                , isTarget payload
+                ]
+        case targetEvents of
+            [] -> pure chunk
+            _  -> do
+                tombstone <- getEventUuid
+                let patch =
+                        [ Op{opId = tombstone, refId, payload = []}
+                        | refId <- targetEvents
+                        ]
+                let state' = state0 <> stateFromChunk patch
+                pure $ stateToChunk state'
 
 -- | Remove an atomic value from the OR-Set
 removeValue

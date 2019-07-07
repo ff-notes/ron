@@ -24,6 +24,7 @@ module RON.Data.Internal (
     eqRef,
     getObjectStateChunk,
     mkStateChunk,
+    modifyObjectStateChunk,
     newObjectState,
     --
     objectEncoding,
@@ -42,7 +43,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           RON.Error (MonadE, errorContext, liftMaybe)
-import           RON.Event (ReplicaClock)
+import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             ObjectState (ObjectState, frame, id), Op (Op, opId),
                             StateChunk (StateChunk, stateBody, stateType, stateVersion),
@@ -244,6 +245,19 @@ getObjectStateChunk = do
     Object id <- ask
     frame <- get
     liftMaybe "no such object in chunk" $ Map.lookup id frame
+
+modifyObjectStateChunk
+    :: (MonadObjectState a m, ReplicaClock m, MonadE m)
+    => (StateChunk -> m StateChunk) -> m ()
+modifyObjectStateChunk f = do
+    Object id <- ask
+    chunk@StateChunk{stateVersion} <- getObjectStateChunk
+    advanceToUuid stateVersion
+    -- event <- getEventUuid
+    -- let state' = StateChunk
+    --         {stateType = _, stateVersion = event, stateBody = chunk'}
+    chunk' <- f chunk
+    modify' $ Map.insert id chunk'
 
 eqRef :: Object a -> [Atom] -> Bool
 eqRef (Object id) atoms = case atoms of
