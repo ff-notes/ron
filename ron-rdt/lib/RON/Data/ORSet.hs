@@ -73,6 +73,7 @@ setType = $(UUID.liftName "set")
 
 -- | Type-directing wrapper for typed OR-Set
 newtype ORSet a = ORSet [a]
+    deriving (Eq, Show)
 
 instance Replicated a => Replicated (ORSet a) where
     encoding = objectEncoding
