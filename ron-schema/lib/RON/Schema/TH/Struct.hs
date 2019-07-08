@@ -123,10 +123,13 @@ mkInstanceReplicatedAsObject name fields annotations = do
     consP = conP name' [varP field'Var | Field'{field'Var} <- fields]
 
 mkHaskellFieldName :: StructAnnotations -> Text -> Text
-mkHaskellFieldName annotations base = saHaskellFieldPrefix <> base' where
-    StructAnnotations{saHaskellFieldPrefix, saHaskellFieldCaseTransform} =
-        annotations
-    base' = case saHaskellFieldCaseTransform of
+mkHaskellFieldName annotations base = prefix <> base' where
+    StructAnnotations
+            { haskellFieldPrefix        = prefix
+            , haskellFieldCaseTransform = caseTransform
+            }
+        = annotations
+    base' = case caseTransform of
         Nothing        -> base
         Just TitleCase -> case Text.uncons base of
             Nothing            -> base

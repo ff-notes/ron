@@ -151,10 +151,10 @@ instance FromEDN StructAnnotations where
                 in pure (name, value)
             NoTag _ -> fail "annotation must be a tagged value"
         go m = do
-            saHaskellFieldPrefix <- mapGetSymbol "field_prefix" m <|> pure ""
-            saHaskellFieldCaseTransform <-
-                optional $ mapGetSymbol "field_case" m
-            pure StructAnnotations{..}
+            haskellFieldPrefix <- mapGetSymbol "field_prefix" m <|> pure ""
+            haskellFieldCaseTransform <- optional $ mapGetSymbol "field_case" m
+            pure
+                StructAnnotations{haskellFieldPrefix, haskellFieldCaseTransform}
 
 instance FromEDN CaseTransform where
     parseEDN = withSymbol' $ \case

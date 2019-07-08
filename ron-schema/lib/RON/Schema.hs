@@ -76,14 +76,14 @@ data StructLww stage = StructLww
 deriving instance Show (UseType stage) => Show (StructLww stage)
 
 data StructAnnotations = StructAnnotations
-    { saHaskellFieldPrefix        :: Text
-    , saHaskellFieldCaseTransform :: Maybe CaseTransform
+    { haskellFieldPrefix        :: Text
+    , haskellFieldCaseTransform :: Maybe CaseTransform
     }
     deriving (Show)
 
 defaultStructAnnotations :: StructAnnotations
 defaultStructAnnotations = StructAnnotations
-    {saHaskellFieldPrefix = Text.empty, saHaskellFieldCaseTransform = Nothing}
+    {haskellFieldPrefix = Text.empty, haskellFieldCaseTransform = Nothing}
 
 data CaseTransform = TitleCase
     deriving (Show)
