@@ -113,9 +113,9 @@ defaultOpaqueAnnotations :: OpaqueAnnotations
 defaultOpaqueAnnotations = OpaqueAnnotations{haskellType = Nothing}
 
 data Opaque = Opaque
-    { opaqueIsObject    :: Bool
-    , opaqueName        :: Text
-    , opaqueAnnotations :: OpaqueAnnotations
+    { isObject    :: Bool
+    , name        :: Text
+    , annotations :: OpaqueAnnotations
     }
     deriving (Show)
 

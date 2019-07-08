@@ -76,17 +76,17 @@ instance FromEDN TEnum where
 
 instance FromEDN Opaque where
     parseEDN = withNoTag . withList $ \case
-        kind : name : annotations ->
+        kind : nameSym : annotationVals ->
             (`withSymbol'` kind) $ \case
                 "atoms"  -> go False
                 "object" -> go True
                 _        -> fail "opaque kind must be either atoms or object"
-            where
-            go opaqueIsObject = do
-                opaqueName        <- parseSymbol' name
-                opaqueAnnotations <- parseAnnotations
-                pure Opaque{..}
-            parseAnnotations = case annotations of
+          where
+            go isObject = do
+                name        <- parseSymbol' nameSym
+                annotations <- parseAnnotations
+                pure Opaque{isObject, name, annotations}
+            parseAnnotations = case annotationVals of
                 [] -> pure defaultOpaqueAnnotations
                 _  -> fail "opaque annotations are not implemented yet"
         _ -> fail
@@ -106,10 +106,10 @@ rememberDeclaration decl = do
 
 declarationName :: Declaration stage -> TypeName
 declarationName = \case
-    DAlias     Alias    {name      } -> name
-    DEnum      Enum     {enumName  } -> enumName
-    DOpaque    Opaque   {opaqueName} -> opaqueName
-    DStructLww StructLww{name      } -> name
+    DAlias     Alias    {name    } -> name
+    DEnum      Enum     {enumName} -> enumName
+    DOpaque    Opaque   {name    } -> name
+    DStructLww StructLww{name    } -> name
 
 instance FromEDN (StructLww 'Parsed) where
     parseEDN = withNoTag . withList $ \case
