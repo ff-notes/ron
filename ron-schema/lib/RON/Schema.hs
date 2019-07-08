@@ -58,7 +58,7 @@ data TComposite
     | TEnum   TEnum
     deriving (Show)
 
-data TEnum = Enum {enumName :: Text, enumItems :: [Text]}
+data TEnum = Enum {name :: Text, items :: [Text]}
     deriving (Show)
 
 data TObject

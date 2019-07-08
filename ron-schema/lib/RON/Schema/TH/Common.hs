@@ -34,8 +34,8 @@ mkViewType = \case
         TAInteger -> [t| Int64 |]
         TAString  -> [t| Text |]
     TComposite t -> case t of
-        TEnum   Enum{enumName} -> conT $ mkNameT enumName
-        TOption u              -> [t| Maybe $(mkViewType u) |]
+        TEnum   Enum{name} -> conT $ mkNameT name
+        TOption u          -> [t| Maybe $(mkViewType u) |]
     TObject t -> case t of
         TORSet     item            -> wrapList item
         TRga       item            -> wrapList item

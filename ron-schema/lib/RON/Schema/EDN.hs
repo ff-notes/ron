@@ -66,10 +66,10 @@ instance FromEDN (Declaration 'Parsed) where
 
 instance FromEDN TEnum where
     parseEDN = withNoTag . withList $ \case
-        name : items -> do
-            enumName  <- parseSymbol' name
-            enumItems <- traverse parseSymbol' items
-            pure Enum{..}
+        nameSym : itemSyms -> do
+            name  <- parseSymbol' nameSym
+            items <- traverse parseSymbol' itemSyms
+            pure Enum{name, items}
         [] -> fail
             "Expected declaration in the form\
             \ (enum <name:symbol> <item:symbol>...)"
@@ -106,10 +106,10 @@ rememberDeclaration decl = do
 
 declarationName :: Declaration stage -> TypeName
 declarationName = \case
-    DAlias     Alias    {name    } -> name
-    DEnum      Enum     {enumName} -> enumName
-    DOpaque    Opaque   {name    } -> name
-    DStructLww StructLww{name    } -> name
+    DAlias     Alias    {name} -> name
+    DEnum      Enum     {name} -> name
+    DOpaque    Opaque   {name} -> name
+    DStructLww StructLww{name} -> name
 
 instance FromEDN (StructLww 'Parsed) where
     parseEDN = withNoTag . withList $ \case

@@ -50,8 +50,8 @@ mkReplicated' = fmap fold . traverse fromDecl where
         DStructLww s -> mkReplicatedStructLww s
 
 mkEnum :: TEnum -> TH.DecsQ
-mkEnum Enum{enumName, enumItems} = do
-    itemsUuids <- for enumItems $ \item -> do
+mkEnum Enum{name, items} = do
+    itemsUuids <- for items $ \item -> do
         uuid <- UUID.mkName $ Text.encodeUtf8 item
         pure (mkNameT item, uuid)
     dataType <- mkDataType
@@ -61,10 +61,10 @@ mkEnum Enum{enumName, enumItems} = do
 
   where
 
-    typeName = conT $ mkNameT enumName
+    typeName = conT $ mkNameT name
 
-    mkDataType = TH.dataD (TH.cxt []) (mkNameT enumName) [] Nothing
-        [TH.normalC (mkNameT item) [] | item <- enumItems] []
+    mkDataType = TH.dataD (TH.cxt []) (mkNameT name) [] Nothing
+        [TH.normalC (mkNameT item) [] | item <- items] []
 
     mkInstanceReplicated = [d|
         instance Replicated $typeName where
@@ -78,10 +78,12 @@ mkEnum Enum{enumName, enumItems} = do
         |]
       where
         toUuid = lamCaseE
-            [match (conP name []) (liftData uuid) | (name, uuid) <- itemsUuids]
+            [ match (conP itemName []) (liftData uuid)
+            | (itemName, uuid) <- itemsUuids
+            ]
         fromUuid = lamCaseE
-            $   [ match (liftDataP uuid) [| pure $(conE name) |]
-                | (name, uuid) <- itemsUuids
+            $   [ match (liftDataP uuid) [| pure $(conE itemName) |]
+                | (itemName, uuid) <- itemsUuids
                 ]
             ++  [match
                     TH.wildP
