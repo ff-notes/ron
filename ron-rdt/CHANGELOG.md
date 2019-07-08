@@ -18,7 +18,10 @@ and this project adheres to
   - `newObjectStateWith`
   - `runObjectState`
   - `runObjectState_`
-- Instances `Eq`, `Show` for `ORSet`.
+- `ORSet`:
+  - Instances `Eq`, `Show` for `ORSet`.
+  - `ORSetItem` type.
+  - Methods `findAnyAlive`, `findAnyAlive'`, `zoom`.
 
 ### Changed
 - `ReplicatedAsObject.newObject` now has more specific type,

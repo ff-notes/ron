@@ -9,26 +9,31 @@
 -- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet
     ( ORSet (..)
+    , ORSetItem (..)
     , ORSetRaw
     , addRef
     , addValue
+    , findAnyAlive
+    , findAnyAlive'
     , removeRef
     , removeValue
+    , zoom
     ) where
 
 import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (MonadObjectState, Reducible, Replicated,
-                                    ReplicatedAsObject, ReplicatedAsPayload,
-                                    encoding, eqPayload, eqRef, fromRon,
-                                    getObject, getObjectStateChunk,
-                                    mkStateChunk, modifyObjectStateChunk_,
-                                    newObject, newRon, objectEncoding,
-                                    objectOpType, reducibleOpType,
-                                    stateFromChunk, stateToChunk)
-import           RON.Error (MonadE)
+import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
+                                    Replicated, ReplicatedAsObject,
+                                    ReplicatedAsPayload, encoding, eqPayload,
+                                    eqRef, fromRon, getObject,
+                                    getObjectStateChunk, mkStateChunk,
+                                    modifyObjectStateChunk_, newObject, newRon,
+                                    objectEncoding, objectOpType,
+                                    reducibleOpType, stateFromChunk,
+                                    stateToChunk)
+import           RON.Error (MonadE, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Atom (AUuid), Object (Object),
                             Op (Op, opId, payload, refId),
@@ -162,3 +167,46 @@ removeRef
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
     => Object a -> m ()
 removeRef = commonRemove . eqRef
+
+-- | Reference to an item inside an 'ORSet'.
+newtype ORSetItem a = ORSetItem UUID
+    deriving (Show)
+
+-- | Go from modification of the whole set to the modification of an item
+-- object.
+zoom
+    :: MonadE m
+    => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
+zoom (ORSetItem key) innerModifier = do
+    StateChunk{stateBody} <- getObjectStateChunk
+    let ORSetRaw opMap = stateFromChunk stateBody
+    itemValueRef <- case Map.lookup key opMap of
+        Nothing ->
+            -- TODO(2019-08-07, cblp) creat empty object?
+            throwErrorText "no such key in ORSet"
+        Just Op{payload} -> case payload of
+            [AUuid itemValueRef] -> pure itemValueRef
+            _ -> throwErrorText "item payload is not an object ref"
+    lift $ runReaderT innerModifier $ Object itemValueRef
+
+-- | Find any alive item. If no alive item found, return 'Nothing'.
+findAnyAlive
+    :: (MonadE m, MonadObjectState (ORSet item) m) => m (Maybe (ORSetItem item))
+findAnyAlive = do
+    StateChunk{stateBody} <- getObjectStateChunk
+    pure $ let
+        ORSetRaw opMap = stateFromChunk stateBody
+        aliveItems = [op | op@Op{refId = UUID.Zero} <- toList opMap]
+        in
+        case listToMaybe aliveItems of
+            Nothing       -> Nothing
+            Just Op{opId} -> Just $ ORSetItem opId
+
+-- | Find any alive item. If no alive item found, report an error.
+findAnyAlive'
+    :: (MonadE m, MonadObjectState (ORSet item) m) => m (ORSetItem item)
+findAnyAlive' = do
+    mx <- findAnyAlive
+    case mx of
+        Just x  -> pure x
+        Nothing -> throwErrorText "empty set"
