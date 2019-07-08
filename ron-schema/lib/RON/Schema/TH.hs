@@ -41,7 +41,7 @@ mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
         mkReplicated' schema
 
 -- | Generate Haskell types from RON-Schema
-mkReplicated' :: HasCallStack => Schema 'Resolved -> TH.DecsQ
+mkReplicated' :: Schema 'Resolved -> TH.DecsQ
 mkReplicated' = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
         DAlias     a -> mkAlias a

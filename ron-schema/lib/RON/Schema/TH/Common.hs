@@ -1,3 +1,4 @@
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -36,10 +37,10 @@ mkViewType = \case
         TEnum   Enum{enumName} -> conT $ mkNameT enumName
         TOption u              -> [t| Maybe $(mkViewType u) |]
     TObject t -> case t of
-        TORSet     item                  -> wrapList item
-        TRga       item                  -> wrapList item
-        TStructLww StructLww{structName} -> conT $ mkNameT structName
-        TVersionVector                   -> [t| VersionVector |]
+        TORSet     item            -> wrapList item
+        TRga       item            -> wrapList item
+        TStructLww StructLww{name} -> conT $ mkNameT name
+        TVersionVector             -> [t| VersionVector |]
     TOpaque Opaque{opaqueName, opaqueAnnotations} -> let
         OpaqueAnnotations{oaHaskellType} = opaqueAnnotations
         in conT $ mkNameT $ fromMaybe opaqueName oaHaskellType

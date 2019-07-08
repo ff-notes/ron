@@ -110,16 +110,16 @@ declarationName = \case
     DAlias     Alias    {name      } -> name
     DEnum      Enum     {enumName  } -> enumName
     DOpaque    Opaque   {opaqueName} -> opaqueName
-    DStructLww StructLww{structName} -> structName
+    DStructLww StructLww{name      } -> name
 
 instance FromEDN (StructLww 'Parsed) where
     parseEDN = withNoTag . withList $ \case
-        name : body -> do
-            let (annotations, fields) = span isTagged body
-            structName        <- parseSymbol' name
-            structFields      <- parseFields fields
-            structAnnotations <- parseList annotations
-            pure StructLww{..}
+        nameSym : body -> do
+            let (annotationVals, fieldVals) = span isTagged body
+            name        <- parseSymbol' nameSym
+            fields      <- parseFields  fieldVals
+            annotations <- parseList    annotationVals
+            pure StructLww{name, fields, annotations}
         [] -> fail
             "Expected declaration in the form\
             \ (struct_lww <name:symbol> <annotations>... <fields>...)"
@@ -184,11 +184,11 @@ collectDeclarations = traverse_ rememberDeclaration
 
 validateTypeUses :: (MonadFail m, MonadState Env m) => Schema 'Parsed -> m ()
 validateTypeUses = traverse_ $ \case
-    DAlias     Alias{target}           -> validateExpr target
-    DEnum      _                       -> pure ()
-    DOpaque    _                       -> pure ()
-    DStructLww StructLww{structFields} ->
-        for_ structFields $ \(Field typeExpr) -> validateExpr typeExpr
+    DAlias     Alias{target}     -> validateExpr target
+    DEnum      _                 -> pure ()
+    DOpaque    _                 -> pure ()
+    DStructLww StructLww{fields} ->
+        for_ fields $ \(Field typeExpr) -> validateExpr typeExpr
   where
     validateName name = do
         Env{userTypes} <- get
@@ -214,10 +214,9 @@ evalSchema env = fst <$> userTypes' where
         DEnum   t -> (DEnum t, Type0 $ TComposite $ TEnum t)
         DOpaque t -> (DOpaque t, Type0 $ TOpaque t)
         DStructLww StructLww{..} -> let
-            structFields' =
-                (\(Field typeExpr) -> Field $ evalType typeExpr)
-                <$> structFields
-            struct = StructLww{structFields = structFields', ..}
+            fields' =
+                (\(Field typeExpr) -> Field $ evalType typeExpr) <$> fields
+            struct = StructLww{fields = fields', ..}
             in (DStructLww struct, Type0 $ TObject $ TStructLww struct)
 
     getType :: TypeName -> RonTypeF

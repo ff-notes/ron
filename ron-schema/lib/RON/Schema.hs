@@ -1,3 +1,4 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE KindSignatures #-}
@@ -68,9 +69,9 @@ data TObject
     deriving (Show)
 
 data StructLww stage = StructLww
-    { structName        :: Text
-    , structFields      :: Map Text (Field stage)
-    , structAnnotations :: StructAnnotations
+    { name        :: Text
+    , fields      :: Map Text (Field stage)
+    , annotations :: StructAnnotations
     }
 deriving instance Show (UseType stage) => Show (StructLww stage)
 
