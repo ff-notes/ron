@@ -42,8 +42,8 @@ mkViewType = \case
         TStructLww StructLww{name} -> conT $ mkNameT name
         TVersionVector             -> [t| VersionVector |]
     TOpaque Opaque{opaqueName, opaqueAnnotations} -> let
-        OpaqueAnnotations{oaHaskellType} = opaqueAnnotations
-        in conT $ mkNameT $ fromMaybe opaqueName oaHaskellType
+        OpaqueAnnotations{haskellType} = opaqueAnnotations
+        in conT $ mkNameT $ fromMaybe opaqueName haskellType
   where
     wrapList a = [t| [$(mkViewType a)] |]
 

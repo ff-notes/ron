@@ -40,8 +40,7 @@ data RonTypeF = Type0 RonType | Type1 (RonType -> RonType)
 prelude :: Map TypeName RonTypeF
 prelude = Map.fromList
     [ ("Bool",
-        Type0 $
-        opaqueAtoms "Bool" OpaqueAnnotations{oaHaskellType = Just "Bool"})
+        Type0 $ opaqueAtoms "Bool" OpaqueAnnotations{haskellType = Just "Bool"})
     , ("Day",           Type0 day)
     , ("Integer",       Type0 $ TAtom TAInteger)
     , ("RgaString",     Type0 $ TObject $ TRga char)
@@ -52,7 +51,7 @@ prelude = Map.fromList
     , ("RGA",           Type1 $ TObject . TRga)
     ]
   where
-    char = opaqueAtoms "Char" OpaqueAnnotations{oaHaskellType = Just "Char"}
+    char = opaqueAtoms "Char" OpaqueAnnotations{haskellType = Just "Char"}
     day = opaqueAtoms_ "Day"
 
 instance FromEDN (Declaration 'Parsed) where

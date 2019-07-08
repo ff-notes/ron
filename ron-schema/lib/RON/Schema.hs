@@ -106,11 +106,11 @@ type family Schema (stage :: Stage) where
     Schema 'Parsed   = [Declaration 'Parsed]
     Schema 'Resolved = Map TypeName (Declaration 'Resolved)
 
-newtype OpaqueAnnotations = OpaqueAnnotations{oaHaskellType :: Maybe Text}
+newtype OpaqueAnnotations = OpaqueAnnotations{haskellType :: Maybe Text}
     deriving (Show)
 
 defaultOpaqueAnnotations :: OpaqueAnnotations
-defaultOpaqueAnnotations = OpaqueAnnotations{oaHaskellType = Nothing}
+defaultOpaqueAnnotations = OpaqueAnnotations{haskellType = Nothing}
 
 data Opaque = Opaque
     { opaqueIsObject    :: Bool
