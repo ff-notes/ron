@@ -172,12 +172,15 @@ removeRef = commonRemove . eqRef
 data ORSetItem a = ORSetItem{key :: UUID, value :: Object a}
     deriving (Show)
 
+-- | Go from modification of the whole set to the modification of an item
+-- object.
 zoom
     :: MonadE m
     => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
 zoom ORSetItem{value} innerModifier =
     lift $ runReaderT innerModifier value
 
+-- | Find any alive item. If no alive item found, return 'Nothing'.
 findAnyAlive
     :: (MonadE m, MonadObjectState (ORSet item) m) => m (Maybe (ORSetItem item))
 findAnyAlive = do
@@ -191,6 +194,7 @@ findAnyAlive = do
                 pure ORSetItem{key = opId, value = Object itemValueRef}
             _ -> throwErrorText "item payload is not an object ref"
 
+-- | Find any alive item. If no alive item found, report an error.
 findAnyAlive'
     :: (MonadE m, MonadObjectState (ORSet item) m) => m (ORSetItem item)
 findAnyAlive' = do
