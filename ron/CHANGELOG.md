@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - Instance `ReplicaClock WriterT`.
+- Instance `MonadFail ReplicaSimT`.
 
 ### Changed
 - Now `ObjectState` keeps a typed reference to an object with state frame
