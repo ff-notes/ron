@@ -88,7 +88,7 @@ defaultStructAnnotations = StructAnnotations
 data CaseTransform = TitleCase
     deriving (Show)
 
-newtype Field stage = Field{fieldType :: UseType stage}
+newtype Field stage = Field{type_ :: UseType stage}
 deriving instance Show (UseType stage) => Show (Field stage)
 
 type family UseType (stage :: Stage) where

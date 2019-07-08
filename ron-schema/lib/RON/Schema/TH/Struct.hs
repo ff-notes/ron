@@ -44,11 +44,11 @@ data Field' = Field'
 
 mkReplicatedStructLww :: StructLww 'Resolved -> TH.DecsQ
 mkReplicatedStructLww StructLww{name, fields, annotations} = do
-    fields' <- for (Map.assocs fields) $ \(field'Name, Field{fieldType}) ->
+    fields' <- for (Map.assocs fields) $ \(field'Name, Field{type_}) ->
         case UUID.mkName . BSC.pack $ Text.unpack field'Name of
             Just field'RonName -> do
                 field'Var <- TH.newName $ Text.unpack field'Name
-                pure Field'{field'Type = fieldType, ..}
+                pure Field'{field'Type = type_, ..}
             Nothing -> fail $
                 "Field name is not representable in RON: " ++ show field'Name
     dataType <- mkDataType structName fields annotations
@@ -68,8 +68,8 @@ mkDataType name fields annotations = TH.dataD (TH.cxt []) name [] Nothing
     [recC name
         [ TH.varBangType (mkNameT $ mkHaskellFieldName annotations fieldName) $
             TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) viewType
-        | (fieldName, Field fieldType) <- Map.assocs fields
-        , let viewType = mkViewType fieldType
+        | (fieldName, Field type_) <- Map.assocs fields
+        , let viewType = mkViewType type_
         ]]
     []
 
