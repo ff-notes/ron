@@ -169,7 +169,7 @@ removeRef
 removeRef = commonRemove . eqRef
 
 -- | Reference to an item inside an 'ORSet'.
-data ORSetItem a = ORSetItem{key :: UUID, value :: Object a}
+newtype ORSetItem a = ORSetItem UUID
     deriving (Show)
 
 -- | Go from modification of the whole set to the modification of an item
@@ -177,22 +177,30 @@ data ORSetItem a = ORSetItem{key :: UUID, value :: Object a}
 zoom
     :: MonadE m
     => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
-zoom ORSetItem{value} innerModifier =
-    lift $ runReaderT innerModifier value
+zoom (ORSetItem key) innerModifier = do
+    StateChunk{stateBody} <- getObjectStateChunk
+    let ORSetRaw opMap = stateFromChunk stateBody
+    itemValueRef <- case Map.lookup key opMap of
+        Nothing ->
+            -- TODO(2019-08-07, cblp) creat empty object?
+            throwErrorText "no such key in ORSet"
+        Just Op{payload} -> case payload of
+            [AUuid itemValueRef] -> pure itemValueRef
+            _ -> throwErrorText "item payload is not an object ref"
+    lift $ runReaderT innerModifier $ Object itemValueRef
 
 -- | Find any alive item. If no alive item found, return 'Nothing'.
 findAnyAlive
     :: (MonadE m, MonadObjectState (ORSet item) m) => m (Maybe (ORSetItem item))
 findAnyAlive = do
     StateChunk{stateBody} <- getObjectStateChunk
-    let ORSetRaw opMap = stateFromChunk stateBody
-    let aliveItems = [op | op@Op{refId = UUID.Zero} <- toList opMap]
-    case listToMaybe aliveItems of
-        Nothing -> pure Nothing
-        Just Op{opId, payload} -> Just <$> case payload of
-            [AUuid itemValueRef] ->
-                pure ORSetItem{key = opId, value = Object itemValueRef}
-            _ -> throwErrorText "item payload is not an object ref"
+    pure $ let
+        ORSetRaw opMap = stateFromChunk stateBody
+        aliveItems = [op | op@Op{refId = UUID.Zero} <- toList opMap]
+        in
+        case listToMaybe aliveItems of
+            Nothing       -> Nothing
+            Just Op{opId} -> Just $ ORSetItem opId
 
 -- | Find any alive item. If no alive item found, report an error.
 findAnyAlive'
