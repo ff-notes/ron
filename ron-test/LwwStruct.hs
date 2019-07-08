@@ -9,21 +9,24 @@ import           RON.Prelude
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.String.Interpolate.IsString (i)
 import           GHC.Stack (withFrozenCallStack)
-import           Hedgehog (MonadTest, Property, evalEither, property, (===))
+import           Hedgehog (MonadTest, Property, evalEither, evalExceptT,
+                           property, (===))
 import           Hedgehog.Internal.Property (failWith)
 
-import           RON.Data (evalObjectState, getObject, newObjectState,
-                           runObjectState)
+import           RON.Data (evalObjectState, execObjectState, getObject,
+                           newObjectState)
 import qualified RON.Data.ORSet as ORSet
 import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
-import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
+import           RON.Event.Simulation (runNetworkSim, runNetworkSimT,
+                                       runReplicaSim, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Util (ByteStringL)
 
 import           LwwStruct.Types (Struct51 (..), int1_assign, opt5_read,
                                   opt6_assign, opt6_read, set4_zoom, str2_zoom,
                                   str3_assign, str3_read)
+import           Orphans ()
 
 example0 :: Struct51
 example0 = Struct51
@@ -129,14 +132,15 @@ prop_lwwStruct = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    ((str3Value, opt5Value, opt6Value), ex4state) <-
-        evalEither $
-        runNetworkSim $ runReplicaSim replica $ runExceptT $
-        runObjectState ex2state $ do
+    ex4state <-
+        evalExceptT $
+        runNetworkSimT $ runReplicaSimT replica $
+        execObjectState ex2state $ do
             -- plain field
             int1_assign 166
             str2_zoom $ RGA.edit "145"
             str3Value <- str3_read
+            str3Value === "190"
             str3_assign "206"
             set4_zoom $
                 ORSet.addValue
@@ -149,12 +153,10 @@ prop_lwwStruct = property $ do
                         , opt6 = Nothing
                         }
             opt5Value <- opt5_read
+            opt5Value === Nothing
             opt6Value <- opt6_read
+            opt6Value === Just 74
             opt6_assign Nothing
-            pure (str3Value, opt5Value, opt6Value)
-    str3Value === "190"
-    opt5Value === Nothing
-    opt6Value === Just 74
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState ex4state getObject
