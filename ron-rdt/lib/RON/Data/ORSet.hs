@@ -24,7 +24,7 @@ import           RON.Data.Internal (MonadObjectState, Reducible, Replicated,
                                     ReplicatedAsObject, ReplicatedAsPayload,
                                     encoding, eqPayload, eqRef, fromRon,
                                     getObject, getObjectStateChunk,
-                                    mkStateChunk, modifyObjectStateChunk,
+                                    mkStateChunk, modifyObjectStateChunk_,
                                     newObject, newRon, objectEncoding,
                                     objectOpType, reducibleOpType,
                                     stateFromChunk, stateToChunk)
@@ -105,7 +105,7 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => [Atom] -> m ()
 commonAdd payload =
-    modifyObjectStateChunk $ \StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \StateChunk{stateBody} -> do
         event <- getEventUuid
         let newOp = Op event Zero payload
         let chunk' = stateBody ++ [newOp]
@@ -130,7 +130,7 @@ commonRemove
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
     => ([Atom] -> Bool) -> m ()
 commonRemove isTarget =
-    modifyObjectStateChunk $ \chunk@StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
         let state0@(ORSetRaw opMap) = stateFromChunk stateBody
         let targetEvents =
                 [ opId

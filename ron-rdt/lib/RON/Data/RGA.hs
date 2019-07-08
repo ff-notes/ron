@@ -40,7 +40,17 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Data.Internal
+import           RON.Data.Internal (MonadObjectState,
+                                    ReducedChunk (ReducedChunk), Reducible,
+                                    Replicated, ReplicatedAsObject,
+                                    ReplicatedAsPayload, Unapplied,
+                                    applyPatches, encoding, fromRon, getObject,
+                                    getObjectStateChunk,
+                                    modifyObjectStateChunk_, newObject, newRon,
+                                    objectEncoding, objectOpType, rcBody, rcRef,
+                                    rcVersion, reduceUnappliedPatches,
+                                    reducibleOpType, stateFromChunk,
+                                    stateToChunk, toPayload)
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Types (Object (Object), Op (..), StateChunk (..),
@@ -354,7 +364,7 @@ edit
         )
     => [a] -> m ()
 edit newItems =
-    modifyObjectStateChunk $ \chunk@StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
         let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
             -- TODO(2019-04-17, #59, cblp) replace 'toPayload' with 'newRon' and
             -- relax constraint on 'a' from 'ReplicatedAsPayload' to
@@ -441,7 +451,7 @@ insert
     -> m ()
 insert []    _         = pure ()
 insert items mPosition =
-    modifyObjectStateChunk $ \chunk@StateChunk{stateVersion, stateBody} -> do
+    modifyObjectStateChunk_ $ \chunk@StateChunk{stateVersion, stateBody} -> do
         vertexIds <- getEventUuids $ ls60 $ genericLength items
         ops <-
             for (zip items vertexIds) $ \(item, vertexId) -> do
@@ -501,7 +511,7 @@ remove
 remove position =
     errorContext "RGA.remove" $
     errorContext ("position = " <> show position) $
-    modifyObjectStateChunk $ \chunk@StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
         event <- getEventUuid
         stateBody' <- findAndTombstone event stateBody
         pure chunk{stateVersion = event, stateBody = stateBody'}

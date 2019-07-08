@@ -25,6 +25,7 @@ module RON.Data.Internal (
     getObjectStateChunk,
     mkStateChunk,
     modifyObjectStateChunk,
+    modifyObjectStateChunk_,
     newObjectState,
     --
     objectEncoding,
@@ -249,7 +250,7 @@ getObjectStateChunk = do
 
 modifyObjectStateChunk
     :: (MonadObjectState a m, ReplicaClock m, MonadE m)
-    => (StateChunk -> m StateChunk) -> m ()
+    => (StateChunk -> m (b, StateChunk)) -> m b
 modifyObjectStateChunk f = do
     Object uuid <- ask
     chunk@StateChunk{stateVersion} <- getObjectStateChunk
@@ -257,8 +258,16 @@ modifyObjectStateChunk f = do
     -- event <- getEventUuid
     -- let state' = StateChunk
     --         {stateType = _, stateVersion = event, stateBody = chunk'}
-    chunk' <- f chunk
+    (a, chunk') <- f chunk
     modify' $ Map.insert uuid chunk'
+    pure a
+
+modifyObjectStateChunk_
+    :: (MonadObjectState a m, ReplicaClock m, MonadE m)
+    => (StateChunk -> m StateChunk) -> m ()
+modifyObjectStateChunk_ f = modifyObjectStateChunk $ \chunk -> do
+    chunk' <- f chunk
+    pure ((), chunk')
 
 eqRef :: Object a -> [Atom] -> Bool
 eqRef (Object uuid) atoms = case atoms of
