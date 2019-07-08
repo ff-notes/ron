@@ -156,7 +156,7 @@ prop_text_roundtrip_frames = property $
 
 prop_filename_roundtrip = property $ do
     ShowAs caseTransform _ <- forAll $ Gen.element
-        [ identity    `ShowAs` "identity"
+        [ id          `ShowAs` "id"
         , map toUpper `ShowAs` "map toUpper"
         , map toLower `ShowAs` "map toLower"
         ]
@@ -200,7 +200,7 @@ prop_uuid_abbreviations = property $ do
         , "A/LED$0"
         , "A/LED"
         ]
-    aLed = either error identity $ RT.parseUuid "A/LED"
+    aLed = either error id $ RT.parseUuid "A/LED"
 
 evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = evalExceptT . liftEither

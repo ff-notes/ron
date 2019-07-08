@@ -49,7 +49,7 @@ import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
 import           RON.Types (ClosedOp (..), Object (Object),
-                            ObjectState (ObjectState, frame, id), Op (..),
+                            ObjectState (ObjectState, frame, uuid), Op (..),
                             StateChunk (..), StateFrame, UUID,
                             WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
@@ -192,7 +192,7 @@ unsafeReduceObject obj@ObjectState{frame = s1} s2 = do
 
 -- | Reduce object with frame from another version of the same object.
 reduceObject :: MonadE m => ObjectState a -> ObjectState a -> m (ObjectState a)
-reduceObject o1@ObjectState{id = id1} ObjectState{id = id2, frame = frame2}
+reduceObject o1@ObjectState{uuid = id1} ObjectState{uuid = id2, frame = frame2}
     | id1 == id2 = unsafeReduceObject o1 frame2
     | otherwise  = throwErrorString $ "Object ids differ: " ++ show (id1, id2)
 
@@ -205,8 +205,8 @@ instance Ord a => Semigroup (MaxOnFst a b) where
 
 -- | Run ObjectState action
 evalObjectState :: Monad m => ObjectState b -> ObjectStateT b m a -> m a
-evalObjectState ObjectState{id, frame} action =
-    evalStateT (runReaderT action $ Object id) frame
+evalObjectState ObjectState{uuid, frame} action =
+    evalStateT (runReaderT action $ Object uuid) frame
 
 -- | Run ObjectState action, starting with an empty frame
 evalObjectState_ :: Monad m => StateT StateFrame m a -> m a
@@ -215,9 +215,9 @@ evalObjectState_ action = evalStateT action mempty
 -- | Run ObjectState action
 execObjectState
     :: Monad m => ObjectState b -> ObjectStateT b m a -> m (ObjectState b)
-execObjectState ObjectState{id, frame} action = do
-    frame' <- execStateT (runReaderT action $ Object id) frame
-    pure ObjectState{id, frame = frame'}
+execObjectState state@ObjectState{uuid, frame} action = do
+    frame' <- execStateT (runReaderT action $ Object uuid) frame
+    pure state{frame = frame'}
 
 -- | Run ObjectState action, starting with an empty frame
 execObjectState_ :: Monad m => StateT StateFrame m a -> m StateFrame
@@ -229,9 +229,9 @@ runObjectState
     => ObjectState b
     -> ObjectStateT b m a
     -> m (a, ObjectState b)
-runObjectState ObjectState{id, frame} action =
-    runStateT (runReaderT action $ Object id) frame
-    <&> \(a, frame') -> (a, ObjectState{id, frame = frame'})
+runObjectState state@ObjectState{uuid, frame} action =
+    runStateT (runReaderT action $ Object uuid) frame
+    <&> \(a, frame') -> (a, state{frame = frame'})
 
 -- | Run ObjectState action, starting with an empty frame
 runObjectState_ :: StateT StateFrame m a -> m (a, StateFrame)
@@ -241,4 +241,4 @@ runObjectState_ action = runStateT action mempty
 newObjectStateWith
     :: Functor m => StateT StateFrame m (Object a) -> m (ObjectState a)
 newObjectStateWith action =
-    runObjectState_ action <&> \(Object id, frame) -> ObjectState{id, frame}
+    runObjectState_ action <&> \(Object uuid, frame) -> ObjectState{uuid, frame}

@@ -30,7 +30,7 @@ import           RON.Data (ReplicatedAsObject)
 import           RON.Error (MonadE, liftMaybe, throwErrorString)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Text (parseStateFrame, serializeStateFrame)
-import           RON.Types (ObjectState (ObjectState, frame, id), UUID)
+import           RON.Types (ObjectState (ObjectState, frame, uuid), UUID)
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
@@ -91,7 +91,7 @@ readVersion
     :: MonadStorage m
     => Collection a => DocId a -> DocVersion -> m (ObjectState a, IsTouched)
 readVersion docid version = do
-    (isObjectIdValid, id) <-
+    (isObjectIdValid, uuid) <-
         liftMaybe ("Bad Base32 UUID " <> show docid) $
         decodeDocId docid
     unless isObjectIdValid $
@@ -99,9 +99,9 @@ readVersion docid version = do
     contents <- loadVersionContent docid version
     case parseStateFrame contents of
         Right frame ->
-            pure (ObjectState{id, frame}, IsTouched False)
+            pure (ObjectState{uuid, frame}, IsTouched False)
         Left ronError ->
-            do  object <- fallbackParse id contents
+            do  object <- fallbackParse uuid contents
                 pure (object, IsTouched True)
             `catchError` \fallbackError ->
                 throwError $ case BSLC.head contents of
@@ -132,14 +132,14 @@ createVersion
     -> ObjectState a
     -> m ()
 createVersion mDoc newObj = case mDoc of
-    Nothing -> save (DocId @a $ UUID.encodeBase32 id) []
+    Nothing -> save (DocId @a $ UUID.encodeBase32 uuid) []
     Just (docid, oldDoc) -> do
         let Document{value = oldObj, versions, isTouched = IsTouched isTouched}
                 = oldDoc
         when (newObj /= oldObj || length versions /= 1 || isTouched) $
             save docid $ toList versions
   where
-    ObjectState{id, frame} = newObj
+    ObjectState{uuid, frame} = newObj
 
     save docid oldVersions = do
         newVersion <- UUID.encodeBase32 <$> getEventUuid

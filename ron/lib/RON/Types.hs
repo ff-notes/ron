@@ -114,7 +114,7 @@ type StateFrame = Map UUID StateChunk
 newtype Object a = Object UUID
 
 -- | Object accompanied with a frame
-data ObjectState a = ObjectState{id :: UUID, frame :: StateFrame}
+data ObjectState a = ObjectState{uuid :: UUID, frame :: StateFrame}
     deriving (Eq, Show)
 
 data OpPattern =

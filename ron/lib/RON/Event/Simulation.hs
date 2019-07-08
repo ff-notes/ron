@@ -17,6 +17,7 @@ module RON.Event.Simulation
 
 import           RON.Prelude
 
+import           Control.Monad.State.Strict (state)
 import qualified Data.HashMap.Strict as HM
 
 import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,

@@ -114,8 +114,8 @@ assignField field value = do
     let chunk' = sortOn refId $ newOp : chunk
     let state' = StateChunk
             {stateVersion = event, stateBody = chunk', stateType = lwwType}
-    Object id <- ask
-    modify' $ Map.insert id state'
+    Object uuid <- ask
+    modify' $ Map.insert uuid state'
 
 -- | Pseudo-lens to an object inside a specified field
 zoomField

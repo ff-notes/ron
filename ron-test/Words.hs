@@ -62,7 +62,7 @@ stems word
 
 rgaTrick1 :: Text -> Text -> (ObjectState RgaString, ObjectState RgaString)
 rgaTrick1 begin branch1 =
-    either (error . show) identity .
+    either (error . show) id .
     runNetworkSim . runReplicaSim (applicationSpecific 1) . runExceptT $ do
         begin'   <- newObjectStateWith     $ RGA.newFromText begin
         branch1' <- execObjectState begin' $ RGA.editText branch1
@@ -70,7 +70,7 @@ rgaTrick1 begin branch1 =
 
 rgaTrick2 :: (ObjectState RgaString, ObjectState RgaString) -> Text -> Text
 rgaTrick2 (begin', branch1') branch2 =
-    either (error . show) identity .
+    either (error . show) id .
     runNetworkSim . runReplicaSim (applicationSpecific 2) . runExceptT $ do
         branch2' <- execObjectState begin' $ RGA.editText branch2
         end'     <- reduceObject branch1' branch2'

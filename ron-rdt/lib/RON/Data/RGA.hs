@@ -165,7 +165,7 @@ instance Reducible RgaRaw where
         stateBody = maybe [] vertexListToOps rga
 
     applyPatches rga (patches, ops) =
-        bimap identity patchSetToChunks . reapplyPatchSetToState rga $
+        bimap id patchSetToChunks . reapplyPatchSetToState rga $
         foldMap patchSetFromChunk patches <> foldMap patchSetFromRawOp ops
 
     reduceUnappliedPatches (patches, ops) =

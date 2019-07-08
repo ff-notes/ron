@@ -169,7 +169,7 @@ mkReplicatedStructLww struct = do
         unguide = [| \ $guidedX -> x |]
         guide = case fieldWrapperC field'Type of
             Just w  -> conE w
-            Nothing -> [| identity |]
+            Nothing -> [| id |]
 
 -- | Type-directing newtype
 fieldWrapperC :: RonType -> Maybe TH.Name

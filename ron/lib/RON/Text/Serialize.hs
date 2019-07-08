@@ -19,6 +19,7 @@ module RON.Text.Serialize
 
 import           RON.Prelude
 
+import           Control.Monad.State.Strict (state)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC

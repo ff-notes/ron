@@ -5,7 +5,6 @@ module RON.Prelude (
     fmapL,
     foldr1,
     headMay,
-    identity,
     lastDef,
     maximumDef,
     maxOn,
@@ -36,7 +35,7 @@ import           Control.Monad.State.Strict as X (MonadState, State, StateT,
                                                   evalState, evalStateT,
                                                   execStateT, get, gets,
                                                   modify', put, runState,
-                                                  runStateT, state)
+                                                  runStateT)
 import           Control.Monad.Trans as X (MonadTrans, lift)
 import           Control.Monad.Writer.Strict as X (MonadWriter, WriterT,
                                                    runWriterT, tell)
@@ -51,7 +50,7 @@ import           Data.Eq as X (Eq, (/=), (==))
 import           Data.Foldable as X (Foldable, and, asum, fold, foldMap, foldl',
                                      foldr, for_, length, minimumBy, null, or,
                                      toList, traverse_)
-import           Data.Function as X (const, flip, on, ($), (.))
+import           Data.Function as X (const, flip, id, on, ($), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>), (<&>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Hashable as X (Hashable, hash)
@@ -111,9 +110,6 @@ headMay :: [a] -> Maybe a
 headMay = \case
     []  -> Nothing
     a:_ -> Just a
-
-identity :: a -> a
-identity x = x
 
 lastDef :: a -> [a] -> a
 lastDef def = list' def last

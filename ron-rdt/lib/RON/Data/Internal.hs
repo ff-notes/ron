@@ -45,7 +45,8 @@ import qualified Data.Text as Text
 import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
-                            ObjectState (ObjectState, frame, id), Op (Op, opId),
+                            ObjectState (ObjectState, frame, uuid),
+                            Op (Op, opId),
                             StateChunk (StateChunk, stateBody, stateType, stateVersion),
                             StateFrame, UUID (UUID), WireChunk)
 import           RON.UUID (zero)
@@ -158,8 +159,8 @@ fromRon = encodingFromRon encoding
 objectEncoding :: ReplicatedAsObject a => Encoding a
 objectEncoding = Encoding
     { encodingNewRon = \a -> do
-        Object id <- newObject a
-        pure [AUuid id]
+        Object uuid <- newObject a
+        pure [AUuid uuid]
     , encodingFromRon = objectFromRon $ runReaderT getObject
     }
 
@@ -230,38 +231,38 @@ class Replicated a => ReplicatedAsObject a where
 
 objectFromRon :: MonadE m => (Object a -> m a) -> [Atom] -> m a
 objectFromRon handler atoms = case atoms of
-    [AUuid id] -> handler $ Object id
-    _          -> throwError "Expected object UUID"
+    [AUuid uuid] -> handler $ Object uuid
+    _            -> throwError "Expected object UUID"
 
 -- | Create new 'ObjectState' from a value
 newObjectState
     :: (ReplicatedAsObject a, ReplicaClock m) => a -> m (ObjectState a)
 newObjectState a = do
-    (Object id, frame) <- runStateT (newObject a) mempty
-    pure $ ObjectState{id, frame}
+    (Object uuid, frame) <- runStateT (newObject a) mempty
+    pure $ ObjectState{uuid, frame}
 
 getObjectStateChunk :: (MonadE m, MonadObjectState a m) => m StateChunk
 getObjectStateChunk = do
-    Object id <- ask
+    Object uuid <- ask
     frame <- get
-    liftMaybe "no such object in chunk" $ Map.lookup id frame
+    liftMaybe "no such object in chunk" $ Map.lookup uuid frame
 
 modifyObjectStateChunk
     :: (MonadObjectState a m, ReplicaClock m, MonadE m)
     => (StateChunk -> m StateChunk) -> m ()
 modifyObjectStateChunk f = do
-    Object id <- ask
+    Object uuid <- ask
     chunk@StateChunk{stateVersion} <- getObjectStateChunk
     advanceToUuid stateVersion
     -- event <- getEventUuid
     -- let state' = StateChunk
     --         {stateType = _, stateVersion = event, stateBody = chunk'}
     chunk' <- f chunk
-    modify' $ Map.insert id chunk'
+    modify' $ Map.insert uuid chunk'
 
 eqRef :: Object a -> [Atom] -> Bool
-eqRef (Object id) atoms = case atoms of
-    [AUuid ref] -> id == ref
+eqRef (Object uuid) atoms = case atoms of
+    [AUuid ref] -> uuid == ref
     _           -> False
 
 eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
