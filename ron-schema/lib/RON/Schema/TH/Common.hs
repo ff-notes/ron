@@ -60,14 +60,16 @@ mkGuideType typ = case typ of
     TAtom                   _ -> view
     TComposite              _ -> view
     TObject                 t -> case t of
-        TORSet              a -> wrap ''ORSet a
-        TRga                a -> wrap ''RGA   a
+        TORSet              a -> wrap  ''ORSet a
+        TORSetMap         k v -> wrap2 ''ORSet k v
+        TRga                a -> wrap  ''RGA   a
         TStructLww          _ -> view
         TVersionVector        -> view
     TOpaque                 _ -> view
   where
     view = mkViewType typ
-    wrap w item = [t| $(conT w) $(mkGuideType item) |]
+    wrap  w item = [t| $(conT w) $(mkGuideType item) |]
+    wrap2 w a b  = [t| $(conT w) ($(mkGuideType a), $(mkGuideType b)) |]
 
 liftText :: Text -> TH.ExpQ
 liftText t = [| Text.pack $(liftString $ Text.unpack t) |]

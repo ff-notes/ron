@@ -187,6 +187,7 @@ fieldWrapperC typ = case typ of
     TComposite              _ -> Nothing
     TObject                 t -> case t of
         TORSet              _ -> Just 'ORSet
+        TORSetMap         _ _ -> Just 'ORSet
         TRga                _ -> Just 'RGA
         TStructLww          _ -> Nothing
         TVersionVector        -> Nothing

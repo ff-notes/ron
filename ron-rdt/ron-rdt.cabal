@@ -45,6 +45,7 @@ library
         RON.Data
         RON.Data.LWW
         RON.Data.ORSet
+        RON.Data.ORSet.Map
         RON.Data.RGA
         RON.Data.Time
         RON.Data.VersionVector
