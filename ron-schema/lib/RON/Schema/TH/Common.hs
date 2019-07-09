@@ -45,16 +45,17 @@ mkGuideType typ = case typ of
         TEnum   Enum{name} -> conT $ mkNameT name
         TOption u          -> [t| Maybe $(mkGuideType u) |]
     TObject t -> case t of
-        TORSet     a               -> wrap ''ORSet a
-        -- TORSetMap  key value       -> _
-        TRga       a               -> wrap ''RGA   a
+        TORSet     item            -> wrap  ''ORSet    item
+        TORSetMap  key value       -> wrap2 ''ORSetMap key value
+        TRga       item            -> wrap  ''RGA      item
         TStructLww StructLww{name} -> conT $ mkNameT name
         TVersionVector             -> [t| VersionVector |]
     TOpaque Opaque{name, annotations} -> let
         OpaqueAnnotations{haskellType} = annotations
         in conT $ mkNameT $ fromMaybe name haskellType
   where
-    wrap w item = [t| $(conT w) $(mkGuideType item) |]
+    wrap  w a   = [t| $(conT w) $(mkGuideType a) |]
+    wrap2 w a b = [t| $(conT w) $(mkGuideType a) $(mkGuideType b) |]
 
 liftText :: Text -> TH.ExpQ
 liftText t = [| Text.pack $(liftString $ Text.unpack t) |]
