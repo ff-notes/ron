@@ -7,7 +7,8 @@ and this project adheres to
 
 ## [Unreleased]
 ### Added
-- Schema language: `alias` declaration.
+- `alias` declaration.
+- `ORSet.Map` type.
 
 ### Changed
 - Renamed `Boole` -> `Bool` due to tradition.

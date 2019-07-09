@@ -22,6 +22,7 @@ and this project adheres to
   - Instances `Eq`, `Show` for `ORSet`.
   - `ORSetItem` type.
   - Methods `findAnyAlive`, `findAnyAlive'`, `zoom`.
+- `ORSetMap` type.
 
 ### Changed
 - `ReplicatedAsObject.newObject` now has more specific type,
