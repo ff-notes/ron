@@ -10,6 +10,7 @@
 module RON.Data.ORSet
     ( ORSet (..)
     , ORSetItem (..)
+    , ORSetMap
     , ORSetRaw
     , addRef
     , addValue
@@ -210,3 +211,5 @@ findAnyAlive' = do
     case mx of
         Just x  -> pure x
         Nothing -> throwErrorText "empty set"
+
+type ORSetMap k v = ORSet (k, v)
