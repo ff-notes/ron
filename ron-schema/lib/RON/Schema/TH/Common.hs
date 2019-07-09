@@ -20,8 +20,8 @@ import           Language.Haskell.TH (conT, normalB, varP)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftString)
 
-import           RON.Data.ORSet (ORSet (..))
-import           RON.Data.RGA (RGA (..))
+import           RON.Data.ORSet (ORSet (ORSet), ORSetMap)
+import           RON.Data.RGA (RGA (RGA))
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Schema as X
 
@@ -60,16 +60,16 @@ mkGuideType typ = case typ of
     TAtom                   _ -> view
     TComposite              _ -> view
     TObject                 t -> case t of
-        TORSet              a -> wrap  ''ORSet a
-        TORSetMap         k v -> wrap2 ''ORSet k v
-        TRga                a -> wrap  ''RGA   a
+        TORSet              a -> wrap  ''ORSet    a
+        TORSetMap         k v -> wrap2 ''ORSetMap k v
+        TRga                a -> wrap  ''RGA      a
         TStructLww          _ -> view
         TVersionVector        -> view
     TOpaque                 _ -> view
   where
     view = mkViewType typ
-    wrap  w item = [t| $(conT w) $(mkGuideType item) |]
-    wrap2 w a b  = [t| $(conT w) ($(mkGuideType a), $(mkGuideType b)) |]
+    wrap  w a   = [t| $(conT w) $(mkGuideType a)                  |]
+    wrap2 w a b = [t| $(conT w) $(mkGuideType a) $(mkGuideType b) |]
 
 liftText :: Text -> TH.ExpQ
 liftText t = [| Text.pack $(liftString $ Text.unpack t) |]
