@@ -20,8 +20,8 @@ import           Language.Haskell.TH (conT, normalB, varP)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftString)
 
-import           RON.Data.ORSet (ORSet (..))
-import           RON.Data.RGA (RGA (..))
+import           RON.Data.ORSet (ORSet, ORSetMap)
+import           RON.Data.RGA (RGA)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Schema as X
 
@@ -37,15 +37,17 @@ mkViewType = \case
         TEnum   Enum{name} -> conT $ mkNameT name
         TOption u          -> [t| Maybe $(mkViewType u) |]
     TObject t -> case t of
-        TORSet     item            -> wrapList item
-        TRga       item            -> wrapList item
+        TORSet     item            -> list item
+        TORSetMap  key value       -> pairList key value
+        TRga       item            -> list item
         TStructLww StructLww{name} -> conT $ mkNameT name
         TVersionVector             -> [t| VersionVector |]
     TOpaque Opaque{name, annotations} -> let
         OpaqueAnnotations{haskellType} = annotations
         in conT $ mkNameT $ fromMaybe name haskellType
   where
-    wrapList a = [t| [$(mkViewType a)] |]
+    list     a   = [t| [  $(mkViewType a)                   ] |]
+    pairList a b = [t| [( $(mkViewType a), $(mkViewType b) )] |]
 
 valD :: TH.PatQ -> TH.ExpQ -> TH.DecQ
 valD pat body = TH.valD pat (normalB body) []
@@ -58,14 +60,16 @@ mkGuideType typ = case typ of
     TAtom                   _ -> view
     TComposite              _ -> view
     TObject                 t -> case t of
-        TORSet              a -> wrap ''ORSet a
-        TRga                a -> wrap ''RGA   a
+        TORSet              a -> wrap  ''ORSet    a
+        TORSetMap         k v -> wrap2 ''ORSetMap k v
+        TRga                a -> wrap  ''RGA      a
         TStructLww          _ -> view
         TVersionVector        -> view
     TOpaque                 _ -> view
   where
     view = mkViewType typ
-    wrap w item = [t| $(conT w) $(mkGuideType item) |]
+    wrap  w a   = [t| $(conT w) $(mkGuideType a)                  |]
+    wrap2 w a b = [t| $(conT w) $(mkGuideType a) $(mkGuideType b) |]
 
 liftText :: Text -> TH.ExpQ
 liftText t = [| Text.pack $(liftString $ Text.unpack t) |]

@@ -39,7 +39,7 @@ import           Data.Type.Equality ((:~:) (Refl))
 
 import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
                            fromPayload, payloadEncoding, toPayload)
-import           RON.Data.ORSet (ORSet)
+import           RON.Data.ORSet (ORSet, ORSetMap)
 import           RON.Schema.TH (mkReplicated)
 
 data Opaque49 = Opaque49
@@ -71,6 +71,8 @@ instance ReplicatedAsPayload Opaque49 where
     (enum Enum67 E67Item1 E67Item2)
 
     (alias Alias69 (ORSet Struct51))
+
+    (alias Alias75 (ORSet.Map String String))
 |]
 
 deriving instance Eq   Struct51
@@ -78,3 +80,6 @@ deriving instance Show Struct51
 
 _check_Alias69 :: Alias69 :~: ORSet Struct51
 _check_Alias69 = Refl
+
+_check_Alias75 :: Alias75 :~: ORSetMap Text Text
+_check_Alias75 = Refl
