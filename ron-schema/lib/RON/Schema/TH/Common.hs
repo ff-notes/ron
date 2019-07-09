@@ -20,8 +20,8 @@ import           Language.Haskell.TH (conT, normalB, varP)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftString)
 
-import           RON.Data.ORSet (ORSet (ORSet), ORSetMap)
-import           RON.Data.RGA (RGA (RGA))
+import           RON.Data.ORSet (ORSet, ORSetMap)
+import           RON.Data.RGA (RGA)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Schema as X
 
