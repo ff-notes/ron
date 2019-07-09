@@ -13,7 +13,7 @@ import qualified Data.ByteString.Char8 as BSC
 import           Data.Char (toTitle)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import           Language.Haskell.TH (Exp (VarE), bindS, conE, conP, conT, doE,
+import           Language.Haskell.TH (Exp (VarE), bindS, conP, conT, doE,
                                       listE, noBindS, recC, recConE, sigD, varE,
                                       varP, varT)
 import qualified Language.Haskell.TH as TH
@@ -24,13 +24,10 @@ import           RON.Data (MonadObjectState, ObjectStateT, Replicated (..),
                            objectEncoding)
 import           RON.Data.LWW (lwwType)
 import qualified RON.Data.LWW as LWW
-import           RON.Data.ORSet (ORSet (..))
-import           RON.Data.RGA (RGA (..))
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock)
 import           RON.Schema as X
-import           RON.Schema.TH.Common (liftText, mkGuideType, mkNameT,
-                                       mkViewType, valDP)
+import           RON.Schema.TH.Common (liftText, mkGuideType, mkNameT, valDP)
 import           RON.Types (Object (Object), UUID)
 import           RON.Util (Instance (..))
 import qualified RON.UUID as UUID
@@ -67,9 +64,9 @@ mkDataType
 mkDataType name fields annotations = TH.dataD (TH.cxt []) name [] Nothing
     [recC name
         [ TH.varBangType (mkNameT $ mkHaskellFieldName annotations fieldName) $
-            TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) viewType
-        | (fieldName, Field type_) <- Map.assocs fields
-        , let viewType = mkViewType type_
+            TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) guideType
+        | (fieldName, Field ronType) <- Map.assocs fields
+        , let guideType = mkGuideType ronType
         ]]
     []
 
@@ -84,13 +81,9 @@ mkInstanceReplicatedAsObject
 mkInstanceReplicatedAsObject name fields annotations = do
     ops <- TH.newName "ops"
     let fieldsToUnpack =
-            [ bindS var
+            [ bindS (varP field'Var)
                 [| LWW.viewField $(liftData field'RonName) $(varE ops) |]
-            | Field'{field'Type, field'Var, field'RonName} <- fields
-            , let
-                fieldP = varP field'Var
-                var = maybe fieldP (\w -> conP w [fieldP]) $
-                    fieldWrapperC field'Type
+            | Field'{field'Var, field'RonName} <- fields
             ]
     let getObjectImpl = doE
             $   bindS (varP ops) [| getObjectStateChunk |]
@@ -106,13 +99,8 @@ mkInstanceReplicatedAsObject name fields annotations = do
     name' = mkNameT name
     structType = conT name'
     fieldsToPack = listE
-        [ [| ($(liftData field'RonName), Instance $var) |]
-        | Field'{field'Type, field'Var, field'RonName} <- fields
-        , let
-            fieldVarE = varE field'Var
-            var = case fieldWrapperC field'Type of
-                Nothing  -> fieldVarE
-                Just con -> [| $(conE con) $fieldVarE |]
+        [ [| ($(liftData field'RonName), Instance $(varE field'Var)) |]
+        | Field'{field'Var, field'RonName} <- fields
         ]
     errCtx = "getObject @" <> name <> ":\n"
     consE = recConE name'
@@ -142,18 +130,16 @@ mkAccessors structType annotations field' = do
     let assignF =
             [ sigD assign [t|
                 (ReplicaClock $m, MonadE $m, MonadObjectState $structType $m)
-                => $fieldViewType -> $m ()
+                => $fieldGuideType -> $m ()
                 |]
-            , valDP assign
-                [| LWW.assignField $(liftData field'RonName) . $guide |]
+            , valDP assign [| LWW.assignField $(liftData field'RonName) |]
             ]
         readF =
             [ sigD read [t|
                 (MonadE $m, MonadObjectState $structType $m)
-                => $m $fieldViewType
+                => $m $fieldGuideType
                 |]
-            , valDP read
-                [| $unguide <$> LWW.readField $(liftData field'RonName) |]
+            , valDP read [| LWW.readField $(liftData field'RonName) |]
             ]
         zoomF =
             [ sigD zoom [t|
@@ -166,29 +152,7 @@ mkAccessors structType annotations field' = do
     sequenceA $ assignF ++ readF ++ zoomF
   where
     Field'{field'Name, field'RonName, field'Type} = field'
-    fieldViewType = mkViewType field'Type
+    fieldGuideType = mkGuideType field'Type
     assign = mkNameT $ mkHaskellFieldName annotations field'Name <> "_assign"
     read   = mkNameT $ mkHaskellFieldName annotations field'Name <> "_read"
     zoom   = mkNameT $ mkHaskellFieldName annotations field'Name <> "_zoom"
-    guidedX = case fieldWrapperC field'Type of
-        Just w  -> conP w [x]
-        Nothing -> x
-        where
-        x = varP $ TH.mkName "x"
-    unguide = [| \ $guidedX -> x |]
-    guide = case fieldWrapperC field'Type of
-        Just w  -> conE w
-        Nothing -> [| id |]
-
--- | Type-directing newtype
-fieldWrapperC :: RonType -> Maybe TH.Name
-fieldWrapperC typ = case typ of
-    TAtom                   _ -> Nothing
-    TComposite              _ -> Nothing
-    TObject                 t -> case t of
-        TORSet              _ -> Just 'ORSet
-        TORSetMap         _ _ -> Just 'ORSet
-        TRga                _ -> Just 'RGA
-        TStructLww          _ -> Nothing
-        TVersionVector        -> Nothing
-    TOpaque                 _ -> Nothing
