@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Attoparsec.Extra
@@ -8,6 +9,7 @@ module Attoparsec.Extra
     , label
     , parseOnlyL
     , takeL
+    , definiteDouble
     , withInputSize
     , (??)
     , (<+>)
@@ -15,11 +17,12 @@ module Attoparsec.Extra
 
 import           RON.Prelude
 
-import           Data.Attoparsec.ByteString.Char8 (anyChar)
+import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit, isDigit_w8, signed)
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
+import qualified Data.Scientific as Sci
 
 import           RON.Util (ByteStringL)
 
@@ -85,6 +88,46 @@ char c = do
         pure c
     else
         fail $ "Expected " ++ show c ++ ", got " ++ show c'
+
+-- Note: Derived from 'scientifically' from Data.Attoparsec.ByteString.Char8.
+-- A strict pair
+data SP = SP !Integer {-# UNPACK #-}!Int
+
+-- | Parses a definite double, i.e. it is not an integer. For this, the double has either a '.', and 'e'/'E' part or both.
+{-# INLINE definiteDouble #-}
+definiteDouble :: Parser Double
+definiteDouble = do
+    let minus = 45 -- ord '-'
+        plus  = 43 -- ord '+'
+    sign <- peekWord8'
+    let !positive = sign /= minus
+    when (sign == plus || sign == minus) $
+        void anyWord8
+
+    n <- decimal
+
+    let f fracDigits = SP (BS.foldl' step n fracDigits)
+                          (negate $ BS.length fracDigits)
+        step a w = a * 10 + fromIntegral (w - 48)
+
+    dotty <- peekWord8
+    -- '.' -> ascii 46
+    let hasDot = case dotty of
+                     Just 46 -> True
+                     _       -> False
+    SP c e <- if hasDot
+                 then anyWord8 *> (f <$> Attoparsec.takeWhile isDigit_w8)
+                 else pure (SP n 0)
+
+    let !signedCoeff | positive  =  c
+                     | otherwise = -c
+
+    let littleE = 101
+        bigE    = 69
+    (satisfy (\ex -> ex == littleE || ex == bigE) *>
+        fmap (Sci.toRealFloat . Sci.scientific signedCoeff . (e +)) (signed decimal)) <|>
+        (if hasDot then pure (Sci.toRealFloat $ Sci.scientific signedCoeff    e)
+                   else fail "Parsing double is ambiguous")
 
 (<+>) :: Parser a -> Parser a -> Parser a
 (<+>) p1 p2 = Internal.Parser $ \t pos more lose suc -> let

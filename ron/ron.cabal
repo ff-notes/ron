@@ -37,6 +37,7 @@ library
         containers,
         hashable,
         mtl,
+        scientific,
         template-haskell,
         text,
         time,
