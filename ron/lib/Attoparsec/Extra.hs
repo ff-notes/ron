@@ -8,6 +8,7 @@ module Attoparsec.Extra
     , label
     , parseOnlyL
     , takeL
+    , definiteDouble
     , withInputSize
     , (??)
     , (<+>)
@@ -15,11 +16,13 @@ module Attoparsec.Extra
 
 import           RON.Prelude
 
-import           Data.Attoparsec.ByteString.Char8 (anyChar)
+import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit_w8, signed)
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict, toStrict)
+import qualified Data.Scientific as Sci
+import           GHC.Real (toInteger)
 
 import           RON.Util (ByteStringL)
 
@@ -85,6 +88,37 @@ char c = do
         pure c
     else
         fail $ "Expected " ++ show c ++ ", got " ++ show c'
+
+-- | Parses a definite double, i.e. it is not an integer. For this, the double has either a '.', and 'e'/'E' part or both.
+{-# INLINE definiteDouble #-}
+definiteDouble :: Parser Double
+definiteDouble = do
+    let parseIntegerPart = signed decimal
+    let parseDot = char '.'
+    let parseFractionalPartWithLength =
+            BS.foldl' step (0, 0) `fmap` Attoparsec.takeWhile1 isDigit_w8
+                where step (a, l) w = (a * 10 + fromIntegral (w - 48), l + 1)
+    let parseExponent = (char 'e' <|> char 'E') *> signed decimal
+
+    let withDot = do
+          i <- optional parseIntegerPart
+          _ <- parseDot
+          (f, l) <- parseFractionalPartWithLength
+          e <- optional parseExponent
+          pure $ buildDouble (fromMaybe 0 i) f l (fromMaybe 0 e)
+
+    let withE = do
+          i <- optional parseIntegerPart
+          buildDouble (fromMaybe 0 i) 0 0 <$> parseExponent
+
+    withDot <|> withE
+
+buildDouble :: Integer -> Integer -> Int -> Int -> Double
+buildDouble integerPart fractionalPart fractionalPartLength exponentPart =
+    let addOrSubFractionalPart = if integerPart < 0 then -fractionalPart else fractionalPart
+        coeff = integerPart * 10 ^ toInteger fractionalPartLength + toInteger addOrSubFractionalPart
+        exponent = exponentPart - fractionalPartLength
+     in Sci.toRealFloat $ Sci.scientific coeff exponent
 
 (<+>) :: Parser a -> Parser a -> Parser a
 (<+>) p1 p2 = Internal.Parser $ \t pos more lose suc -> let
