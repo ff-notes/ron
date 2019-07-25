@@ -39,7 +39,8 @@ main = do
 
 loadCases :: IO [TestTree]
 loadCases = do
-    inOutFiles <- filter (".in.ron" `isSuffixOf`) <$> listDirectory commonTestDir
+    inOutFiles <-
+        filter (".in.ron" `isSuffixOf`) <$> listDirectory commonTestDir
     testsInOut <- for inOutFiles $ \fileIn -> do
         let name = dropEnd 7 fileIn
             fileOut = name <> ".out.ron"
@@ -66,11 +67,17 @@ loadCases = do
                     Left err -> [testCase fileIn $ assertFailure err]
                     Right c  -> let
                         es = Map.elems c
-                        (lefts, rights) = partitionEithers $ fmap zipWithWireFrameRoundtrip es
-                        newTestCase ks = testCase ("comparing roundtrip for object " <> show ks)
+                        (lefts, rights) =
+                            partitionEithers $
+                            fmap zipWithWireFrameRoundtrip es
+                        newTestCase ks =
+                            testCase
+                                ("comparing roundtrip for object " <> show ks)
                         in
-                        fmap (testCase fileIn . assertFailure) lefts ++
-                        fmap (\(w, ks, w') -> newTestCase ks $ assertEqual "not equal" w w') rights
+                        map (testCase fileIn . assertFailure) lefts ++
+                        [ newTestCase ks $ assertEqual "not equal" w w'
+                        | (w, ks, w') <- rights
+                        ]
     pure $ testsInOut ++ testsNote
   where
     commonTestDir = "../gritzko~ron-test"
