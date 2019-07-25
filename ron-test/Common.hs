@@ -56,7 +56,8 @@ loadCases = do
                         Map.assocs $ zipDef [] [] chunksIn1 chunksOut1
                     , not $ "06" `isPrefixOf` name
                     ]
-    noteFiles <- collectFiles "./data/note"
+    noteFiles <- collectFiles "../.ff"
+    when (null noteFiles) $ fail "there must be some ff files"
     testsNote <-
         for noteFiles $ \fileIn -> do
             chunks0  <- readChunks fileIn
