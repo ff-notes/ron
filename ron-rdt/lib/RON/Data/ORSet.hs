@@ -11,7 +11,7 @@ module RON.Data.ORSet
     ( ORSet (..)
     , ORSetItem (..)
     , ORSetMap
-    , ORSetRaw
+    , ORSetRep
     , addRef
     , addValue
     , findAnyAlive
@@ -46,7 +46,7 @@ import qualified RON.UUID as UUID
 -- | Untyped OR-Set.
 -- Implementation:
 -- a map from the last change (creation or deletion) to the original op.
-newtype ORSetRaw = ORSetRaw (Map UUID Op)
+newtype ORSetRep = ORSetRep (Map UUID Op)
     deriving (Eq, Show)
 
 opKey :: Op -> UUID
@@ -57,20 +57,20 @@ opKey Op{opId, refId} = case refId of
 observedRemove :: Op -> Op -> Op
 observedRemove = maxOn refId
 
-instance Semigroup ORSetRaw where
-    ORSetRaw set1 <> ORSetRaw set2 =
-        ORSetRaw $ Map.unionWith observedRemove set1 set2
+instance Semigroup ORSetRep where
+    ORSetRep set1 <> ORSetRep set2 =
+        ORSetRep $ Map.unionWith observedRemove set1 set2
 
-instance Monoid ORSetRaw where
-    mempty = ORSetRaw mempty
+instance Monoid ORSetRep where
+    mempty = ORSetRep mempty
 
-instance Reducible ORSetRaw where
+instance Reducible ORSetRep where
     reducibleOpType = setType
 
     stateFromChunk ops =
-        ORSetRaw $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
+        ORSetRep $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
 
-    stateToChunk (ORSetRaw set) =
+    stateToChunk (ORSetRep set) =
         mkStateChunk setType . sortOn opId $ Map.elems set
 
 -- | Name-UUID to use as OR-Set type marker.
@@ -137,7 +137,7 @@ commonRemove
     => ([Atom] -> Bool) -> m ()
 commonRemove isTarget =
     modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
-        let state0@(ORSetRaw opMap) = stateFromChunk stateBody
+        let state0@(ORSetRep opMap) = stateFromChunk stateBody
         let targetEvents =
                 [ opId
                 | Op{opId, refId, payload} <- toList opMap
@@ -180,7 +180,7 @@ zoom
     => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
 zoom (ORSetItem key) innerModifier = do
     StateChunk{stateBody} <- getObjectStateChunk
-    let ORSetRaw opMap = stateFromChunk stateBody
+    let ORSetRep opMap = stateFromChunk stateBody
     itemValueRef <- case Map.lookup key opMap of
         Nothing ->
             -- TODO(2019-08-07, cblp) creat empty object?
@@ -196,7 +196,7 @@ findAnyAlive
 findAnyAlive = do
     StateChunk{stateBody} <- getObjectStateChunk
     pure $ let
-        ORSetRaw opMap = stateFromChunk stateBody
+        ORSetRep opMap = stateFromChunk stateBody
         aliveItems = [op | op@Op{refId = UUID.Zero} <- toList opMap]
         in
         case listToMaybe aliveItems of
