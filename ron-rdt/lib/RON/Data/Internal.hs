@@ -20,6 +20,7 @@ module RON.Data.Internal (
     ReplicatedAsPayload (..),
     Unapplied,
     WireReducer,
+    advanceToObject,
     eqPayload,
     eqRef,
     getObjectStateChunk,
@@ -47,7 +48,7 @@ import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             ObjectState (ObjectState, frame, uuid),
-                            Op (Op, opId),
+                            Op (Op, opId, payload, refId),
                             StateChunk (StateChunk, stateBody, stateType, stateVersion),
                             StateFrame, UUID (UUID), WireChunk)
 import           RON.UUID (zero)
@@ -325,3 +326,19 @@ instance ReplicatedAsPayload Bool where
 type ObjectStateT b m a = ReaderT (Object b) (StateT StateFrame m) a
 
 type MonadObjectState b m = (MonadReader (Object b) m, MonadState StateFrame m)
+
+advanceToObject :: (MonadE m, MonadObjectState a m, ReplicaClock m) => m ()
+advanceToObject = do
+    Object uuid <- ask
+    StateChunk{stateBody} <- getObjectStateChunk
+    advanceToUuid $
+        maximumDef
+            uuid
+            [ max opId $ maximumDef refId $ mapMaybe atomAsUuid payload
+            | Op{opId, refId, payload} <- stateBody
+            ]
+  where
+    -- | TODO(2019-07-26, cblp) Use lens
+    atomAsUuid = \case
+        AUuid u -> Just u
+        _       -> Nothing
