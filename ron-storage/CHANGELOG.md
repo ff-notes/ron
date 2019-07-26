@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.8] - 2019-07-26
 ### Added
 - Module `RON.Storage.Rocks`
 
@@ -118,7 +120,9 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/v0.6...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/v0.8...HEAD
+[0.8]: https://github.com/ff-notes/ron/compare/v0.7...v0.8
+[0.7]: https://github.com/ff-notes/ron/compare/v0.6...v0.7
 [0.6]: https://github.com/ff-notes/ron/compare/v0.5...v0.6
 [0.5]: https://github.com/ff-notes/ron/compare/v0.4...v0.5
 [0.4]: https://github.com/ff-notes/ron/compare/v0.3...v0.4
