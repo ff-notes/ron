@@ -9,6 +9,9 @@ and this project adheres to
 ### Added
 - Instance `ReplicaClock WriterT`.
 - Instance `MonadFail ReplicaSimT`.
+- Module `RON.Semilattice`:
+  - Class `Semilattice`.
+  - Class alias `BoundedSemilattice`.
 
 ### Changed
 - Now `ObjectState` keeps a typed reference to an object with state frame
