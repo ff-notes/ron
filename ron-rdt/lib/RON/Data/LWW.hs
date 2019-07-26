@@ -9,7 +9,7 @@
 
 -- | LWW-per-field RDT
 module RON.Data.LWW
-    ( LwwPerField (..)
+    ( LwwRep (..)
     , assignField
     , lwwType
     , newObject
@@ -38,20 +38,20 @@ lww :: Op -> Op -> Op
 lww = maxOn opId
 
 -- | Untyped LWW. Implementation: a map from 'opRef' to the original op.
-newtype LwwPerField = LwwPerField (Map UUID Op)
+newtype LwwRep = LwwRep (Map UUID Op)
     deriving (Eq, Monoid, Show)
 
-instance Semigroup LwwPerField where
-    LwwPerField fields1 <> LwwPerField fields2 =
-        LwwPerField $ Map.unionWith lww fields1 fields2
+instance Semigroup LwwRep where
+    LwwRep fields1 <> LwwRep fields2 =
+        LwwRep $ Map.unionWith lww fields1 fields2
 
-instance Reducible LwwPerField where
+instance Reducible LwwRep where
     reducibleOpType = lwwType
 
     stateFromChunk ops =
-        LwwPerField $ Map.fromListWith lww [(refId, op) | op@Op{refId} <- ops]
+        LwwRep $ Map.fromListWith lww [(refId, op) | op@Op{refId} <- ops]
 
-    stateToChunk (LwwPerField fields) = mkStateChunk lwwType $ Map.elems fields
+    stateToChunk (LwwRep fields) = mkStateChunk lwwType $ Map.elems fields
 
 -- | Name-UUID to use as LWW type marker.
 lwwType :: UUID

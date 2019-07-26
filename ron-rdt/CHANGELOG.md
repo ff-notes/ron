@@ -37,6 +37,7 @@ and this project adheres to
   Object is now passed as an explicit argument.
 - `ORSet` now can contain objects.
 - `ORSet.addValue` now accepts objects.
+- Renamed `LwwPerField` to `LwwRep`.
 
 ### Removed
 - `ObjectORSet` merged into `ORSet`.

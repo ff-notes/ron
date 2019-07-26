@@ -43,7 +43,7 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
-import           RON.Data.LWW (LwwPerField)
+import           RON.Data.LWW (LwwRep)
 import           RON.Data.ORSet (ORSetRaw)
 import           RON.Data.RGA (RgaRaw)
 import           RON.Data.VersionVector (VersionVector)
@@ -58,7 +58,7 @@ import qualified RON.UUID as UUID
 
 reducers :: Map UUID Reducer
 reducers = Map.fromList
-    [ mkReducer @LwwPerField
+    [ mkReducer @LwwRep
     , mkReducer @RgaRaw
     , mkReducer @ORSetRaw
     , mkReducer @VersionVector
