@@ -38,6 +38,7 @@ and this project adheres to
 - `ORSet` now can contain objects.
 - `ORSet.addValue` now accepts objects.
 - Renamed `LwwPerField` to `LwwRep`.
+- Renamed `RgaRaw` to `RgaRep`.
 
 ### Removed
 - `ObjectORSet` merged into `ORSet`.

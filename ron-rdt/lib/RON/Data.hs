@@ -45,7 +45,7 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal
 import           RON.Data.LWW (LwwRep)
 import           RON.Data.ORSet (ORSetRaw)
-import           RON.Data.RGA (RgaRaw)
+import           RON.Data.RGA (RgaRep)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
 import           RON.Types (ClosedOp (..), Object (Object),
@@ -59,7 +59,7 @@ import qualified RON.UUID as UUID
 reducers :: Map UUID Reducer
 reducers = Map.fromList
     [ mkReducer @LwwRep
-    , mkReducer @RgaRaw
+    , mkReducer @RgaRep
     , mkReducer @ORSetRaw
     , mkReducer @VersionVector
     ]
