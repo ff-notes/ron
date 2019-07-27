@@ -53,6 +53,7 @@ import           RON.Data.Internal (MonadObjectState,
                                     stateToChunk, toPayload)
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
+import           RON.Semilattice (Semilattice)
 import           RON.Types (Object (Object), Op (..), StateChunk (..),
                             StateFrame, UUID)
 import           RON.Util.Word (pattern B11, ls60)
@@ -112,7 +113,7 @@ vertexListFromOps = foldr go mempty where
 
 -- | Untyped RGA
 newtype RgaRep = RgaRep (Maybe VertexList)
-    deriving (Eq, Monoid, Semigroup, Show)
+    deriving (Eq, Monoid, Semigroup, Semilattice, Show)
 
 data PatchSet = PatchSet
     { psPatches  :: Map UUID VertexList

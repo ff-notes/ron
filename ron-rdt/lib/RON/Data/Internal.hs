@@ -46,6 +46,7 @@ import qualified Data.Text as Text
 
 import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
+import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             ObjectState (ObjectState, frame, uuid),
                             Op (Op, opId, payload, refId),
@@ -64,11 +65,10 @@ data Reducer = Reducer
 -- | Unapplied patches and raw ops
 type Unapplied = ([ReducedChunk], [Op])
 
--- TODO(2018-08-24, cblp, #26) Semilattice a?
 -- | Untyped-reducible types.
 -- Untyped means if this type is a container then the types of data contained in
 -- it is not considered.
-class (Eq a, Monoid a) => Reducible a where
+class (Eq a, BoundedSemilattice a) => Reducible a where
 
     -- | UUID of the type
     reducibleOpType :: UUID

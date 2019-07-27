@@ -15,6 +15,7 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal
 import           RON.Event (getEventUuid)
+import           RON.Semilattice (Semilattice)
 import           RON.Types (Object (Object), Op (..), StateChunk (..),
                             UUID (UUID))
 import qualified RON.UUID as UUID
@@ -42,6 +43,11 @@ instance Semigroup VersionVector where
 
 instance Monoid VersionVector where
     mempty = VersionVector mempty
+
+-- | Laws:
+-- 1. Idempotent because 'Map.unionWith' is idempotent.
+-- 2. Commutative because 'latter' is commutative.
+instance Semilattice VersionVector
 
 instance Reducible VersionVector where
     reducibleOpType = vvType

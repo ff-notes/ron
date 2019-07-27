@@ -28,6 +28,7 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     stateFromChunk, stateToChunk)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
+import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
 import           RON.Util (Instance (Instance))
@@ -44,6 +45,11 @@ newtype LwwRep = LwwRep (Map UUID Op)
 instance Semigroup LwwRep where
     LwwRep fields1 <> LwwRep fields2 =
         LwwRep $ Map.unionWith lww fields1 fields2
+
+-- | Laws:
+-- 1. Idempotent because 'Map.unionWith' is idempotent.
+-- 2. Commutative because 'lww' is commutative.
+instance Semilattice LwwRep
 
 instance Reducible LwwRep where
     reducibleOpType = lwwType

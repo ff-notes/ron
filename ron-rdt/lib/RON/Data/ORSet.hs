@@ -36,6 +36,7 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     stateToChunk)
 import           RON.Error (MonadE, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (Object),
                             Op (Op, opId, payload, refId),
                             StateChunk (StateChunk, stateBody, stateType, stateVersion),
@@ -63,6 +64,11 @@ instance Semigroup ORSetRep where
 
 instance Monoid ORSetRep where
     mempty = ORSetRep mempty
+
+-- | Laws:
+-- 1. Idempotent because 'Map.unionWith' is idempotent.
+-- 2. Commutative because 'observedRemove' is commutative.
+instance Semilattice ORSetRep
 
 instance Reducible ORSetRep where
     reducibleOpType = setType

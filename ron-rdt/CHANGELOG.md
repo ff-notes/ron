@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- `Reducible` depends on `BoundedSemilattice`.
 
 ## [0.7] - 2019-07-26
 ### Added
