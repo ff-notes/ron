@@ -111,7 +111,9 @@ data StateChunk = StateChunk
     }
     deriving (Eq, Show)
 
--- | Frame containing only state chunks
+-- | Frame containing only state chunks.
+-- Must contain one main object and any number of other objects that are part of
+-- the main one.
 type StateFrame = Map UUID StateChunk
 
 -- | Reference to an object
