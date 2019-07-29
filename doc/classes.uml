@@ -1,0 +1,68 @@
+@startuml
+    package base {
+        Semigroup <|-- Monoid
+    }
+
+    package ron {
+        Semigroup <|-- Semilattice
+        Semilattice <|-- BoundedSemilattice
+        Monoid <|-- BoundedSemilattice
+    }
+
+    package "ron-rdt (untyped)" {
+        BoundedSemilattice <|-- Reducible
+
+        note as instances_Reducible
+            • LwwRep
+            • ORSetRep
+            • RgaRep
+            • VersionVector
+        end note
+        Reducible -- instances_Reducible
+    }
+
+    package "ron-rdt (typed)" {
+        Replicated <|-- ReplicatedAsObject
+        Replicated <|-- ReplicatedAsPayload
+
+        note as instances_Replicated
+            • Maybe
+
+            • <i>opaque</i>
+        end note
+        Replicated --- instances_Replicated
+
+        note as instances_ReplicatedAsObject
+            • ORSet
+            • RGA
+            • VersionVector
+
+            • <i>struct_lww</i>
+            • <i>struct_set</i>
+        end note
+        ReplicatedAsObject -- instances_ReplicatedAsObject
+
+        note as instances_ReplicatedAsPayload1
+            as atom:
+            • Bool
+            • Char (1-char string)
+            • Int64 (integer)
+            • Text (string)
+            • UUID
+
+            • <i>enum</i>
+        end note
+        ReplicatedAsPayload -- instances_ReplicatedAsPayload1
+
+        note as instances_ReplicatedAsPayload2
+            as sequence of atoms:
+            • Day (3 integers)
+        end note
+        ReplicatedAsPayload -- instances_ReplicatedAsPayload2
+    }
+
+    package ron-storage {
+        ReplicatedAsObject <|--- Collection
+        class Document
+    }
+@enduml
