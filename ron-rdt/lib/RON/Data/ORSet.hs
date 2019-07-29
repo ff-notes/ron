@@ -29,7 +29,7 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Replicated, ReplicatedAsObject,
                                     ReplicatedAsPayload, encoding, eqPayload,
                                     eqRef, fromRon, getObject,
-                                    getObjectStateChunk, mkStateChunk,
+                                    getObjectStateChunk,
                                     modifyObjectStateChunk_, newObject, newRon,
                                     objectEncoding, objectOpType,
                                     reducibleOpType, stateFromChunk,
@@ -39,8 +39,7 @@ import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (Object),
                             Op (Op, opId, payload, refId),
-                            StateChunk (StateChunk, stateBody, stateType),
-                            UUID)
+                            StateChunk (StateChunk, stateBody, stateType), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
@@ -76,8 +75,10 @@ instance Reducible ORSetRep where
     stateFromChunk ops =
         ORSetRep $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
 
-    stateToChunk (ORSetRep set) =
-        mkStateChunk setType . sortOn opId $ Map.elems set
+    stateToChunk (ORSetRep set) = mkStateChunk . sortOn opId $ Map.elems set
+
+mkStateChunk :: [Op] -> StateChunk
+mkStateChunk stateBody = StateChunk{stateType = setType, stateBody}
 
 -- | Name-UUID to use as OR-Set type marker.
 setType :: UUID

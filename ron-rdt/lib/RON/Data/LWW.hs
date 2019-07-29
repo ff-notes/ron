@@ -24,7 +24,7 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Replicated, advanceToObject, fromRon,
-                                    getObjectStateChunk, mkStateChunk, newRon,
+                                    getObjectStateChunk, newRon,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
 import           RON.Error (MonadE, errorContext)
@@ -58,7 +58,10 @@ instance Reducible LwwRep where
     stateFromChunk ops =
         LwwRep $ Map.fromListWith lww [(refId, op) | op@Op{refId} <- ops]
 
-    stateToChunk (LwwRep fields) = mkStateChunk lwwType $ Map.elems fields
+    stateToChunk (LwwRep fields) = mkStateChunk $ Map.elems fields
+
+mkStateChunk :: [Op] -> StateChunk
+mkStateChunk stateBody = StateChunk{stateType = lwwType, stateBody}
 
 -- | Name-UUID to use as LWW type marker.
 lwwType :: UUID

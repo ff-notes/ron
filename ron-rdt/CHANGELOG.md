@@ -9,6 +9,9 @@ and this project adheres to
 ### Changed
 - `Reducible` depends on `BoundedSemilattice`.
 
+### Removed
+- `mkStateChunk`.
+
 ## [0.7] - 2019-07-26
 ### Added
 - `newObjectState`

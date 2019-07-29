@@ -24,7 +24,6 @@ module RON.Data.Internal (
     eqPayload,
     eqRef,
     getObjectStateChunk,
-    mkStateChunk,
     modifyObjectStateChunk,
     modifyObjectStateChunk_,
     newObjectState,
@@ -50,8 +49,8 @@ import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             ObjectState (ObjectState, frame, uuid),
                             Op (Op, opId, payload, refId),
-                            StateChunk (StateChunk, stateBody, stateType),
-                            StateFrame, UUID (UUID), WireChunk)
+                            StateChunk (StateChunk, stateBody), StateFrame,
+                            UUID (UUID), WireChunk)
 
 -- | Reduce all chunks of specific type and object in the frame
 type WireReducer = UUID -> NonEmpty WireChunk -> [WireChunk]
@@ -101,10 +100,6 @@ data ReducedChunk = ReducedChunk
     , rcBody    :: [Op]
     }
     deriving (Show)
-
--- | TODO(2019-07-29, cblp, #99) get stateType from Reducible
-mkStateChunk :: UUID -> [Op] -> StateChunk
-mkStateChunk stateType ops = StateChunk{stateType, stateBody = ops}
 
 data Patch a = Patch{patchRef :: UUID, patchValue :: a}
 

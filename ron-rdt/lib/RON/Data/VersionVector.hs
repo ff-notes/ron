@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Version Vector
 module RON.Data.VersionVector
@@ -55,7 +56,10 @@ instance Reducible VersionVector where
     stateFromChunk ops =
         VersionVector $ Map.fromListWith latter [(opOrigin op, op) | op <- ops]
 
-    stateToChunk (VersionVector vv) = mkStateChunk vvType $ Map.elems vv
+    stateToChunk (VersionVector vv) = mkStateChunk $ Map.elems vv
+
+mkStateChunk :: [Op] -> StateChunk
+mkStateChunk stateBody = StateChunk{stateType = vvType, stateBody}
 
 -- | Name-UUID to use as Version Vector type marker.
 vvType :: UUID

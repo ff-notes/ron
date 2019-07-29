@@ -16,7 +16,6 @@ module RON.Data (
     ReplicatedAsPayload (..),
     fromRon,
     getObjectStateChunk,
-    mkStateChunk,
     newRon,
     objectEncoding,
     payloadEncoding,
