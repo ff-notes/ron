@@ -1,4 +1,4 @@
-@startuml
+@startuml RonClassesAndInstances
     package base {
         Semigroup <|-- Monoid
     }
