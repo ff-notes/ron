@@ -30,7 +30,7 @@ import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             nanosecHundreds, seconds)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
-                            Op (Op, opId, payload, refId),
+                            Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk, stateBody, stateType),
                             StateFrame, UUID, WireChunk (Closed, Query, Value),
                             WireFrame,
@@ -121,7 +121,7 @@ eventTime = choice
     , TUnknown  <$> word60
     ]
 
-genPayload :: MonadGen gen => Int -> gen [Atom]
+genPayload :: MonadGen gen => Int -> gen Payload
 genPayload size = list (Range.exponential 0 size) (atom size)
 
 atom :: MonadGen gen => Int -> gen Atom

@@ -22,9 +22,9 @@ module RON.Text.Parse
 
 import           RON.Prelude hiding (takeWhile)
 
-import           Attoparsec.Extra (Parser, char, endOfInputEx, isSuccessful,
-                                   label, manyTill, parseOnlyL, satisfy,
-                                   definiteDouble, (<+>), (??))
+import           Attoparsec.Extra (Parser, char, definiteDouble, endOfInputEx,
+                                   isSuccessful, label, manyTill, parseOnlyL,
+                                   satisfy, (<+>), (??))
 import qualified Data.Aeson as Json
 import           Data.Attoparsec.ByteString (takeWhile1)
 import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
@@ -39,7 +39,7 @@ import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (..), ObjectState (ObjectState), Op (..),
                             OpTerm (TClosed, THeader, TQuery, TReduced),
-                            StateChunk (..), StateFrame, UUID (UUID),
+                            Payload, StateChunk (..), StateFrame, UUID (UUID),
                             WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
 import           RON.Util (ByteStringL)
@@ -314,7 +314,7 @@ pUuidVersion = label "UUID-version" $
         '-' -> pure b11
         _   -> fail "not a UUID-version"
 
-payloadP :: UUID -> Parser [Atom]
+payloadP :: UUID -> Parser Payload
 payloadP = label "payload" . go
   where
     go prevUuid = do

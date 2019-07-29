@@ -15,8 +15,8 @@ module RON.Types (
     Object (..),
     ObjectState (..),
     Op (..),
-    OpPattern (..),
     OpTerm (..),
+    Payload,
     StateChunk (..),
     StateFrame,
     UUID (..),
@@ -24,6 +24,7 @@ module RON.Types (
     WireFrame,
     WireReducedChunk (..),
     -- * Op patterns
+    OpPattern (..),
     opPattern,
     pattern AckP,
     pattern AnnotationDerivedP,
@@ -59,13 +60,15 @@ data ClosedOp = ClosedOp
     }
     deriving (Data, Eq, Generic)
 
+type Payload = [Atom]
+
 -- | Open op (operation)
 data Op = Op
-    { opId      :: UUID
+    { opId :: UUID
         -- ^ event id (usually timestamp)
-    , refId     :: UUID
+    , refId :: UUID
         -- ^ reference to other op; actual semantics depends on the type
-    , payload :: [Atom]
+    , payload :: Payload
         -- ^ payload
     }
     deriving (Data, Eq, Generic, Hashable, Show)

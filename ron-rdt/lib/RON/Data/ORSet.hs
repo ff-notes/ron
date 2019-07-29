@@ -38,7 +38,7 @@ import           RON.Error (MonadE, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (Object),
-                            Op (Op, opId, payload, refId),
+                            Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk, stateBody, stateType), UUID)
 import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
@@ -115,7 +115,7 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
         pure . ORSet $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
-commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => [Atom] -> m ()
+commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => Payload -> m ()
 commonAdd payload =
     modifyObjectStateChunk_ $ \StateChunk{stateBody} -> do
         event <- getEventUuid
@@ -139,7 +139,7 @@ addRef (Object itemUuid) = commonAdd [AUuid itemUuid]
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
 commonRemove
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
-    => ([Atom] -> Bool) -> m ()
+    => (Payload -> Bool) -> m ()
 commonRemove isTarget =
     modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
         let state0@(ORSetRep opMap) = stateFromChunk stateBody

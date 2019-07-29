@@ -30,8 +30,9 @@ import           RON.Binary.Types (Desc (..), Size, descIsOp)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (..), Op (..),
                             OpTerm (TClosed, THeader, TQuery, TReduced),
-                            UUID (UUID), WireChunk (Closed, Query, Value),
-                            WireFrame, WireReducedChunk (..))
+                            Payload, UUID (UUID),
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.Util.Word (safeCast)
 
@@ -186,7 +187,7 @@ uuid size = label "UUID" $
         _  -> fail "expected uuid of size 16"
 
 -- | 'Parser' for a payload (sequence of atoms)
-parsePayload :: Parser [Atom]
+parsePayload :: Parser Payload
 parsePayload = label "payload" $ many atom
 
 -- | 'Parser' for an atom

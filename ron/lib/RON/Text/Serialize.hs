@@ -29,7 +29,7 @@ import qualified Data.Map.Strict as Map
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            ClosedOp (..), ObjectState (..), Op (..),
+                            ClosedOp (..), ObjectState (..), Op (..), Payload,
                             StateChunk (..), StateFrame,
                             WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
@@ -170,7 +170,7 @@ serializeUuidAtom' u =
 -- | Serialize a payload in stream context
 serializePayload
     :: UUID  -- ^ previous UUID (default is 'zero')
-    -> [Atom]
+    -> Payload
     -> ByteStringL
 serializePayload prev =
     BSLC.unwords . (`evalState` prev) . traverse serializeAtomZip

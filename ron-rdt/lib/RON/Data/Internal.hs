@@ -48,7 +48,7 @@ import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             ObjectState (ObjectState, frame, uuid),
-                            Op (Op, opId, payload, refId),
+                            Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk, stateBody), StateFrame,
                             UUID (UUID), WireChunk)
 
@@ -131,20 +131,20 @@ class Replicated a where
 data Encoding a = Encoding
     { encodingNewRon
         :: forall m
-        . (ReplicaClock m, MonadState StateFrame m) => a -> m [Atom]
+        . (ReplicaClock m, MonadState StateFrame m) => a -> m Payload
     , encodingFromRon
-        :: forall m . (MonadE m, MonadState StateFrame m) => [Atom] -> m a
+        :: forall m . (MonadE m, MonadState StateFrame m) => Payload -> m a
     }
 
 -- | Encode typed data to a payload with possible addition objects
 newRon
-    :: (Replicated a, ReplicaClock m, MonadState StateFrame m) => a -> m [Atom]
+    :: (Replicated a, ReplicaClock m, MonadState StateFrame m) => a -> m Payload
 newRon = encodingNewRon encoding
 
 -- | Decode typed data from a payload.
 -- The implementation may use other objects in the frame to resolve references.
 -- TODO(2019-06-28, cblp) use 'ReaderT' for symmetry with 'newRon'
-fromRon :: (MonadE m, Replicated a, MonadState StateFrame m) => [Atom] -> m a
+fromRon :: (MonadE m, Replicated a, MonadState StateFrame m) => Payload -> m a
 fromRon = encodingFromRon encoding
 
 -- | Standard implementation of 'Replicated' for 'ReplicatedAsObject' types.
@@ -169,10 +169,10 @@ payloadEncoding = Encoding
 class Replicated a => ReplicatedAsPayload a where
 
     -- | Encode data
-    toPayload :: a -> [Atom]
+    toPayload :: a -> Payload
 
     -- | Decode data
-    fromPayload :: MonadE m => [Atom] -> m a
+    fromPayload :: MonadE m => Payload -> m a
 
 instance Replicated Int64 where encoding = payloadEncoding
 
@@ -221,7 +221,7 @@ class Replicated a => ReplicatedAsObject a where
     -- | Decode data
     getObject :: (MonadE m, MonadObjectState a m) => m a
 
-objectFromRon :: MonadE m => (Object a -> m a) -> [Atom] -> m a
+objectFromRon :: MonadE m => (Object a -> m a) -> Payload -> m a
 objectFromRon handler atoms = case atoms of
     [AUuid uuid] -> handler $ Object uuid
     _            -> throwError "Expected object UUID"
@@ -257,12 +257,12 @@ modifyObjectStateChunk_ f = modifyObjectStateChunk $ \chunk -> do
     chunk' <- f chunk
     pure ((), chunk')
 
-eqRef :: Object a -> [Atom] -> Bool
+eqRef :: Object a -> Payload -> Bool
 eqRef (Object uuid) atoms = case atoms of
     [AUuid ref] -> uuid == ref
     _           -> False
 
-eqPayload :: ReplicatedAsPayload a => a -> [Atom] -> Bool
+eqPayload :: ReplicatedAsPayload a => a -> Payload -> Bool
 eqPayload a atoms = toPayload a == atoms
 
 pattern None :: Atom
