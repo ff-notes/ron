@@ -169,7 +169,7 @@ instance Reducible RgaRep where
 
     stateFromChunk = RgaRep . vertexListFromOps
 
-    stateToChunk (RgaRaw rga) = StateChunk{stateType = rgaType, stateBody} where
+    stateToChunk (RgaRep rga) = StateChunk{stateType = rgaType, stateBody} where
         stateBody = maybe [] vertexListToOps rga
 
     applyPatches rga (patches, ops) =

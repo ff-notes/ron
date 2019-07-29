@@ -28,7 +28,7 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
 import           RON.Error (MonadE, errorContext)
-import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
+import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
                             StateFrame, UUID)
