@@ -102,7 +102,7 @@ data ReducedChunk = ReducedChunk
     }
     deriving (Show)
 
--- | TODO(2019-07-29, cblp) get stateType from Reducible
+-- | TODO(2019-07-29, cblp, #99) get stateType from Reducible
 mkStateChunk :: UUID -> [Op] -> StateChunk
 mkStateChunk stateType ops = StateChunk{stateType, stateBody = ops}
 
