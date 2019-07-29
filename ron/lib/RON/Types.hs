@@ -10,13 +10,6 @@
 
 -- | RON model types
 module RON.Types (
-    pattern AckP,
-    pattern AnnotationDerivedP,
-    pattern AnnotationP,
-    pattern CreateP,
-    pattern DeleteP,
-    pattern RegularP,
-    pattern UndeleteP,
     Atom (..),
     ClosedOp (..),
     Object (..),
@@ -30,7 +23,15 @@ module RON.Types (
     WireChunk (..),
     WireFrame,
     WireReducedChunk (..),
+    -- * Op patterns
     opPattern,
+    pattern AckP,
+    pattern AnnotationDerivedP,
+    pattern AnnotationP,
+    pattern CreateP,
+    pattern DeleteP,
+    pattern RegularP,
+    pattern UndeleteP,
 ) where
 
 import           RON.Prelude
