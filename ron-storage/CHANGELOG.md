@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- `modify` now pops result of action (to use with `getObject`, for instance).
 
 ## [0.8] - 2019-07-26
 ### Added

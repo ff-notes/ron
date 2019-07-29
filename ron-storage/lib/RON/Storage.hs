@@ -20,7 +20,7 @@ import           RON.Prelude
 
 import qualified Data.Text as Text
 
-import           RON.Data (ObjectStateT, execObjectState, reduceObject)
+import           RON.Data (ObjectStateT, reduceObject, runObjectState)
 import           RON.Error (Error (Error), errorContext, throwErrorString)
 import           RON.Storage.Backend (Collection (..), CollectionName,
                                       DocId (DocId), Document (Document),
@@ -76,11 +76,12 @@ try ma = (Right <$> ma) `catchError` (pure . Left)
 
 -- | Load document, apply changes and put it back to storage
 modify
-    :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m () -> m ()
+    :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m b -> m b
 modify docid f = do
     oldDoc <- loadDocument docid
-    value' <- execObjectState (value oldDoc) f
+    (b, value') <- runObjectState (value oldDoc) f
     createVersion (Just (docid, oldDoc)) value'
+    pure b
 
 -- | Create document assuming it doesn't exist yet.
 createDocument :: (Collection a, MonadStorage m) => ObjectState a -> m ()
