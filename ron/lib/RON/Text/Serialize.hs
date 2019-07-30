@@ -29,7 +29,7 @@ import qualified Data.Map.Strict as Map
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            ClosedOp (..), ObjectState (..), Op (..), Payload,
+                            ClosedOp (..), ObjectFrame (..), Op (..), Payload,
                             StateChunk (..), StateFrame,
                             WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
@@ -189,8 +189,8 @@ serializeStateFrame =
                 }
 
 -- | Serialize an object. Return object id that must be stored separately.
-serializeObject :: ObjectState a -> (UUID, ByteStringL)
-serializeObject (ObjectState oid frame) = (oid, serializeStateFrame frame)
+serializeObject :: ObjectFrame a -> (UUID, ByteStringL)
+serializeObject (ObjectFrame oid frame) = (oid, serializeStateFrame frame)
 
 opZero :: ClosedOp
 opZero = ClosedOp

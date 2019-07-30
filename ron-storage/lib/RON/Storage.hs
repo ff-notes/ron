@@ -28,7 +28,7 @@ import           RON.Storage.Backend (Collection (..), CollectionName,
                                       createVersion, decodeDocId,
                                       getDocumentVersions, isTouched,
                                       readVersion, value, versions)
-import           RON.Types (ObjectState, UUID)
+import           RON.Types (ObjectFrame, UUID)
 import qualified RON.UUID as UUID
 
 data CollectionDocId = forall a. Collection a => CollectionDocId (DocId a)
@@ -59,8 +59,8 @@ loadDocument docid = loadRetry (3 :: Int)
 
 -- | Validation-like version of 'sconcat'.
 vsconcat
-    :: NonEmpty (Either Error (ObjectState a, IsTouched))
-    -> Either Error (ObjectState a, IsTouched)
+    :: NonEmpty (Either Error (ObjectFrame a, IsTouched))
+    -> Either Error (ObjectFrame a, IsTouched)
 vsconcat = foldr1 vappend
   where
     vappend    (Left  e1)    (Left  e2) = Left $ Error "vappend" [e1, e2]
@@ -84,7 +84,7 @@ modify docid f = do
     pure b
 
 -- | Create document assuming it doesn't exist yet.
-createDocument :: (Collection a, MonadStorage m) => ObjectState a -> m ()
+createDocument :: (Collection a, MonadStorage m) => ObjectFrame a -> m ()
 createDocument = createVersion Nothing
 
 docIdFromUuid :: UUID -> DocId a

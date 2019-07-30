@@ -12,7 +12,7 @@ import           Data.String.Interpolate.IsString (i)
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
 import           RON.Data (evalObjectState, execObjectState, getObject,
-                           newObjectState)
+                           newObjectFrame)
 import           RON.Data.ORSet (ORSet (ORSet), addValue, findAnyAlive',
                                  removeValue, zoom)
 import           RON.Event (ReplicaId, applicationSpecific)
@@ -66,7 +66,7 @@ prop_orSet =
     evalExceptT $
     runNetworkSimT $ runReplicaSimT replica $ do
         -- create an object
-        state1 <- newObjectState example0
+        state1 <- newObjectFrame example0
         let (oid, state1ser) = serializeObject state1
         prep state1expect === prep state1ser
 

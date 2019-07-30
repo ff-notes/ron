@@ -22,15 +22,15 @@ module RON.Data (
     reduceObject,
     reduceStateFrame,
     reduceWireFrame,
-    -- * 'ObjectState' monad
+    -- * Object-state monad
     ObjectStateT,
     MonadObjectState,
     evalObjectState,
     evalObjectState_,
     execObjectState,
     execObjectState_,
-    newObjectState,
-    newObjectStateWith,
+    newObjectFrame,
+    newObjectFrameWith,
     runObjectState,
     runObjectState_,
 ) where
@@ -48,7 +48,7 @@ import           RON.Data.RGA (RgaRep)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
 import           RON.Types (ClosedOp (..), Object (Object),
-                            ObjectState (ObjectState, frame, uuid), Op (..),
+                            ObjectFrame (ObjectFrame, frame, uuid), Op (..),
                             StateChunk (..), StateFrame, UUID,
                             WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
@@ -163,14 +163,14 @@ reduceStateFrame s1 s2 =
                 "Cannot reduce StateFrame of unknown type " ++ show stateType
 
 unsafeReduceObject
-    :: MonadE m => ObjectState a -> StateFrame -> m (ObjectState a)
-unsafeReduceObject obj@ObjectState{frame = s1} s2 = do
+    :: MonadE m => ObjectFrame a -> StateFrame -> m (ObjectFrame a)
+unsafeReduceObject obj@ObjectFrame{frame = s1} s2 = do
     frame' <- reduceStateFrame s1 s2
     pure obj{frame = frame'}
 
 -- | Reduce object with frame from another version of the same object.
-reduceObject :: MonadE m => ObjectState a -> ObjectState a -> m (ObjectState a)
-reduceObject o1@ObjectState{uuid = id1} ObjectState{uuid = id2, frame = frame2}
+reduceObject :: MonadE m => ObjectFrame a -> ObjectFrame a -> m (ObjectFrame a)
+reduceObject o1@ObjectFrame{uuid = id1} ObjectFrame{uuid = id2, frame = frame2}
     | id1 == id2 = unsafeReduceObject o1 frame2
     | otherwise  = throwErrorString $ "Object ids differ: " ++ show (id1, id2)
 
@@ -181,42 +181,42 @@ instance Ord a => Semigroup (MaxOnFst a b) where
         | a1 < a2   = mof2
         | otherwise = mof1
 
--- | Run ObjectState action
-evalObjectState :: Monad m => ObjectState b -> ObjectStateT b m a -> m a
-evalObjectState ObjectState{uuid, frame} action =
+-- | Run ObjectFrame action
+evalObjectState :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m a
+evalObjectState ObjectFrame{uuid, frame} action =
     evalStateT (runReaderT action $ Object uuid) frame
 
--- | Run ObjectState action, starting with an empty frame
+-- | Run ObjectFrame action, starting with an empty frame
 evalObjectState_ :: Monad m => StateT StateFrame m a -> m a
 evalObjectState_ action = evalStateT action mempty
 
--- | Run ObjectState action
+-- | Run ObjectFrame action
 execObjectState
-    :: Monad m => ObjectState b -> ObjectStateT b m a -> m (ObjectState b)
-execObjectState state@ObjectState{uuid, frame} action = do
+    :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m (ObjectFrame b)
+execObjectState state@ObjectFrame{uuid, frame} action = do
     frame' <- execStateT (runReaderT action $ Object uuid) frame
     pure state{frame = frame'}
 
--- | Run ObjectState action, starting with an empty frame
+-- | Run ObjectFrame action, starting with an empty frame
 execObjectState_ :: Monad m => StateT StateFrame m a -> m StateFrame
 execObjectState_ action = execStateT action mempty
 
--- | Run ObjectState action
+-- | Run ObjectFrame action
 runObjectState
     :: Functor m
-    => ObjectState b
+    => ObjectFrame b
     -> ObjectStateT b m a
-    -> m (a, ObjectState b)
-runObjectState state@ObjectState{uuid, frame} action =
+    -> m (a, ObjectFrame b)
+runObjectState state@ObjectFrame{uuid, frame} action =
     runStateT (runReaderT action $ Object uuid) frame
     <&> \(a, frame') -> (a, state{frame = frame'})
 
--- | Run ObjectState action, starting with an empty frame
+-- | Run ObjectFrame action, starting with an empty frame
 runObjectState_ :: StateT StateFrame m a -> m (a, StateFrame)
 runObjectState_ action = runStateT action mempty
 
--- | Create new 'ObjectState' with an action
-newObjectStateWith
-    :: Functor m => StateT StateFrame m (Object a) -> m (ObjectState a)
-newObjectStateWith action =
-    runObjectState_ action <&> \(Object uuid, frame) -> ObjectState{uuid, frame}
+-- | Create new 'ObjectFrame' with an action
+newObjectFrameWith
+    :: Functor m => StateT StateFrame m (Object a) -> m (ObjectFrame a)
+newObjectFrameWith action =
+    runObjectState_ action <&> \(Object uuid, frame) -> ObjectFrame{uuid, frame}

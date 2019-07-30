@@ -28,8 +28,8 @@ import qualified Text.Show
 import qualified RON.Base64 as Base64
 import qualified RON.Binary.Parse as RB
 import qualified RON.Binary.Serialize as RB
-import           RON.Data (evalObjectState, execObjectState, newObjectState,
-                           newObjectStateWith, runObjectState)
+import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
+                           newObjectFrameWith, runObjectState)
 import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RgaString)
@@ -269,7 +269,7 @@ prop_RGA_edit_idempotency = property $ do
     textY <- forAll Gen.shortText
     evalExceptT $
         runNetworkSimT $ runReplicaSimT (applicationSpecific 271) $ do
-            rgaX   <- newObjectStateWith   $ RGA.newFromText textX
+            rgaX   <- newObjectFrameWith   $ RGA.newFromText textX
             rgaY   <- execObjectState rgaX $ RGA.editText    textY
             textY' <- evalObjectState rgaY   RGA.getText
             textY === textY'
@@ -279,7 +279,7 @@ prop_RGA_edit_idempotency_back = property $ do
     textY <- forAll Gen.shortText
     evalExceptT $
         runNetworkSimT $ runReplicaSimT (applicationSpecific 271) $ do
-            rgaX   <- newObjectStateWith   $ RGA.newFromText textX
+            rgaX   <- newObjectFrameWith   $ RGA.newFromText textX
             rgaY   <- execObjectState rgaX $ RGA.editText    textY
             rgaX'  <- execObjectState rgaY $ RGA.editText    textX
             textX' <- evalObjectState rgaX'  RGA.getText
@@ -318,7 +318,7 @@ prop_RGA_delete_deleted = let
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 234) $ do
-        rga0 <- newObjectStateWith $ RGA.newFromText "hello"
+        rga0 <- newObjectFrameWith $ RGA.newFromText "hello"
         rga0expect === prep rga0
 
         rga1 <- execObjectState rga0 $ RGA.editText "hell"
@@ -332,7 +332,7 @@ prop_RGA_getAliveIndices = property $ do
     replica <- forAll Gen.replicaId
     evalExceptT $ runNetworkSimT $ do
         rga <-
-            runReplicaSimT replica $ newObjectStateWith $ RGA.newFromText text
+            runReplicaSimT replica $ newObjectFrameWith $ RGA.newFromText text
         indices <- evalObjectState rga RGA.getAliveIndices
         Text.length text === length indices
 
@@ -344,7 +344,7 @@ prop_RGA_insertAfter = property $ do
     evalExceptT $ runNetworkSimT $ do
         rgaState <-
             runReplicaSimT replica1 $
-            newObjectStateWith $ RGA.newFromText $ prefix <> suffix
+            newObjectFrameWith $ RGA.newFromText $ prefix <> suffix
         rgaIndices <- evalObjectState rgaState RGA.getAliveIndices
         annotateShow rgaIndices
         let pos = rgaIndices !! (Text.length prefix - 1)
@@ -362,7 +362,7 @@ prop_RGA_remove = property $ do
     (replica1, replica2) <- forAll $ replicateM2 Gen.replicaId
     evalExceptT $ runNetworkSimT $ do
         rgaState <-
-            runReplicaSimT replica1 $ newObjectStateWith $ RGA.newFromText text
+            runReplicaSimT replica1 $ newObjectFrameWith $ RGA.newFromText text
         indices <- evalObjectState rgaState RGA.getAliveIndices
         let u = fromJust $ indices !! i
         text' <-
@@ -399,7 +399,7 @@ prop_ORSet = let
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 366) $ do
-        state0 <- newObjectState $ ORSet @Int64 []
+        state0 <- newObjectFrame $ ORSet @Int64 []
         state0expect === prep state0
 
         state1 <- execObjectState state0 $ ORSet.addValue 370
@@ -432,7 +432,7 @@ prop_ObjectORSet = let
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 400) $ do
-        state0 <- newObjectState $ ORSet @RgaString []
+        state0 <- newObjectFrame $ ORSet @RgaString []
         state0expect === prep state0
 
         (rga, state1) <- runObjectState state0 $ do
@@ -463,7 +463,7 @@ prop_ObjectORSet_recursive = let
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 409) $ do
-        state1 <- newObjectState state0
+        state1 <- newObjectFrame state0
         state1expect === prep state1
 
         state2 <-

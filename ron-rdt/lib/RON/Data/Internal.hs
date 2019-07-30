@@ -26,7 +26,7 @@ module RON.Data.Internal (
     getObjectStateChunk,
     modifyObjectStateChunk,
     modifyObjectStateChunk_,
-    newObjectState,
+    newObjectFrame,
     --
     objectEncoding,
     payloadEncoding,
@@ -47,7 +47,7 @@ import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
-                            ObjectState (ObjectState, frame, uuid),
+                            ObjectFrame (ObjectFrame, frame, uuid),
                             Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk, stateBody), StateFrame,
                             UUID (UUID), WireChunk)
@@ -226,12 +226,12 @@ objectFromRon handler atoms = case atoms of
     [AUuid uuid] -> handler $ Object uuid
     _            -> throwError "Expected object UUID"
 
--- | Create new 'ObjectState' from a value
-newObjectState
-    :: (ReplicatedAsObject a, ReplicaClock m) => a -> m (ObjectState a)
-newObjectState a = do
+-- | Create new 'ObjectFrame' from a value
+newObjectFrame
+    :: (ReplicatedAsObject a, ReplicaClock m) => a -> m (ObjectFrame a)
+newObjectFrame a = do
     (Object uuid, frame) <- runStateT (newObject a) mempty
-    pure $ ObjectState{uuid, frame}
+    pure $ ObjectFrame{uuid, frame}
 
 getObjectStateChunk :: (MonadE m, MonadObjectState a m) => m StateChunk
 getObjectStateChunk = do

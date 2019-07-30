@@ -13,7 +13,7 @@ module RON.Types (
     Atom (..),
     ClosedOp (..),
     Object (..),
-    ObjectState (..),
+    ObjectFrame (..),
     Op (..),
     OpTerm (..),
     Payload,
@@ -132,7 +132,7 @@ instance Typeable a => Show (Object a) where
             . showsPrec 11 b
 
 -- | Object accompanied with a frame
-data ObjectState a = ObjectState{uuid :: UUID, frame :: StateFrame}
+data ObjectFrame a = ObjectFrame{uuid :: UUID, frame :: StateFrame}
     deriving (Eq, Show)
 
 data OpPattern =

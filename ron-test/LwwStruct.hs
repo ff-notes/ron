@@ -10,7 +10,7 @@ import           Data.String.Interpolate.IsString (i)
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
 import           RON.Data (evalObjectState, execObjectState, getObject,
-                           newObjectState)
+                           newObjectFrame)
 import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
@@ -117,7 +117,7 @@ prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
     -- create an object
     let ex1state =
-            runNetworkSim $ runReplicaSim replica $ newObjectState example0
+            runNetworkSim $ runReplicaSim replica $ newObjectFrame example0
     let (oid, ex1ser) = serializeObject ex1state
     prep ex1expect === prep ex1ser
 
