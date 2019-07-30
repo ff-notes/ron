@@ -28,6 +28,8 @@ module RON.Data.Internal (
     modifyObjectStateChunk,
     modifyObjectStateChunk_,
     newObjectFrame,
+    reduceState,
+    reduceObjectStates,
     --
     objectEncoding,
     payloadEncoding,
@@ -41,6 +43,8 @@ module RON.Data.Internal (
 
 import           RON.Prelude
 
+import           Data.Foldable (foldl1)
+import           Data.List (minimum)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
@@ -211,7 +215,7 @@ instance ReplicatedAsPayload Char where
 -- An enclosing object's payload will be filled with this object's id.
 --
 -- Law: @'encoding' == 'objectEncoding'@
-class Replicated a => ReplicatedAsObject a where
+class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
 
     type Rep a
 
@@ -329,3 +333,18 @@ advanceToObject = do
     atomAsUuid = \case
         AUuid u -> Just u
         _       -> Nothing
+
+reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
+reduceState s1 s2 =
+    stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2
+
+reduceObjectStates
+    :: forall a m
+    . (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
+    => NonEmpty (Object a) -> m (Object a)
+reduceObjectStates (obj :| objs) = do
+    chunks <- for (obj :| objs) $ runReaderT getObjectStateChunk
+    let chunk = foldl1 (reduceState @(Rep a)) chunks
+    let oid = minimum [i | Object i <- obj:objs]
+    modify' $ Map.insert oid chunk
+    pure $ Object oid
