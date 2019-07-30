@@ -6,8 +6,14 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Associated type `ReplicatedAsObject.Rep`
+
 ### Changed
 - Renamed `ObjectState` to `ObjectFrame`.
+
+### Removed
+- Method `ReplicatedAsObject.objectOpType`
 
 ## [0.7] - 2019-07-26
 ### Added
