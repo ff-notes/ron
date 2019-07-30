@@ -13,9 +13,10 @@ main :: IO ()
 main =
     print $ runExcept $ runNetworkSimT $ do
         state1 <-
-            runReplicaSimT (applicationSpecific 1) $ newObjectFrame $ ORSet []
+            runReplicaSimT (applicationSpecific 1) $
+                newObjectFrame $ ORSet []
         traceShowM state1
         state2 <-
-            runReplicaSimT (applicationSpecific 2) $ execObjectState state1 $
-            ORSet.addValue $ ORSet ["ab" :: Text]
+            runReplicaSimT (applicationSpecific 2) $
+                execObjectState state1 $ ORSet.addValue $ ORSet ["ab" :: Text]
         traceShowM state2
