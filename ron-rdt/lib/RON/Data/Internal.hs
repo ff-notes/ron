@@ -9,6 +9,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module RON.Data.Internal (
@@ -212,8 +213,7 @@ instance ReplicatedAsPayload Char where
 -- Law: @'encoding' == 'objectEncoding'@
 class Replicated a => ReplicatedAsObject a where
 
-    -- | UUID of the type
-    objectOpType :: UUID
+    type Rep a
 
     -- | Encode data. Write frame and return id.
     newObject :: (ReplicaClock m, MonadState StateFrame m) => a -> m (Object a)

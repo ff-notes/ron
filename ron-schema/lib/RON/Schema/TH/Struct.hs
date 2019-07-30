@@ -19,11 +19,10 @@ import           Language.Haskell.TH (Exp (VarE), bindS, conP, conT, doE, listE,
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
-import           RON.Data (MonadObjectState, ObjectStateT,
+import           RON.Data (MonadObjectState, ObjectStateT, Rep,
                            Replicated (encoding), ReplicatedAsObject, getObject,
-                           getObjectStateChunk, newObject, objectEncoding,
-                           objectOpType)
-import           RON.Data.LWW (lwwType)
+                           getObjectStateChunk, newObject, objectEncoding)
+import           RON.Data.LWW (LwwRep)
 import qualified RON.Data.LWW as LWW
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock)
@@ -91,7 +90,7 @@ mkInstanceReplicatedAsObject name fields annotations = do
             :   fieldsToUnpack
             ++  [noBindS [| pure $consE |]]
     [d| instance ReplicatedAsObject $structType where
-            objectOpType = lwwType
+            type Rep $structType = LwwRep
             newObject $consP = Object <$> LWW.newObject $fieldsToPack
             getObject =
                 errorContext $(liftText errCtx) $getObjectImpl

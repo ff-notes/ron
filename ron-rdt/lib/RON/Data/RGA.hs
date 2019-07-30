@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Replicated Growable Array (RGA)
 module RON.Data.RGA
@@ -40,16 +41,7 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Data.Internal (MonadObjectState,
-                                    ReducedChunk (ReducedChunk), Reducible,
-                                    Replicated, ReplicatedAsObject,
-                                    ReplicatedAsPayload, Unapplied,
-                                    applyPatches, encoding, fromRon, getObject,
-                                    getObjectStateChunk,
-                                    modifyObjectStateChunk_, newObject, newRon,
-                                    objectEncoding, objectOpType, rcBody, rcRef,
-                                    reduceUnappliedPatches, reducibleOpType,
-                                    stateFromChunk, stateToChunk, toPayload)
+import           RON.Data.Internal
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Semilattice (Semilattice)
@@ -327,7 +319,7 @@ newtype RGA a = RGA [a]
 instance Replicated a => Replicated (RGA a) where encoding = objectEncoding
 
 instance Replicated a => ReplicatedAsObject (RGA a) where
-    objectOpType = rgaType
+    type Rep (RGA a) = RgaRep
 
     newObject (RGA items) = do
         vertexIds <- getEventUuids $ ls60 $ genericLength items

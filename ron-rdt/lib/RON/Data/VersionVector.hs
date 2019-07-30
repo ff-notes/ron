@@ -3,6 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Version Vector
 module RON.Data.VersionVector
@@ -69,7 +70,7 @@ instance Replicated VersionVector where
     encoding = objectEncoding
 
 instance ReplicatedAsObject VersionVector where
-    objectOpType = vvType
+    type Rep VersionVector = VersionVector
 
     newObject (VersionVector vv) = do
         oid <- getEventUuid

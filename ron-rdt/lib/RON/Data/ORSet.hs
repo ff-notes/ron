@@ -5,6 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet
@@ -25,15 +26,7 @@ import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
-                                    Replicated, ReplicatedAsObject,
-                                    ReplicatedAsPayload, encoding, eqPayload,
-                                    eqRef, fromRon, getObject,
-                                    getObjectStateChunk,
-                                    modifyObjectStateChunk_, newObject, newRon,
-                                    objectEncoding, objectOpType,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk)
+import           RON.Data.Internal
 import           RON.Error (MonadE, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
@@ -92,7 +85,7 @@ instance Replicated a => Replicated (ORSet a) where
     encoding = objectEncoding
 
 instance Replicated a => ReplicatedAsObject (ORSet a) where
-    objectOpType = setType
+    type Rep (ORSet a) = ORSetRep
 
     newObject (ORSet items) = do
         ops <- for items $ \item -> do
