@@ -4,14 +4,23 @@ name: examples
 version: 0
 build-type: Simple
 
-executable TypicalUsage
+common common
     build-depends:
         -- global
         base,
+        mtl,
+        text,
         -- project
         ron,
         ron-rdt,
         ron-schema,
         ron-storage
     default-language: Haskell2010
+
+executable TypicalUsage
+    import: common
     main-is: TypicalUsage.hs
+
+executable CreateAndModify
+    import: common
+    main-is: CreateAndModify.hs
