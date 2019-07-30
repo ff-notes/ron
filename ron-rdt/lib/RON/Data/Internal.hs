@@ -180,7 +180,7 @@ instance ReplicatedAsPayload Int64 where
     toPayload int = [AInteger int]
     fromPayload atoms = errorContext "Integer" $ case atoms of
         [AInteger int] -> pure int
-        _              -> throwError "Expected Integer syntax"
+        _              -> throwError "Expected Integer"
 
 instance Replicated UUID where encoding = payloadEncoding
 
@@ -188,7 +188,7 @@ instance ReplicatedAsPayload UUID where
     toPayload u = [AUuid u]
     fromPayload atoms = errorContext "UUID" $ case atoms of
         [AUuid u] -> pure u
-        _         -> throwError "Expected UUID syntax"
+        _         -> throwError "Expected UUID"
 
 instance Replicated Text where encoding = payloadEncoding
 
@@ -196,7 +196,7 @@ instance ReplicatedAsPayload Text where
     toPayload t = [AString t]
     fromPayload atoms = errorContext "String" $ case atoms of
         [AString t] -> pure t
-        _           -> throwError "Expected string syntax"
+        _           -> throwError "Expected String"
 
 instance Replicated Char where encoding = payloadEncoding
 
