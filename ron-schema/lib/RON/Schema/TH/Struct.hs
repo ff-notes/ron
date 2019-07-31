@@ -74,8 +74,8 @@ mkDataType name fields annotations = TH.dataD (TH.cxt []) name [] Nothing
     []
 
 mkInstanceReplicated :: TH.TypeQ -> TH.DecsQ
-mkInstanceReplicated structType = [d|
-    instance Replicated $structType where
+mkInstanceReplicated type' = [d|
+    instance Replicated $type' where
         encoding = objectEncoding
     |]
 
@@ -98,15 +98,15 @@ mkInstanceReplicatedAO name fields annotations = do
             $   bindS (varP ops) [| getObjectStateChunk |]
             :   fieldsToUnpack
             ++  [noBindS [| pure $consE |]]
-    [d| instance ReplicatedAsObject $structType where
-            type Rep $structType = LwwRep
+    [d| instance ReplicatedAsObject $type' where
+            type Rep $type' = LwwRep
             newObject $consP = Object <$> LWW.newObject $fieldsToPack
             getObject =
                 errorContext $(liftText errCtx) $getObjectImpl
         |]
   where
     name' = mkNameT name
-    structType = conT name'
+    type' = conT name'
     fieldsToPack = listE
         [ [| ($(liftData ronName), Instance $(varE var)) |]
         | Field'{var, ronName} <- fields
@@ -133,19 +133,19 @@ mkHaskellFieldName annotations base = prefix <> base' where
             Just (b, baseTail) -> Text.cons (toTitle b) baseTail
 
 mkAccessors :: TH.TypeQ -> StructAnnotations -> Field' -> TH.DecsQ
-mkAccessors structType annotations field' = do
+mkAccessors type' annotations field' = do
     a <- varT <$> TH.newName "a"
     m <- varT <$> TH.newName "m"
     let assignF =
             [ sigD assign [t|
-                (ReplicaClock $m, MonadE $m, MonadObjectState $structType $m)
+                (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
                 => $fieldGuideType -> $m ()
                 |]
             , valDP assign [| LWW.assignField $(liftData ronName) |]
             ]
         readF =
             [ sigD read [t|
-                (MonadE $m, MonadObjectState $structType $m)
+                (MonadE $m, MonadObjectState $type' $m)
                 => $m $fieldGuideType
                 |]
             , valDP read [| LWW.readField $(liftData ronName) |]
@@ -154,7 +154,7 @@ mkAccessors structType annotations field' = do
             [ sigD zoom [t|
                 MonadE $m
                 => ObjectStateT $(mkGuideType ronType) $m $a
-                -> ObjectStateT $structType                  $m $a
+                -> ObjectStateT $type'                  $m $a
                 |]
             , valDP zoom [| LWW.zoomField $(liftData ronName) |]
             ]
