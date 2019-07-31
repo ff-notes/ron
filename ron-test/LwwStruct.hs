@@ -44,7 +44,7 @@ ex1expect :: ByteStringL
 ex1expect = [i|
     *lww    #B/00009ISodW+r3pl1c4                       !
                                     @`          :int1   275
-                                                :opt5   >none
+                                                :opt5
                                                 :opt6   >some 74
                                                 :set4   >(1KqirW
                                                 :str2   >(6FAycW
@@ -63,16 +63,16 @@ ex4expect :: ByteStringL
 ex4expect = [i|
     *lww    #B/00009ISodW+r3pl1c4                           !
                                     @`(D81V2W   :int1       166
-                                    @`          :opt5       >none
-                                    @(c1l2MW    :opt6       >none
+                                    @`          :opt5
+                                    @(c1l2MW    :opt6
                                     @`          :set4       >(1KqirW
                                                 :str2       >(6FAycW
                                     @(PEddUW    :str3       '206'
 
             #(YD2ZdW                @0          :0          !
                                     @`          :int1       135
-                                                :opt5       >none
-                                                :opt6       >none
+                                                :opt5
+                                                :opt6
                                                 :set4       >(T6VGUW
                                                 :str2       >(XvcLcW
                                                 :str3       '137'
