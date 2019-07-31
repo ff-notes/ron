@@ -146,10 +146,6 @@ mkWireReducer obj chunks = chunks' <> leftovers where
         , wrcBody   = rcBody
         }
 
-reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
-reduceState s1 s2 =
-    stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2
-
 reduceStateFrame :: MonadE m => StateFrame -> StateFrame -> m StateFrame
 reduceStateFrame s1 s2 =
     (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid chunk -> let
