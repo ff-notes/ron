@@ -84,6 +84,9 @@ newtype ORSet a = ORSet [a]
 instance Replicated a => Replicated (ORSet a) where
     encoding = objectEncoding
 
+instance Replicated a => ReplicatedBoundedSemilattice (ORSet a) where
+    rconcat = objectRconcat
+
 instance Replicated a => ReplicatedAsObject (ORSet a) where
     type Rep (ORSet a) = ORSetRep
 

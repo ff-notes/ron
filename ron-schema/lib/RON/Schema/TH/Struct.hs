@@ -19,9 +19,10 @@ import           Language.Haskell.TH (Exp (VarE), bindS, conP, conT, doE, listE,
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
-import           RON.Data (MonadObjectState, ObjectStateT, Rep,
-                           Replicated (encoding), ReplicatedAsObject, getObject,
-                           getObjectStateChunk, newObject, objectEncoding)
+import           RON.Data (MonadObjectState, ObjectStateT, Rep, Replicated,
+                           ReplicatedAsObject, ReplicatedBoundedSemilattice,
+                           encoding, getObject, getObjectStateChunk, newObject,
+                           objectEncoding, objectRconcat, rconcat)
 import           RON.Data.LWW (LwwRep)
 import qualified RON.Data.LWW as LWW
 import           RON.Error (MonadE, errorContext)
@@ -49,15 +50,17 @@ mkReplicatedStructLww StructLww{name, fields, annotations} = do
             Nothing -> fail $
                 "Field name is not representable in RON: " ++ show haskellName
     dataType <- mkDataType name' fields annotations
-    [instanceReplicated] <- mkInstanceReplicated structType
-    [instanceReplicatedAsObject] <-
-        mkInstanceReplicatedAsObject name fields' annotations
-    accessors <- fold <$> traverse (mkAccessors structType annotations) fields'
-    pure $
-        dataType : instanceReplicated : instanceReplicatedAsObject : accessors
+    [instanceReplicated]   <- mkInstanceReplicated   type'
+    [instanceReplicatedBS] <- mkInstanceReplicatedBS type'
+    [instanceReplicatedAO] <- mkInstanceReplicatedAO name fields' annotations
+    accessors <- fold <$> traverse (mkAccessors type' annotations) fields'
+    pure
+        $ dataType
+        : instanceReplicated : instanceReplicatedBS : instanceReplicatedAO
+        : accessors
   where
     name' = mkNameT name
-    structType = conT name'
+    type' = conT    name'
 
 mkDataType
     :: TH.Name -> Map Text (Field Resolved) -> StructAnnotations -> TH.DecQ
@@ -76,9 +79,15 @@ mkInstanceReplicated structType = [d|
         encoding = objectEncoding
     |]
 
-mkInstanceReplicatedAsObject
+mkInstanceReplicatedBS :: TH.TypeQ -> TH.DecsQ
+mkInstanceReplicatedBS type' = [d|
+    instance ReplicatedBoundedSemilattice $type' where
+        rconcat = objectRconcat
+    |]
+
+mkInstanceReplicatedAO
     :: Text -> [Field'] -> StructAnnotations -> TH.DecsQ
-mkInstanceReplicatedAsObject name fields annotations = do
+mkInstanceReplicatedAO name fields annotations = do
     ops <- TH.newName "ops"
     let fieldsToUnpack =
             [ bindS (varP var)
