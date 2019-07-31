@@ -52,7 +52,7 @@ mkReplicatedStructLww StructLww{name, fields, annotations} = do
     dataType <- mkDataType name' fields annotations
     [instanceReplicated]   <- mkInstanceReplicated   type'
     [instanceReplicatedBS] <- mkInstanceReplicatedBS type'
-    [instanceReplicatedAO] <- mkInstanceReplicatedAO name fields' annotations
+    [instanceReplicatedAO] <- mkInstanceReplicatedAOLww name fields' annotations
     accessors <- fold <$> traverse (mkAccessors type' annotations) fields'
     pure
         $ dataType
@@ -85,9 +85,8 @@ mkInstanceReplicatedBS type' = [d|
         rconcat = objectRconcat
     |]
 
-mkInstanceReplicatedAO
-    :: Text -> [Field'] -> StructAnnotations -> TH.DecsQ
-mkInstanceReplicatedAO name fields annotations = do
+mkInstanceReplicatedAOLww :: Text -> [Field'] -> StructAnnotations -> TH.DecsQ
+mkInstanceReplicatedAOLww name fields annotations = do
     ops <- TH.newName "ops"
     let fieldsToUnpack =
             [ bindS (varP var)
