@@ -39,8 +39,9 @@ valDP = valD . varP
 mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
     TAtom atom -> case atom of
-        TAInteger -> [t| Int64 |]
-        TAString  -> [t| Text |]
+        TAFloat   -> [t| Double |]
+        TAInteger -> [t| Int64  |]
+        TAString  -> [t| Text   |]
     TComposite t -> case t of
         TEnum   Enum{name} -> conT $ mkNameT name
         TOption u          -> [t| Maybe $(mkGuideType u) |]

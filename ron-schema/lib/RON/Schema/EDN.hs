@@ -45,6 +45,7 @@ prelude = Map.fromList
     [ ("Bool",
         Type0 $ opaqueAtoms "Bool" OpaqueAnnotations{haskellType = Just "Bool"})
     , ("Day",           Type0 day)
+    , ("Float",         Type0 $ TAtom TAFloat)
     , ("Integer",       Type0 $ TAtom TAInteger)
     , ("RgaString",     Type0 $ TObject $ TRga char)
     , ("String",        Type0 $ TAtom TAString)

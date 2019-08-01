@@ -43,7 +43,7 @@ type TypeName = Text
 data TypeExpr = Use TypeName | Apply TypeName [TypeExpr]
     deriving (Show)
 
-data TAtom = TAInteger | TAString
+data TAtom = TAFloat | TAInteger | TAString
     deriving (Show)
 
 data RonType
