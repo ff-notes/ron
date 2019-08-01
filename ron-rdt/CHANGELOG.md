@@ -20,6 +20,7 @@ and this project adheres to
   - Behavior: referencing `Rep` type instead of duplicating type UUID
 - `Option` encoding: for availability, anything except `some` means None.
   None is encoded as empty payload.
+- Renamed `ORSet.zoom` -> `zoomItem`.
 
 ### Removed
 - `mkStateChunk`.

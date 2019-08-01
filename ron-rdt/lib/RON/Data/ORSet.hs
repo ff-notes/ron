@@ -19,7 +19,7 @@ module RON.Data.ORSet (
     findAnyAlive',
     removeRef,
     removeValue,
-    zoom,
+    zoomItem,
 ) where
 
 import           RON.Prelude
@@ -176,10 +176,10 @@ newtype ORSetItem a = ORSetItem UUID
 
 -- | Go from modification of the whole set to the modification of an item
 -- object.
-zoom
+zoomItem
     :: MonadE m
     => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
-zoom (ORSetItem key) innerModifier = do
+zoomItem (ORSetItem key) innerModifier = do
     StateChunk{stateBody} <- getObjectStateChunk
     let ORSetRep opMap = stateFromChunk stateBody
     itemValueRef <- case Map.lookup key opMap of
