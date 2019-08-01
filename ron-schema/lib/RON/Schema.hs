@@ -33,7 +33,7 @@ import           RON.Prelude
 
 import qualified Data.Text as Text
 
-data Stage = Parsed | Resolved
+data Stage = Parsed | Resolved | Equipped
 
 type TypeName = Text
 
