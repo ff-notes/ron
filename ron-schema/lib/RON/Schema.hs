@@ -54,8 +54,8 @@ data RonType
     deriving (Show)
 
 data TComposite
-    = TOption RonType
-    | TEnum   TEnum
+    = TEnum   TEnum
+    | TOption RonType
     deriving (Show)
 
 data TEnum = Enum {name :: Text, items :: [Text]}
