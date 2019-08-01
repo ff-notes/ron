@@ -53,21 +53,14 @@ matrix:
       script: $STACK exec -- hlint .
     - name: haddock
       script: $STACK haddock --no-haddock-deps $EXPORTED_PACKAGES
-    - name: 'cabal check: ron'
+    - name: 'cabal check'
       install: $STACK install cabal-install
-      script: cd ron && cabal check
-    - name: 'cabal check: ron-rdt'
-      install: $STACK install cabal-install
-      script: cd ron-rdt && cabal check
-    - name: 'cabal check: ron-schema'
-      install: $STACK install cabal-install
-      script: cd ron-schema && cabal check
-    - name: 'cabal check: ron-storage'
-      install: $STACK install cabal-install
-      script: cd ron-storage && cabal check
-    # - name: 'cabal check: swarm'
-    #   install: $STACK install cabal-install
-    #   script: cd swarm && cabal check
+      script:
+        - (cd ron         && cabal check)
+        - (cd ron-rdt     && cabal check)
+        - (cd ron-schema  && cabal check)
+        - (cd ron-storage && cabal check)
+        # - (cd swarm       && cabal check)
     - name: weeder
       install: $STACK build weeder
       script: $STACK exec -- weeder
