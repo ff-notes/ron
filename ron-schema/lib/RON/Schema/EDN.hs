@@ -27,9 +27,8 @@ import           RON.Schema
 readSchema :: MonadFail m => String -> Text -> m (Schema 'Resolved)
 readSchema sourceName source = do
     parsed <- parseSchema sourceName source
-    env <- (`execStateT` Env{userTypes=Map.empty}) $ do
-        collectDeclarations parsed
-        validateTypeUses    parsed
+    env <- (`execStateT` Env{userTypes=Map.empty}) $ collectDeclarations parsed
+    validateParsed env parsed
     pure $ evalSchema env
 
 newtype Env = Env{userTypes :: Map TypeName (Declaration 'Parsed)}
@@ -187,16 +186,15 @@ instance FromEDN TypeExpr where
 collectDeclarations :: (MonadFail m, MonadState Env m) => Schema 'Parsed -> m ()
 collectDeclarations = traverse_ rememberDeclaration
 
-validateTypeUses :: (MonadFail m, MonadState Env m) => Schema 'Parsed -> m ()
-validateTypeUses = traverse_ $ \case
+validateParsed :: MonadFail m => Env -> Schema 'Parsed -> m ()
+validateParsed Env{userTypes} = traverse_ $ \case
     DAlias     Alias{target}     -> validateExpr target
     DEnum      _                 -> pure ()
     DOpaque    _                 -> pure ()
     DStructLww StructLww{fields} ->
         for_ fields $ \Field{ronType} -> validateExpr ronType
   where
-    validateName name = do
-        Env{userTypes} <- get
+    validateName name =
         unless
             (name `Map.member` userTypes || name `Map.member` prelude)
             (fail $ "unknown type name " ++ Text.unpack name)
