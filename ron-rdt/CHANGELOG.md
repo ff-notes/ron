@@ -6,8 +6,20 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Function `reduceState`
+- Function `reduceObjectStates`
+
 ### Changed
 - `Reducible` depends on `BoundedSemilattice`.
+- `ReplicatedAsObject` depends on `ReplicatedBoundedSemilattice`.
+- `ReplicatedAsObject`:
+  - Removed method `objectOpType`
+  - Added associated type alias `Rep` --
+    untyped RON-RDT representation of a typed RDT.
+  - Behavior: referencing `Rep` type instead of duplicating type UUID
+- `Option` encoding: for availability, anything except `some` means None.
+  None is encoded as empty payload.
 
 ### Removed
 - `mkStateChunk`.

@@ -6,8 +6,16 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Type alias Payload = [Atom]
+
 ### Changed
 - `modify` now pops result of action (to use with `getObject`, for instance).
+- Renamed `ObjectState` to `ObjectFrame`
+
+### Removed
+- Concept of chunk version in RON protocol,
+  types `StateChunk` and `WireReducedChunk`.
 
 ## [0.8] - 2019-07-26
 ### Added

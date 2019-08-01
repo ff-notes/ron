@@ -220,6 +220,7 @@ instance ReplicatedAsPayload Char where
 class (Reducible (Rep a), ReplicatedBoundedSemilattice a) =>
     ReplicatedAsObject a where
 
+    -- | Untyped RON-RDT representation
     type Rep a
 
     -- | Encode data. Write frame and return id.
