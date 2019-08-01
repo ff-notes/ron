@@ -11,13 +11,13 @@ packages:
 
 extra-deps:
   # ron-schema:
-  - hedn-0.2.0.0
+  - hedn-0.2.0.1
 
   # swarm:
-  - inline-c-cpp-0.3.0.1
+  - inline-c-cpp-0.3.0.2
 
   # hedn:
-  - megaparsec-7.0.4
+  - megaparsec-7.0.5
 
 extra-lib-dirs:
   - swarm/_artifacts/lib

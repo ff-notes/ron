@@ -5,26 +5,26 @@
 
 packages:
 - completed:
-    hackage: hedn-0.2.0.0@sha256:ffa03dec3ad6d76e20e99a951347be160de177a8f37ac2ed85688c689121e110,2231
+    hackage: hedn-0.2.0.1@sha256:5fc70a561392a7b740a1e062d358bcbe6affc9501b901b8327e104b9c0fe23f3,2345
     pantry-tree:
-      size: 1345
-      sha256: 18c471436544e88fe0f50a4ad47e84a06fc7a4196ce7c476a4656371b44849da
+      size: 1344
+      sha256: ed2236a0c3b7a3efa6df59b9d5afe95b4dc024135deec31d1be23593e90ca595
   original:
-    hackage: hedn-0.2.0.0
+    hackage: hedn-0.2.0.1
 - completed:
-    hackage: inline-c-cpp-0.3.0.1@sha256:916ffd22c097f399a47f6ddb9313e2ce36d8051755dd702c23f8d20a370fee09,1517
+    hackage: inline-c-cpp-0.3.0.2@sha256:e269a28e1e48b96bdf0b263af9165c775f1abd95fd6435e76cb4fae337b1374e,1750
     pantry-tree:
       size: 313
-      sha256: ef970fa8d947613ed147a3b57cedcb67c3c3300f0100bcecfb576e7d9d28c692
+      sha256: 39b91210e9420eb865e5302d3717c258ddb86e44d722d479424b84e499ac3f77
   original:
-    hackage: inline-c-cpp-0.3.0.1
+    hackage: inline-c-cpp-0.3.0.2
 - completed:
-    hackage: megaparsec-7.0.4@sha256:a7397151601cbe6b8f831f8bdad1a10118dcd6d9a7ee50d6bbdcfbd1181b4ba2,6202
+    hackage: megaparsec-7.0.5@sha256:45e1f1348fab2783646fdb4d9e6097568981a740951c7356d36d794e2baba305,3902
     pantry-tree:
-      size: 2647
-      sha256: ab1608bf3230f6f3242fd49f4aa60025698c831f2cfb3496ccbdadf7840848e9
+      size: 1428
+      sha256: 1f8baf6e07326f8c8a2dd31de6b2860427f158b0892c52ba5fe9ffeb6cd3bf7f
   original:
-    hackage: megaparsec-7.0.4
+    hackage: megaparsec-7.0.5
 snapshots:
 - completed:
     size: 509471
