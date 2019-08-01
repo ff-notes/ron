@@ -184,7 +184,7 @@ zoomItem (ORSetItem key) innerModifier = do
     let ORSetRep opMap = stateFromChunk stateBody
     itemValueRef <- case Map.lookup key opMap of
         Nothing ->
-            -- TODO(2019-08-07, cblp) creat empty object?
+            -- TODO(2019-07-08, cblp) create empty object?
             throwErrorText "no such key in ORSet"
         Just Op{payload} -> case payload of
             [AUuid itemValueRef] -> pure itemValueRef
