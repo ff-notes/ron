@@ -12,10 +12,11 @@ module RON.Schema.EDN (readSchema) where
 
 import           RON.Prelude
 
+import           Control.Arrow ((&&&))
 import           Data.EDN (FromEDN, Tagged (NoTag, Tagged),
                            Value (List, Symbol), mapGetSymbol, parseEDN,
                            renderText, unexpected, withList, withMap, withNoTag)
-import           Data.EDN.Class.Parser (parseM)
+import           Data.EDN.Class.Parser (Parser, parseM)
 import           Data.EDN.Extra (decodeMultiDoc, isTagged, parseList,
                                  parseSymbol', withNoPrefix, withSymbol')
 import           Data.Map.Strict ((!?))
@@ -132,10 +133,14 @@ instance FromEDN (StructLww 'Parsed) where
 
         parseFields = \case
             [] -> pure mempty
-            nameAsTagged : typeAsTagged : cont -> do
-                name    <- parseSymbol' nameAsTagged
-                ronType <- parseEDN typeAsTagged
-                Map.insert name Field{ronType, ext = ()} <$> parseFields cont
+            nameVal : typeVal : cont -> do
+                let (annotationVals, cont') = span isTagged cont
+                name        <- parseSymbol' nameVal
+                ronType     <- parseEDN     typeVal
+                annotations <- parseList    annotationVals
+                let field = Field{ronType, annotations, ext = ()}
+                fields' <- parseFields cont'
+                pure $ Map.insert name field fields'
             [f] ->
                 fail $
                 "field " ++ Text.unpack (renderText f) ++ " must have type"
@@ -147,13 +152,6 @@ instance FromEDN StructAnnotations where
             Nothing -> pure defaultStructAnnotations
             Just annValue -> withMap go annValue
       where
-        unwrapTag = \case
-            Tagged prefix tag value -> let
-                name = case prefix of
-                    "" -> tag
-                    _  -> prefix <> "/" <> tag
-                in pure (name, value)
-            NoTag _ -> fail "annotation must be a tagged value"
         go m = do
             haskellFieldPrefix <- mapGetSymbol "field_prefix" m <|> pure ""
             haskellFieldCaseTransform <- optional $ mapGetSymbol "field_case" m
@@ -214,13 +212,16 @@ evalSchema env = fst <$> userTypes' where
         DAlias Alias{name, target} -> let
             target' = evalType target
             in (DAlias Alias{name, target = target'}, Type0 target')
-        DEnum   t -> (DEnum t, Type0 $ TComposite $ TEnum t)
-        DOpaque t -> (DOpaque t, Type0 $ TOpaque t)
-        DStructLww StructLww{..} -> let
-            fields' =
-                (\Field{..} -> Field{ronType = evalType ronType, ..}) <$> fields
-            struct = StructLww{fields = fields', ..}
-            in (DStructLww struct, Type0 $ TObject $ TStructLww struct)
+        DEnum      t -> (DEnum t, Type0 $ TComposite $ TEnum t)
+        DOpaque    t -> (DOpaque t, Type0 $ TOpaque t)
+        DStructLww s ->
+            (DStructLww &&& Type0 . TObject . TStructLww) $ evalStruct s
+
+    evalStruct :: StructLww Parsed -> StructLww Resolved
+    evalStruct StructLww{..} = StructLww{fields = evalField <$> fields, ..}
+
+    evalField :: Field Parsed -> Field Resolved
+    evalField Field{..} = Field{ronType = evalType ronType, ..}
 
     getType :: TypeName -> RonTypeF
     getType typ
@@ -256,3 +257,31 @@ instance FromEDN (Alias 'Parsed) where
         _ -> fail
             "Expected declaration in the form\
             \ (alias <name:symbol> <target:type>)"
+
+instance FromEDN FieldAnnotations where
+    parseEDN = withNoTag . withList $ \annTaggedValues -> do
+        annValues <- traverse unwrapTag annTaggedValues
+        case lookup "ron" annValues of
+            Nothing -> pure defaultFieldAnnotations
+            Just annValue -> withMap go annValue
+      where
+        go m = do
+            mergeStrategy <- mapGetSymbol "merge" m
+            pure FieldAnnotations{mergeStrategy}
+
+unwrapTag :: Tagged Text a -> Parser (Text, a)
+unwrapTag = \case
+    Tagged prefix tag value -> let
+        name = case prefix of
+            "" -> tag
+            _  -> prefix <> "/" <> tag
+        in pure (name, value)
+    NoTag _ -> fail "annotation must be a tagged value"
+
+instance FromEDN MergeStrategy where
+    parseEDN = withSymbol' $ \case
+        "LWW" -> pure LWW
+        "max" -> pure Max
+        "min" -> pure Min
+        "set" -> pure Set
+        s     -> fail $ "unknown merge strategy " <> show s

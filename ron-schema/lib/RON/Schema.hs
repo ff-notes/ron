@@ -11,12 +11,14 @@ module RON.Schema (
     CaseTransform (..),
     Declaration (..),
     Field (..),
-    Opaque (..),
-    OpaqueAnnotations (..),
+    FieldAnnotations (..), defaultFieldAnnotations,
+    MergeStrategy (..),
+    Opaque (..), opaqueAtoms, opaqueAtoms_, opaqueObject,
+    OpaqueAnnotations (..), defaultOpaqueAnnotations,
     RonType (..),
     Schema,
     Stage (..),
-    StructAnnotations (..),
+    StructAnnotations (..), defaultStructAnnotations,
     StructLww (..),
     TAtom (..),
     TComposite (..),
@@ -25,11 +27,6 @@ module RON.Schema (
     TypeExpr (..),
     TypeName,
     UseType,
-    defaultOpaqueAnnotations,
-    defaultStructAnnotations,
-    opaqueAtoms,
-    opaqueAtoms_,
-    opaqueObject,
 ) where
 
 import           RON.Prelude
@@ -92,10 +89,18 @@ data CaseTransform = TitleCase
 
 data Field (stage :: Stage) = Field
     { ronType     :: UseType stage
+    , annotations :: FieldAnnotations
     , ext         :: XField stage
     }
 deriving instance
     (Show (UseType stage), Show (XField stage)) => Show (Field stage)
+
+newtype FieldAnnotations =
+    FieldAnnotations{mergeStrategy :: Maybe MergeStrategy}
+    deriving (Show)
+
+defaultFieldAnnotations :: FieldAnnotations
+defaultFieldAnnotations = FieldAnnotations{mergeStrategy = Nothing}
 
 type family XField (stage :: Stage)
 
@@ -143,3 +148,10 @@ opaqueAtoms_ tyname = TOpaque $ Opaque False tyname defaultOpaqueAnnotations
 
 data Alias stage = Alias{name :: Text, target :: UseType stage}
 deriving instance Show (UseType stage) => Show (Alias stage)
+
+data MergeStrategy
+    = LWW
+    | Max
+    | Min
+    | Set
+    deriving (Show)

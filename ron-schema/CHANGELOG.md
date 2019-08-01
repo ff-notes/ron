@@ -6,13 +6,15 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `Float` atom type
+- `UUID` atom type
+- Struct field annotations
 
 ## [0.7] - 2019-07-26
 ### Added
 - `alias` declaration.
 - `ORSet.Map` type.
-- `Float` atom type
-- `UUID` atom type
 
 ### Changed
 - Renamed `Boole` -> `Bool` due to tradition.
