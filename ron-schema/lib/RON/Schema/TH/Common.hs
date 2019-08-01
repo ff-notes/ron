@@ -42,6 +42,7 @@ mkGuideType typ = case typ of
         TAFloat   -> [t| Double |]
         TAInteger -> [t| Int64  |]
         TAString  -> [t| Text   |]
+        TAUuid    -> [t| UUID   |]
     TComposite t -> case t of
         TEnum   Enum{name} -> conT $ mkNameT name
         TOption u          -> [t| Maybe $(mkGuideType u) |]

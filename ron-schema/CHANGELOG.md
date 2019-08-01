@@ -11,6 +11,8 @@ and this project adheres to
 ### Added
 - `alias` declaration.
 - `ORSet.Map` type.
+- `Float` atom type
+- `UUID` atom type
 
 ### Changed
 - Renamed `Boole` -> `Bool` due to tradition.

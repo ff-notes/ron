@@ -47,13 +47,14 @@ prelude = Map.fromList
     , ("Day",           Type0 day)
     , ("Float",         Type0 $ TAtom TAFloat)
     , ("Integer",       Type0 $ TAtom TAInteger)
+    , ("Option",        Type1 $ TComposite . TOption)
+    , ("ORSet.Map",     Type2 $ \k v -> TObject $ TORSetMap k v)
+    , ("ORSet",         Type1 $ TObject . TORSet)
+    , ("RGA",           Type1 $ TObject . TRga)
     , ("RgaString",     Type0 $ TObject $ TRga char)
     , ("String",        Type0 $ TAtom TAString)
+    , ("UUID",          Type0 $ TAtom TAUuid)
     , ("VersionVector", Type0 $ TObject TVersionVector)
-    , ("Option",        Type1 $ TComposite . TOption)
-    , ("ORSet",         Type1 $ TObject . TORSet)
-    , ("ORSet.Map",     Type2 $ \k v -> TObject $ TORSetMap k v)
-    , ("RGA",           Type1 $ TObject . TRga)
     ]
   where
     char = opaqueAtoms "Char" OpaqueAnnotations{haskellType = Just "Char"}
