@@ -6,30 +6,30 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module RON.Event
-    ( CalendarTime (..)
-    , CalendarEvent (..)
-    , EpochEvent (..)
-    , EpochTime
-    , Event (..)
-    , LocalTime (..)
-    , Naming (..)
-    , ReplicaClock (..)
-    , ReplicaId (..)
-    , advanceToUuid
-    , applicationSpecific
-    , decodeEvent
-    , encodeEvent
-    , fromCalendarEvent
-    , fromEpochEvent
-    , getEvent
-    , getEventUuid
-    , getEventUuids
-    , mkCalendarDate
-    , mkCalendarDateTime
-    , mkCalendarDateTimeNano
-    , toEpochEvent
-    ) where
+module RON.Event (
+    CalendarTime (..),
+    CalendarEvent (..),
+    EpochEvent (..),
+    EpochTime,
+    Event (..),
+    LocalTime (..),
+    Naming (..),
+    ReplicaClock (..),
+    ReplicaId (..),
+    advanceToUuid,
+    applicationSpecific,
+    decodeEvent,
+    encodeEvent,
+    fromCalendarEvent,
+    fromEpochEvent,
+    getEvent,
+    getEventUuid,
+    getEventUuids,
+    mkCalendarDate,
+    mkCalendarDateTime,
+    mkCalendarDateTimeNano,
+    toEpochEvent,
+) where
 
 import           RON.Prelude
 

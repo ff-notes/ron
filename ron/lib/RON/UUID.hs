@@ -8,25 +8,25 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module RON.UUID
-    ( UUID (..)
-    , UuidFields (..)
-    , build
-    , buildX
-    , buildY
-    , split
-    , succValue
-    , zero
-    , pattern Zero
+module RON.UUID (
+    UUID (..),
+    UuidFields (..),
+    build,
+    buildX,
+    buildY,
+    split,
+    succValue,
+    zero,
+    pattern Zero,
     -- * Name
-    , getName
-    , liftName
-    , mkName
-    , mkScopedName
+    getName,
+    liftName,
+    mkName,
+    mkScopedName,
     -- * Base32 encoding, suitable for file names
-    , decodeBase32
-    , encodeBase32
-    ) where
+    decodeBase32,
+    encodeBase32,
+) where
 
 import           RON.Prelude
 

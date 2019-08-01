@@ -6,9 +6,9 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Version Vector
-module RON.Data.VersionVector
-    ( VersionVector
-    ) where
+module RON.Data.VersionVector (
+    VersionVector,
+) where
 
 import           RON.Prelude
 

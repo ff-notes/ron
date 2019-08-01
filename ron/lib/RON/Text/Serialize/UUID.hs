@@ -5,11 +5,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module RON.Text.Serialize.UUID
-    ( serializeUuid
-    , serializeUuidAtom
-    , serializeUuidKey
-    ) where
+module RON.Text.Serialize.UUID (
+    serializeUuid,
+    serializeUuidAtom,
+    serializeUuidKey,
+) where
 
 import           RON.Prelude
 

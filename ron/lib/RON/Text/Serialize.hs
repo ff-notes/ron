@@ -6,16 +6,16 @@
 {-# LANGUAGE RecordWildCards #-}
 
 -- | RON-Text serialization
-module RON.Text.Serialize
-    ( serializeAtom
-    , serializeObject
-    , serializeRawOp
-    , serializeStateFrame
-    , serializeString
-    , serializeUuid
-    , serializeWireFrame
-    , serializeWireFrames
-    ) where
+module RON.Text.Serialize (
+    serializeAtom,
+    serializeObject,
+    serializeRawOp,
+    serializeStateFrame,
+    serializeString,
+    serializeUuid,
+    serializeWireFrame,
+    serializeWireFrames,
+) where
 
 import           RON.Prelude
 

@@ -8,15 +8,15 @@
 {-# LANGUAGE TypeApplications #-}
 
 -- | LWW-per-field RDT
-module RON.Data.LWW
-    ( LwwRep (..)
-    , assignField
-    , lwwType
-    , newObject
-    , readField
-    , viewField
-    , zoomField
-    ) where
+module RON.Data.LWW (
+    LwwRep (..),
+    assignField,
+    lwwType,
+    newObject,
+    readField,
+    viewField,
+    zoomField,
+) where
 
 import           RON.Prelude
 

@@ -7,18 +7,18 @@
 {-# LANGUAGE RecordWildCards #-}
 
 -- | RON-Text parsing
-module RON.Text.Parse
-    ( parseAtom
-    , parseObject
-    , parseOp
-    , parseStateFrame
-    , parseString
-    , parseUuid
-    , parseUuidKey
-    , parseUuidAtom
-    , parseWireFrame
-    , parseWireFrames
-    ) where
+module RON.Text.Parse (
+    parseAtom,
+    parseObject,
+    parseOp,
+    parseStateFrame,
+    parseString,
+    parseUuid,
+    parseUuidKey,
+    parseUuidAtom,
+    parseWireFrame,
+    parseWireFrames,
+) where
 
 import           RON.Prelude hiding (takeWhile)
 

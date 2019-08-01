@@ -1,18 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Attoparsec.Extra
-    ( module Attoparsec
-    , char
-    , endOfInputEx
-    , isSuccessful
-    , label
-    , parseOnlyL
-    , takeL
-    , definiteDouble
-    , withInputSize
-    , (??)
-    , (<+>)
-    ) where
+module Attoparsec.Extra (
+    module Attoparsec,
+    char,
+    endOfInputEx,
+    isSuccessful,
+    label,
+    parseOnlyL,
+    takeL,
+    definiteDouble,
+    withInputSize,
+    (??),
+    (<+>),
+) where
 
 import           RON.Prelude
 

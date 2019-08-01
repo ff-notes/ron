@@ -8,19 +8,19 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Observed-Remove Set (OR-Set)
-module RON.Data.ORSet
-    ( ORSet (..)
-    , ORSetItem (..)
-    , ORSetMap
-    , ORSetRep
-    , addRef
-    , addValue
-    , findAnyAlive
-    , findAnyAlive'
-    , removeRef
-    , removeValue
-    , zoom
-    ) where
+module RON.Data.ORSet (
+    ORSet (..),
+    ORSetItem (..),
+    ORSetMap,
+    ORSetRep,
+    addRef,
+    addValue,
+    findAnyAlive,
+    findAnyAlive',
+    removeRef,
+    removeValue,
+    zoom,
+) where
 
 import           RON.Prelude
 

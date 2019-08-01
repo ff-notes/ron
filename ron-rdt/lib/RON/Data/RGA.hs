@@ -11,26 +11,26 @@
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Replicated Growable Array (RGA)
-module RON.Data.RGA
-    ( RGA (..)
-    , RgaRep
-    , RgaString
-    , edit
-    , editText
-    , getAliveIndices
-    , getList
-    , getText
-    , insert
-    , insertAfter
-    , insertAtBegin
-    , insertText
-    , insertTextAfter
-    , insertTextAtBegin
-    , newFromList
-    , newFromText
-    , remove
-    , rgaType
-    ) where
+module RON.Data.RGA (
+    RGA (..),
+    RgaRep,
+    RgaString,
+    edit,
+    editText,
+    getAliveIndices,
+    getList,
+    getText,
+    insert,
+    insertAfter,
+    insertAtBegin,
+    insertText,
+    insertTextAfter,
+    insertTextAtBegin,
+    newFromList,
+    newFromText,
+    remove,
+    rgaType,
+) where
 
 import           RON.Prelude
 

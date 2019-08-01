@@ -4,16 +4,16 @@
 -- | Lamport clock network simulation.
 -- 'ReplicaSim' provides 'Replica' and 'Clock' instances,
 -- replicas may interchange data while they are connected in a 'NetworkSim'.
-module RON.Event.Simulation
-    ( NetworkSim
-    , NetworkSimT
-    , ReplicaSim
-    , ReplicaSimT
-    , runNetworkSim
-    , runNetworkSimT
-    , runReplicaSim
-    , runReplicaSimT
-    ) where
+module RON.Event.Simulation (
+    NetworkSim,
+    NetworkSimT,
+    ReplicaSim,
+    ReplicaSimT,
+    runNetworkSim,
+    runNetworkSimT,
+    runReplicaSim,
+    runReplicaSimT,
+) where
 
 import           RON.Prelude
 

@@ -4,48 +4,47 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE TypeApplications #-}
 
-module RON.Util.Word
-    (
+module RON.Util.Word (
     -- * Word2
-      Word2
-    , b00, b01, b10, b11
-    , pattern B00, pattern B01, pattern B10, pattern B11
-    , leastSignificant2
+    Word2,
+    b00, b01, b10, b11,
+    pattern B00, pattern B01, pattern B10, pattern B11,
+    leastSignificant2,
     -- * Word4
-    , Word4
-    , b0000, b0001, b0010, b0011, b0100, b0101, b0110, b0111
-    , b1000, b1001, b1010, b1011, b1100, b1101, b1110, b1111
-    , pattern B0000
-    , leastSignificant4
+    Word4,
+    b0000, b0001, b0010, b0011, b0100, b0101, b0110, b0111,
+    b1000, b1001, b1010, b1011, b1100, b1101, b1110, b1111,
+    pattern B0000,
+    leastSignificant4,
     -- * Word6
-    , Word6 (..)
-    , leastSignificant6
-    , ls6
+    Word6 (..),
+    leastSignificant6,
+    ls6,
     -- * Word8
-    , Word8
+    Word8,
     -- * Word12
-    , Word12
-    , leastSignificant12
-    , ls12
+    Word12,
+    leastSignificant12,
+    ls12,
     -- * Word16
-    , Word16
+    Word16,
     -- * Word24
-    , Word24
-    , leastSignificant24
-    , ls24
+    Word24,
+    leastSignificant24,
+    ls24,
     -- * Word32
-    , Word32
+    Word32,
     -- * Word60
-    , Word60
-    , leastSignificant60
-    , ls60
-    , toWord60
-    , word60add
+    Word60,
+    leastSignificant60,
+    ls60,
+    toWord60,
+    word60add,
     -- * Word64
-    , Word64
+    Word64,
     -- * SafeCast
-    , SafeCast (..)
-    ) where
+    SafeCast (..),
+) where
 
 import           RON.Prelude
 

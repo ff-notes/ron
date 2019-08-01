@@ -1,9 +1,9 @@
 -- Copyright (c) 2016, Pasqualino `Titto` Assini
 
-module Data.ZigZag
-    ( zzEncode
-    , zzDecode64
-    ) where
+module Data.ZigZag (
+    zzEncode,
+    zzDecode64,
+) where
 
 import           RON.Prelude
 

@@ -1,14 +1,14 @@
 -- | RON-Text wire format
-module RON.Text
-    ( parseObject
-    , parseStateFrame
-    , parseWireFrame
-    , parseWireFrames
-    , serializeObject
-    , serializeStateFrame
-    , serializeWireFrame
-    , serializeWireFrames
-    ) where
+module RON.Text (
+    parseObject,
+    parseStateFrame,
+    parseWireFrame,
+    parseWireFrames,
+    serializeObject,
+    serializeStateFrame,
+    serializeWireFrame,
+    serializeWireFrames,
+) where
 
 import           RON.Text.Parse (parseObject, parseStateFrame, parseWireFrame,
                                  parseWireFrames)

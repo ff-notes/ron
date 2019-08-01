@@ -3,24 +3,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | RON version of Base64 encoding
-module RON.Base64
-    ( alphabet
-    , decode
-    , decode60
-    , decode60base32
-    , decode64
-    , decode64base32
-    , decodeLetter
-    , decodeLetter4
-    , encode
-    , encode60
-    , encode60short
-    , encode64
-    , encode64base32short
-    , encodeLetter
-    , encodeLetter4
-    , isLetter
-    ) where
+module RON.Base64 (
+    alphabet,
+    decode,
+    decode60,
+    decode60base32,
+    decode64,
+    decode64base32,
+    decodeLetter,
+    decodeLetter4,
+    encode,
+    encode60,
+    encode60short,
+    encode64,
+    encode64base32short,
+    encodeLetter,
+    encodeLetter4,
+    isLetter,
+) where
 
 import           RON.Prelude
 
