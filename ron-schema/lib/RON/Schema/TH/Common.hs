@@ -23,6 +23,7 @@ import           RON.Data.ORSet (ORSet, ORSetMap)
 import           RON.Data.RGA (RGA)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Schema as X
+import           RON.Types (UUID)
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack

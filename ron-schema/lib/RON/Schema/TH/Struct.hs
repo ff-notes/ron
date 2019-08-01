@@ -69,7 +69,7 @@ mkDataType name fields annotations = TH.dataD (TH.cxt []) name [] Nothing
         [ TH.varBangType (mkNameT $ mkHaskellFieldName annotations fieldName) $
             TH.bangType (TH.bang TH.sourceNoUnpack TH.sourceStrict) $
             mkGuideType ronType
-        | (fieldName, Field ronType) <- Map.assocs fields
+        | (fieldName, Field{ronType}) <- Map.assocs fields
         ]]
     []
 

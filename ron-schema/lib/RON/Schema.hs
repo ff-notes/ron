@@ -74,7 +74,8 @@ data StructLww stage = StructLww
     , fields      :: Map Text (Field stage)
     , annotations :: StructAnnotations
     }
-deriving instance Show (UseType stage) => Show (StructLww stage)
+deriving instance
+    (Show (UseType stage), Show (XField stage)) => Show (StructLww stage)
 
 data StructAnnotations = StructAnnotations
     { haskellFieldPrefix        :: Text
@@ -89,8 +90,18 @@ defaultStructAnnotations = StructAnnotations
 data CaseTransform = TitleCase
     deriving (Show)
 
-newtype Field stage = Field{ronType :: UseType stage}
-deriving instance Show (UseType stage) => Show (Field stage)
+data Field (stage :: Stage) = Field
+    { ronType     :: UseType stage
+    , ext         :: XField stage
+    }
+deriving instance
+    (Show (UseType stage), Show (XField stage)) => Show (Field stage)
+
+type family XField (stage :: Stage)
+
+type instance XField Parsed = ()
+
+type instance XField Resolved = ()
 
 type family UseType (stage :: Stage) where
     UseType 'Parsed   = TypeExpr
@@ -101,7 +112,8 @@ data Declaration stage
     | DEnum       TEnum
     | DOpaque     Opaque
     | DStructLww (StructLww stage)
-deriving instance Show (UseType stage) => Show (Declaration stage)
+deriving instance
+    (Show (UseType stage), Show (XField stage)) => Show (Declaration stage)
 
 type family Schema (stage :: Stage) where
     Schema 'Parsed   = [Declaration 'Parsed]

@@ -134,9 +134,9 @@ instance FromEDN (StructLww 'Parsed) where
         parseFields = \case
             [] -> pure mempty
             nameAsTagged : typeAsTagged : cont -> do
-                name <- parseSymbol' nameAsTagged
-                typ  <- parseEDN typeAsTagged
-                Map.insert name (Field typ) <$> parseFields cont
+                name    <- parseSymbol' nameAsTagged
+                ronType <- parseEDN typeAsTagged
+                Map.insert name Field{ronType, ext = ()} <$> parseFields cont
             [f] ->
                 fail $
                 "field " ++ Text.unpack (renderText f) ++ " must have type"
@@ -193,7 +193,7 @@ validateTypeUses = traverse_ $ \case
     DEnum      _                 -> pure ()
     DOpaque    _                 -> pure ()
     DStructLww StructLww{fields} ->
-        for_ fields $ \(Field typeExpr) -> validateExpr typeExpr
+        for_ fields $ \Field{ronType} -> validateExpr ronType
   where
     validateName name = do
         Env{userTypes} <- get
@@ -220,7 +220,7 @@ evalSchema env = fst <$> userTypes' where
         DOpaque t -> (DOpaque t, Type0 $ TOpaque t)
         DStructLww StructLww{..} -> let
             fields' =
-                (\(Field typeExpr) -> Field $ evalType typeExpr) <$> fields
+                (\Field{..} -> Field{ronType = evalType ronType, ..}) <$> fields
             struct = StructLww{fields = fields', ..}
             in (DStructLww struct, Type0 $ TObject $ TStructLww struct)
 
