@@ -50,7 +50,7 @@ state4expect :: BSL.ByteString
 state4expect = [s|
     *set    #B/0000000WUW+r3pl1c4                   !
                                     @`{1lUW         'candies'
-                                    @{20UW  :`{0OUW
+                                    @{20UW  :`{0OUW 'octaves'
             #}lUW                   @0      :0      !
                                     @`}KUW          >}WUW
             #{10UW                  @0              !

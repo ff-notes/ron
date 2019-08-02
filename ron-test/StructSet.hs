@@ -22,8 +22,9 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
-import           RON.Types (Object, Op (Op), StateChunk (StateChunk),
-                            StateFrame, opId, refId, stateBody, stateType)
+import           RON.Types (Object, Op (Op, opId, refId),
+                            StateChunk (StateChunk, stateBody, stateType),
+                            StateFrame)
 import           RON.Util (ByteStringL)
 import           RON.UUID (zero)
 
@@ -66,14 +67,14 @@ state1expect = [s|
 state4expect :: ByteStringL
 state4expect = [s|
     *set    #B/0000000DrW+r3pl1c4                   !
-                                    @`}KUW  :`{1k2W >int1
-                                    @}OUW   :0      >opt5
+                                    @`}OUW          >opt5
                                     @}WUW           >set4 >B/0000000lUW+r3pl1c4
                                     @{10UW          >str2 >B/0000001GUW+r3pl1c4
-                                    @}LcW   :`{2WUW >str3
-                                    @}ZdW   :0      >int1 166
-                                    @{2OUW          >str3 '206'
-                                    @{3~2W          >nst6 >B/00000042MW+r3pl1c4
+                                    @}ZdW           >int1 166
+                                    @}k2W   :`{0KUW >int1 275
+                                    @{2OUW  :0      >str3 '206'
+                                    @}WUW   :`{1LcW >str3 '190'
+                                    @{3~2W  :0      >nst6 >B/00000042MW+r3pl1c4
             #}lUW                   @0              !
                                     @`{3odW         >{2lUW
     *rga    #{1GUW                  @0              !

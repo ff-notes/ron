@@ -231,9 +231,10 @@ prop_name_roundtip = property $ do
     dropZeroesEnd = fst . BSC.spanEnd (== '0')
 
 prop_ron_json_example = let
-    input =
-        "*lww #1TUAQ+gritzko @`   :bar = 1  ;\n\
-        \     #(R            @`   :foo > (Q ;"
+    input = [s|
+        *lww #1TUAQ+gritzko @`   :bar = 1  ;
+             #(R            @`   :foo > (Q ;
+        |]
     output =
         [ Closed ClosedOp
             { reducerId = lwwType
@@ -394,7 +395,7 @@ prop_ORSet = let
         . |]
     state2expect = prep [s|
         *set #B/0000000Don+000000005j !
-        @`}U_Y :`}HJ2
+        @`}U_Y :`}HJ2 370
         . |]
     in
     property $ evalExceptT $
@@ -422,7 +423,7 @@ prop_ObjectORSet = let
         . |]
     state2expect = prep [s|
         *set #B/0000000DlG+000000006G                   !
-                                        @`}psG  :`}ghG
+                                        @`}psG  :`}ghG  >}PsG
         *rga #}PsG                      @0      :0      !
                                         @`}aXM          '4'
                                         @)N             '0'

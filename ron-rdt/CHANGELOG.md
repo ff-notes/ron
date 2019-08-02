@@ -24,9 +24,11 @@ and this project adheres to
 - Renamed `LWW.newObject` -> `newStruct`.
 - Event simulation: decreased max event leap from 2³² to 2¹⁶
 - Text serialization: changed chunk sort order from (type, id) to just id
+- ORSet: keep payload on removal
 
 ### Fixed
-- Fix causality: an object happens-before its ops (in ORSet, RGA, LWW)
+- Causality: an object happens-before its ops (in ORSet, RGA, LWW)
+- Tombstone creation in ORSet
 
 ### Removed
 - `mkStateChunk`.

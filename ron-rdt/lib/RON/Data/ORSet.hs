@@ -49,36 +49,37 @@ import           RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
 
 -- | Untyped OR-Set.
--- Implementation:
--- a map from the last change (creation or deletion) to the original op.
+-- Implementation: a map from the itemKey to the original op.
+-- Each time a value is added, a new item=op is created.
+-- Deletion of a value replaces all its known items with tombstone ops.
 newtype ORSetRep = ORSetRep (Map UUID Op)
     deriving (Eq, Show)
 
-opKey :: Op -> UUID
-opKey Op{opId, refId} = case refId of
+itemKey :: Op -> UUID
+itemKey Op{opId, refId} = case refId of
     Zero -> opId   -- alive
     _    -> refId  -- tombstone
 
-observedRemove :: Op -> Op -> Op
-observedRemove = maxOn refId
+preferTombstone :: Op -> Op -> Op
+preferTombstone = maxOn refId
 
 instance Semigroup ORSetRep where
     ORSetRep set1 <> ORSetRep set2 =
-        ORSetRep $ Map.unionWith observedRemove set1 set2
+        ORSetRep $ Map.unionWith preferTombstone set1 set2
 
 instance Monoid ORSetRep where
     mempty = ORSetRep mempty
 
 -- | Laws:
 -- 1. Idempotent because 'Map.unionWith' is idempotent.
--- 2. Commutative because 'observedRemove' is commutative.
+-- 2. Commutative because 'preferTombstone' is commutative.
 instance Semilattice ORSetRep
 
 instance Reducible ORSetRep where
     reducibleOpType = setType
 
-    stateFromChunk ops =
-        ORSetRep $ Map.fromListWith observedRemove [(opKey op, op) | op <- ops]
+    stateFromChunk ops = ORSetRep $
+        Map.fromListWith preferTombstone [(itemKey op, op) | op <- ops]
 
     stateToChunk (ORSetRep set) = mkStateChunk . sortOn opId $ Map.elems set
 
@@ -158,9 +159,8 @@ commonRemove isTarget =
     modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
         let state0@(ORSetRep opMap) = stateFromChunk stateBody
         let targetEvents =
-                [ opId
-                | Op{opId, refId, payload} <- toList opMap
-                , refId == Zero  -- is alive
+                [ op
+                | op@Op{refId = Zero, payload} <- toList opMap
                 , isTarget payload
                 ]
         case targetEvents of
@@ -168,8 +168,8 @@ commonRemove isTarget =
             _  -> do
                 tombstone <- getEventUuid
                 let patch =
-                        [ Op{opId = tombstone, refId, payload = []}
-                        | refId <- targetEvents
+                        [ op{opId = tombstone, refId = observed}
+                        | op@Op{opId = observed} <- targetEvents
                         ]
                 let state' = state0 <> stateFromChunk patch
                 pure $ stateToChunk state'
@@ -248,10 +248,10 @@ assignField field value =
                 , refId = Zero
                 , payload = AUuid field : valuePayload
                 }
-        let (observed, stateBody1) = partition (isAliveField field) stateBody
-        removeOps <- for observed $ \op -> do
+        let (observedOps, stateBody1) = partition (isAliveField field) stateBody
+        removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
             tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
-            pure op{refId = tombstone, payload = [AUuid field]}
+            pure op{opId = tombstone, refId = observedEvent}
         let stateBody2 = sortOn opId $ addOp : removeOps ++ stateBody1
         pure StateChunk{stateBody = stateBody2, stateType = setType}
 
