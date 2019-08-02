@@ -22,6 +22,11 @@ and this project adheres to
   None is encoded as empty payload.
 - Renamed `ORSet.zoom` -> `zoomItem`.
 - Renamed `LWW.newObject` -> `newStruct`.
+- Event simulation: decreased max event leap from 2³² to 2¹⁶
+- Text serialization: changed chunk sort order from (type, id) to just id
+
+### Fixed
+- Fix causality: an object happens-before its ops (in ORSet, RGA, LWW)
 
 ### Removed
 - `mkStateChunk`.
