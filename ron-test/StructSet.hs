@@ -10,8 +10,8 @@ import           Data.Default (def)
 import           Data.String.Interpolate.IsString (i)
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
-import           RON.Data (evalObjectState, getObject, newObjectFrame,
-                           runObjectState)
+import           RON.Data (evalObjectState, execObjectState, getObject,
+                           newObjectFrame)
 import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
@@ -21,6 +21,7 @@ import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Util (ByteStringL)
 
+import           Orphans ()
 import           StructSet.Types
 
 example0 :: StructSet13
@@ -120,14 +121,15 @@ prop_structSet = property $ do
     example0 === example3
 
     -- apply operations to the object (frame)
-    ((str3Value, opt5Value, nst6Value), state4) <-
+    state4 <-
         evalExceptT $
         runNetworkSimT $ runReplicaSimT replica $
-        runObjectState state2 $ do
+        execObjectState state2 $ do
             -- plain field
             int1_assign 166
             str2_zoom $ RGA.edit "145"
-            str3Value <- str3_read
+            do  value <- str3_read
+                value === Just "190"
             str3_assign "206"
             set4_zoom $
                 ORSet.addValue
@@ -135,13 +137,11 @@ prop_structSet = property $ do
                         , str2 = Just $ RGA "136"
                         , str3 = Just "137"
                         }
-            opt5Value <- opt5_read
-            nst6Value <- nst6_read
+            do  value <- opt5_read
+                value === Just Nothing
+            do  value <- nst6_read
+                value === Nothing
             nst6_assign def{int1 = Just 138}
-            pure (str3Value, opt5Value, nst6Value)
-    str3Value === Just "190"
-    opt5Value === Just Nothing
-    nst6Value === Nothing
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState state4 getObject
