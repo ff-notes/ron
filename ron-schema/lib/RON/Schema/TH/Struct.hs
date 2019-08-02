@@ -180,7 +180,7 @@ mkInstanceReplicatedAOLww Struct{name, fields, annotations} = do
             ++  [noBindS [| pure $consE |]]
     [d| instance ReplicatedAsObject $type' where
             type Rep $type' = LwwRep
-            newObject $consP = Object <$> LWW.newObject $packFields
+            newObject $consP = Object <$> LWW.newStruct $packFields
             getObject = errorContext $(liftText errCtx) $getObjectImpl
         |]
   where

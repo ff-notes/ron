@@ -325,11 +325,11 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
     type Rep (RGA a) = RgaRep
 
     newObject (RGA items) = do
+        oid <- getEventUuid
         vertexIds <- getEventUuids $ ls60 $ genericLength items
         ops <- for (zip items vertexIds) $ \(item, vertexId) -> do
             payload <- newRon item
             pure $ Op vertexId Zero payload
-        oid <- getEventUuid
         modify' $
             (<>) $ Map.singleton oid $
             StateChunk{stateType = rgaType, stateBody = ops}

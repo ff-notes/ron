@@ -54,13 +54,14 @@ test-suite test
     build-depends:
         -- global
         bytestring,
+        containers,
         data-default,
         directory,
         hedgehog,
-        interpolate,
         mtl,
         tasty-hedgehog,
         tasty-th,
+        template-haskell,
         text,
         -- project
         ron,
@@ -74,6 +75,7 @@ test-suite test
         HexDump
         LwwStruct
         ORSet
+        String
         StructSet
         Types
     type: exitcode-stdio-1.0

@@ -8,7 +8,6 @@ import           RON.Prelude
 
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.String.Interpolate.IsString (i)
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
 import           RON.Data (evalObjectState, execObjectState, getObject,
@@ -21,6 +20,7 @@ import           RON.Schema.TH (mkReplicated)
 import           RON.Text (parseObject, serializeObject)
 
 import           Orphans ()
+import           String (s)
 
 [mkReplicated|
     (alias Set27
@@ -33,13 +33,13 @@ example0 :: Set27
 example0 = ORSet [ORSet [ORSet ["octaves"]]]
 
 state1expect :: BSL.ByteString
-state1expect = [i|
-    *set    #B/00009NFGUW+r3pl1c4               !
-                                    @`(6g0dUW   'octaves'
-            #(AvZ0UW                @0          !
-                                    @`(4bX_UW   >(9NFGUW
-            #(EYD0UW                @0          !
-                                    @`(1KqirW   >(AvZ0UW
+state1expect = [s|
+    *set    #B/0000000WUW+r3pl1c4           !
+                                    @`}OUW  'octaves'
+            #}lUW                   @0      !
+                                    @`}KUW  >}WUW
+            #{10UW                  @0      !
+                                    @`{0DrW >{0lUW
     .
     |]
 
@@ -47,16 +47,16 @@ example4expect :: Set27
 example4expect = ORSet [ORSet [ORSet ["candies"]], ORSet []]
 
 state4expect :: BSL.ByteString
-state4expect = [i|
-    *set    #B/00009NFGUW+r3pl1c4                           !
-                                    @`(KR50UW               'candies'
-                                    @(NR50UW    :`(6g0dUW
-            #(AvZ0UW                @0          :0          !
-                                    @`(4bX_UW               >(9NFGUW
-            #(EYD0UW                @0                      !
-                                    @`(1KqirW               >(AvZ0UW
-                                    @(JLa0UW                >(G2L0UW
-            #(G2L0UW                @0                      !
+state4expect = [s|
+    *set    #B/0000000WUW+r3pl1c4                   !
+                                    @`{1lUW         'candies'
+                                    @{20UW  :`{0OUW
+            #}lUW                   @0      :0      !
+                                    @`}KUW          >}WUW
+            #{10UW                  @0              !
+                                    @`{0DrW         >{0lUW
+                                    @{1WUW          >}GUW
+            #}GUW                   @0              !
     .
     |]
 

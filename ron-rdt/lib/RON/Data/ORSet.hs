@@ -362,6 +362,7 @@ newStruct
     :: (MonadState StateFrame m, ReplicaClock m)
     => [(UUID, Maybe (Instance Replicated))] -> m UUID
 newStruct fields = do
+    objectId <- getEventUuid
     stateBody <-
         fmap fold $ for fields $ \(name, values) ->
             for (toList values) $ \(Instance value) -> do
@@ -369,7 +370,6 @@ newStruct fields = do
                     -- TODO(2019-07-12, cblp, #15) sequential uuids
                 valuePayload <- newRon value
                 pure Op{opId, refId = Zero, payload = AUuid name : valuePayload}
-    objectId <- getEventUuid
     modify' $
         (<>) $ Map.singleton objectId $
         StateChunk{stateType = setType, stateBody}

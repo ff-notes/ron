@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
@@ -7,8 +9,9 @@ import           RON.Prelude
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Default (def)
-import           Data.String.Interpolate.IsString (i)
-import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
+import qualified Data.Map.Strict as Map
+import           Hedgehog (MonadTest, Property, annotate, evalEither,
+                           evalExceptT, failure, property, (===))
 
 import           RON.Data (evalObjectState, execObjectState, getObject,
                            newObjectFrame)
@@ -19,9 +22,13 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
+import           RON.Types (Object, Op (Op), StateChunk (StateChunk),
+                            StateFrame, opId, refId, stateBody, stateType)
 import           RON.Util (ByteStringL)
+import           RON.UUID (zero)
 
 import           Orphans ()
+import           String (s)
 import           StructSet.Types
 
 example0 :: StructSet13
@@ -39,58 +46,52 @@ replica :: ReplicaId
 replica = applicationSpecific 0xd83d30067100000
 
 state1expect :: ByteStringL
-state1expect = [i|
-    *rga    #B/0000GrVLcW+r3pl1c4               !
-                                    @`(EWD0g6   '2'
-                                    @)7         '7'
-                                    @)8         '5'
+state1expect = [s|
+    *set    #B/0000000DrW+r3pl1c4           !
+                                    @`}KUW  >int1   275
+                                    @}OUW   >opt5
+                                    @}WUW   >set4   >B/0000000lUW+r3pl1c4
+                                    @{10UW  >str2   >B/0000001GUW+r3pl1c4
+                                    @}LcW   >str3   '190'
 
-    *set    #(9NFGUW                @0          !
+            #}lUW                   @0      !
 
-            #(IdJV2W                            !
-                                    @`(1KqirW   >int1   275
-                                    @(4bX_UW    >opt5
-                                    @(6g0dUW    >set4   >B/00009NFGUW+r3pl1c4
-                                    @(AvZ0UW    >str2   >B/0000GrVLcW+r3pl1c4
-                                    @(IGnZdW    >str3   '190'
+    *rga    #{1GUW                          !
+                                    @`]g6   '2'
+                                    @)7     '7'
+                                    @)8     '5'
     .
     |]
 
--- | TODO (2019-07-30, cblp) BUG! #(IdJV2W @` :0 >int1 166 -- impossible
 state4expect :: ByteStringL
-state4expect = [i|
-    *rga    #B/0000GrVLcW+r3pl1c4                           !
-                                    @`(EWD0g6   :`(PRyXUW   '2'
-                                    @)7         :(RgJfUW    '7'
-                                    @(SxA_UW    :0          '1'
-                                    @(TEddUW                '4'
-                                    @(EWD0g8                '5'
-
-            #(eQ~LcW                @0                      !
-                                    @`[JT0g6                '1'
-                                    @)7                     '3'
-                                    @)8                     '6'
-
-    *set    #(9NFGUW                @0                      !
-                                    @`(jil2MW               >(fxJV2W
-
-            #(IdJV2W                @0                      !
-                                    @`(1KqirW   :`(MDl2MW   >int1
-                                    @(4bX_UW    :0          >opt5
-                                    @(6g0dUW                >set4 >B/00009NFGUW+r3pl1c4
-                                    @(AvZ0UW                >str2 >B/0000GrVLcW+r3pl1c4
-                                    @(IGnZdW    :`(_s30UW   >str3
-                                    @`          :0          >int1 166
-                                    @(X6VGUW                >str3 '206'
-                                    @(mRyXUW                >nst6 >B/0000pxA_UW+r3pl1c4
-
-            #(fxJV2W                @0                      !
-                                    @`(dMD0UW               >int1 135
-                                    @[nL0UW                 >str2 >B/0000eQ~LcW+r3pl1c4
-                                    @(frnZdW                >str3 '137'
-
-            #(pxA_UW                @0                      !
-                                    @`(ogJfUW               >int1 138
+state4expect = [s|
+    *set    #B/0000000DrW+r3pl1c4                   !
+                                    @`}KUW  :`{1k2W >int1
+                                    @}OUW   :0      >opt5
+                                    @}WUW           >set4 >B/0000000lUW+r3pl1c4
+                                    @{10UW          >str2 >B/0000001GUW+r3pl1c4
+                                    @}LcW   :`{2WUW >str3
+                                    @}ZdW   :0      >int1 166
+                                    @{2OUW          >str3 '206'
+                                    @{3~2W          >nst6 >B/00000042MW+r3pl1c4
+            #}lUW                   @0              !
+                                    @`{3odW         >{2lUW
+    *rga    #{1GUW                  @0              !
+                                    @`]g6   :`}nMW  '2'
+                                    @)7     :{21UW  '7'
+                                    @{2AUW  :0      '1'
+                                    @}KUW           '4'
+                                    @`]g8           '5'
+    *set    #{2lUW                  @0              !
+                                    @`{30UW         >int1 135
+                                    @}GUW           >str2 >B/0000003WUW+r3pl1c4
+                                    @}acW           >str3 '137'
+    *rga    #{3WUW                  @0              !
+                                    @`]g6           '1'
+                                    @)7             '3'
+                                    @)8             '6'
+    *set    #{42MW                  @0              !
+                                    @`}HUW          >int1 138
     .
     |]
 
@@ -125,23 +126,29 @@ prop_structSet = property $ do
         evalExceptT $
         runNetworkSimT $ runReplicaSimT replica $
         execObjectState state2 $ do
-            -- plain field
-            int1_assign 166
+            checkCausality
+            int1_assign 166 -- plain field
+            checkCausality
             str2_zoom $ RGA.edit "145"
+            checkCausality
             do  value <- str3_read
                 value === Just "190"
             str3_assign "206"
-            set4_zoom $
+            checkCausality
+            set4_zoom $ do
                 ORSet.addValue
                     def { int1 = Just 135
                         , str2 = Just $ RGA "136"
                         , str3 = Just "137"
                         }
+                checkCausality
+            checkCausality
             do  value <- opt5_read
                 value === Just Nothing
             do  value <- nst6_read
                 value === Nothing
             nst6_assign def{int1 = Just 138}
+            checkCausality
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState state4 getObject
@@ -152,3 +159,33 @@ prop_structSet = property $ do
 
   where
     prep = filter (not . null) . map BSLC.words . BSLC.lines
+
+checkCausality
+    ::  ( HasCallStack
+        , MonadTest m
+        , MonadReader (Object a) m
+        , MonadState StateFrame m
+        , Typeable a
+        )
+    =>  m ()
+checkCausality = do
+    root <- ask
+    get >>= checkStateFrame root
+  where
+    checkStateFrame root = void . Map.traverseWithKey (checkObject root)
+    checkObject root self StateChunk{stateType, stateBody} =
+        for_ stateBody $ \Op{opId, refId} -> do
+            unless (opId > self) $ do
+                annotate $ unlines
+                    [ "root = " <> show root
+                    , "self = " <> show self <> " :: " <> show stateType
+                    , "opId = " <> show opId
+                    ]
+                failure
+            unless (refId == zero || refId > self) $ do
+                annotate $ unlines
+                    [ "root = " <> show root
+                    , "self = " <> show self <> " :: " <> show stateType
+                    , "refId = " <> show refId
+                    ]
+                failure

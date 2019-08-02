@@ -6,7 +6,6 @@ module LwwStruct (prop_lwwStruct) where
 import           RON.Prelude
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.String.Interpolate.IsString (i)
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
 import           RON.Data (evalObjectState, execObjectState, getObject,
@@ -25,6 +24,7 @@ import           LwwStruct.Types (Struct51 (..), int1_assign, opt5_read,
                                   opt6_assign, opt6_read, set4_zoom, str2_zoom,
                                   str3_assign, str3_read)
 import           Orphans ()
+import           String (s)
 
 example0 :: Struct51
 example0 = Struct51
@@ -41,58 +41,58 @@ replica :: ReplicaId
 replica = applicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
-ex1expect = [i|
-    *lww    #B/00009ISodW+r3pl1c4                       !
-                                    @`          :int1   275
-                                                :opt5
-                                                :opt6   >some 74
-                                                :set4   >(1KqirW
-                                                :str2   >(6FAycW
-                                                :str3   '190'
+ex1expect = [s|
+    *lww    #B/0000000DrW+r3pl1c4                   !
+                                    @`      :int1   275
+                                            :opt5
+                                            :opt6   >some 74
+                                            :set4   >}KUW
+                                            :str2   >}OUW
+                                            :str3   '190'
 
-    *rga    #(6FAycW                @0          :0      !
-                                    @`(4pX_g6           '2'
-                                    @)7                 '7'
-                                    @)8                 '5'
+    *set    #}KUW                   @0      :0      !
 
-    *set    #(1KqirW                @0                  !
+    *rga    #}OUW                                   !
+                                    @`}Wg6          '2'
+                                    @)7             '7'
+                                    @)8             '5'
     .
     |]
 
 ex4expect :: ByteStringL
-ex4expect = [i|
-    *lww    #B/00009ISodW+r3pl1c4                           !
-                                    @`(D81V2W   :int1       166
-                                    @`          :opt5
-                                    @(c1l2MW    :opt6
-                                    @`          :set4       >(1KqirW
-                                                :str2       >(6FAycW
-                                    @(PEddUW    :str3       '206'
+ex4expect = [s|
+    *lww    #B/0000000DrW+r3pl1c4                   !
+                                    @`}WUW  :int1   166
+                                    @`      :opt5
+                                    @{23dW  :opt6
+                                    @`      :set4   >}KUW
+                                            :str2   >}OUW
+                                    @{1HUW  :str3   '206'
 
-            #(YD2ZdW                @0          :0          !
-                                    @`          :int1       135
-                                                :opt5
-                                                :opt6
-                                                :set4       >(T6VGUW
-                                                :str2       >(XvcLcW
-                                                :str3       '137'
+    *set    #}KUW                   @0      :0      !
+                                    @`{1qcW         >{1QUW
 
-    *rga    #(6FAycW                @0          :0          !
-                                    @`(4pX_g6   :`(E4W2MW   '2'
-                                    @)7         :(HTTXUW    '7'
-                                    @(LJJfUW    :0          '1'
-                                    @[xA_UW                 '4'
-                                    @(4pX_g8                '5'
+    *rga    #}OUW                   @0              !
+                                    @`}Wg6  :`}acW  '2'
+                                    @)7     :}odW   '7'
+                                    @}~2W   :0      '1'
+                                    @{12MW          '4'
+                                    @{0Wg8          '5'
 
-            #(XvcLcW                @0                      !
-                                    @`[530g6                '1'
-                                    @)7                     '3'
-                                    @)8                     '6'
+    *lww    #{1QUW                  @0              !
+                                    @`      :int1   135
+                                            :opt5
+                                            :opt6
+                                            :set4   >}_UW
+                                            :str2   >}dUW
+                                            :str3   '137'
 
-    *set    #(1KqirW                @0                      !
-                                    @`(asoV2W               >(YD2ZdW
+    *set    #}_UW                   @0      :0      !
 
-            #(T6VGUW                @0                      !
+    *rga    #}dUW                                   !
+                                    @`}lg6          '1'
+                                    @)7             '3'
+                                    @)8             '6'
     .
     |]
 
@@ -161,8 +161,8 @@ prop_lwwStruct = property $ do
     example4expect === example4
 
     -- serialize object after modification
-    parseObject oid ex4expect === Right ex4state
     prep ex4expect === prep (snd $ serializeObject ex4state)
+    parseObject oid ex4expect === Right ex4state
 
   where
     prep = filter (not . null) . map BSLC.words . BSLC.lines

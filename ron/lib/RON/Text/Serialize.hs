@@ -177,10 +177,7 @@ serializePayload prev =
 
 -- | Serialize a state frame
 serializeStateFrame :: StateFrame -> ByteStringL
-serializeStateFrame =
-    serializeWireFrame . map wrapChunk . sortOn (stateType . snd) . Map.assocs
-    -- TODO(2019-01-28, cblp) remove sortOn type
-  where
+serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs where
     wrapChunk (objectId, StateChunk{stateType, stateBody}) =
         Value
             WireReducedChunk

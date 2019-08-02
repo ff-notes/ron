@@ -12,7 +12,7 @@ module RON.Data.LWW (
     LwwRep (..),
     assignField,
     lwwType,
-    newObject,
+    newStruct,
     readField,
     viewField,
     zoomField,
@@ -68,12 +68,12 @@ lwwType :: UUID
 lwwType = $(UUID.liftName "lww")
 
 -- | Create an LWW object from a list of named fields.
-newObject
+newStruct
     :: (MonadState StateFrame m, ReplicaClock m)
     => [(UUID, Instance Replicated)] -> m UUID
-newObject fields = do
-    payloads <- for fields $ \(_, Instance value) -> newRon value
+newStruct fields = do
     event <- getEventUuid
+    payloads <- for fields $ \(_, Instance value) -> newRon value
     modify' $
         (<>) $ Map.singleton event $
         StateChunk

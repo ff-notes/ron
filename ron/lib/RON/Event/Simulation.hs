@@ -53,7 +53,7 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
                 t0orig = HM.lookupDefault (ls60 0) rid replicaStates
                 ReplicaId _ r = rid
                 randomLeap =
-                    ls60 . fromIntegral $ hash (t0orig, n, r) `mod` 0x100000000
+                    ls60 . fromIntegral $ hash (t0orig, n, r) `mod` 0x10000
                 t0 = t0orig `word60add` randomLeap
                 t1 = t0 `word60add` n
                 in ((t0, t1), HM.insert rid t1 replicaStates)

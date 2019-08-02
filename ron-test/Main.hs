@@ -2,6 +2,7 @@
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -45,8 +46,8 @@ import qualified RON.Text.Serialize as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
-                            Op (Op, opId, payload, refId), UUID (UUID),
-                            WireChunk (Closed))
+                            ObjectFrame, Op (Op, opId, payload, refId),
+                            UUID (UUID), WireChunk (Closed))
 import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
@@ -55,6 +56,7 @@ import           HexDump (hexdump)
 import qualified LwwStruct
 import           Orphans ()
 import qualified ORSet
+import           String (s)
 import qualified StructSet
 import           Types (TestRecursiveORSet (TestRecursiveORSet), testRecSet,
                         testRecSet_zoom)
@@ -220,8 +222,8 @@ prop_name_roundtip = property $ do
     scope <- forAll genName
     tripping (scope, name) (uncurry UUID.mkScopedName) $ \mu -> do
         u <- mu
-        (s, n) <- UUID.getName u
-        pure (dropZeroesEnd s, dropZeroesEnd n)
+        (sc, n) <- UUID.getName u
+        pure (dropZeroesEnd sc, dropZeroesEnd n)
   where
     genName
         = fmap (dropZeroesEnd . BS.pack) $ Gen.list (Range.linear 1 10)
@@ -289,46 +291,42 @@ prop_RGA_edit_idempotency_back = property $ do
             textX === textX'
 
 prop_RGA_delete_deleted = let
-    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
-    rga0expect =
-        [ ["*rga", "#B/000015NGPU+000000003f", "!"]
-        , ["@`(0kmiUv", "'h'"]
-        , ["@)w",       "'e'"]
-        , ["@)x",       "'l'"]
-        , ["@)y",       "'l'"]
-        , ["@)z",       "'o'"]
-        , ["."]
-        ]
-    rga1expect =
-        [ ["*rga", "#B/000015NGPU+000000003f", "!"]
-        , ["@`(0kmiUv",         "'h'"]
-        , ["@)w",               "'e'"]
-        , ["@)x",               "'l'"]
-        , ["@)y",               "'l'"]
-        , ["@)z", ":`(4Q8IxU",  "'o'"]
-        , ["."]
-        ]
-    rga2expect =
-        [ ["*rga", "#B/000015NGPU+000000003f", "!"]
-        , ["@`(0kmiUv",                 "'h'"]
-        , ["@)w",                       "'e'"]
-        , ["@)x",                       "'l'"]
-        , ["@)y",       ":`(75FOxU",    "'l'"]
-        , ["@)z",       ":(4Q8IxU",     "'o'"]
-        , ["@(AVmKxU",  ":0",           "'p'"]
-        , ["."]
-        ]
+    rga0expect = prep [s|
+        *rga    #B/0000000Dqr+000000003f                    !
+                                            @`}LaI          'h'
+                                            @)J             'e'
+                                            @)K             'l'
+                                            @)L             'l'
+                                            @)M             'o'
+        . |]
+    rga1expect = prep [s|
+        *rga    #B/0000000Dqr+000000003f                    !
+                                            @`}LaI          'h'
+                                            @)J             'e'
+                                            @)K             'l'
+                                            @)L             'l'
+                                            @)M     :`}WFE  'o'
+        . |]
+    rga2expect = prep [s|
+        *rga    #B/0000000Dqr+000000003f                    !
+                                            @`}LaI          'h'
+                                            @)J             'e'
+                                            @)K             'l'
+                                            @)L     :`}cyz  'l'
+                                            @)M     :}WFE   'o'
+                                            @}kmU   :0      'p'
+        . |]
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 234) $ do
         rga0 <- newObjectFrameWith $ RGA.newFromText "hello"
-        rga0expect === prep rga0
+        rga0expect === prepObj rga0
 
         rga1 <- execObjectState rga0 $ RGA.editText "hell"
-        rga1expect === prep rga1
+        rga1expect === prepObj rga1
 
         rga2 <- execObjectState rga1 $ RGA.editText "help"
-        rga2expect === prep rga2
+        rga2expect === prepObj rga2
 
 prop_RGA_getAliveIndices = property $ do
     text    <- forAll Gen.shortText
@@ -384,93 +382,94 @@ prop_base64_isLetter = property $ do
 data ShowAs a = ShowAs a String
 
 instance Show (ShowAs a) where
-    show (ShowAs _ s) = s
+    show (ShowAs _ str) = str
 
 prop_ORSet = let
-    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
-    state0expect = [["*set", "#B/00000omion+000000005j", "!"], ["."]]
-    state1expect =
-        [ ["*set", "#B/00000omion+000000005j", "!"]
-        , ["@`(2xPmJ2", "370"]
-        , ["."]
-        ]
-    state2expect =
-        [ ["*set", "#B/00000omion+000000005j", "!"]
-        , ["@`(3Jlz_Y", ":`(2xPmJ2"]
-        , ["."]
-        ]
+    state0expect = prep [s|
+        *set #B/0000000Don+000000005j !
+        . |]
+    state1expect = prep [s|
+        *set #B/0000000Don+000000005j !
+        @`}HJ2 370
+        . |]
+    state2expect = prep [s|
+        *set #B/0000000Don+000000005j !
+        @`}U_Y :`}HJ2
+        . |]
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 366) $ do
         state0 <- newObjectFrame $ ORSet @Int64 []
-        state0expect === prep state0
+        state0expect === prepObj state0
 
         state1 <- execObjectState state0 $ ORSet.addValue 370
-        state1expect === prep state1
+        state1expect === prepObj state1
 
         state2 <- execObjectState state1 $ ORSet.removeValue 370
-        state2expect === prep state2
+        state2expect === prepObj state2
 
 prop_ObjectORSet = let
-    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
-    state0expect = [["*set", "#B/00000omilG+000000006G", "!"], ["."]]
-    state1expect =
-        [ ["*rga", "#B/00005~K_SG+000000006G", "!"]
-            , ["@`(2lqPwM", "'4'"]
-            , ["@)N", "'0'"]
-            , ["@)O", "'3'"]
-        , ["*set", "#(0omilG", "@0", "!"]
-            , ["@`(6Io4NG", ">(5~K_SG"]
-        , ["."]
-        ]
-    state2expect =
-        [ ["*rga", "#B/00005~K_SG+000000006G", "!"]
-            , ["@`(2lqPwM", "'4'"]
-            , ["@)N", "'0'"]
-            , ["@)O", "'3'"]
-        , ["*set", "#(0omilG", "@0", "!"]
-            , ["@`(8QQEHG", ":`(6Io4NG"]
-        , ["."]
-        ]
+    state0expect = prep [s|
+        *set #B/0000000DlG+000000006G                   !
+        . |]
+    state1expect = prep [s|
+        *set #B/0000000DlG+000000006G                   !
+                                        @`}ghG          >}PsG
+        *rga #}PsG                      @0              !
+                                        @`}aXM          '4'
+                                        @)N             '0'
+                                        @)O             '3'
+        . |]
+    state2expect = prep [s|
+        *set #B/0000000DlG+000000006G                   !
+                                        @`}psG  :`}ghG
+        *rga #}PsG                      @0      :0      !
+                                        @`}aXM          '4'
+                                        @)N             '0'
+                                        @)O             '3'
+        . |]
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 400) $ do
         state0 <- newObjectFrame $ ORSet @RgaString []
-        state0expect === prep state0
+        state0expect === prepObj state0
 
         (rga, state1) <- runObjectState state0 $ do
             rga <- RGA.newFromText "403"
             ORSet.addRef rga
             pure rga
-        state1expect === prep state1
+        state1expect === prepObj state1
 
         state2 <- execObjectState state1 $ ORSet.removeRef rga
-        state2expect === prep state2
+        state2expect === prepObj state2
 
 prop_ObjectORSet_recursive = let
-    prep = map BSLC.words . BSLC.lines . snd . RT.serializeObject
     state0 = TestRecursiveORSet{testRecSet = ORSet []}
-    state1expect =
-        [ ["*lww", "#B/00004bfsbH+000000006P", "!"]
-            , ["@`", ":testRecSet", ">(0omil7"]
-        , ["*set", "#(0omil7", "@0", ":0", "!"]
-        , ["."]
-        ]
-    state2expect =
-        [ ["*lww", "#B/00004bfsbH+000000006P", "!"]
-            , ["@`", ":testRecSet", ">(0omil7"]
-        , ["*set", "#(0omil7", "@0", ":0", "!"]
-            , ["@`(6yT_gy", ">(4bfsbH"]
-        , ["."]
-        ]
+    state1expect = prep [s|
+        *lww #B/0000000Dl7+000000006P !
+            @` :testRecSet >}NbH
+        *set #}NbH @0 :0 !
+        . |]
+    state2expect = prep [s|
+        *lww #B/0000000Dl7+000000006P !
+            @` :testRecSet >}NbH
+        *set #}NbH @0 :0 !
+            @`}_gy >}Dl7
+        . |]
     in
     property $ evalExceptT $
     runNetworkSimT $ runReplicaSimT (applicationSpecific 409) $ do
         state1 <- newObjectFrame state0
-        state1expect === prep state1
+        state1expect === prepObj state1
 
         state2 <-
             execObjectState state1 $ do
                 outerSet <- ask
                 testRecSet_zoom $ ORSet.addRef outerSet
-        state2expect === prep state2
+        state2expect === prepObj state2
+
+prepObj :: ObjectFrame a -> [[ByteStringL]]
+prepObj = prep . snd . RT.serializeObject
+
+prep :: ByteStringL -> [[ByteStringL]]
+prep = filter (not . null) . map BSLC.words . BSLC.lines

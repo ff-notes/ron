@@ -21,6 +21,7 @@ and this project adheres to
 - `Option` encoding: for availability, anything except `some` means None.
   None is encoded as empty payload.
 - Renamed `ORSet.zoom` -> `zoomItem`.
+- Renamed `LWW.newObject` -> `newStruct`.
 
 ### Removed
 - `mkStateChunk`.
