@@ -21,9 +21,9 @@ import           Data.Char (toTitle)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Language.Haskell.TH (bindS, conT, doE, fieldExp, fieldPat,
-                                      listE, newName, noBindS, recC, recConE,
-                                      recP, sigD, varE, varP, varT)
+import           Language.Haskell.TH (bindS, conT, doE, listE, newName, noBindS,
+                                      recC, recConE, recP, sigD, varE, varP,
+                                      varT)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
@@ -38,8 +38,8 @@ import qualified RON.Data.ORSet as ORSet
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock)
 import           RON.Schema as X
-import           RON.Schema.TH.Common (liftText, mkGuideType, mkNameT, newNameT,
-                                       valDP)
+import           RON.Schema.TH.Common (fieldExp', fieldPat', liftText,
+                                       mkGuideType, mkNameT, newNameT, valDP)
 import           RON.Types (Object (Object), UUID)
 import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
@@ -52,8 +52,8 @@ data XFieldEquipped = XFieldEquipped
     }
 
 equipStruct :: Struct e Resolved -> Struct e Equipped
-equipStruct Struct{name, fields, annotations} =
-    Struct{name, fields = Map.mapWithKey equipField fields, annotations}
+equipStruct Struct{name, fields, annotations} = Struct
+    {name, fields = Map.mapWithKey (equipField annotations) fields, annotations}
 
 mkReplicatedStructLww :: StructLww Resolved -> TH.DecsQ
 mkReplicatedStructLww structResolved = do
@@ -61,13 +61,13 @@ mkReplicatedStructLww structResolved = do
     [instanceReplicated]   <- mkInstanceReplicated      type'
     [instanceReplicatedBS] <- mkInstanceReplicatedBS    type'
     [instanceReplicatedAO] <- mkInstanceReplicatedAOLww struct
-    accessors <- fold <$> traverse (mkAccessorsLww name' annotations) fields
+    accessors <- fold <$> traverse (mkAccessorsLww name') fields
     pure
         $ dataType
         : instanceReplicated : instanceReplicatedBS : instanceReplicatedAO
         : accessors
   where
-    struct@Struct{name, fields, annotations} = equipStruct structResolved
+    struct@Struct{name, fields} = equipStruct structResolved
     name' = mkNameT name
     type' = conT    name'
 
@@ -77,22 +77,24 @@ mkReplicatedStructSet structResolved = do
     [instanceReplicated]   <- mkInstanceReplicated      type'
     [instanceReplicatedBS] <- mkInstanceReplicatedBS    type'
     [instanceReplicatedAO] <- mkInstanceReplicatedAOSet struct
-    accessors <- fold <$> traverse (mkAccessorsSet name' annotations) fields
+    accessors <- fold <$> traverse (mkAccessorsSet name') fields
     pure
         $ dataType
         : instanceReplicated : instanceReplicatedBS : instanceReplicatedAO
         : accessors
   where
-    struct@Struct{name, fields, annotations} = equipStruct structResolved
+    struct@Struct{name, fields} = equipStruct structResolved
     name' = mkNameT name
     type' = conT    name'
 
-equipField :: Text -> Field Resolved -> Field Equipped
-equipField haskellName Field{..} =
-    case UUID.mkName $ Text.encodeUtf8 haskellName of
+equipField :: StructAnnotations -> Text -> Field Resolved -> Field Equipped
+equipField structAnnotations schemaName Field{..} =
+    case UUID.mkName $ Text.encodeUtf8 schemaName of
         Just ronName -> Field{ext = XFieldEquipped{haskellName, ronName}, ..}
         Nothing -> error $
-            "Field name is not representable in RON: " ++ show haskellName
+            "Field name is not representable in RON: " ++ show schemaName
+  where
+    haskellName = mkHaskellFieldName structAnnotations schemaName
 
 varBangType' :: Text -> TH.TypeQ -> TH.VarBangTypeQ
 varBangType' name
@@ -100,33 +102,30 @@ varBangType' name
     . TH.bangType (TH.bang TH.noSourceUnpackedness TH.sourceStrict)
 
 mkDataTypeLww :: StructLww Equipped -> TH.DecQ
-mkDataTypeLww Struct{name, fields, annotations} =
+mkDataTypeLww Struct{name, fields} =
     TH.dataD
         (TH.cxt [])
         name'
         []
         Nothing
         [recC name'
-            [ varBangType' (mkHaskellFieldName annotations fieldName) $
-                mkGuideType ronType
-            | (fieldName, Field{ronType}) <- Map.assocs fields
+            [ varBangType' haskellName $ mkGuideType ronType
+            | Field{ronType, ext = XFieldEquipped{haskellName}} <- toList fields
             ]]
         []
   where
     name' = mkNameT name
 
 mkDataTypeSet :: StructSet Equipped -> TH.DecQ
-mkDataTypeSet Struct{name, fields, annotations} =
+mkDataTypeSet Struct{name, fields} =
     TH.dataD
         (TH.cxt [])
         name'
         []
         Nothing
         [recC name'
-            [ varBangType'
-                (mkHaskellFieldName annotations fieldName)
-                [t| Maybe $(mkGuideType ronType) |]
-            | (fieldName, Field{ronType}) <- Map.assocs fields
+            [ varBangType' haskellName [t| Maybe $(mkGuideType ronType) |]
+            | Field{ronType, ext = XFieldEquipped{haskellName}} <- toList fields
             ]]
         []
   where
@@ -145,7 +144,7 @@ mkInstanceReplicatedBS type' = [d|
     |]
 
 mkInstanceReplicatedAOLww :: StructLww Equipped -> TH.DecsQ
-mkInstanceReplicatedAOLww Struct{name, fields, annotations} = do
+mkInstanceReplicatedAOLww Struct{name, fields} = do
     ops  <- newName "ops"
     vars <- traverse (newNameT . haskellName . ext) fields
     let packFields = listE
@@ -161,17 +160,13 @@ mkInstanceReplicatedAOLww Struct{name, fields, annotations} = do
             | var <- toList vars
             ]
     let consE = recConE name'
-            [ fieldExp fieldName $ varE var
+            [ fieldExp' haskellName $ varE var
             | Field{ext = XFieldEquipped{haskellName}} <- toList fields
-            , let
-                fieldName = mkNameT $ mkHaskellFieldName annotations haskellName
             | var <- toList vars
             ]
         consP = recP name'
-            [ fieldPat fieldName $ varP var
+            [ fieldPat' haskellName $ varP var
             | Field{ext = XFieldEquipped{haskellName}} <- toList fields
-            , let
-                fieldName = mkNameT $ mkHaskellFieldName annotations haskellName
             | var <- toList vars
             ]
     let getObjectImpl = doE
@@ -189,7 +184,7 @@ mkInstanceReplicatedAOLww Struct{name, fields, annotations} = do
     errCtx = "getObject @" <> name
 
 mkInstanceReplicatedAOSet :: StructSet Equipped -> TH.DecsQ
-mkInstanceReplicatedAOSet Struct{name, fields, annotations} = do
+mkInstanceReplicatedAOSet Struct{name, fields} = do
     ops  <- newName "ops"
     vars <- traverse (newNameT . haskellName . ext) fields
     let packFields = listE
@@ -211,17 +206,13 @@ mkInstanceReplicatedAOSet Struct{name, fields, annotations} = do
             | var <- toList vars
             ]
     let consE = recConE name'
-            [ fieldExp fieldName $ varE var
+            [ fieldExp' haskellName $ varE var
             | Field{ext = XFieldEquipped{haskellName}} <- toList fields
-            , let
-                fieldName = mkNameT $ mkHaskellFieldName annotations haskellName
             | var <- toList vars
             ]
         consP = recP name'
-            [ fieldPat fieldName $ varP var
+            [ fieldPat' haskellName $ varP var
             | Field{ext = XFieldEquipped{haskellName}} <- toList fields
-            , let
-                fieldName = mkNameT $ mkHaskellFieldName annotations haskellName
             | var <- toList vars
             ]
     let getObjectImpl = doE
@@ -251,8 +242,8 @@ mkHaskellFieldName annotations base = prefix <> base' where
             Nothing            -> base
             Just (b, baseTail) -> Text.cons (toTitle b) baseTail
 
-mkAccessorsLww :: TH.Name -> StructAnnotations -> Field Equipped -> TH.DecsQ
-mkAccessorsLww name' annotations field = do
+mkAccessorsLww :: TH.Name -> Field Equipped -> TH.DecsQ
+mkAccessorsLww name' field = do
     a <- varT <$> newName "a"
     m <- varT <$> newName "m"
     let assignF =
@@ -279,12 +270,12 @@ mkAccessorsLww name' annotations field = do
     ronName' = liftData ronName
     type'    = conT name'
     fieldGuideType = mkGuideType ronType
-    assign = mkNameT $ mkHaskellFieldName annotations haskellName <> "_assign"
-    read   = mkNameT $ mkHaskellFieldName annotations haskellName <> "_read"
-    zoom   = mkNameT $ mkHaskellFieldName annotations haskellName <> "_zoom"
+    assign = mkNameT $ haskellName <> "_assign"
+    read   = mkNameT $ haskellName <> "_read"
+    zoom   = mkNameT $ haskellName <> "_zoom"
 
-mkAccessorsSet :: TH.Name -> StructAnnotations -> Field Equipped -> TH.DecsQ
-mkAccessorsSet name' annotations field = do
+mkAccessorsSet :: TH.Name -> Field Equipped -> TH.DecsQ
+mkAccessorsSet name' field = do
     a <- varT <$> newName "a"
     m <- varT <$> newName "m"
     let assignF =
@@ -318,9 +309,9 @@ mkAccessorsSet name' annotations field = do
     ronName' = liftData ronName
     type'    = conT name'
     fieldGuideType = mkGuideType ronType
-    assign = mkNameT $ mkHaskellFieldName annotations haskellName <> "_assign"
-    read   = mkNameT $ mkHaskellFieldName annotations haskellName <> "_read"
-    zoom   = mkNameT $ mkHaskellFieldName annotations haskellName <> "_zoom"
+    assign = mkNameT $ haskellName <> "_assign"
+    read   = mkNameT $ haskellName <> "_read"
+    zoom   = mkNameT $ haskellName <> "_zoom"
 
 orSetViewField :: Maybe MergeStrategy -> TH.ExpQ
 orSetViewField = varE . \case

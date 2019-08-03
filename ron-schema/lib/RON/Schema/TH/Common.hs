@@ -4,6 +4,8 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module RON.Schema.TH.Common (
+    fieldExp',
+    fieldPat',
     let1S,
     liftText,
     mkGuideType,
@@ -70,3 +72,9 @@ liftText t = [| Text.pack $(liftString $ Text.unpack t) |]
 
 let1S :: TH.PatQ -> TH.ExpQ -> TH.StmtQ
 let1S pat exp = TH.letS [valD pat exp]
+
+fieldExp' :: Text -> TH.ExpQ -> TH.Q (TH.Name, TH.Exp)
+fieldExp' = TH.fieldExp . mkNameT
+
+fieldPat' :: Text -> TH.PatQ -> TH.FieldPatQ
+fieldPat' = TH.fieldPat . mkNameT
