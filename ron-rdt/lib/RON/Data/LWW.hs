@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -70,17 +71,17 @@ lwwType = $(UUID.liftName "lww")
 -- | Create an LWW object from a list of named fields.
 newStruct
     :: (MonadState StateFrame m, ReplicaClock m)
-    => [(UUID, Instance Replicated)] -> m UUID
+    => [(UUID, Maybe (Instance Replicated))] -> m UUID
 newStruct fields = do
     event <- getEventUuid
-    payloads <- for fields $ \(_, Instance value) -> newRon value
+    stateBody <-
+        for fields $ \(name, mvalue) -> do
+            payload <- case mvalue of
+                Just (Instance value) -> newRon value
+                Nothing               -> pure []
+            pure $ Op event name payload
     modify' $
-        (<>) $ Map.singleton event $
-        StateChunk
-            { stateType = lwwType
-            , stateBody =
-                [Op event name p | ((name, _), p) <- zip fields payloads]
-            }
+        (<>) $ Map.singleton event $ StateChunk{stateType = lwwType, stateBody}
     pure event
 
 -- | Decode field value
@@ -88,36 +89,38 @@ viewField
     :: (Replicated a, MonadE m, MonadState StateFrame m)
     => UUID        -- ^ Field name
     -> StateChunk  -- ^ LWW object chunk
-    -> m a
-viewField field StateChunk{..} =
-    errorContext ("LWW.viewField " <> show field) $ do
-        let ops = filter (\Op{refId} -> refId == field) stateBody
-        Op{payload} <- case ops of
-            []   -> throwError "no field in lww chunk"
-            [op] -> pure op
-            _    -> throwError "unreduced state"
-        fromRon payload
+    -> m (Maybe a)
+viewField field StateChunk{stateBody} =
+    errorContext "LWW.viewField" $ do
+        let mPayload =
+                fmap payload $
+                maximumMayOn opId $
+                filter (\Op{refId} -> refId == field) stateBody
+        case mPayload of
+            Nothing      -> pure Nothing
+            Just []      -> pure Nothing
+            Just payload -> Just <$> fromRon payload
 
 -- | Read field value
 readField
     :: (MonadE m, MonadObjectState struct m, Replicated field)
     => UUID  -- ^ Field name
-    -> m field
+    -> m (Maybe field)
 readField field = do
     stateChunk <- getObjectStateChunk
     viewField field stateChunk
 
 -- | Assign a value to a field
 assignField
-    :: (Replicated field, ReplicaClock m, MonadE m, MonadObjectState struct m)
-    => UUID   -- ^ Field name
-    -> field  -- ^ Value
+    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
+    => UUID     -- ^ Field name
+    -> Maybe a  -- ^ Value
     -> m ()
-assignField field value =
+assignField field mvalue =
     modifyObjectStateChunk_ $ \StateChunk{stateBody} -> do
         let chunk = filter (\Op{refId} -> refId /= field) stateBody
         event <- getEventUuid
-        p <- newRon value
+        p <- maybe (pure []) newRon mvalue
         let newOp = Op event field p
         let chunk' = sortOn refId $ newOp : chunk
         pure StateChunk{stateBody = chunk', stateType = lwwType}

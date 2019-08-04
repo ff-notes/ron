@@ -18,7 +18,7 @@ import           RON.Schema.TH (mkReplicated)
         str2 RgaString
         str3 String     #ron{merge LWW}
         set4 (ORSet StructSet13)
-        opt5 (Option StructSet13)
+        opt5 StructSet13
         nst6 StructSet13)
 |]
 

@@ -445,7 +445,7 @@ prop_ObjectORSet = let
         state2expect === prepObj state2
 
 prop_ObjectORSet_recursive = let
-    state0 = TestRecursiveORSet{testRecSet = ORSet []}
+    state0 = TestRecursiveORSet{testRecSet = Just $ ORSet []}
     state1expect = prep [s|
         *lww #B/0000000Dl7+000000006P !
             @` :testRecSet >}NbH

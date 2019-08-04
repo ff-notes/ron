@@ -25,13 +25,21 @@ and this project adheres to
 - Event simulation: decreased max event leap from 2³² to 2¹⁶
 - Text serialization: changed chunk sort order from (type, id) to just id
 - ORSet: keep payload on removal
+- LWW
+  - fields are always optional
+  - `viewField` returns `Maybe`
+  - `readField` returns `Maybe`
+  - `assignField` takes `Maybe`
 
 ### Fixed
 - Causality: an object happens-before its ops (in ORSet, RGA, LWW)
 - Tombstone creation in ORSet
 
 ### Removed
-- `mkStateChunk`.
+- Function `mkStateChunk`.
+- RON type `Option` (instances for Haskell type `Maybe`)
+- Class `ReplicatedBoundedSemilattice`
+- Function `objectRconcat` (`rconcat` took its place)
 
 ## [0.7] - 2019-07-26
 ### Added

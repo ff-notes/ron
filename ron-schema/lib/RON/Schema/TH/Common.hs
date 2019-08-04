@@ -52,7 +52,6 @@ mkGuideType typ = case typ of
         TAUuid    -> [t| UUID   |]
     TComposite t -> case t of
         TEnum     Enum{name} -> conT $ mkNameT name
-        TOption   u          -> [t| Maybe $(mkGuideType u) |]
     TObject t -> case t of
         TORSet     item         -> wrap  ''ORSet    item
         TORSetMap  key value    -> wrap2 ''ORSetMap key value

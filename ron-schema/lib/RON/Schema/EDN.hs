@@ -50,7 +50,6 @@ prelude = Map.fromList
     , ("Day",           Type0 day)
     , ("Float",         Type0 $ TAtom TAFloat)
     , ("Integer",       Type0 $ TAtom TAInteger)
-    , ("Option",        Type1 $ TComposite . TOption)
     , ("ORSet.Map",     Type2 $ \k v -> TObject $ TORSetMap k v)
     , ("ORSet",         Type1 $ TObject . TORSet)
     , ("RGA",           Type1 $ TObject . TRga)
@@ -233,7 +232,6 @@ validateResolved = traverse_ $ \case
                 TAtom       a   -> goAtom a
                 TComposite  c   -> case c of
                     TEnum   _   -> goAtom TAUuid
-                    TOption t   -> validateField fieldName field{ronType = t}
                 TObject     _   -> goObject
                 TOpaque     Opaque{isObject}
                     | isObject  -> goObject

@@ -58,12 +58,12 @@ instance ReplicatedAsPayload Opaque49 where
         str2 RgaString
         str3 String
         set4 Alias69
-        opt5 (Option Struct51)
-        opt6 (Option Integer))
+        opt5 Struct51
+        opt6 Integer)
 
     (struct_lww TestFieldPrefix
         #haskell {field_prefix "tfp_"}
-        field (Option Opaque49))
+        field Opaque49)
 
     (struct_lww TestFieldPrefixAndTitle
         #haskell {field_prefix "tfpat", field_case title}

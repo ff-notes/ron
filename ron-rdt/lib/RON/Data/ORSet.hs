@@ -103,9 +103,6 @@ newtype ORSet a = ORSet [a]
 instance Replicated a => Replicated (ORSet a) where
     encoding = objectEncoding
 
-instance Replicated a => ReplicatedBoundedSemilattice (ORSet a) where
-    rconcat = objectRconcat
-
 instance Replicated a => ReplicatedAsObject (ORSet a) where
     type Rep (ORSet a) = ORSetRep
 
@@ -128,6 +125,8 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
                 pure $ Just item
             _    -> pure Nothing
         pure . ORSet $ catMaybes mItems
+
+    -- rempty = ORSet []
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => Payload -> m ()
@@ -282,14 +281,17 @@ filterAliveFieldIdsAndPayloads field ops =
 
 -- | Decode field value, merge all versions, return 'Nothing' if no versions
 viewField
-    :: (MonadE m, MonadState StateFrame m, ReplicatedBoundedSemilattice a)
+    :: (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
     => UUID        -- ^ Field name
     -> StateChunk  -- ^ ORSet object chunk
     -> m (Maybe a)
 viewField field StateChunk{stateBody} =
-    case filterAliveFieldPayloads field stateBody of
-        []   -> pure Nothing
-        p:ps -> fmap Just . rconcat $ p :| ps
+    errorContext "ORSet.viewField" $ do
+        let payloads = filterAliveFieldPayloads field stateBody
+            refs = [ref | AUuid ref : _ <- payloads]
+        case refs of
+            []   -> pure Nothing
+            p:ps -> fmap Just . rconcat $ p :| ps
 
 -- | Decode field value, keep last version only
 viewFieldLWW
@@ -298,10 +300,14 @@ viewFieldLWW
     -> StateChunk   -- ^ ORSet object chunk
     -> m (Maybe a)
 viewFieldLWW field StateChunk{stateBody} =
-    errorContext "ORSet.viewFieldLWW" $
-    traverse fromRon $
-    fmap snd . maximumMayOn fst $
-    filterAliveFieldIdsAndPayloads field stateBody
+    errorContext "ORSet.viewFieldLWW" $ do
+    let mPayload =
+            fmap snd . maximumMayOn fst $
+            filterAliveFieldIdsAndPayloads field stateBody
+    case mPayload of
+        Nothing      -> pure Nothing
+        Just []      -> pure Nothing
+        Just payload -> Just <$> fromRon payload
 
 -- | Decode field value, keep max value only, only for Integer and Float
 viewFieldMax
@@ -364,12 +370,12 @@ newStruct
 newStruct fields = do
     objectId <- getEventUuid
     stateBody <-
-        fmap fold $ for fields $ \(name, values) ->
-            for (toList values) $ \(Instance value) -> do
-                opId <- getEventUuid
-                    -- TODO(2019-07-12, cblp, #15) sequential uuids
-                valuePayload <- newRon value
-                pure Op{opId, refId = Zero, payload = AUuid name : valuePayload}
+        for fields $ \(name, mvalue) -> do
+            opId <- getEventUuid -- TODO(2019-07-12, cblp, #15) sequential uuids
+            valuePayload <- case mvalue of
+                Just (Instance value) -> newRon value
+                Nothing               -> pure []
+            pure Op{opId, refId = Zero, payload = AUuid name : valuePayload}
     modify' $
         (<>) $ Map.singleton objectId $
         StateChunk{stateType = setType, stateBody}

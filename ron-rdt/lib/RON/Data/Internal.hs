@@ -20,7 +20,6 @@ module RON.Data.Internal (
     Replicated (..),
     ReplicatedAsObject (..),
     ReplicatedAsPayload (..),
-    ReplicatedBoundedSemilattice (..),
     Unapplied,
     WireReducer,
     advanceToObject,
@@ -34,7 +33,7 @@ module RON.Data.Internal (
     reduceObjectStates,
     --
     objectEncoding,
-    objectRconcat,
+    rconcat,
     payloadEncoding,
     --
     fromRon,
@@ -217,8 +216,7 @@ instance ReplicatedAsPayload Char where
 -- An enclosing object's payload will be filled with this object's id.
 --
 -- Law: @'encoding' == 'objectEncoding'@
-class (Reducible (Rep a), ReplicatedBoundedSemilattice a) =>
-    ReplicatedAsObject a where
+class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
 
     -- | Untyped RON-RDT representation
     type Rep a
@@ -228,6 +226,9 @@ class (Reducible (Rep a), ReplicatedBoundedSemilattice a) =>
 
     -- | Decode data
     getObject :: (MonadE m, MonadObjectState a m) => m a
+
+    -- | Counterpart of 'mempty', but without an explicit 'Semigroup'
+    -- rempty :: a
 
 objectFromRon :: MonadE m => (Object a -> m a) -> Payload -> m a
 objectFromRon handler atoms = case atoms of
@@ -273,37 +274,6 @@ eqRef (Object uuid) atoms = case atoms of
 eqPayload :: ReplicatedAsPayload a => a -> Payload -> Bool
 eqPayload a atoms = toPayload a == atoms
 
-pattern Some :: Atom
-pattern Some = AUuid (UUID 0xdf3c69000000000 0)  -- some
-
-instance Replicated a => Replicated (Maybe a) where
-    encoding = Encoding
-        { encodingNewRon = \case
-            Just a  -> (Some :) <$> newRon a
-            Nothing -> pure []
-        , encodingFromRon = \atoms ->
-            errorContext "Option" $ case atoms of
-                Some : atoms' -> Just <$> fromRon atoms'
-                _             -> pure Nothing
-        }
-
-instance ReplicatedAsPayload a => ReplicatedAsPayload (Maybe a) where
-    toPayload = \case
-        Just a  -> Some : toPayload a
-        Nothing -> []
-    fromPayload = errorContext "Option" . \case
-        Some : atoms -> Just <$> fromPayload atoms
-        _            -> pure Nothing
-
-instance ReplicatedBoundedSemilattice a =>
-    ReplicatedBoundedSemilattice (Maybe a) where
-
-    rconcat payloads = case payloads' of
-        []   -> pure Nothing
-        p:ps -> Just <$> rconcat (p :| ps)
-      where
-        payloads' = [targetPayload | Some : targetPayload <- toList payloads]
-
 pattern ATrue :: Atom
 pattern ATrue = AUuid (UUID 0xe36e69000000000 0)  -- true
 
@@ -342,9 +312,6 @@ advanceToObject = do
         AUuid u -> Just u
         _       -> Nothing
 
-class Replicated a => ReplicatedBoundedSemilattice a where
-    rconcat :: (MonadE m, MonadState StateFrame m) => NonEmpty Payload -> m a
-
 reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
 reduceState s1 s2 =
     stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2
@@ -360,12 +327,11 @@ reduceObjectStates (obj :| objs) = do
     modify' $ Map.insert oid chunk
     pure $ Object oid
 
--- | Implementation of 'rconcat' for 'ReplicatedAsObject'
-objectRconcat
+rconcat
     :: forall a m
     . (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
-    => NonEmpty Payload -> m a
-objectRconcat payloads = do
-    states <- for payloads $ fmap Object . fromPayload
-    Object ref <- reduceObjectStates @a states
-    fromRon [AUuid ref]
+    => NonEmpty UUID -> m a
+rconcat uuids =
+    errorContext "rconcat" $ do
+        Object ref <- reduceObjectStates @a $ Object <$> uuids
+        fromRon [AUuid ref]

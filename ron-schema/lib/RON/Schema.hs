@@ -54,9 +54,9 @@ data RonType
     | TOpaque    Opaque
     deriving (Show)
 
-data TComposite
+-- | TODO(2019-08-04, cblp) do we need is as a group?
+newtype TComposite
     = TEnum   TEnum
-    | TOption RonType
     deriving (Show)
 
 data TEnum = Enum {name :: Text, items :: [Text]}

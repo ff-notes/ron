@@ -69,9 +69,6 @@ vvType = $(UUID.liftName "vv")
 instance Replicated VersionVector where
     encoding = objectEncoding
 
-instance ReplicatedBoundedSemilattice VersionVector where
-    rconcat = objectRconcat
-
 instance ReplicatedAsObject VersionVector where
     type Rep VersionVector = VersionVector
 
@@ -86,3 +83,5 @@ instance ReplicatedAsObject VersionVector where
     getObject = do
         StateChunk{stateBody} <- getObjectStateChunk
         pure $ stateFromChunk stateBody
+
+    -- rempty = mempty

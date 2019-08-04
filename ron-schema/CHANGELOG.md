@@ -11,6 +11,16 @@ and this project adheres to
 - `UUID` atom type
 - Struct field annotations
 
+### Changed
+- LWW
+  - fields are always optional
+  - `viewField` returns `Maybe`
+  - `readField` returns `Maybe`
+  - `assignField` takes `Maybe`
+
+### Removed
+- `Option` type
+
 ## [0.7] - 2019-07-26
 ### Added
 - `alias` declaration.

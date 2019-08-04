@@ -26,8 +26,6 @@
         Replicated <|-- ReplicatedAsPayload
 
         note as instances_Replicated
-            • Maybe
-
             • <i>opaque</i>
         end note
         Replicated --- instances_Replicated

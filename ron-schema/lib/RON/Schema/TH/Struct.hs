@@ -27,10 +27,10 @@ import           Language.Haskell.TH (bindS, conT, doE, listE, newName, noBindS,
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Syntax (liftData)
 
-import           RON.Data (MonadObjectState, ObjectStateT, Rep, Replicated,
-                           ReplicatedAsObject, ReplicatedBoundedSemilattice,
-                           encoding, getObject, getObjectStateChunk, newObject,
-                           objectEncoding, objectRconcat, rconcat)
+import           RON.Data (MonadObjectState, ObjectStateT,
+                           Replicated (encoding),
+                           ReplicatedAsObject (Rep, getObject, newObject),
+                           getObjectStateChunk, objectEncoding)
 import           RON.Data.LWW (LwwRep)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSetRep)
@@ -57,14 +57,13 @@ equipStruct Struct{name, fields, annotations} = Struct
 
 mkReplicatedStructLww :: StructLww Resolved -> TH.DecsQ
 mkReplicatedStructLww structResolved = do
-    dataType               <- mkDataTypeLww             struct
+    dataType               <- mkDataType                struct
     [instanceReplicated]   <- mkInstanceReplicated      type'
-    [instanceReplicatedBS] <- mkInstanceReplicatedBS    type'
     [instanceReplicatedAO] <- mkInstanceReplicatedAOLww struct
     accessors <- fold <$> traverse (mkAccessorsLww name') fields
     pure
         $ dataType
-        : instanceReplicated : instanceReplicatedBS : instanceReplicatedAO
+        : instanceReplicated : instanceReplicatedAO
         : accessors
   where
     struct@Struct{name, fields} = equipStruct structResolved
@@ -73,14 +72,13 @@ mkReplicatedStructLww structResolved = do
 
 mkReplicatedStructSet :: StructSet Resolved -> TH.DecsQ
 mkReplicatedStructSet structResolved = do
-    dataType               <- mkDataTypeSet             struct
+    dataType               <- mkDataType                struct
     [instanceReplicated]   <- mkInstanceReplicated      type'
-    [instanceReplicatedBS] <- mkInstanceReplicatedBS    type'
     [instanceReplicatedAO] <- mkInstanceReplicatedAOSet struct
     accessors <- fold <$> traverse (mkAccessorsSet name') fields
     pure
         $ dataType
-        : instanceReplicated : instanceReplicatedBS : instanceReplicatedAO
+        : instanceReplicated : instanceReplicatedAO
         : accessors
   where
     struct@Struct{name, fields} = equipStruct structResolved
@@ -101,23 +99,8 @@ varBangType' name
     = TH.varBangType (mkNameT name)
     . TH.bangType (TH.bang TH.noSourceUnpackedness TH.sourceStrict)
 
-mkDataTypeLww :: StructLww Equipped -> TH.DecQ
-mkDataTypeLww Struct{name, fields} =
-    TH.dataD
-        (TH.cxt [])
-        name'
-        []
-        Nothing
-        [recC name'
-            [ varBangType' haskellName $ mkGuideType ronType
-            | Field{ronType, ext = XFieldEquipped{haskellName}} <- toList fields
-            ]]
-        []
-  where
-    name' = mkNameT name
-
-mkDataTypeSet :: StructSet Equipped -> TH.DecQ
-mkDataTypeSet Struct{name, fields} =
+mkDataType :: Struct encoding Equipped -> TH.DecQ
+mkDataType Struct{name, fields} =
     TH.dataD
         (TH.cxt [])
         name'
@@ -137,18 +120,12 @@ mkInstanceReplicated type' = [d|
         encoding = objectEncoding
     |]
 
-mkInstanceReplicatedBS :: TH.TypeQ -> TH.DecsQ
-mkInstanceReplicatedBS type' = [d|
-    instance ReplicatedBoundedSemilattice $type' where
-        rconcat = objectRconcat
-    |]
-
 mkInstanceReplicatedAOLww :: StructLww Equipped -> TH.DecsQ
 mkInstanceReplicatedAOLww Struct{name, fields} = do
     ops  <- newName "ops"
     vars <- traverse (newNameT . haskellName . ext) fields
     let packFields = listE
-            [ [| ($ronName', Instance $(varE var)) |]
+            [ [| ($ronName', Instance <$> $(varE var)) |]
             | Field{ext = XFieldEquipped{ronName}} <- toList fields
             , let ronName' = liftData ronName
             | var <- toList vars
@@ -177,6 +154,7 @@ mkInstanceReplicatedAOLww Struct{name, fields} = do
             type Rep $type' = LwwRep
             newObject $consP = Object <$> LWW.newStruct $packFields
             getObject = errorContext $(liftText errCtx) $getObjectImpl
+            -- rempty = $remptyImpl
         |]
   where
     name' = mkNameT name
@@ -223,6 +201,7 @@ mkInstanceReplicatedAOSet Struct{name, fields} = do
             type Rep $type' = ORSetRep
             newObject $consP = Object <$> ORSet.newStruct $packFields
             getObject = errorContext $(liftText errCtx) $getObjectImpl
+            -- rempty = _
         |]
   where
     name' = mkNameT name
@@ -249,19 +228,20 @@ mkAccessorsLww name' field = do
     let assignF =
             [ sigD assign [t|
                 (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
-                => $fieldGuideType -> $m () |]
+                => Maybe $guideType -> $m () |]
             , valDP assign [| LWW.assignField $ronName' |]
             ]
         readF =
             [ sigD read [t|
-                (MonadE $m, MonadObjectState $type' $m) => $m $fieldGuideType |]
+                (MonadE $m, MonadObjectState $type' $m)
+                => $m (Maybe $guideType) |]
             , valDP read [| LWW.readField $ronName' |]
             ]
         zoomF =
             [ sigD zoom [t|
                 MonadE $m
-                => ObjectStateT $(mkGuideType ronType) $m $a
-                -> ObjectStateT $type'                 $m $a |]
+                => ObjectStateT $guideType $m $a
+                -> ObjectStateT $type'     $m $a |]
             , valDP zoom [| LWW.zoomField $ronName' |]
             ]
     sequenceA $ assignF ++ readF ++ zoomF
@@ -269,7 +249,7 @@ mkAccessorsLww name' field = do
     Field{ronType, ext = XFieldEquipped{haskellName, ronName}} = field
     ronName' = liftData ronName
     type'    = conT name'
-    fieldGuideType = mkGuideType ronType
+    guideType = mkGuideType ronType
     assign = mkNameT $ haskellName <> "_assign"
     read   = mkNameT $ haskellName <> "_read"
     zoom   = mkNameT $ haskellName <> "_zoom"
@@ -281,13 +261,13 @@ mkAccessorsSet name' field = do
     let assignF =
             [ sigD assign [t|
                 (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
-                => $fieldGuideType -> $m () |]
+                => $guideType -> $m () |]
             , valDP assign [| ORSet.assignField $ronName' |]
             ]
         readF =
             [ sigD read [t|
                 (MonadE $m, MonadObjectState $type' $m)
-                => $m (Maybe $fieldGuideType) |]
+                => $m (Maybe $guideType) |]
             , valDP read
                 [| do
                     chunk <- getObjectStateChunk
@@ -308,7 +288,7 @@ mkAccessorsSet name' field = do
     XFieldEquipped{haskellName, ronName} = ext
     ronName' = liftData ronName
     type'    = conT name'
-    fieldGuideType = mkGuideType ronType
+    guideType = mkGuideType ronType
     assign = mkNameT $ haskellName <> "_assign"
     read   = mkNameT $ haskellName <> "_read"
     zoom   = mkNameT $ haskellName <> "_zoom"

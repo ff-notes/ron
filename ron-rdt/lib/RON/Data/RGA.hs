@@ -318,9 +318,6 @@ newtype RGA a = RGA [a]
 
 instance Replicated a => Replicated (RGA a) where encoding = objectEncoding
 
-instance Replicated a => ReplicatedBoundedSemilattice (RGA a) where
-    rconcat = objectRconcat
-
 instance Replicated a => ReplicatedAsObject (RGA a) where
     type Rep (RGA a) = RgaRep
 
@@ -341,6 +338,8 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
             Zero -> Just <$> fromRon payload
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems
+
+    -- rempty = RGA []
 
 -- | Replace content of the RGA throug introducing changes detected by
 -- 'getGroupedDiffBy'.
