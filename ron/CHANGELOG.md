@@ -11,6 +11,7 @@ and this project adheres to
 
 ### Changed
 - Renamed `ObjectState` to `ObjectFrame`.
+- Simplified `Error` type
 
 ### Removed
 - Method `ReplicatedAsObject.objectOpType`

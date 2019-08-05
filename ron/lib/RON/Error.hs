@@ -17,9 +17,7 @@ import           RON.Prelude
 
 import           Data.String (IsString, fromString)
 
-data Error
-    = Error        Text [Error]
-    | ErrorContext Text  Error
+data Error = Error Text [Error]
     deriving (Exception, Eq, Show)
 
 instance IsString Error where
@@ -28,7 +26,7 @@ instance IsString Error where
 type MonadE = MonadError Error
 
 errorContext :: MonadE m => Text -> m a -> m a
-errorContext ctx action = action `catchError` (throwError . ErrorContext ctx)
+errorContext ctx action = action `catchError` \e -> throwError $ Error ctx [e]
 
 liftMaybe :: MonadE m => Text -> Maybe a -> m a
 liftMaybe msg = maybe (throwErrorText msg) pure
