@@ -138,13 +138,13 @@ prop_structSet = property $ do
         runNetworkSimT $ runReplicaSimT replica $
         execObjectState state2 $ do
             checkCausality
-            int1_assign 166 -- plain field
+            int1_assign $ Just 166  -- plain field
             checkCausality
             str2_zoom $ RGA.edit "145"
             checkCausality
             do  value <- str3_read
                 value === Just "190"
-            str3_assign "206"
+            str3_assign $ Just "206"
             checkCausality
             set4_zoom $ do
                 ORSet.addValue
@@ -158,7 +158,7 @@ prop_structSet = property $ do
                 value === Nothing
             do  value <- nst6_read
                 value === Nothing
-            nst6_assign def{int1 = Just 138}
+            nst6_assign $ Just def{int1 = Just 138}
             checkCausality
 
     -- decode object after modification

@@ -261,7 +261,7 @@ mkAccessorsSet name' field = do
     let assignF =
             [ sigD assign [t|
                 (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
-                => $guideType -> $m () |]
+                => Maybe $guideType -> $m () |]
             , valDP assign [| ORSet.assignField $ronName' |]
             ]
         readF =

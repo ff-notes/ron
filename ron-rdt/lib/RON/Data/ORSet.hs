@@ -234,14 +234,14 @@ type ORSetMap k v = ORSet (k, v)
 
 -- | Assign a value to a field
 assignField
-    :: (Replicated field, ReplicaClock m, MonadE m, MonadObjectState struct m)
-    => UUID   -- ^ Field name
-    -> field  -- ^ Value
+    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
+    => UUID     -- ^ Field name
+    -> Maybe a  -- ^ Value
     -> m ()
-assignField field value =
+assignField field mvalue =
     modifyObjectStateChunk_ $ \StateChunk{stateBody} -> do
         event <- getEventUuid
-        valuePayload <- newRon value
+        valuePayload <- maybe (pure []) newRon mvalue
         let addOp = Op
                 { opId = event
                 , refId = Zero
