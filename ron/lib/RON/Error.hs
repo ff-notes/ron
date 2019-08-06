@@ -1,10 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 module RON.Error (
     Error (..),
     MonadE,
+    correct,
     errorContext,
     liftEither,
     liftEitherString,
@@ -18,7 +18,9 @@ import           RON.Prelude
 import           Data.String (IsString, fromString)
 
 data Error = Error Text [Error]
-    deriving (Exception, Eq, Show)
+    deriving (Eq, Show)
+
+instance Exception Error
 
 instance IsString Error where
     fromString s = Error (fromString s) []
@@ -39,3 +41,10 @@ throwErrorText msg = throwError $ Error msg []
 
 throwErrorString :: (MonadError e m, IsString e) => String -> m a
 throwErrorString = throwError . fromString
+
+correct :: MonadError e m => a -> m a -> m a
+correct def action =
+    action
+    `catchError` \_e ->
+        -- TODO(2019-08-06, cblp) $logWarnSH e
+        pure def

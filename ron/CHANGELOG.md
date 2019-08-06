@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - Associated type `ReplicatedAsObject.Rep`
+- Function `correct`
 
 ### Changed
 - Renamed `ObjectState` to `ObjectFrame`.
