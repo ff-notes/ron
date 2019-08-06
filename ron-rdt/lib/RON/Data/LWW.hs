@@ -28,7 +28,7 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     modifyObjectStateChunk_, newRon,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
-import           RON.Error (MonadE, errorContext)
+import           RON.Error (MonadE, correct, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
@@ -98,8 +98,7 @@ viewField field StateChunk{stateBody} =
                 filter (\Op{refId} -> refId == field) stateBody
         case mPayload of
             Nothing      -> pure Nothing
-            Just []      -> pure Nothing
-            Just payload -> Just <$> fromRon payload
+            Just payload -> correct Nothing $ Just <$> fromRon payload
 
 -- | Read field value
 readField
