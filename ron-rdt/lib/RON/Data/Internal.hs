@@ -31,6 +31,8 @@ module RON.Data.Internal (
     newObjectFrame,
     reduceState,
     reduceObjectStates,
+    tryFromRon,
+    pattern Some,
     --
     objectEncoding,
     rconcat,
@@ -50,7 +52,7 @@ import           Data.List (minimum)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Error (MonadE, errorContext, liftMaybe)
+import           RON.Error (MonadE, correct, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
@@ -335,3 +337,14 @@ rconcat uuids =
     errorContext "rconcat" $ do
         Object ref <- reduceObjectStates @a $ Object <$> uuids
         fromRon [AUuid ref]
+
+tryFromRon
+    :: (MonadE m, MonadState StateFrame m, Replicated a)
+    => Payload -> m (Maybe a)
+tryFromRon = correct Nothing . fmap Just . fromRon
+
+-- | TODO(2019-08-06, cblp) Remove a year after release
+-- (the release is planned on 2019-08; removal is planned on 2020-08)
+pattern Some :: Atom
+pattern Some = AUuid (UUID 0xdf3c69000000000 0)
+{-# DEPRECATED Some "Will be removed soon" #-}
