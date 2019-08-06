@@ -10,6 +10,7 @@ and this project adheres to
 - `Float` atom type
 - `UUID` atom type
 - Struct field annotations
+- `struct_set` to define an ORSet-based structure
 
 ### Changed
 - LWW
