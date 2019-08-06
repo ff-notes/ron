@@ -1,8 +1,11 @@
+{-# OPTIONS_GHC -Wno-deprecations #-} -- about 'Some'
+
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -24,14 +27,17 @@ import           RON.Prelude
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
-                                    Replicated, fromRon, getObjectStateChunk,
+                                    Replicated, pattern Some, fromRon,
+                                    getObjectStateChunk,
                                     modifyObjectStateChunk_, newRon,
                                     reducibleOpType, stateFromChunk,
-                                    stateToChunk)
-import           RON.Error (MonadE, correct, errorContext)
+                                    stateToChunk, tryFromRon)
+import           RON.Error (Error (Error), MonadE, correct, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Atom (AUuid), Object (..), Op (..), StateChunk (..),
+import           RON.Types (Atom (AUuid), Object (Object),
+                            Op (Op, opId, payload, refId),
+                            StateChunk (StateChunk, stateBody, stateType),
                             StateFrame, UUID)
 import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
@@ -97,8 +103,16 @@ viewField field StateChunk{stateBody} =
                 maximumMayOn opId $
                 filter (\Op{refId} -> refId == field) stateBody
         case mPayload of
-            Nothing      -> pure Nothing
-            Just payload -> correct Nothing $ Just <$> fromRon payload
+            Nothing -> pure Nothing
+            Just payload@(Some : payload') ->
+                correct Nothing $
+                    (Just <$> fromRon payload)
+                    `catchError` \e1 ->
+                        (Just <$> fromRon payload')
+                        `catchError` \e2 ->
+                            throwError $
+                                Error "Option compatibility mode" [e1, e2]
+            Just payload -> tryFromRon payload
 
 -- | Read field value
 readField
