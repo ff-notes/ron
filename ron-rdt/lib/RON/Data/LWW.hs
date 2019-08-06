@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-} -- about 'Some'
-
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -27,12 +25,11 @@ import           RON.Prelude
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
-                                    Replicated, pattern Some, fromRon,
-                                    getObjectStateChunk,
+                                    Replicated, getObjectStateChunk,
                                     modifyObjectStateChunk_, newRon,
                                     reducibleOpType, stateFromChunk,
-                                    stateToChunk, tryFromRon)
-import           RON.Error (Error (Error), MonadE, correct, errorContext)
+                                    stateToChunk, tryOptionFromRon)
+import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (Object),
@@ -97,22 +94,11 @@ viewField
     -> StateChunk  -- ^ LWW object chunk
     -> m (Maybe a)
 viewField field StateChunk{stateBody} =
-    errorContext "LWW.viewField" $ do
-        let mPayload =
-                fmap payload $
-                maximumMayOn opId $
-                filter (\Op{refId} -> refId == field) stateBody
-        case mPayload of
-            Nothing -> pure Nothing
-            Just payload@(Some : payload') ->
-                correct Nothing $
-                    (Just <$> fromRon payload)
-                    `catchError` \e1 ->
-                        (Just <$> fromRon payload')
-                        `catchError` \e2 ->
-                            throwError $
-                                Error "Option compatibility mode" [e1, e2]
-            Just payload -> tryFromRon payload
+    errorContext "LWW.viewField" $
+    maybe (pure Nothing) tryOptionFromRon $
+    fmap payload $
+    maximumMayOn opId $
+    filter (\Op{refId} -> refId == field) stateBody
 
 -- | Read field value
 readField

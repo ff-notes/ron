@@ -32,6 +32,7 @@ module RON.Data.Internal (
     reduceState,
     reduceObjectStates,
     tryFromRon,
+    tryOptionFromRon,
     pattern Some,
     --
     objectEncoding,
@@ -52,7 +53,8 @@ import           Data.List (minimum)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Error (MonadE, correct, errorContext, liftMaybe)
+import           RON.Error (Error (Error), MonadE, correct, errorContext,
+                            liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
@@ -342,6 +344,19 @@ tryFromRon
     :: (MonadE m, MonadState StateFrame m, Replicated a)
     => Payload -> m (Maybe a)
 tryFromRon = correct Nothing . fmap Just . fromRon
+
+tryOptionFromRon
+    :: (MonadE m, MonadState StateFrame m, Replicated a)
+    => Payload -> m (Maybe a)
+tryOptionFromRon payload = case payload of
+    Some : payload' ->
+        correct Nothing $
+            (Just <$> fromRon payload)
+            `catchError` \e1 ->
+                (Just <$> fromRon payload')
+                `catchError` \e2 ->
+                    throwError $ Error "tryOptionFromRon" [e1, e2]
+    _ -> tryFromRon payload
 
 -- | TODO(2019-08-06, cblp) Remove a year after release
 -- (the release is planned on 2019-08; removal is planned on 2020-08)
