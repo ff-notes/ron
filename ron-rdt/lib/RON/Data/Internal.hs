@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -25,14 +24,18 @@ module RON.Data.Internal (
     advanceToObject,
     eqPayload,
     eqRef,
+    getObjectState,
     getObjectStateChunk,
     modifyObjectStateChunk,
     modifyObjectStateChunk_,
     newObjectFrame,
     reduceState,
     reduceObjectStates,
+    stateFromWireChunk,
+    stateToWireChunk,
     tryFromRon,
     tryOptionFromRon,
+    wireStateChunk,
     pattern Some,
     --
     objectEncoding,
@@ -48,7 +51,6 @@ module RON.Data.Internal (
 
 import           RON.Prelude
 
-import           Data.Foldable (foldl1)
 import           Data.List (minimum)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -60,15 +62,16 @@ import           RON.Semilattice (BoundedSemilattice)
 import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
                             ObjectFrame (ObjectFrame, frame, uuid),
                             Op (Op, opId, payload, refId), Payload,
-                            StateChunk (StateChunk, stateBody), StateFrame,
-                            UUID (UUID), WireChunk)
+                            StateChunk (StateChunk), StateFrame, UUID (UUID),
+                            WireChunk,
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
 
 -- | Reduce all chunks of specific type and object in the frame
 type WireReducer = UUID -> NonEmpty WireChunk -> [WireChunk]
 
 data Reducer = Reducer
     { wireReducer  :: WireReducer
-    , stateReducer :: StateChunk -> StateChunk -> StateChunk
+    , stateReducer :: WireStateChunk -> WireStateChunk -> WireStateChunk
     }
 
 -- | Unapplied patches and raw ops
@@ -82,11 +85,11 @@ class (Eq a, BoundedSemilattice a) => Reducible a where
     -- | UUID of the type
     reducibleOpType :: UUID
 
-    -- | Load a state from a state chunk
+    -- | Load a state from a state chunk.
     stateFromChunk :: [Op] -> a
 
     -- | Store a state to a state chunk
-    stateToChunk :: a -> StateChunk
+    stateToChunk :: a -> [Op]
 
     -- | Merge a state with patches and raw ops
     applyPatches :: a -> Unapplied -> (a, Unapplied)
@@ -106,6 +109,20 @@ class (Eq a, BoundedSemilattice a) => Reducible a where
         , []
         )
 
+stateToWireChunk :: forall rep . Reducible rep => rep -> WireStateChunk
+stateToWireChunk rep = wireStateChunk @rep $ StateChunk $ stateToChunk @rep rep
+
+stateFromWireChunk
+    :: forall a m . (MonadE m, Reducible a) => WireStateChunk -> m a
+stateFromWireChunk WireStateChunk{stateType, stateBody} = do
+    unless (stateType == reducibleOpType @a) $
+        throwError $
+        Error "bad type"
+            [ Error ("expected " <> show (reducibleOpType @a)) []
+            , Error ("got " <> show stateType) []
+            ]
+    pure $ stateFromChunk stateBody
+
 data ReducedChunk = ReducedChunk
     { rcRef     :: UUID
     , rcBody    :: [Op]
@@ -124,14 +141,14 @@ patchFromRawOp op@Op{opId} = Patch
     }
 
 patchFromChunk :: Reducible a => ReducedChunk -> Patch a
-patchFromChunk ReducedChunk{..} =
+patchFromChunk ReducedChunk{rcRef, rcBody} =
     Patch{patchRef = rcRef, patchValue = stateFromChunk rcBody}
 
 patchToChunk :: Reducible a => Patch a -> ReducedChunk
 patchToChunk Patch{patchRef, patchValue} =
     ReducedChunk{rcRef = patchRef, rcBody = stateBody}
   where
-    StateChunk{stateBody} = stateToChunk patchValue
+    WireStateChunk{stateBody} = stateToWireChunk patchValue
 
 -- | Base class for typed encoding
 class Replicated a where
@@ -246,26 +263,38 @@ newObjectFrame a = do
     (Object uuid, frame) <- runStateT (newObject a) mempty
     pure $ ObjectFrame{uuid, frame}
 
-getObjectStateChunk :: (MonadE m, MonadObjectState a m) => m StateChunk
+getObjectStateChunk
+    :: forall a m . (MonadE m, MonadObjectState a m) => m (StateChunk (Rep a))
 getObjectStateChunk = do
     Object uuid <- ask
     frame <- get
-    liftMaybe "no such object in chunk" $ Map.lookup uuid frame
+    WireStateChunk{stateType, stateBody} <-
+        liftMaybe "no such object in chunk" $ Map.lookup uuid frame
+    unless (stateType == reducibleOpType @(Rep a)) $
+        throwError $
+        Error "bad type"
+            [ Error ("expected " <> show (reducibleOpType @(Rep a))) []
+            , Error ("got " <> show stateType) []
+            ]
+    pure $ StateChunk stateBody
 
 modifyObjectStateChunk
-    :: (MonadObjectState a m, ReplicaClock m, MonadE m)
-    => (StateChunk -> m (b, StateChunk)) -> m b
+    :: forall a b m
+    . (MonadObjectState a m, ReplicaClock m, MonadE m)
+    => (StateChunk (Rep a) -> m (b, StateChunk (Rep a))) -> m b
 modifyObjectStateChunk f = do
     advanceToObject
     Object uuid <- ask
     chunk <- getObjectStateChunk
-    (a, chunk') <- f chunk
-    modify' $ Map.insert uuid chunk'
+    (a, StateChunk chunk') <- f chunk
+    modify' $
+        Map.insert uuid $
+        WireStateChunk{stateType = reducibleOpType @(Rep a), stateBody = chunk'}
     pure a
 
 modifyObjectStateChunk_
     :: (MonadObjectState a m, ReplicaClock m, MonadE m)
-    => (StateChunk -> m StateChunk) -> m ()
+    => (StateChunk (Rep a) -> m (StateChunk (Rep a))) -> m ()
 modifyObjectStateChunk_ f = modifyObjectStateChunk $ \chunk -> do
     chunk' <- f chunk
     pure ((), chunk')
@@ -298,17 +327,18 @@ instance ReplicatedAsPayload Bool where
 
 type ObjectStateT b m a = ReaderT (Object b) (StateT StateFrame m) a
 
-type MonadObjectState b m = (MonadReader (Object b) m, MonadState StateFrame m)
+type MonadObjectState a m =
+    (MonadReader (Object a) m, MonadState StateFrame m, Reducible (Rep a))
 
 advanceToObject :: (MonadE m, MonadObjectState a m, ReplicaClock m) => m ()
 advanceToObject = do
     Object uuid <- ask
-    StateChunk{stateBody} <- getObjectStateChunk
+    StateChunk chunk <- getObjectStateChunk
     advanceToUuid $
         maximumDef
             uuid
             [ max opId $ maximumDef refId $ mapMaybe atomAsUuid payload
-            | Op{opId, refId, payload} <- stateBody
+            | Op{opId, refId, payload} <- chunk
             ]
   where
     -- | TODO(2019-07-26, cblp) Use lens
@@ -316,19 +346,21 @@ advanceToObject = do
         AUuid u -> Just u
         _       -> Nothing
 
-reduceState :: forall a . Reducible a => StateChunk -> StateChunk -> StateChunk
-reduceState s1 s2 =
-    stateToChunk @a $ ((<>) `on` (stateFromChunk . stateBody)) s1 s2
+reduceState
+    :: forall rep
+    . Reducible rep => StateChunk rep -> StateChunk rep -> StateChunk rep
+reduceState (StateChunk s1) (StateChunk s2) =
+    StateChunk $ stateToChunk @rep $ stateFromChunk s1 <> stateFromChunk s2
 
 reduceObjectStates
     :: forall a m
     . (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
     => NonEmpty (Object a) -> m (Object a)
 reduceObjectStates (obj :| objs) = do
-    chunks <- for (obj :| objs) $ runReaderT getObjectStateChunk
-    let chunk = foldl1 (reduceState @(Rep a)) chunks
-    let oid = minimum [i | Object i <- obj:objs]
-    modify' $ Map.insert oid chunk
+    c :| cs <- for (obj :| objs) $ runReaderT getObjectStateChunk
+    let chunk = foldl' (reduceState @(Rep a)) c cs
+        oid = minimum [i | Object i <- obj:objs]
+    modify' $ Map.insert oid $ wireStateChunk chunk
     pure $ Object oid
 
 rconcat
@@ -363,3 +395,12 @@ tryOptionFromRon payload = case payload of
 pattern Some :: Atom
 pattern Some = AUuid (UUID 0xdf3c69000000000 0)
 {-# DEPRECATED Some "Will be removed soon" #-}
+
+getObjectState :: (MonadE m, MonadObjectState a m) => m (Rep a)
+getObjectState = do
+    StateChunk chunk <- getObjectStateChunk
+    pure $ stateFromChunk chunk
+
+wireStateChunk :: forall rep . Reducible rep => StateChunk rep -> WireStateChunk
+wireStateChunk (StateChunk stateBody) =
+    WireStateChunk{stateType = reducibleOpType @rep, stateBody}

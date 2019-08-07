@@ -30,11 +30,10 @@ import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             nanosecHundreds, seconds)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
-                            Op (Op, opId, payload, refId), Payload,
-                            StateChunk (StateChunk, stateBody, stateType),
-                            StateFrame, UUID, WireChunk (Closed, Query, Value),
-                            WireFrame,
-                            WireReducedChunk (WireReducedChunk, wrcBody, wrcHeader))
+                            Op (Op, opId, payload, refId), Payload, StateFrame,
+                            UUID, WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (WireReducedChunk, wrcBody, wrcHeader),
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util.Word (Word60, leastSignificant2, leastSignificant4,
                                 ls12, ls24, ls6, ls60)
 import           RON.UUID (UuidFields (UuidFields))
@@ -88,17 +87,17 @@ wireFrame size = list (Range.exponential 0 size) (wireChunk size)
 
 stateFrame :: MonadGen gen => Int -> gen StateFrame
 stateFrame size =
-    Gen.map (Range.exponential 0 size) $ (,) <$> uuid <*> stateChunk size
+    Gen.map (Range.exponential 0 size) $ (,) <$> uuid <*> wireStateChunk size
 
-stateChunk :: MonadGen gen => Int -> gen StateChunk
-stateChunk size = do
+wireStateChunk :: MonadGen gen => Int -> gen WireStateChunk
+wireStateChunk size = do
     stateType <- choice [pure UUID.zero, uuid]
     stateBody <-
         choice
             [ pure [Op UUID.zero UUID.zero []]
             , list (Range.exponential 0 size) $ reducedOp size
             ]
-    pure StateChunk{stateType, stateBody}
+    pure WireStateChunk{stateType, stateBody}
 
 wireFrames :: MonadGen gen => Int -> gen [WireFrame]
 wireFrames size = list (Range.exponential 0 size) (wireFrame size)

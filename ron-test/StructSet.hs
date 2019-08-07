@@ -22,9 +22,7 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
-import           RON.Types (Object, Op (Op, opId, refId),
-                            StateChunk (StateChunk, stateBody, stateType),
-                            StateFrame)
+import           RON.Types (Object, Op (Op, opId, refId), StateFrame, WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util (ByteStringL)
 import           RON.UUID (zero)
 
@@ -184,7 +182,7 @@ checkCausality = do
     get >>= checkStateFrame root
   where
     checkStateFrame root = void . Map.traverseWithKey (checkObject root)
-    checkObject root self StateChunk{stateType, stateBody} =
+    checkObject root self WireStateChunk{stateType, stateBody} =
         for_ stateBody $ \Op{opId, refId} -> do
             unless (opId > self) $ do
                 annotate $ unlines

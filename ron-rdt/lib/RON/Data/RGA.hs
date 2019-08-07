@@ -41,12 +41,22 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Data.Internal
+import           RON.Data.Internal (MonadObjectState,
+                                    ReducedChunk (ReducedChunk, rcBody, rcRef),
+                                    Reducible, Rep, Replicated (encoding),
+                                    ReplicatedAsObject, ReplicatedAsPayload,
+                                    Unapplied, applyPatches, fromRon, getObject,
+                                    getObjectStateChunk,
+                                    modifyObjectStateChunk_, newObject, newRon,
+                                    objectEncoding, reduceUnappliedPatches,
+                                    reducibleOpType, stateFromChunk,
+                                    stateToChunk, toPayload)
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Object (Object), Op (..), StateChunk (..),
-                            StateFrame, UUID)
+import           RON.Types (Object (Object), Op (Op, opId, payload, refId),
+                            StateChunk (StateChunk), StateFrame, UUID,
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util.Word (pattern B11, ls60)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
@@ -161,8 +171,7 @@ instance Reducible RgaRep where
 
     stateFromChunk = RgaRep . vertexListFromOps
 
-    stateToChunk (RgaRep rga) = StateChunk{stateType = rgaType, stateBody} where
-        stateBody = maybe [] vertexListToOps rga
+    stateToChunk (RgaRep rga) = maybe [] vertexListToOps rga
 
     applyPatches rga (patches, ops) =
         bimap id patchSetToChunks . reapplyPatchSetToState rga $
@@ -327,19 +336,15 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
         ops <- for (zip items vertexIds) $ \(item, vertexId) -> do
             payload <- newRon item
             pure $ Op vertexId Zero payload
-        modify' $
-            (<>) $ Map.singleton oid $
-            StateChunk{stateType = rgaType, stateBody = ops}
+        modify' $ Map.insert oid $ wireStateChunk ops
         pure $ Object oid
 
     getObject = do
-        StateChunk{stateBody} <- getObjectStateChunk
+        StateChunk stateBody <- getObjectStateChunk
         mItems <- for stateBody $ \Op{refId, payload} -> case refId of
             Zero -> Just <$> fromRon payload
             _    -> pure Nothing
         pure . RGA $ catMaybes mItems
-
-    -- rempty = RGA []
 
 -- | Replace content of the RGA throug introducing changes detected by
 -- 'getGroupedDiffBy'.
@@ -349,7 +354,7 @@ edit
         )
     => [a] -> m ()
 edit newItems =
-    modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \chunk@(StateChunk stateBody) -> do
         let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
             -- TODO(2019-04-17, #59, cblp) replace 'toPayload' with 'newRon' and
             -- relax constraint on 'a' from 'ReplicatedAsPayload' to
@@ -371,10 +376,9 @@ edit newItems =
                     opId <- getEventUuid
                     tell . Last $ Just opId
                     pure op{opId}
-        case lastEvent of
-            Nothing -> pure chunk
-            Just _  ->
-                pure StateChunk{stateType = rgaType, stateBody = stateBody'}
+        pure $ case lastEvent of
+            Nothing -> chunk
+            Just _  -> StateChunk stateBody'
   where
     eqAliveOnPayload
             Op{refId = Zero, payload = p1}
@@ -406,7 +410,7 @@ newFromText = newFromList . Text.unpack
 
 getAliveIndices :: (MonadE m, MonadObjectState (RGA a) m) => m [UUID]
 getAliveIndices = do
-    StateChunk{stateBody} <- getObjectStateChunk
+    StateChunk stateBody <- getObjectStateChunk
     let mItems =
             [ case refId of
                 Zero -> Just opId
@@ -432,7 +436,7 @@ insert
     -> m ()
 insert []    _         = pure ()
 insert items mPosition =
-    modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
         vertexIds <- getEventUuids $ ls60 $ genericLength items
         ops <-
             for (zip items vertexIds) $ \(item, vertexId) -> do
@@ -441,7 +445,7 @@ insert items mPosition =
         stateBody' <- case mPosition of
             Nothing -> pure $ ops <> stateBody
             Just position -> findAndInsertAfter position ops stateBody
-        pure chunk{stateBody = stateBody'}
+        pure $ StateChunk stateBody'
   where
     findAndInsertAfter pos newOps = go where
         go = \case
@@ -490,10 +494,10 @@ remove
 remove position =
     errorContext "RGA.remove" $
     errorContext ("position = " <> show position) $
-    modifyObjectStateChunk_ $ \chunk@StateChunk{stateBody} -> do
+    modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
         event <- getEventUuid
         stateBody' <- findAndTombstone event stateBody
-        pure chunk{stateBody = stateBody'}
+        pure $ StateChunk stateBody'
   where
     findAndTombstone event = go where
         go = \case
@@ -501,3 +505,6 @@ remove position =
             op@Op{opId} : ops
                 | opId == position -> pure $ op{refId = event} : ops
                 | otherwise        -> (op :) <$> go ops
+
+wireStateChunk :: [Op] -> WireStateChunk
+wireStateChunk stateBody = WireStateChunk{stateType = rgaType, stateBody}

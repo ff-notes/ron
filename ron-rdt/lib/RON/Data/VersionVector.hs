@@ -15,11 +15,14 @@ import           RON.Prelude
 import           Data.Hashable (hashWithSalt)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal
+import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
+                                    ReplicatedAsObject, getObject,
+                                    getObjectState, newObject, objectEncoding,
+                                    reducibleOpType, stateFromChunk,
+                                    stateToChunk)
 import           RON.Event (getEventUuid)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Object (Object), Op (..), StateChunk (..),
-                            UUID (UUID))
+import           RON.Types (Object (Object), Op (Op, opId), UUID (UUID), WireStateChunk (WireStateChunk, stateBody, stateType))
 import qualified RON.UUID as UUID
 
 type Origin = Word64
@@ -57,10 +60,10 @@ instance Reducible VersionVector where
     stateFromChunk ops =
         VersionVector $ Map.fromListWith latter [(opOrigin op, op) | op <- ops]
 
-    stateToChunk (VersionVector vv) = mkStateChunk $ Map.elems vv
+    stateToChunk (VersionVector vv) = Map.elems vv
 
-mkStateChunk :: [Op] -> StateChunk
-mkStateChunk stateBody = StateChunk{stateType = vvType, stateBody}
+wireStateChunk :: [Op] -> WireStateChunk
+wireStateChunk stateBody = WireStateChunk{stateType = vvType, stateBody}
 
 -- | Name-UUID to use as Version Vector type marker.
 vvType :: UUID
@@ -75,13 +78,9 @@ instance ReplicatedAsObject VersionVector where
     newObject (VersionVector vv) = do
         oid <- getEventUuid
         let ops = Map.elems vv
-        modify' $
-            (<>) $ Map.singleton oid $
-            StateChunk{stateType = vvType, stateBody = ops}
+        modify' $ Map.insert oid $ wireStateChunk ops
         pure $ Object oid
 
-    getObject = do
-        StateChunk{stateBody} <- getObjectStateChunk
-        pure $ stateFromChunk stateBody
+    getObject = getObjectState
 
     -- rempty = mempty

@@ -8,6 +8,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | LWW-per-field RDT
 module RON.Data.LWW (
@@ -25,7 +26,8 @@ import           RON.Prelude
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
-                                    Replicated, getObjectStateChunk,
+                                    Rep, Replicated, ReplicatedAsObject,
+                                    getObjectStateChunk,
                                     modifyObjectStateChunk_, newRon,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk, tryOptionFromRon)
@@ -34,8 +36,8 @@ import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (Object),
                             Op (Op, opId, payload, refId),
-                            StateChunk (StateChunk, stateBody, stateType),
-                            StateFrame, UUID)
+                            StateChunk (StateChunk), StateFrame, UUID,
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
 
@@ -62,10 +64,10 @@ instance Reducible LwwRep where
     stateFromChunk ops =
         LwwRep $ Map.fromListWith lww [(refId, op) | op@Op{refId} <- ops]
 
-    stateToChunk (LwwRep fields) = mkStateChunk $ Map.elems fields
+    stateToChunk (LwwRep fields) = Map.elems fields
 
-mkStateChunk :: [Op] -> StateChunk
-mkStateChunk stateBody = StateChunk{stateType = lwwType, stateBody}
+wireStateChunk :: [Op] -> WireStateChunk
+wireStateChunk stateBody = WireStateChunk{stateType = lwwType, stateBody}
 
 -- | Name-UUID to use as LWW type marker.
 lwwType :: UUID
@@ -83,28 +85,31 @@ newStruct fields = do
                 Just (Instance value) -> newRon value
                 Nothing               -> pure []
             pure $ Op event name payload
-    modify' $
-        (<>) $ Map.singleton event $ StateChunk{stateType = lwwType, stateBody}
+    modify' $ Map.insert event $ wireStateChunk stateBody
     pure event
 
 -- | Decode field value
 viewField
     :: (Replicated a, MonadE m, MonadState StateFrame m)
-    => UUID        -- ^ Field name
-    -> StateChunk  -- ^ LWW object chunk
+    => UUID               -- ^ Field name
+    -> StateChunk LwwRep  -- ^ LWW object chunk
     -> m (Maybe a)
-viewField field StateChunk{stateBody} =
+viewField field (StateChunk ops) =
     errorContext "LWW.viewField" $
     maybe (pure Nothing) tryOptionFromRon $
     fmap payload $
     maximumMayOn opId $
-    filter (\Op{refId} -> refId == field) stateBody
+    filter (\Op{refId} -> refId == field) ops
 
 -- | Read field value
 readField
-    :: (MonadE m, MonadObjectState struct m, Replicated field)
-    => UUID  -- ^ Field name
-    -> m (Maybe field)
+    ::  ( MonadE m
+        , MonadObjectState struct m
+        , Rep struct ~ LwwRep
+        , Replicated field
+        )
+    =>  UUID  -- ^ Field name
+    ->  m (Maybe field)
 readField field = do
     stateChunk <- getObjectStateChunk
     viewField field stateChunk
@@ -116,25 +121,24 @@ assignField
     -> Maybe a  -- ^ Value
     -> m ()
 assignField field mvalue =
-    modifyObjectStateChunk_ $ \StateChunk{stateBody} -> do
-        let chunk = filter (\Op{refId} -> refId /= field) stateBody
+    modifyObjectStateChunk_ $ \(StateChunk ops) -> do
+        let chunk = filter (\Op{refId} -> refId /= field) ops
         event <- getEventUuid
         p <- maybe (pure []) newRon mvalue
         let newOp = Op event field p
-        let chunk' = sortOn refId $ newOp : chunk
-        pure StateChunk{stateBody = chunk', stateType = lwwType}
+        pure $ StateChunk $ sortOn refId $ newOp : chunk
 
 -- | Pseudo-lens to an object inside a specified field
 zoomField
-    :: MonadE m
+    :: (MonadE m, ReplicatedAsObject struct)
     => UUID                     -- ^ Field name
     -> ObjectStateT field  m a  -- ^ Inner object modifier
     -> ObjectStateT struct m a
 zoomField field innerModifier =
     errorContext ("LWW.zoomField" <> show field) $ do
-        StateChunk{stateBody} <- getObjectStateChunk
-        let ops = filter (\Op{refId} -> refId == field) stateBody
-        Op{payload} <- case ops of
+        StateChunk ops <- getObjectStateChunk
+        let fieldOps = filter (\Op{refId} -> refId == field) ops
+        Op{payload} <- case fieldOps of
             []   -> throwError "empty chunk"
             [op] -> pure op
             _    -> throwError "unreduced state"

@@ -30,9 +30,9 @@ import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (..), ObjectFrame (..), Op (..), Payload,
-                            StateChunk (..), StateFrame,
-                            WireChunk (Closed, Query, Value), WireFrame,
-                            WireReducedChunk (..))
+                            StateFrame, WireChunk (Closed, Query, Value),
+                            WireFrame, WireReducedChunk (..),
+                            WireStateChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.UUID (UUID, zero)
 
@@ -178,7 +178,7 @@ serializePayload prev =
 -- | Serialize a state frame
 serializeStateFrame :: StateFrame -> ByteStringL
 serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs where
-    wrapChunk (objectId, StateChunk{stateType, stateBody}) =
+    wrapChunk (objectId, WireStateChunk{stateType, stateBody}) =
         Value
             WireReducedChunk
                 { wrcHeader = opZero{reducerId = stateType, objectId}

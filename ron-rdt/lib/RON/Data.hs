@@ -52,7 +52,8 @@ import           RON.Types (ClosedOp (..), Object (Object),
                             ObjectFrame (ObjectFrame, frame, uuid), Op (..),
                             StateChunk (..), StateFrame, UUID,
                             WireChunk (Closed, Query, Value), WireFrame,
-                            WireReducedChunk (..))
+                            WireReducedChunk (..),
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.UUID (pattern Zero)
 
 reducers :: Map UUID Reducer
@@ -92,8 +93,17 @@ isQuery = \case
 mkReducer :: forall a . Reducible a => (UUID, Reducer)
 mkReducer =
     ( reducibleOpType @a
-    , Reducer{wireReducer = mkWireReducer @a, stateReducer = reduceState @a}
+    , Reducer
+        {wireReducer = mkWireReducer @a, stateReducer = unsafeReduceState @a}
     )
+  where
+    -- | Reduce states using type @rep@ without checking 'stateType'
+    unsafeReduceState
+        :: forall rep
+        . Reducible rep => WireStateChunk -> WireStateChunk -> WireStateChunk
+    unsafeReduceState
+            WireStateChunk{stateBody = c1} WireStateChunk{stateBody = c2} =
+        wireStateChunk @rep $ reduceState (StateChunk c1) (StateChunk c2)
 
 mkWireReducer :: forall a . Reducible a => WireReducer
 mkWireReducer obj chunks = chunks' <> leftovers where
@@ -108,8 +118,7 @@ mkWireReducer obj chunks = chunks' <> leftovers where
             nState = sconcat $ fmap snd nStates
             (reducedState, unapplied') =
                 applyPatches nState (patches, closedOps)
-            StateChunk {stateBody = reducedStateBody} =
-                stateToChunk @a reducedState
+            reducedStateBody = stateToChunk @a reducedState
             rc = ReducedChunk{rcRef = Zero, rcBody = reducedStateBody}
             in
             (Just $ Value $ wrapRChunk rc, reduceUnappliedPatches @a unapplied')
@@ -150,7 +159,7 @@ mkWireReducer obj chunks = chunks' <> leftovers where
 reduceStateFrame :: MonadE m => StateFrame -> StateFrame -> m StateFrame
 reduceStateFrame s1 s2 =
     (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid chunk -> let
-        StateChunk{stateType} = chunk
+        WireStateChunk{stateType} = chunk
         in
         case reducers !? stateType of
             Just Reducer{stateReducer} ->

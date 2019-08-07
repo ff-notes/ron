@@ -39,9 +39,9 @@ import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (..), ObjectFrame (ObjectFrame), Op (..),
                             OpTerm (TClosed, THeader, TQuery, TReduced),
-                            Payload, StateChunk (..), StateFrame, UUID (UUID),
+                            Payload, StateFrame, UUID (UUID),
                             WireChunk (Closed, Query, Value), WireFrame,
-                            WireReducedChunk (..))
+                            WireReducedChunk (..), WireStateChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word2, Word4, Word60, b00, b0000, b01, b10, b11,
                                 ls60, safeCast)
@@ -411,7 +411,7 @@ findObjects = fmap Map.fromList . traverse loadBody where
             let ClosedOp{reducerId, objectId} = wrcHeader
             pure
                 ( objectId
-                , StateChunk{stateType = reducerId, stateBody = wrcBody}
+                , WireStateChunk{stateType = reducerId, stateBody = wrcBody}
                 )
         _ -> Left "expected reduced chunk"
 

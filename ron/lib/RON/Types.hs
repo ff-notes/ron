@@ -23,6 +23,7 @@ module RON.Types (
     WireChunk (..),
     WireFrame,
     WireReducedChunk (..),
+    WireStateChunk (..),
     -- * Op patterns
     OpPattern (..),
     opPattern,
@@ -108,16 +109,19 @@ data OpTerm = TClosed | TReduced | THeader | TQuery
     deriving (Eq, Show)
 
 -- | Reduced chunk representing an object state (i. e. high-level value)
-data StateChunk = StateChunk
+data WireStateChunk = WireStateChunk
     { stateType :: UUID
     , stateBody :: [Op]
     }
     deriving (Eq, Show)
 
+-- | Type-tagged version of 'WireStateChunk'
+newtype StateChunk a = StateChunk [Op]
+
 -- | Frame containing only state chunks.
 -- Must contain one main object and any number of other objects that are part of
 -- the main one.
-type StateFrame = Map UUID StateChunk
+type StateFrame = Map UUID WireStateChunk
 
 -- | Reference to an object
 newtype Object a = Object UUID

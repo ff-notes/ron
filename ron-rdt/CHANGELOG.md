@@ -9,6 +9,7 @@ and this project adheres to
 ### Added
 - Function `reduceState`
 - Function `reduceObjectStates`
+- Checking type field and correcting object reduce
 
 ### Changed
 - `Reducible` depends on `BoundedSemilattice`.
