@@ -10,6 +10,8 @@ and this project adheres to
 - Function `reduceState`
 - Function `reduceObjectStates`
 - Checking type field and correcting object reduce
+- Function `stateFromWireChunk`
+- Function `stateToWireChunk`
 
 ### Changed
 - `Reducible` depends on `BoundedSemilattice`.

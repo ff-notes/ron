@@ -23,6 +23,8 @@ module RON.Data (
     reduceObject,
     reduceStateFrame,
     reduceWireFrame,
+    stateFromWireChunk,
+    stateToWireChunk,
     -- * Object-state monad
     ObjectStateT,
     MonadObjectState,

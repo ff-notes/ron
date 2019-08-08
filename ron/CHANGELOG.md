@@ -13,6 +13,9 @@ and this project adheres to
 ### Changed
 - Renamed `ObjectState` to `ObjectFrame`.
 - Simplified `Error` type
+- Type `StateChunk` is split into two new:
+  - `StateChunk` is tagged on Haskell-type-level with its RDT
+  - `WireStateChunk` has RDT as a field, isomorphic to the old `StateChunk`
 
 ### Removed
 - Method `ReplicatedAsObject.objectOpType`
