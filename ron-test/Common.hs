@@ -53,9 +53,9 @@ loadCases = do
                 Right (chunksIn1, chunksOut1) ->
                     [ testProperty (BSLC.unpack $ RT.serializeUuid obj) $
                         reduceAndCompareChunks chunksIn2 chunksOut2
-                    | (obj, (chunksIn2, chunksOut2)) <-
+                    | not $ "06" `isPrefixOf` name
+                    , (obj, (chunksIn2, chunksOut2)) <-
                         Map.assocs $ zipDef [] [] chunksIn1 chunksOut1
-                    , not $ "06" `isPrefixOf` name
                     ]
     noteFiles <- collectFiles "../.ff"
     when (null noteFiles) $ fail "there must be some ff files"

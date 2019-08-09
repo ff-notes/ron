@@ -1,7 +1,6 @@
 {-# OPTIONS -Wno-orphans #-}
 
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Types where
 

@@ -96,8 +96,7 @@ viewField
     -> m (Maybe a)
 viewField field (StateChunk ops) =
     errorContext "LWW.viewField" $
-    maybe (pure Nothing) tryOptionFromRon $
-    fmap payload $
+    maybe (pure Nothing) (tryOptionFromRon . payload) $
     maximumMayOn opId $
     filter (\Op{refId} -> refId == field) ops
 

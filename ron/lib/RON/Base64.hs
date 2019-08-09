@@ -203,11 +203,10 @@ encodeLetter4 i = alphabet `BS.index` safeCast i
 
 -- | Encode a 60-bit number to a Base64 string
 encode60 :: Word60 -> ByteString
-encode60 w = BS.pack $
-    map (encodeLetter . leastSignificant6)
-        [ (safeCast w `shiftR` (6 * i)) .&. 0b111111 :: Word64
-        | i <- [9, 8 .. 0]
-        ]
+encode60 w = BS.pack
+    [ encodeLetter $ leastSignificant6 (safeCast w `shiftR` (6 * i) :: Word64)
+    | i <- [9, 8 .. 0]
+    ]
 
 -- | Encode a 60-bit number to a Base64 string, dropping trailing zeroes
 encode60short :: Word60 -> ByteString
