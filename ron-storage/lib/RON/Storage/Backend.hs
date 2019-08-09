@@ -140,8 +140,12 @@ createVersion
 createVersion mDoc newObj = case mDoc of
   Nothing -> save (DocId @a $ UUID.encodeBase32 uuid) []
   Just (docid, oldDoc) -> do
-    let Document {objectFrame = oldObj, versions, isTouched = IsTouched isTouched} =
-          oldDoc
+    let Document
+          { objectFrame = oldObj,
+            versions,
+            isTouched = IsTouched isTouched
+            } =
+            oldDoc
     when (newObj /= oldObj || length versions /= 1 || isTouched)
       $ save docid
       $ toList versions
