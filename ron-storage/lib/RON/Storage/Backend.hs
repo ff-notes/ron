@@ -123,8 +123,7 @@ newtype IsTouched = IsTouched Bool
 -- | Result of DB reading, loaded document with information about its versions
 data Document a
   = Document
-      { value :: ObjectFrame a,
-        -- ^ Merged value.
+      { objectFrame :: ObjectFrame a,
         versions :: NonEmpty DocVersion,
         isTouched :: IsTouched
         }
@@ -141,7 +140,7 @@ createVersion
 createVersion mDoc newObj = case mDoc of
   Nothing -> save (DocId @a $ UUID.encodeBase32 uuid) []
   Just (docid, oldDoc) -> do
-    let Document {value = oldObj, versions, isTouched = IsTouched isTouched} =
+    let Document {objectFrame = oldObj, versions, isTouched = IsTouched isTouched} =
           oldDoc
     when (newObj /= oldObj || length versions /= 1 || isTouched)
       $ save docid

@@ -25,16 +25,13 @@ import RON.Storage.Backend
   ( Collection (..),
     CollectionName,
     DocId (DocId),
-    Document (Document),
+    Document (Document, isTouched, objectFrame, versions),
     IsTouched (IsTouched),
     MonadStorage,
     createVersion,
     decodeDocId,
     getDocumentVersions,
-    isTouched,
-    readVersion,
-    value,
-    versions
+    readVersion
     )
 import RON.Types (ObjectFrame, UUID)
 import qualified RON.UUID as UUID
@@ -57,8 +54,8 @@ loadDocument docid = loadRetry (3 :: Int)
                 ++ " has not found."
             v : vs -> do
               let versions = v :| vs
-              let wrapDoc (value, isTouched) =
-                    Document {value, versions, isTouched}
+              let wrapDoc (objectFrame, isTouched) =
+                    Document {objectFrame, versions, isTouched}
               readResults <-
                 errorContext ("document " <> show docid)
                   $ for versions $ \ver ->
@@ -91,8 +88,8 @@ modify
   :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m b -> m b
 modify docid f = do
   oldDoc <- loadDocument docid
-  (b, value') <- runObjectState (value oldDoc) f
-  createVersion (Just (docid, oldDoc)) value'
+  (b, objectFrame') <- runObjectState (objectFrame oldDoc) f
+  createVersion (Just (docid, oldDoc)) objectFrame'
   pure b
 
 -- | Create document assuming it doesn't exist yet.

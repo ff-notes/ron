@@ -12,6 +12,7 @@ and this project adheres to
 ### Changed
 - `modify` now pops result of action (to use with `getObject`, for instance).
 - Renamed `ObjectState` to `ObjectFrame`
+- Renamed `Document.value` to `objectFrame`
 
 ### Removed
 - Concept of chunk version in RON protocol,
