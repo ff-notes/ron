@@ -147,13 +147,13 @@ mkInstanceReplicatedAOLww Struct {name, fields} = do
   vars <- traverse (newNameT . haskellName . ext) fields
   let packFields =
         listE
-          [ [e|($ronName', Instance <$> $(varE var))|]
+          [ [|($ronName', Instance <$> $(varE var))|]
             | Field {ext = XFieldEquipped {ronName}} <- toList fields,
               let ronName' = liftData ronName
             | var <- toList vars
             ]
       unpackFields =
-        [ bindS (varP var) [e|LWW.viewField $ronName' $(varE ops)|]
+        [ bindS (varP var) [|LWW.viewField $ronName' $(varE ops)|]
           | Field {ext = XFieldEquipped {ronName}} <- toList fields,
             let ronName' = liftData ronName
           | var <- toList vars
@@ -172,9 +172,9 @@ mkInstanceReplicatedAOLww Struct {name, fields} = do
             ]
   let readObjectImpl =
         doE
-          $ bindS (varP ops) [e|getObjectStateChunk|]
+          $ bindS (varP ops) [|getObjectStateChunk|]
           : unpackFields
-          ++ [noBindS [e|pure $consE|]]
+          ++ [noBindS [|pure $consE|]]
   [d|
     instance ReplicatedAsObject $type' where
 
@@ -195,7 +195,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
   vars <- traverse (newNameT . haskellName . ext) fields
   let packFields =
         listE
-          [ [e|($ronName', fmap Instance $(varE var))|]
+          [ [|($ronName', fmap Instance $(varE var))|]
             | Field {ext = XFieldEquipped {ronName}} <- toList fields,
               let ronName' = liftData ronName
             | var <- toList vars
@@ -203,7 +203,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
       unpackFields =
         [ bindS
             (varP var)
-            [e|
+            [|
               errorContext $(liftText haskellName)
                 $ $(orSetViewField mergeStrategy) $ronName' $(varE ops)
               |]
@@ -227,9 +227,9 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
             ]
   let readObjectImpl =
         doE
-          $ bindS (varP ops) [e|getObjectStateChunk|]
+          $ bindS (varP ops) [|getObjectStateChunk|]
           : unpackFields
-          ++ [noBindS [e|pure $consE|]]
+          ++ [noBindS [|pure $consE|]]
   [d|
     instance ReplicatedAsObject $type' where
 
@@ -269,14 +269,14 @@ mkAccessorsLww name' field = do
               => Maybe $guideType
               -> $m ()
               |],
-          valDP assign [e|LWW.assignField $ronName'|]
+          valDP assign [|LWW.assignField $ronName'|]
           ]
       readF =
         [ sigD read
             [t|
               (MonadE $m, MonadObjectState $type' $m) => $m (Maybe $guideType)
               |],
-          valDP read [e|LWW.readField $ronName'|]
+          valDP read [|LWW.readField $ronName'|]
           ]
       zoomF =
         [ sigD zoom
@@ -285,7 +285,7 @@ mkAccessorsLww name' field = do
               => ObjectStateT $guideType $m $a
               -> ObjectStateT $type' $m $a
               |],
-          valDP zoom [e|LWW.zoomField $ronName'|]
+          valDP zoom [|LWW.zoomField $ronName'|]
           ]
   sequenceA $ assignF ++ readF ++ zoomF
   where
@@ -308,7 +308,7 @@ mkAccessorsSet name' field = do
               => Maybe $guideType
               -> $m ()
               |],
-          valDP assign [e|ORSet.assignField $ronName'|]
+          valDP assign [|ORSet.assignField $ronName'|]
           ]
       readF =
         [ sigD read
@@ -316,7 +316,7 @@ mkAccessorsSet name' field = do
               (MonadE $m, MonadObjectState $type' $m) => $m (Maybe $guideType)
               |],
           valDP read
-            [e|
+            [|
               do
                 chunk <- getObjectStateChunk
                 $(orSetViewField mergeStrategy) $ronName' chunk
@@ -330,7 +330,7 @@ mkAccessorsSet name' field = do
               => ObjectStateT $(mkGuideType ronType) $m $a
               -> ObjectStateT $type' $m $a
               |],
-          valDP zoom [e|ORSet.zoomFieldObject $ronName'|]
+          valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
   sequenceA $ assignF ++ readF ++ zoomF
   where
