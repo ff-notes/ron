@@ -45,11 +45,12 @@ mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
 mkReplicated' :: Schema 'Resolved -> TH.DecsQ
 mkReplicated' = fmap fold . traverse fromDecl where
     fromDecl decl = case decl of
-        DAlias     a -> mkAlias a
-        DEnum      e -> mkEnum e
-        DOpaque    _ -> pure []
-        DStructLww s -> mkReplicatedStructLww s
-        DStructSet s -> mkReplicatedStructSet s
+        DAlias        a -> mkAlias a
+        DEnum         e -> mkEnum e
+        DOpaqueAtoms  _ -> pure []
+        DOpaqueObject _ -> pure []
+        DStructLww    s -> mkReplicatedStructLww s
+        DStructSet    s -> mkReplicatedStructSet s
 
 mkEnum :: TEnum -> TH.DecsQ
 mkEnum Enum{name, items} = do

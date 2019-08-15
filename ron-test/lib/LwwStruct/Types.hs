@@ -51,7 +51,7 @@ instance ReplicatedAsPayload Opaque49 where
     fromPayload = undefined
 
 [mkReplicated|
-    (opaque atoms Opaque49)
+    (opaque_atoms Opaque49)
 
     (struct_lww Struct51
         int1 Integer

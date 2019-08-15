@@ -65,12 +65,13 @@ prelude = Map.fromList
 instance FromEDN (Declaration 'Parsed) where
     parseEDN = withNoTag . withList $ \case
         func : args -> (`withSymbol'` func) $ \case
-            "alias"      -> DAlias     <$> parseList args
-            "enum"       -> DEnum      <$> parseList args
-            "opaque"     -> DOpaque    <$> parseList args
-            "struct_lww" -> DStructLww <$> parseList args
-            "struct_set" -> DStructSet <$> parseList args
-            name         -> fail $ "unknown declaration " ++ Text.unpack name
+            "alias"         -> DAlias        <$> parseList args
+            "enum"          -> DEnum         <$> parseList args
+            "opaque_atoms"  -> DOpaqueAtoms  <$> parseList args
+            "opaque_object" -> DOpaqueObject <$> parseList args
+            "struct_lww"    -> DStructLww    <$> parseList args
+            "struct_set"    -> DStructSet    <$> parseList args
+            name            -> fail $ "unknown declaration " ++ Text.unpack name
         [] -> fail "empty declaration"
 
 instance FromEDN TEnum where
@@ -85,16 +86,15 @@ instance FromEDN TEnum where
 
 instance FromEDN Opaque where
     parseEDN = withNoTag . withList $ \case
-        kind : nameSym : annotationVals ->
-            (`withSymbol'` kind) $ \case
-                "atoms"  -> go False
-                "object" -> go True
-                _        -> fail "opaque kind must be either atoms or object"
+        nameSym : annotationVals -> do
+            name        <- parseSymbol' nameSym
+            annotations <- parseAnnotations
+            pure Opaque{name, annotations}
+            -- (`withSymbol'` kind) $ \case
+            --     "atoms"  -> go False
+            --     "object" -> go True
+            --     _        -> fail "opaque kind must be either atoms or object"
           where
-            go isObject = do
-                name        <- parseSymbol' nameSym
-                annotations <- parseAnnotations
-                pure Opaque{isObject, name, annotations}
             parseAnnotations = case annotationVals of
                 [] -> pure defaultOpaqueAnnotations
                 _  -> fail "opaque annotations are not implemented yet"
@@ -115,11 +115,12 @@ rememberDeclaration decl = do
 
 declarationName :: Declaration stage -> TypeName
 declarationName = \case
-    DAlias     Alias {name} -> name
-    DEnum      Enum  {name} -> name
-    DOpaque    Opaque{name} -> name
-    DStructLww Struct{name} -> name
-    DStructSet Struct{name} -> name
+    DAlias        Alias {name} -> name
+    DEnum         Enum  {name} -> name
+    DOpaqueAtoms  Opaque{name} -> name
+    DOpaqueObject Opaque{name} -> name
+    DStructLww    Struct{name} -> name
+    DStructSet    Struct{name} -> name
 
 instance FromEDN (StructLww Parsed) where
     parseEDN = parseStruct "struct_lww"
@@ -198,11 +199,12 @@ collectDeclarations = traverse_ rememberDeclaration
 
 validateParsed :: MonadFail m => Env -> Schema Parsed -> m ()
 validateParsed Env{userTypes} = traverse_ $ \case
-    DAlias     Alias{target}  -> validateExpr target
-    DEnum      _              -> pure ()
-    DOpaque    _              -> pure ()
-    DStructLww Struct{fields} -> validateStruct fields
-    DStructSet Struct{fields} -> validateStruct fields
+    DAlias        Alias{target}  -> validateExpr target
+    DEnum         _              -> pure ()
+    DOpaqueAtoms  _              -> pure ()
+    DOpaqueObject _              -> pure ()
+    DStructLww    Struct{fields} -> validateStruct fields
+    DStructSet    Struct{fields} -> validateStruct fields
   where
     validateName name =
         unless
@@ -218,23 +220,22 @@ validateParsed Env{userTypes} = traverse_ $ \case
 
 validateResolved :: MonadFail m => Schema Resolved -> m ()
 validateResolved = traverse_ $ \case
-    DAlias     _                    -> pure ()
-    DEnum      _                    -> pure ()
-    DOpaque    _                    -> pure ()
-    DStructLww _                    -> pure ()
-    DStructSet Struct{name, fields} -> validateSetFields name fields
+    DAlias        _                    -> pure ()
+    DEnum         _                    -> pure ()
+    DOpaqueAtoms  _                    -> pure ()
+    DOpaqueObject _                    -> pure ()
+    DStructLww    _                    -> pure ()
+    DStructSet    Struct{name, fields} -> validateSetFields name fields
   where
     validateSetFields structName fields =
         void $ Map.traverseWithKey validateField fields
       where
         validateField fieldName field =
             case ronType of
-                TAtom   a       -> goAtom a
-                TEnum   _       -> goAtom TAUuid
-                TObject _       -> goObject
-                TOpaque Opaque{isObject}
-                    | isObject  -> goObject
-                    | otherwise -> goOpaqueAtoms
+                TAtom        a -> goAtom a
+                TEnum        _ -> goAtom TAUuid
+                TObject      _ -> goObject
+                TOpaqueAtoms _ -> goOpaqueAtoms
           where
             Field{ronType, annotations} = field
             FieldAnnotations{mergeStrategy} = annotations
@@ -280,11 +281,12 @@ evalSchema env = fst <$> userTypes' where
         DAlias Alias{name, target} -> let
             target' = evalType target
             in (DAlias Alias{name, target = target'}, Type0 target')
-        DEnum      t -> (DEnum t, Type0 $ TEnum t)
-        DOpaque    t -> (DOpaque t, Type0 $ TOpaque t)
-        DStructLww s ->
+        DEnum         t -> (DEnum t, Type0 $ TEnum t)
+        DOpaqueAtoms  t -> (DOpaqueAtoms t, Type0 $ TOpaqueAtoms t)
+        DOpaqueObject t -> (DOpaqueObject t, Type0 $ TObject $ TOpaqueObject t)
+        DStructLww    s ->
             (DStructLww &&& Type0 . TObject . TStructLww) $ evalStruct s
-        DStructSet s ->
+        DStructSet    s ->
             (DStructSet &&& Type0 . TObject . TStructSet) $ evalStruct s
 
     evalStruct :: Struct encoding Parsed -> Struct encoding Resolved

@@ -45,22 +45,23 @@ data TAtom = TAFloat | TAInteger | TAString | TAUuid
     deriving (Show)
 
 data RonType
-    = TAtom   TAtom
-    | TEnum   TEnum
-    | TObject TObject
-    | TOpaque Opaque
+    = TAtom        TAtom
+    | TEnum        TEnum
+    | TObject      TObject
+    | TOpaqueAtoms Opaque
     deriving (Show)
 
 data TEnum = Enum {name :: Text, items :: [Text]}
     deriving (Show)
 
 data TObject
-    = TORSet     RonType
-    | TORSetMap  RonType RonType
-    | TRga       RonType
-    | TStructLww (StructLww Resolved)
-    | TStructSet (StructSet Resolved)
+    = TORSet        RonType
+    | TORSetMap     RonType RonType
+    | TRga          RonType
+    | TStructLww    (StructLww Resolved)
+    | TStructSet    (StructSet Resolved)
     | TVersionVector
+    | TOpaqueObject Opaque
     deriving (Show)
 
 data StructEncoding = SELww | SESet
@@ -117,11 +118,12 @@ type family UseType (stage :: Stage) where
     UseType Equipped = RonType
 
 data Declaration stage
-    = DAlias     (Alias stage)
-    | DEnum       TEnum
-    | DOpaque     Opaque
-    | DStructLww (StructLww stage)
-    | DStructSet (StructSet stage)
+    = DAlias        (Alias stage)
+    | DEnum         TEnum
+    | DOpaqueAtoms  Opaque
+    | DOpaqueObject Opaque
+    | DStructLww    (StructLww stage)
+    | DStructSet    (StructSet stage)
 deriving instance
     (Show (UseType stage), Show (XField stage)) => Show (Declaration stage)
 
@@ -136,20 +138,19 @@ defaultOpaqueAnnotations :: OpaqueAnnotations
 defaultOpaqueAnnotations = OpaqueAnnotations{haskellType = Nothing}
 
 data Opaque = Opaque
-    { isObject    :: Bool
-    , name        :: Text
+    { name        :: Text
     , annotations :: OpaqueAnnotations
     }
     deriving (Show)
 
 opaqueObject :: Text -> OpaqueAnnotations -> RonType
-opaqueObject tyname = TOpaque . Opaque True tyname
+opaqueObject tyname = TObject . TOpaqueObject . Opaque tyname
 
 opaqueAtoms :: Text -> OpaqueAnnotations -> RonType
-opaqueAtoms tyname = TOpaque . Opaque False tyname
+opaqueAtoms tyname = TOpaqueAtoms . Opaque tyname
 
 opaqueAtoms_ :: Text -> RonType
-opaqueAtoms_ tyname = TOpaque $ Opaque False tyname defaultOpaqueAnnotations
+opaqueAtoms_ tyname = TOpaqueAtoms $ Opaque tyname defaultOpaqueAnnotations
 
 data Alias stage = Alias{name :: Text, target :: UseType stage}
 deriving instance Show (UseType stage) => Show (Alias stage)

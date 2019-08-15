@@ -323,7 +323,7 @@ mkAccessorsSet name' field = do
               |]
           ]
       zoomF = do
-        guard $ isObjectType ronType
+        TObject _ <- [ronType]
         [ sigD zoom
             [t|
               (MonadE $m, ReplicaClock $m)
@@ -350,9 +350,3 @@ orSetViewField = varE . \case
   Just Max -> 'ORSet.viewFieldMax
   Just Min -> 'ORSet.viewFieldMin
   Just Set -> 'ORSet.viewFieldSet
-
-isObjectType :: RonType -> Bool
-isObjectType = \case
-  TObject _ -> True
-  TOpaque Opaque{isObject} -> isObject
-  _ -> False
