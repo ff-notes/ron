@@ -180,7 +180,7 @@ objectEncoding = Encoding
     { encodingNewRon = \a -> do
         Object uuid <- newObject a
         pure [AUuid uuid]
-    , encodingFromRon = objectFromRon $ runReaderT getObject
+    , encodingFromRon = objectFromRon $ runReaderT readObject
     }
 
 -- | Standard implementation of 'Replicated' for 'ReplicatedAsPayload' types.
@@ -246,10 +246,7 @@ class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
     newObject :: (ReplicaClock m, MonadState StateFrame m) => a -> m (Object a)
 
     -- | Decode data
-    getObject :: (MonadE m, MonadObjectState a m) => m a
-
-    -- | Counterpart of 'mempty', but without an explicit 'Semigroup'
-    -- rempty :: a
+    readObject :: (MonadE m, MonadObjectState a m) => m a
 
 objectFromRon :: MonadE m => (Object a -> m a) -> Payload -> m a
 objectFromRon handler atoms = case atoms of

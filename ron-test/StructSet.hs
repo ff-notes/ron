@@ -13,8 +13,8 @@ import qualified Data.Map.Strict as Map
 import           Hedgehog (MonadTest, Property, annotate, evalEither,
                            evalExceptT, failure, property, (===))
 
-import           RON.Data (evalObjectState, execObjectState, getObject,
-                           newObjectFrame)
+import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
+                           readObject)
 import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
@@ -127,7 +127,7 @@ prop_structSet = property $ do
     state1 === state2
 
     -- decode newly created object
-    example3 <- evalEither $ evalObjectState state2 getObject
+    example3 <- evalEither $ evalObjectState state2 readObject
     example0 === example3
 
     -- apply operations to the object (frame)
@@ -160,7 +160,7 @@ prop_structSet = property $ do
             checkCausality
 
     -- decode object after modification
-    example4 <- evalEither $ evalObjectState state4 getObject
+    example4 <- evalEither $ evalObjectState state4 readObject
     example4expect === example4
 
     -- serialize object after modification

@@ -10,8 +10,8 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
-import           RON.Data (evalObjectState, execObjectState, getObject,
-                           newObjectFrame)
+import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
+                           readObject)
 import           RON.Data.ORSet (ORSet (ORSet), addValue, findAnyAlive',
                                  removeValue, zoomItem)
 import           RON.Event (ReplicaId, applicationSpecific)
@@ -75,7 +75,7 @@ prop_orSet =
         state1 === state2
 
         -- decode newly created object
-        example3 <- evalEither $ evalObjectState state2 getObject
+        example3 <- evalEither $ evalObjectState state2 readObject
         example0 === example3
 
         -- apply operations to the object (frame)
@@ -91,7 +91,7 @@ prop_orSet =
                         removeValue "octaves"
 
         -- decode object after modification
-        example4 <- evalEither $ evalObjectState state4 getObject
+        example4 <- evalEither $ evalObjectState state4 readObject
         example4expect === example4
 
         -- serialize object after modification

@@ -40,12 +40,11 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Rep, Replicated (encoding),
                                     ReplicatedAsObject, ReplicatedAsPayload,
                                     eqPayload, eqRef, fromPayload, fromRon,
-                                    getObject, getObjectState,
-                                    getObjectStateChunk,
+                                    getObjectState, getObjectStateChunk,
                                     modifyObjectStateChunk_, newObject, newRon,
-                                    objectEncoding, rconcat, reduceObjectStates,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk)
+                                    objectEncoding, rconcat, readObject,
+                                    reduceObjectStates, reducibleOpType,
+                                    stateFromChunk, stateToChunk)
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
@@ -124,7 +123,7 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
         modify' $ Map.insert oid $ wireStateChunk ops
         pure $ Object oid
 
-    getObject = do
+    readObject = do
         StateChunk ops <- getObjectStateChunk
         mItems <- for ops $ \Op{refId, payload} -> case refId of
             Zero -> do

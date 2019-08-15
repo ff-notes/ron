@@ -39,7 +39,7 @@ import RON.Data
   ( MonadObjectState,
     ObjectStateT,
     Replicated (encoding),
-    ReplicatedAsObject (Rep, getObject, newObject),
+    ReplicatedAsObject (Rep, newObject, readObject),
     getObjectStateChunk,
     objectEncoding
     )
@@ -170,7 +170,7 @@ mkInstanceReplicatedAOLww Struct {name, fields} = do
             | Field {ext = XFieldEquipped {haskellName}} <- toList fields
             | var <- toList vars
             ]
-  let getObjectImpl =
+  let readObjectImpl =
         doE
           $ bindS (varP ops) [e|getObjectStateChunk|]
           : unpackFields
@@ -182,7 +182,7 @@ mkInstanceReplicatedAOLww Struct {name, fields} = do
 
       newObject $consP = Object <$> LWW.newStruct $packFields
 
-      getObject = errorContext $(liftText errCtx) $getObjectImpl
+      readObject = errorContext $(liftText errCtx) $readObjectImpl
     |]
   where
     name' = mkNameT name
@@ -225,7 +225,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
             | Field {ext = XFieldEquipped {haskellName}} <- toList fields
             | var <- toList vars
             ]
-  let getObjectImpl =
+  let readObjectImpl =
         doE
           $ bindS (varP ops) [e|getObjectStateChunk|]
           : unpackFields
@@ -237,7 +237,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
 
       newObject $consP = Object <$> ORSet.newStruct $packFields
 
-      getObject = errorContext $(liftText errCtx) $getObjectImpl
+      readObject = errorContext $(liftText errCtx) $readObjectImpl
     |]
   where
     name' = mkNameT name

@@ -45,12 +45,12 @@ import           RON.Data.Internal (MonadObjectState,
                                     ReducedChunk (ReducedChunk, rcBody, rcRef),
                                     Reducible, Rep, Replicated (encoding),
                                     ReplicatedAsObject, ReplicatedAsPayload,
-                                    Unapplied, applyPatches, fromRon, getObject,
+                                    Unapplied, applyPatches, fromRon,
                                     getObjectStateChunk,
                                     modifyObjectStateChunk_, newObject, newRon,
-                                    objectEncoding, reduceUnappliedPatches,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk, toPayload)
+                                    objectEncoding, readObject,
+                                    reduceUnappliedPatches, reducibleOpType,
+                                    stateFromChunk, stateToChunk, toPayload)
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Semilattice (Semilattice)
@@ -339,7 +339,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
         modify' $ Map.insert oid $ wireStateChunk ops
         pure $ Object oid
 
-    getObject = do
+    readObject = do
         StateChunk stateBody <- getObjectStateChunk
         mItems <- for stateBody $ \Op{refId, payload} -> case refId of
             Zero -> Just <$> fromRon payload
@@ -421,7 +421,7 @@ getAliveIndices = do
 
 -- | Read elements from RGA
 getList :: (Replicated a, MonadE m, MonadObjectState (RGA a) m) => m [a]
-getList = coerce <$> getObject
+getList = coerce <$> readObject
 
 -- | Read characters from 'RgaString'
 getText :: (MonadE m, MonadObjectState RgaString m) => m Text

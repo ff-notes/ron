@@ -9,8 +9,8 @@ import           RON.Prelude
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
-import           RON.Data (evalObjectState, execObjectState, getObject,
-                           newObjectFrame)
+import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
+                           readObject)
 import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
@@ -128,7 +128,7 @@ prop_lwwStruct = property $ do
     ex1state === ex2state
 
     -- decode newly created object
-    example3 <- evalEither $ evalObjectState ex2state getObject
+    example3 <- evalEither $ evalObjectState ex2state readObject
     example0 === example3
 
     -- apply operations to the object (frame)
@@ -159,7 +159,7 @@ prop_lwwStruct = property $ do
             opt6_assign Nothing
 
     -- decode object after modification
-    example4 <- evalEither $ evalObjectState ex4state getObject
+    example4 <- evalEither $ evalObjectState ex4state readObject
     example4expect === example4
 
     -- serialize object after modification

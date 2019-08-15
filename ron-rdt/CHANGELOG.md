@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Renamed `getObject` to `readObject`
 
 ## [0.8] - 2019-08-10
 ### Added

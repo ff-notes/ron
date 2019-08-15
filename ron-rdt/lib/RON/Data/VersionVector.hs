@@ -16,8 +16,8 @@ import           Data.Hashable (hashWithSalt)
 import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
-                                    ReplicatedAsObject, getObject,
-                                    getObjectState, newObject, objectEncoding,
+                                    ReplicatedAsObject, getObjectState,
+                                    newObject, objectEncoding, readObject,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
 import           RON.Event (getEventUuid)
@@ -81,6 +81,6 @@ instance ReplicatedAsObject VersionVector where
         modify' $ Map.insert oid $ wireStateChunk ops
         pure $ Object oid
 
-    getObject = getObjectState
+    readObject = getObjectState
 
     -- rempty = mempty

@@ -26,7 +26,7 @@ import           RON.Data (evalObjectState, execObjectState)
 import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
 import           RON.Storage.Backend (DocId (DocId), Document (Document),
-                                      createVersion, value)
+                                      createVersion, objectFrame)
 import           RON.Storage.FS (loadDocument, runStorage)
 import qualified RON.Storage.FS as Storage
 
@@ -40,8 +40,8 @@ main = do
     let dataDir = "demo/data"
     h <- Storage.newHandle dataDir
     (document, text) <- runStorage h $ do
-        document@Document{value = obj} <- loadDocument theDoc
-        text <- evalObjectState obj RGA.getText
+        document@Document{objectFrame} <- loadDocument theDoc
+        text <- evalObjectState objectFrame RGA.getText
         pure (document, text)
     rhythm <- mkRhythm
     runUI rhythm (mkApp h) MyState{editor = mkEditor text, document}
@@ -98,14 +98,14 @@ handleEvent storage state@MyState{editor} = \case
 sync :: Storage.Handle -> MyState -> Bool -> IO MyState
 sync storage state@MyState{editor, document} reload =
     runStorage storage $ do
-        do  let Document{value = obj} = document
-            obj' <-
-                execObjectState obj $
+        do  let Document{objectFrame} = document
+            objectFrame' <-
+                execObjectState objectFrame $
                 RGA.editText $ Text.unlines $ getEditContents editor
-            createVersion (Just (theDoc, document)) obj'
+            createVersion (Just (theDoc, document)) objectFrame'
         if reload then do
-            document'@Document{value = obj} <- loadDocument theDoc
-            text <- evalObjectState obj RGA.getText
+            document'@Document{objectFrame} <- loadDocument theDoc
+            text <- evalObjectState objectFrame RGA.getText
             let editor' = applyEdit (replaceZipper text) editor
             pure MyState{editor = editor', document = document'}
         else
