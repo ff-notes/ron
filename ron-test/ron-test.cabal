@@ -57,7 +57,7 @@ test-suite test
         containers,
         data-default,
         directory,
-        hedgehog,
+        hedgehog >= 1,
         mtl,
         tasty-hedgehog,
         tasty-th,

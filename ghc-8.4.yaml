@@ -13,6 +13,10 @@ extra-deps:
   # ron-schema:
   - hedn-0.2.0.1
 
+  # ron-test:
+  - tasty-hedgehog-1.0.0.1
+  - hedgehog-1.0
+
   # swarm:
   - inline-c-cpp-0.3.0.2
 
