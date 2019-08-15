@@ -84,8 +84,7 @@ try :: MonadError e m => m a -> m (Either e a)
 try ma = (Right <$> ma) `catchError` (pure . Left)
 
 -- | Load document, apply changes and put it back to storage
-modify
-  :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m b -> m b
+modify :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m b -> m b
 modify docid f = do
   oldDoc <- loadDocument docid
   (b, objectFrame') <- runObjectState (objectFrame oldDoc) f
