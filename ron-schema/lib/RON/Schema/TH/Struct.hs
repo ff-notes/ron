@@ -187,7 +187,7 @@ mkInstanceReplicatedAOLww Struct {name, fields} = do
   where
     name' = mkNameT name
     type' = conT name'
-    errCtx = "getObject @" <> name
+    errCtx = "readObject @" <> name
 
 mkInstanceReplicatedAOSet :: StructSet Equipped -> TH.DecsQ
 mkInstanceReplicatedAOSet Struct {name, fields} = do
@@ -242,7 +242,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
   where
     name' = mkNameT name
     type' = conT name'
-    errCtx = "getObject @" <> name
+    errCtx = "readObject @" <> name
 
 mkHaskellFieldName :: StructAnnotations -> Text -> Text
 mkHaskellFieldName annotations base = prefix <> base'
