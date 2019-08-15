@@ -8,9 +8,6 @@ and this project adheres to
 ## [Unreleased]
 
 ## [0.9] - 2019-08-10
-### Added
-- Type alias Payload = [Atom]
-
 ### Changed
 - `modify` now pops result of action (to use with `getObject`, for instance).
 - Renamed `ObjectState` to `ObjectFrame`

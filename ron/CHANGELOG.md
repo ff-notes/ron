@@ -9,6 +9,7 @@ and this project adheres to
 
 ## [0.8] - 2019-08-10
 ### Added
+- Type alias `Payload = [Atom]`
 - Associated type `ReplicatedAsObject.Rep`
 - Function `correct`
 
