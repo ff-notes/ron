@@ -23,6 +23,7 @@ module RON.Data.ORSet (
     zoomItem,
     -- * struct_set
     assignField,
+    getFieldObject,
     newStruct,
     viewField,
     viewFieldLWW,
@@ -280,6 +281,20 @@ filterAliveFieldIdsAndPayloads field ops =
     , field' == field
     ]
 
+-- | Find object field, merge all versions, return 'Nothing' if no versions
+getFieldObject
+    :: (MonadE m, MonadObjectState struct m, ReplicatedAsObject a)
+    => UUID                 -- ^ Field name
+    -> m (Maybe (Object a))
+getFieldObject field =
+    errorContext "ORSet.getFieldObject" $ do
+        StateChunk ops <- getObjectStateChunk
+        let payloads = filterAliveFieldPayloads field ops
+            refs = [ref | AUuid ref : _ <- payloads]
+        case refs of
+            []   -> pure Nothing
+            p:ps -> fmap Just $ reduceObjectStates $ fmap Object $ p :| ps
+
 -- | Decode field value, merge all versions, return 'Nothing' if no versions
 viewField
     :: (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
@@ -357,7 +372,7 @@ zoomFieldObject
     ->  ObjectStateT field  m a  -- ^ Inner object modifier
     ->  ObjectStateT struct m a
 zoomFieldObject field innerModifier =
-    errorContext ("ORSet.zoomFieldObject" <> show field) $ do
+    errorContext ("ORSet.zoomFieldObject " <> show field) $ do
         (StateChunk stateBody) <- getObjectStateChunk
         let objectIds =
                 [ objectId

@@ -7,7 +7,8 @@ and this project adheres to
 
 ## [Unreleased]
 ### Added
-- Generate `struct_set._zoom` for opaque objects, too
+- Generate `struct_set.$(field)_zoom` for opaque object field
+- Generate `struct_set.$(field)_get` for object field
 
 ### Changed
 - `opaque atoms`  is now `opaque_atoms`

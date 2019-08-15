@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Function `ORSet.getFieldObject`
+
 ### Changed
 - Renamed `getObject` to `readObject`
 

@@ -305,10 +305,18 @@ mkAccessorsSet name' field = do
         [ sigD assign
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
-              => Maybe $guideType
-              -> $m ()
+              => Maybe $guideType -> $m ()
               |],
           valDP assign [|ORSet.assignField $ronName'|]
+          ]
+      getF = do
+        TObject _ <- [ronType]
+        [ sigD getName
+            [t|
+              (MonadE $m, MonadObjectState $type' $m)
+              => $m (Maybe (Object $guideType))
+              |],
+          valDP getName [|ORSet.getFieldObject $ronName'|]
           ]
       readF =
         [ sigD read
@@ -327,21 +335,21 @@ mkAccessorsSet name' field = do
         [ sigD zoom
             [t|
               (MonadE $m, ReplicaClock $m)
-              => ObjectStateT $(mkGuideType ronType) $m $a
-              -> ObjectStateT $type' $m $a
+              => ObjectStateT $guideType $m $a -> ObjectStateT $type' $m $a
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
-  sequenceA $ assignF ++ readF ++ zoomF
+  sequenceA $ assignF ++ getF ++ readF ++ zoomF
   where
     Field {ronType, annotations = FieldAnnotations {mergeStrategy}, ext} = field
     XFieldEquipped {haskellName, ronName} = ext
     ronName' = liftData ronName
     type' = conT name'
     guideType = mkGuideType ronType
-    assign = mkNameT $ haskellName <> "_assign"
-    read   = mkNameT $ haskellName <> "_read"
-    zoom   = mkNameT $ haskellName <> "_zoom"
+    assign  = mkNameT $ haskellName <> "_assign"
+    getName = mkNameT $ haskellName <> "_get"
+    read    = mkNameT $ haskellName <> "_read"
+    zoom    = mkNameT $ haskellName <> "_zoom"
 
 orSetViewField :: Maybe MergeStrategy -> TH.ExpQ
 orSetViewField = varE . \case
