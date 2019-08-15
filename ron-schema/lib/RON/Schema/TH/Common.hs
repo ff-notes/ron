@@ -50,8 +50,7 @@ mkGuideType typ = case typ of
         TAInteger -> [t| Int64  |]
         TAString  -> [t| Text   |]
         TAUuid    -> [t| UUID   |]
-    TComposite t -> case t of
-        TEnum     Enum{name} -> conT $ mkNameT name
+    TEnum Enum{name} -> conT $ mkNameT name
     TObject t -> case t of
         TORSet     item         -> wrap  ''ORSet    item
         TORSetMap  key value    -> wrap2 ''ORSetMap key value

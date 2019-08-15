@@ -229,11 +229,10 @@ validateResolved = traverse_ $ \case
       where
         validateField fieldName field =
             case ronType of
-                TAtom       a   -> goAtom a
-                TComposite  c   -> case c of
-                    TEnum   _   -> goAtom TAUuid
-                TObject     _   -> goObject
-                TOpaque     Opaque{isObject}
+                TAtom   a       -> goAtom a
+                TEnum   _       -> goAtom TAUuid
+                TObject _       -> goObject
+                TOpaque Opaque{isObject}
                     | isObject  -> goObject
                     | otherwise -> goOpaqueAtoms
           where
@@ -281,7 +280,7 @@ evalSchema env = fst <$> userTypes' where
         DAlias Alias{name, target} -> let
             target' = evalType target
             in (DAlias Alias{name, target = target'}, Type0 target')
-        DEnum      t -> (DEnum t, Type0 $ TComposite $ TEnum t)
+        DEnum      t -> (DEnum t, Type0 $ TEnum t)
         DOpaque    t -> (DOpaque t, Type0 $ TOpaque t)
         DStructLww s ->
             (DStructLww &&& Type0 . TObject . TStructLww) $ evalStruct s

@@ -9,6 +9,9 @@ and this project adheres to
 ### Added
 - Generate `struct_set._zoom` for opaque objects, too
 
+### Removed
+- `TComposite`, now `TEnum _ :: RonType`
+
 ## [0.8] - 2019-08-10
 ### Added
 - `Float` atom type

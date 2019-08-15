@@ -23,7 +23,6 @@ module RON.Schema (
     StructLww,
     StructSet,
     TAtom (..),
-    TComposite (..),
     TEnum (..),
     TObject (..),
     TypeExpr (..),
@@ -46,15 +45,10 @@ data TAtom = TAFloat | TAInteger | TAString | TAUuid
     deriving (Show)
 
 data RonType
-    = TAtom      TAtom
-    | TComposite TComposite
-    | TObject    TObject
-    | TOpaque    Opaque
-    deriving (Show)
-
--- | TODO(2019-08-04, cblp) do we need is as a group?
-newtype TComposite
-    = TEnum   TEnum
+    = TAtom   TAtom
+    | TEnum   TEnum
+    | TObject TObject
+    | TOpaque Opaque
     deriving (Show)
 
 data TEnum = Enum {name :: Text, items :: [Text]}
