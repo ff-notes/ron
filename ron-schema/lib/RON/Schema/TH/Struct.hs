@@ -322,17 +322,16 @@ mkAccessorsSet name' field = do
                 $(orSetViewField mergeStrategy) $ronName' chunk
               |]
           ]
-      zoomF = case ronType of
-        TObject _ ->
-          [ sigD zoom
-              [t|
-                (MonadE $m, ReplicaClock $m)
-                => ObjectStateT $(mkGuideType ronType) $m $a
-                -> ObjectStateT $type' $m $a
-                |],
-            valDP zoom [e|ORSet.zoomFieldObject $ronName'|]
-            ]
-        _ -> []
+      zoomF = do
+        guard $ isObjectType ronType
+        [ sigD zoom
+            [t|
+              (MonadE $m, ReplicaClock $m)
+              => ObjectStateT $(mkGuideType ronType) $m $a
+              -> ObjectStateT $type' $m $a
+              |],
+          valDP zoom [e|ORSet.zoomFieldObject $ronName'|]
+          ]
   sequenceA $ assignF ++ readF ++ zoomF
   where
     Field {ronType, annotations = FieldAnnotations {mergeStrategy}, ext} = field
@@ -351,3 +350,9 @@ orSetViewField = varE . \case
   Just Max -> 'ORSet.viewFieldMax
   Just Min -> 'ORSet.viewFieldMin
   Just Set -> 'ORSet.viewFieldSet
+
+isObjectType :: RonType -> Bool
+isObjectType = \case
+  TObject _ -> True
+  TOpaque Opaque{isObject} -> isObject
+  _ -> False
