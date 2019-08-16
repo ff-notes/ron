@@ -262,14 +262,14 @@ mkAccessorsLww :: TH.Name -> Field Equipped -> TH.DecsQ
 mkAccessorsLww name' field = do
   a <- varT <$> newName "a"
   m <- varT <$> newName "m"
-  let assignF =
-        [ sigD assign
+  let setF =
+        [ sigD set
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
               => Maybe $guideType
               -> $m ()
               |],
-          valDP assign [|LWW.assignField $ronName'|]
+          valDP set [|LWW.assignField $ronName'|]
           ]
       readF =
         [ sigD read
@@ -287,27 +287,35 @@ mkAccessorsLww name' field = do
               |],
           valDP zoom [|LWW.zoomField $ronName'|]
           ]
-  sequenceA $ assignF ++ readF ++ zoomF
+  sequenceA $ setF ++ readF ++ zoomF
   where
     Field {ronType, ext = XFieldEquipped {haskellName, ronName}} = field
     ronName' = liftData ronName
     type' = conT name'
     guideType = mkGuideType ronType
-    assign = mkNameT $ haskellName <> "_assign"
-    read   = mkNameT $ haskellName <> "_read"
-    zoom   = mkNameT $ haskellName <> "_zoom"
+    set  = mkNameT $ haskellName <> "_set"
+    read = mkNameT $ haskellName <> "_read"
+    zoom = mkNameT $ haskellName <> "_zoom"
 
 mkAccessorsSet :: TH.Name -> Field Equipped -> TH.DecsQ
 mkAccessorsSet name' field = do
   a <- varT <$> newName "a"
   m <- varT <$> newName "m"
-  let assignF =
-        [ sigD assign
+  let setF =
+        [ sigD set
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
-              => Maybe $guideType -> $m ()
+              => $guideType -> $m ()
               |],
-          valDP assign [|ORSet.assignField $ronName'|]
+          valDP set [|ORSet.assignField $ronName' . Just|]
+          ]
+      clearF =
+        [ sigD clear
+            [t|
+              (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) => $m ()
+              |],
+          valDP clear
+            [|ORSet.assignField $ronName' (Nothing :: Maybe $guideType)|]
           ]
       getF = do
         TObject _ <- [ronType]
@@ -339,14 +347,15 @@ mkAccessorsSet name' field = do
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
-  sequenceA $ assignF ++ getF ++ readF ++ zoomF
+  sequenceA $ setF ++ clearF ++ getF ++ readF ++ zoomF
   where
     Field {ronType, annotations = FieldAnnotations {mergeStrategy}, ext} = field
     XFieldEquipped {haskellName, ronName} = ext
     ronName' = liftData ronName
     type' = conT name'
     guideType = mkGuideType ronType
-    assign  = mkNameT $ haskellName <> "_assign"
+    set     = mkNameT $ haskellName <> "_set"
+    clear   = mkNameT $ haskellName <> "_clear"
     getName = mkNameT $ haskellName <> "_get"
     read    = mkNameT $ haskellName <> "_read"
     zoom    = mkNameT $ haskellName <> "_zoom"
