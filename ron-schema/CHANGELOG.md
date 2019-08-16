@@ -13,6 +13,10 @@ and this project adheres to
 ### Changed
 - `opaque atoms`  is now `opaque_atoms`
 - `opaque object` is now `opaque_object`
+- `struct_set.$(field)_assign` is split into:
+  - `struct_set.$(field)_set` now accepts only "whole" (not Nothing) values
+  - `struct_set.$(field)_clear` assigns Nothing
+- Renamed `struct_lww.$(field)_assign` to `struct_lww.$(field)_set`
 
 ### Removed
 - `TComposite`, now `TEnum _ :: RonType`

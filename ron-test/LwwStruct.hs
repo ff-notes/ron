@@ -21,9 +21,9 @@ import           RON.Event.Simulation (runNetworkSim, runNetworkSimT,
 import           RON.Text (parseObject, serializeObject)
 import           RON.Util (ByteStringL)
 
-import           LwwStruct.Types (Struct51 (..), int1_assign, opt5_read,
-                                  opt6_assign, opt6_read, set4_zoom, str2_zoom,
-                                  str3_assign, str3_read)
+import           LwwStruct.Types (Struct51 (..), int1_set, opt5_read, opt6_read,
+                                  opt6_set, set4_zoom, str2_zoom, str3_read,
+                                  str3_set)
 import           Orphans ()
 import           String (s)
 
@@ -137,11 +137,11 @@ prop_lwwStruct = property $ do
         runNetworkSimT $ runReplicaSimT replica $
         execObjectState ex2state $ do
             -- plain field
-            int1_assign $ Just 166
+            int1_set $ Just 166
             str2_zoom $ RGA.edit "145"
             str3Value <- str3_read
             str3Value === Just "190"
-            str3_assign $ Just "206"
+            str3_set $ Just "206"
             set4_zoom $
                 ORSet.addValue
                     Struct51
@@ -156,7 +156,7 @@ prop_lwwStruct = property $ do
             opt5Value === Nothing
             opt6Value <- opt6_read
             opt6Value === Just 74
-            opt6_assign Nothing
+            opt6_set Nothing
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState ex4state readObject
