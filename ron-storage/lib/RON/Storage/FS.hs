@@ -149,12 +149,10 @@ emitDocumentChanged docid = Storage $ do
 -- | Create new storage handle
 newHandle :: FilePath -> IO Handle
 newHandle hDataDir = do
-    randomId <- getRandomId
+    randomId <- fst . random <$> newTFGen
     macAddress <- getMacAddress
     let hReplicaId = fromMaybe randomId macAddress
     newHandleWithReplicaId hDataDir hReplicaId
-  where
-    getRandomId = fst . random <$> newTFGen
 
 newHandleWithReplicaId :: FilePath -> Word64 -> IO Handle
 newHandleWithReplicaId hDataDir hReplicaId = do
