@@ -146,7 +146,8 @@ emitDocumentChanged docid = Storage $ do
     Handle{hOnDocumentChanged} <- ask
     liftIO . atomically $ writeTChan hOnDocumentChanged $ CollectionDocId docid
 
--- | Create new storage handle
+-- | Create new storage handle.
+-- Uses MAC address for replica id or generates a random one.
 newHandle :: FilePath -> IO Handle
 newHandle hDataDir = do
     macAddress <- getMacAddress

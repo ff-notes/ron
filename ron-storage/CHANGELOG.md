@@ -6,6 +6,11 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Function `newHandleWithReplicaId`
+
+### Changed
+- Function `newHandle` takes random replica id if cannot get MAC address
 
 ## [0.9] - 2019-08-10
 ### Changed
