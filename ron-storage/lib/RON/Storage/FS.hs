@@ -67,9 +67,9 @@ newtype Storage a = Storage (ExceptT Error (ReaderT Handle EpochClock) a)
 
 -- | Run a 'Storage' action
 runStorage :: Handle -> Storage a -> IO a
-runStorage h@Handle{hReplica, hClock} (Storage action) = do
+runStorage h@Handle{replica, clock} (Storage action) = do
     res <-
-        runEpochClock hReplica hClock $
+        runEpochClock replica clock $
         (`runReaderT` h) $
         runExceptT action
     either throwIO pure res
@@ -81,10 +81,10 @@ instance ReplicaClock Storage where
 
 instance MonadStorage Storage where
     getCollections = Storage $ do
-        Handle{hDataDir} <- ask
+        Handle{dataDir} <- ask
         liftIO $
-            listDirectory hDataDir
-            >>= filterM (doesDirectoryExist . (hDataDir </>))
+            listDirectory dataDir
+            >>= filterM (doesDirectoryExist . (dataDir </>))
 
     getDocuments :: forall doc. Collection doc => Storage [DocId doc]
     getDocuments = map DocId <$> listDirectoryIfExists (collectionName @doc)
@@ -93,30 +93,30 @@ instance MonadStorage Storage where
 
     saveVersionContent docid version content = do
         Storage $ do
-            Handle{hDataDir} <- ask
-            let docdir = hDataDir </> docDir docid
+            Handle{dataDir} <- ask
+            let docdir = dataDir </> docDir docid
             liftIO $ do
                 createDirectoryIfMissing True docdir
                 BSL.writeFile (docdir </> version) content
         emitDocumentChanged docid
 
     loadVersionContent docid version = Storage $ do
-        Handle{hDataDir} <- ask
-        liftIO $ BSL.readFile $ hDataDir </> docDir docid </> version
+        Handle{dataDir} <- ask
+        liftIO $ BSL.readFile $ dataDir </> docDir docid </> version
 
     deleteVersion docid version = Storage $ do
-        Handle{hDataDir} <- ask
+        Handle{dataDir} <- ask
         liftIO $ do
-            let file = hDataDir </> docDir docid </> version
+            let file = dataDir </> docDir docid </> version
             removeFile file
             `catch` \e ->
                 unless (isDoesNotExistError e) $ throwIO e
 
     changeDocId old new = do
         renamed <- Storage $ do
-            Handle{hDataDir} <- ask
-            let oldPath = hDataDir </> docDir old
-                newPath = hDataDir </> docDir new
+            Handle{dataDir} <- ask
+            let oldPath = dataDir </> docDir old
+                newPath = dataDir </> docDir new
             oldPathCanon <- liftIO $ canonicalizePath oldPath
             newPathCanon <- liftIO $ canonicalizePath newPath
             let pathsDiffer = newPathCanon /= oldPathCanon
@@ -135,16 +135,16 @@ instance MonadStorage Storage where
 
 -- | Storage handle (uses the “Handle pattern”).
 data Handle = Handle
-    { hClock             :: IORef EpochTime
-    , hDataDir           :: FilePath
-    , hReplica           :: ReplicaId
-    , hOnDocumentChanged :: TChan CollectionDocId
+    { clock             :: IORef EpochTime
+    , dataDir           :: FilePath
+    , replica           :: ReplicaId
+    , onDocumentChanged :: TChan CollectionDocId
     }
 
 emitDocumentChanged :: Collection a => DocId a -> Storage ()
 emitDocumentChanged docid = Storage $ do
-    Handle{hOnDocumentChanged} <- ask
-    liftIO . atomically $ writeTChan hOnDocumentChanged $ CollectionDocId docid
+    Handle{onDocumentChanged} <- ask
+    liftIO . atomically $ writeTChan onDocumentChanged $ CollectionDocId docid
 
 -- | Create new storage handle.
 -- Uses MAC address for replica id or generates a random one.
@@ -157,17 +157,17 @@ newHandle hDataDir = do
     newHandleWithReplicaId hDataDir replicaId
 
 newHandleWithReplicaId :: FilePath -> Word64 -> IO Handle
-newHandleWithReplicaId hDataDir replicaId = do
+newHandleWithReplicaId dataDir replicaId = do
     time <- getCurrentEpochTime
-    hClock <- newIORef time
-    let hReplica = applicationSpecific replicaId
-    hOnDocumentChanged <- newBroadcastTChanIO
-    pure Handle{hDataDir, hClock, hReplica, hOnDocumentChanged}
+    clock <- newIORef time
+    let replica = applicationSpecific replicaId
+    onDocumentChanged <- newBroadcastTChanIO
+    pure Handle{dataDir, clock, replica, onDocumentChanged}
 
 listDirectoryIfExists :: FilePath -> Storage [FilePath]
 listDirectoryIfExists relpath = Storage $ do
-    Handle{hDataDir} <- ask
-    let dir = hDataDir </> relpath
+    Handle{dataDir} <- ask
+    let dir = dataDir </> relpath
     liftIO $ do
         exists <- doesDirectoryExist dir
         if exists then listDirectory dir else pure []
@@ -196,8 +196,8 @@ getMacAddress = do
         + fromIntegral b0
 
 subscribeForever :: Handle -> (CollectionDocId -> IO ()) -> IO ()
-subscribeForever Handle{hOnDocumentChanged} action = do
-    childChan <- atomically $ dupTChan hOnDocumentChanged
+subscribeForever Handle{onDocumentChanged} action = do
+    childChan <- atomically $ dupTChan onDocumentChanged
     forever $ do
         docId <- atomically $ readTChan childChan
         action docId
