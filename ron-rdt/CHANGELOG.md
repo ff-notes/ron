@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - Function `ORSet.getFieldObject`
+- Export `ORSetRep` constructor
 
 ### Changed
 - Renamed `getObject` to `readObject`

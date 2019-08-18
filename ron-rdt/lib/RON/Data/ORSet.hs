@@ -13,7 +13,7 @@ module RON.Data.ORSet (
     ORSet (..),
     ORSetItem (..),
     ORSetMap,
-    ORSetRep,
+    ORSetRep (..),
     addRef,
     addValue,
     findAnyAlive,
