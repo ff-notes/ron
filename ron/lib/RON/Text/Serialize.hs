@@ -22,7 +22,7 @@ import Control.Monad.State.Strict (state)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import Data.List (elem)
+import Data.ByteString.Lazy.Char8 (cons, snoc, elem)
 import qualified Data.Map.Strict as Map
 import RON.Prelude
 import RON.Text.Serialize.UUID
@@ -47,11 +47,8 @@ import RON.Util (ByteStringL)
 
 -- | Serialize a common frame
 serializeWireFrame :: WireFrame -> ByteStringL
-serializeWireFrame chunks =
-  (`BSLC.snoc` '.')
-    . fold
-    . (`evalState` opZero)
-    $ traverse serializeChunk chunks
+serializeWireFrame =
+  (`snoc` '.') . fold . (`evalState` opZero) . traverse serializeChunk
 
 -- | Serialize a sequence of common frames
 serializeWireFrames :: [WireFrame] -> ByteStringL
@@ -103,7 +100,7 @@ serializeClosedOpZip this = state $ \prev ->
         )
   where
     this' = op this
-    key c u = [BSLC.cons c u | not $ BSL.null u]
+    key c u = [c `cons` u | not $ BSL.null u]
 
 -- | Serialize a reduced op with compression in stream context
 serializeReducedOpZip
@@ -120,7 +117,7 @@ serializeReducedOpZip opObject this = state $ \prev ->
       op = keys ++ [payloadAtoms | not $ BSL.null payloadAtoms]
    in (BSLC.unwords op, this)
   where
-    key c u = [c `BSLC.cons` u | not $ BSL.null u]
+    key c u = [c `cons` u | not $ BSL.null u]
 
 -- | Serialize a context-free atom
 serializeAtom :: Atom -> ByteStringL
@@ -138,13 +135,11 @@ serializeAtomZip = \case
 -- If unambiguous, i.e. contains a '.' or an 'e'/'E', the prefix '^' is skipped.
 serializeFloatAtom :: Double -> ByteStringL
 serializeFloatAtom float
-  | isDistinguishableFromUuid = asByteString
-  | otherwise = '^' `BSLC.cons` asByteString
+  | isDistinguishableFromUuid = bs
+  | otherwise = '^' `cons` bs
   where
-    asString = show float
-    isDistinguishableFromUuid =
-      '.' `elem` asString || 'e' `elem` asString || 'E' `elem` asString
-    asByteString = BSLC.pack asString
+    isDistinguishableFromUuid = '.' `elem` bs || 'e' `elem` bs || 'E' `elem` bs
+    bs = BSLC.pack $ show float
 
 -- | Serialize an integer atom.
 -- Since integers are always unambiguous, the prefix '=' is always skipped.
@@ -156,7 +151,7 @@ serializeString :: Text -> ByteStringL
 serializeString =
   wrapSingleQuotes . escapeApostrophe . stripDoubleQuotes . Json.encode
   where
-    wrapSingleQuotes = (`BSLC.snoc` '\'') . BSLC.cons '\''
+    wrapSingleQuotes = (`snoc` '\'') . cons '\''
     stripDoubleQuotes = BSL.init . BSL.tail
     escapeApostrophe s
       | BSL.null s2 = s1
@@ -168,7 +163,7 @@ serializeUuidAtom' :: UUID -> State UUID ByteStringL
 serializeUuidAtom' u =
   -- TODO(2019-08-19, cblp): Check if uuid can be unambiguously serialized and
   -- if so, skip the prefix.
-  state $ \prev -> (BSLC.cons '>' $ serializeUuidAtom prev u, u)
+  state $ \prev -> (cons '>' $ serializeUuidAtom prev u, u)
 
 -- | Serialize a payload in stream context
 serializePayload
