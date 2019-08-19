@@ -20,8 +20,7 @@ where
 
 import Control.Monad.State.Strict (state)
 import qualified Data.Aeson as Json
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSLC
+import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.ByteString.Lazy.Char8 (cons, snoc, elem)
 import qualified Data.Map.Strict as Map
 import RON.Prelude
@@ -64,11 +63,11 @@ serializeChunk = \case
 -- | Serialize a reduced chunk
 serializeReducedChunk :: Bool -> WireReducedChunk -> State ClosedOp ByteStringL
 serializeReducedChunk isQuery WireReducedChunk {wrcHeader, wrcBody} =
-  BSLC.unlines <$> liftA2 (:) serializeHeader serializeBody
+  BSL.unlines <$> liftA2 (:) serializeHeader serializeBody
   where
     serializeHeader = do
       h <- serializeClosedOpZip wrcHeader
-      pure $ BSLC.unwords [h, if isQuery then "?" else "!"]
+      pure $ BSL.unwords [h, if isQuery then "?" else "!"]
     serializeBody = state $ \ClosedOp {op = opBefore, ..} ->
       let (body, opAfter) =
             (`runState` opBefore)
@@ -90,7 +89,7 @@ serializeClosedOpZip this = state $ \prev ->
       evt = serializeUuidKey (opId prev') (objectId this) (opId this')
       ref = serializeUuidKey (refId prev') (opId this') (refId this')
       payloadAtoms = serializePayload (objectId this) (payload this')
-   in ( BSLC.unwords
+   in ( BSL.unwords
           $ key '*' typ
           ++ key '#' obj
           ++ key '@' evt
@@ -115,7 +114,7 @@ serializeReducedOpZip opObject this = state $ \prev ->
         | BSL.null evt && BSL.null ref = ["@"]
         | otherwise = key '@' evt ++ key ':' ref
       op = keys ++ [payloadAtoms | not $ BSL.null payloadAtoms]
-   in (BSLC.unwords op, this)
+   in (BSL.intercalate "\t" op, this)
   where
     key c u = [c `cons` u | not $ BSL.null u]
 
@@ -139,12 +138,12 @@ serializeFloatAtom float
   | otherwise = '^' `cons` bs
   where
     isDistinguishableFromUuid = '.' `elem` bs || 'e' `elem` bs || 'E' `elem` bs
-    bs = BSLC.pack $ show float
+    bs = BSL.pack $ show float
 
 -- | Serialize an integer atom.
 -- Since integers are always unambiguous, the prefix '=' is always skipped.
 serializeIntegerAtom :: Int64 -> ByteStringL
-serializeIntegerAtom = BSLC.pack . show
+serializeIntegerAtom = BSL.pack . show
 
 -- | Serialize a string atom
 serializeString :: Text -> ByteStringL
@@ -157,7 +156,7 @@ serializeString =
       | BSL.null s2 = s1
       | otherwise = s1 <> "\\'" <> escapeApostrophe (BSL.tail s2)
       where
-        (s1, s2) = BSLC.break (== '\'') s
+        (s1, s2) = BSL.break (== '\'') s
 
 serializeUuidAtom' :: UUID -> State UUID ByteStringL
 serializeUuidAtom' u =
@@ -171,7 +170,7 @@ serializePayload
   -> Payload
   -> ByteStringL
 serializePayload prev =
-  BSLC.unwords . (`evalState` prev) . traverse serializeAtomZip
+  BSL.unwords . (`evalState` prev) . traverse serializeAtomZip
 
 -- | Serialize a state frame
 serializeStateFrame :: StateFrame -> ByteStringL
