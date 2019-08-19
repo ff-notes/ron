@@ -67,7 +67,7 @@ serializeReducedChunk isQuery WireReducedChunk {wrcHeader, wrcBody} =
   where
     serializeHeader = do
       h <- serializeClosedOpZip wrcHeader
-      pure $ BSL.unwords [h, if isQuery then "?" else "!"]
+      pure $ BSL.intercalate "\t" [h, if isQuery then "?" else "!"]
     serializeBody = state $ \ClosedOp {op = opBefore, ..} ->
       let (body, opAfter) =
             (`runState` opBefore)
@@ -89,7 +89,7 @@ serializeClosedOpZip this = state $ \prev ->
       evt = serializeUuidKey (opId prev') (objectId this) (opId this')
       ref = serializeUuidKey (refId prev') (opId this') (refId this')
       payloadAtoms = serializePayload (objectId this) (payload this')
-   in ( BSL.unwords
+   in ( BSL.intercalate "\t"
           $ key '*' typ
           ++ key '#' obj
           ++ key '@' evt
