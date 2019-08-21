@@ -82,5 +82,3 @@ instance ReplicatedAsObject VersionVector where
         pure $ Object oid
 
     readObject = getObjectState
-
-    -- rempty = mempty

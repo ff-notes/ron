@@ -133,8 +133,6 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
             _    -> pure Nothing
         pure . ORSet $ catMaybes mItems
 
-    -- rempty = ORSet []
-
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => Payload -> m ()
 commonAdd payload =
