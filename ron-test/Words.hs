@@ -14,7 +14,7 @@ import           RON.Data (evalObjectState, execObjectState, newObjectFrameWith,
 import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
 import           RON.Event (applicationSpecific)
-import           RON.Event.Simulation (runNetworkSim, runReplicaSim)
+import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Types (ObjectFrame)
 
 main :: IO ()
@@ -63,7 +63,7 @@ stems word
 rgaTrick1 :: Text -> Text -> (ObjectFrame RgaString, ObjectFrame RgaString)
 rgaTrick1 begin branch1 =
     either (error . show) id .
-    runNetworkSim . runReplicaSim (applicationSpecific 1) . runExceptT $ do
+    runNetworkSimT . runReplicaSimT (applicationSpecific 1) $ do
         begin'   <- newObjectFrameWith     $ RGA.newFromText begin
         branch1' <- execObjectState begin' $ RGA.editText branch1
         pure (begin', branch1')
@@ -71,7 +71,7 @@ rgaTrick1 begin branch1 =
 rgaTrick2 :: (ObjectFrame RgaString, ObjectFrame RgaString) -> Text -> Text
 rgaTrick2 (begin', branch1') branch2 =
     either (error . show) id .
-    runNetworkSim . runReplicaSim (applicationSpecific 2) . runExceptT $ do
+    runNetworkSimT . runReplicaSimT (applicationSpecific 2) $ do
         branch2' <- execObjectState begin' $ RGA.editText branch2
         end'     <- reduceObject branch1' branch2'
         evalObjectState end' RGA.getText

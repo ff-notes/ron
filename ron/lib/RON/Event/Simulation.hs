@@ -5,13 +5,9 @@
 -- 'ReplicaSim' provides 'Replica' and 'Clock' instances,
 -- replicas may interchange data while they are connected in a 'NetworkSim'.
 module RON.Event.Simulation (
-    NetworkSim,
     NetworkSimT,
-    ReplicaSim,
     ReplicaSimT,
-    runNetworkSim,
     runNetworkSimT,
-    runReplicaSim,
     runReplicaSimT,
 ) where
 
@@ -32,13 +28,9 @@ newtype NetworkSimT m a = NetworkSim (StateT (HashMap ReplicaId Word60) m a)
 instance MonadTrans NetworkSimT where
     lift = NetworkSim . lift
 
-type NetworkSim = NetworkSimT Identity
-
 -- | ReplicaSim inside Lamport clock simulation.
 newtype ReplicaSimT m a = ReplicaSim (ReaderT ReplicaId (NetworkSimT m) a)
     deriving (Applicative, Functor, Monad, MonadError e)
-
-type ReplicaSim = ReplicaSimT Identity
 
 instance MonadTrans ReplicaSimT where
     lift = ReplicaSim . lift . lift
@@ -77,24 +69,18 @@ instance MonadFail m => MonadFail (ReplicaSimT m) where
 -- Usage:
 --
 -- @
--- runNetworkSim $ do
---     'runReplicaSim' r1 $ do
+-- 'runExceptT' . runNetworkSimT $ do
+--     'runReplicaSimT' r1 $ do
 --         actions...
---     'runReplicaSim' r2 $ do
+--     'runReplicaSimT' r2 $ do
 --         actions...
---     'runReplicaSim' r1 $ ...
+--     'runReplicaSimT' r1 $ ...
 -- @
 --
--- Each 'runNetworkSim' starts its own networks.
+-- Each 'runNetworkSimT' starts its own networks.
 -- One shouldn't use in one network events generated in another.
-runNetworkSim :: NetworkSim a -> a
-runNetworkSim (NetworkSim action) = evalState action mempty
-
 runNetworkSimT :: Monad m => NetworkSimT m a -> m a
 runNetworkSimT (NetworkSim action) = evalStateT action mempty
-
-runReplicaSim :: ReplicaId -> ReplicaSim a -> NetworkSim a
-runReplicaSim rid (ReplicaSim action) = runReaderT action rid
 
 runReplicaSimT :: ReplicaId -> ReplicaSimT m a -> NetworkSimT m a
 runReplicaSimT rid (ReplicaSim action) = runReaderT action rid

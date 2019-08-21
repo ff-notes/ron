@@ -6,6 +6,10 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Removed
+- Types `NetworkSim`, `ReplicaSim`, functions `runNetworkSim`, `runReplicaSim`.
+  Use `NetworkSimT`, `ReplicaSimT`, functions `runNetworkSimT`, `runReplicaSimT`
+  instead.
 
 ## [0.8] - 2019-08-10
 ### Added

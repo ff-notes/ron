@@ -15,7 +15,8 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Error (Error)
 import           RON.Event (ReplicaClock, applicationSpecific)
-import           RON.Event.Simulation (ReplicaSim, runNetworkSim, runReplicaSim)
+import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
+                                       runReplicaSimT)
 import           RON.Util (ByteStringL)
 
 import           RON.Storage (Collection, CollectionName, collectionName)
@@ -33,13 +34,13 @@ type DocumentId = FilePath
 
 -- * Storage simulation
 
-newtype StorageSim a = StorageSim (StateT TestDB (ExceptT Error ReplicaSim) a)
+newtype StorageSim a = StorageSim (StateT TestDB (ReplicaSimT (Either Error)) a)
     deriving (Applicative, Functor, Monad, MonadError Error, ReplicaClock)
 
 runStorageSim :: TestDB -> StorageSim a -> Either Error (a, TestDB)
 runStorageSim db (StorageSim action) =
-    runNetworkSim $ runReplicaSim (applicationSpecific 34) $
-    runExceptT $ runStateT action db
+    runNetworkSimT $ runReplicaSimT (applicationSpecific 34) $
+    runStateT action db
 
 instance MonadStorage StorageSim where
     getCollections = StorageSim $ gets Map.keys

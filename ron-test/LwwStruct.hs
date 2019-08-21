@@ -16,8 +16,7 @@ import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
 import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
-import           RON.Event.Simulation (runNetworkSim, runNetworkSimT,
-                                       runReplicaSim, runReplicaSimT)
+import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Util (ByteStringL)
 
@@ -118,8 +117,8 @@ example4expect = Struct51
 prop_lwwStruct :: Property
 prop_lwwStruct = property $ do
     -- create an object
-    let ex1state =
-            runNetworkSim $ runReplicaSim replica $ newObjectFrame example0
+    ex1state <-
+        runNetworkSimT $ runReplicaSimT replica $ newObjectFrame example0
     let (oid, ex1ser) = serializeObject ex1state
     prep ex1expect === prep ex1ser
 
