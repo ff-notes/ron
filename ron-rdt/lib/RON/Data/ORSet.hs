@@ -1,5 +1,7 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -40,7 +42,11 @@ module RON.Data.ORSet (
 
 import           RON.Prelude
 
+import           Data.HashSet (HashSet)
+import qualified Data.HashSet as HashSet
 import qualified Data.Map.Strict as Map
+import           Data.Set (Set)
+import qualified Data.Set as Set
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Rep, Replicated (encoding),
@@ -108,38 +114,53 @@ setType :: UUID
 setType = $(UUID.liftName "set")
 
 -- | Type-directing wrapper for typed OR-Set.
--- 'Eq' instance is purely technical, it doesn't use 'Ord', nor 'Hashable',
--- so its result may be confusing.
-newtype ORSet a = ORSet [a]
-    deriving (Eq, Show)
-{- TODO(2019-07-24, cblp, #102) data family ORSet c a where
-    newtype instance ORSet Ord      a = ORSetOrd  (Set     a)
-    newtype instance ORSet Hashable a = ORSetHash (HashSet a)
--}
+data ORSet c a where
+    ORSetOrd  :: Set     a -> ORSet Ord      a
+    ORSetHash :: HashSet a -> ORSet Hashable a
 
-instance Replicated a => Replicated (ORSet a) where
+instance (Ord a, Replicated a) => Replicated (ORSet Ord a) where
     encoding = objectEncoding
 
-instance Replicated a => ReplicatedAsObject (ORSet a) where
-    type Rep (ORSet a) = ORSetRep
+instance (Eq a, Hashable a, Replicated a) => Replicated (ORSet Hashable a) where
+    encoding = objectEncoding
 
-    newObject (ORSet items) = do
-        ops <- for items $ \item -> do
-            event <- getEventUuid
-            payload <- newRon item
-            pure $ Op event Zero payload
-        oid <- getEventUuid
-        modify' $ Map.insert oid $ wireStateChunk ops
-        pure $ ObjectRef oid
+instance (Ord a, Replicated a) => ReplicatedAsObject (ORSet Ord a) where
+    type Rep (ORSet Ord a) = ORSetRep
 
-    readObject = do
-        StateChunk ops <- getObjectStateChunk
-        mItems <- for ops $ \Op{refId, payload} -> case refId of
-            Zero -> do
-                item <- fromRon payload
-                pure $ Just item
-            _    -> pure Nothing
-        pure . ORSet $ catMaybes mItems
+    newObject (ORSetOrd items) = newObject' $ toList items
+
+    readObject = ORSetOrd . Set.fromList <$> readObject'
+
+instance
+    (Eq a, Hashable a, Replicated a) => ReplicatedAsObject (ORSet Hashable a)
+    where
+
+    type Rep (ORSet Hashable a) = ORSetRep
+
+    newObject (ORSetHash items) = newObject' $ toList items
+
+    readObject = ORSetHash . HashSet.fromList <$> readObject'
+
+newObject'
+    :: (MonadState StateFrame m, ReplicaClock m, Replicated a)
+    => [a] -> m (ObjectRef (ORSet c a))
+newObject' items = do
+    ops <- for items $ \item -> do
+        event <- getEventUuid
+        payload <- newRon item
+        pure $ Op event Zero payload
+    oid <- getEventUuid
+    modify' $ Map.insert oid $ wireStateChunk ops
+    pure $ ObjectRef oid
+
+readObject' :: (MonadE m, MonadObjectState (ORSet c a) m, Replicated a) => m [a]
+readObject' = do
+    StateChunk ops <- getObjectStateChunk
+    fmap catMaybes . for ops $ \Op{refId, payload} -> case refId of
+        Zero -> do
+            item <- fromRon payload
+            pure $ Just item
+        _ -> pure Nothing
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => Payload -> m ()
@@ -150,20 +171,20 @@ commonAdd payload =
 
 -- | Encode a value and add a it to the OR-Set
 addValue
-    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m)
+    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState (ORSet c a) m)
     => a -> m ()
 addValue item = do
     payload <- newRon item
     commonAdd payload
 
 addRef
-    :: (ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m)
+    :: (ReplicaClock m, MonadE m, MonadObjectState (ORSet c a) m)
     => ObjectRef a -> m ()
 addRef (ObjectRef itemUuid) = commonAdd [AUuid itemUuid]
 
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
 commonRemove
-    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
+    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet c a) m)
     => (Payload -> m Bool) -> m ()
 commonRemove isTarget =
     modifyObjectStateChunk_ $ \(StateChunk chunk) -> do
@@ -189,7 +210,7 @@ commonRemove isTarget =
                     pure $ stateToChunk state'
 
 removeObjectIf
-    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
+    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet c a) m)
     => ObjectStateT a m Bool -> m ()
 removeObjectIf isTarget = commonRemove $ \case
     AUuid uuid' : _ -> do
@@ -200,7 +221,7 @@ removeObjectIf isTarget = commonRemove $ \case
 -- | Remove an atomic value from the OR-Set
 removeValue
     ::  ( ReplicatedAsPayload a
-        , MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m
+        , MonadE m, ReplicaClock m, MonadObjectState (ORSet c a) m
         )
     => a -> m ()
 removeValue v = commonRemove $ pure . eqPayload v
@@ -256,7 +277,7 @@ removeFieldValueIfP field isTarget =
 
 -- | Remove an object reference from the OR-Set
 removeRef
-    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
+    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet c a) m)
     => ObjectRef a -> m ()
 removeRef r = commonRemove $ pure . eqRef r
 
@@ -267,8 +288,10 @@ newtype ORSetItem a = ORSetItem UUID
 -- | Go from modification of the whole set to the modification of an item
 -- object.
 zoomItem
-    :: MonadE m
-    => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
+    :: (MonadE m, Rep (ORSet c item) ~ ORSetRep)
+    => ORSetItem item
+    -> ObjectStateT item m a
+    -> ObjectStateT (ORSet c item) m a
 zoomItem (ORSetItem key) innerModifier = do
     ORSetRep opMap <- getObjectState
     itemValueRef <- case Map.lookup key opMap of
@@ -282,7 +305,11 @@ zoomItem (ORSetItem key) innerModifier = do
 
 -- | Find any alive item. If no alive item found, return 'Nothing'.
 findAnyAlive
-    :: (MonadE m, MonadObjectState (ORSet item) m) => m (Maybe (ORSetItem item))
+    ::  ( MonadE m
+        , MonadObjectState (ORSet c item) m
+        , Rep (ORSet c item) ~ ORSetRep
+        )
+    =>  m (Maybe (ORSetItem item))
 findAnyAlive = do
     ORSetRep opMap <- getObjectState
     let aliveItems = [op | op@Op{refId = Zero} <- toList opMap]
@@ -292,14 +319,18 @@ findAnyAlive = do
 
 -- | Find any alive item. If no alive item found, report an error.
 findAnyAlive'
-    :: (MonadE m, MonadObjectState (ORSet item) m) => m (ORSetItem item)
+    ::  ( MonadE m
+        , MonadObjectState (ORSet c item) m
+        , Rep (ORSet c item) ~ ORSetRep
+        )
+    =>  m (ORSetItem item)
 findAnyAlive' = do
     mx <- findAnyAlive
     case mx of
         Just x  -> pure x
         Nothing -> throwErrorText "empty set"
 
-type ORSetMap k v = ORSet (k, v)
+type ORSetMap c k v = ORSet c (k, v)
 
 -- | Assign a value to a field, deleting all previous (observed) values.
 -- Assignment of 'Nothing' just deletes all values.

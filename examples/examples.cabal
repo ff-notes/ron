@@ -8,6 +8,7 @@ common common
     build-depends:
         -- global
         base,
+        containers,
         mtl,
         text,
         pretty-simple,

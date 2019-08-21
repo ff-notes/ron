@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad.Except
+import           Data.Set as Set
 import           Data.Text
 import           Debug.Pretty.Simple
 import           Text.Pretty.Simple
@@ -15,9 +16,9 @@ main =
     pPrint $ runExcept $ runNetworkSimT $ do
         state1 <-
             runReplicaSimT (applicationSpecific 1) $
-                newObjectFrame $ ORSet []
+                newObjectFrame $ ORSetOrd Set.empty
         pTraceShowM state1
         state2 <-
-            runReplicaSimT (applicationSpecific 2) $
-                execObjectState state1 $ ORSet.addValue $ ORSet ["ab" :: Text]
+            runReplicaSimT (applicationSpecific 2) $ execObjectState state1 $
+            ORSet.addValue $ ORSetOrd $ Set.fromList ["ab" :: Text]
         pTraceShowM state2
