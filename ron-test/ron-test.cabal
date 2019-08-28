@@ -93,3 +93,17 @@ executable words
         ron-rdt
     hs-source-dirs: .
     main-is: Words.hs
+
+test-suite formatting
+    import: language
+    build-depends:
+        -- global
+        directory,
+        filepath,
+        -- project
+        ron,
+    default-extensions:
+        FlexibleContexts
+        LambdaCase
+    type: exitcode-stdio-1.0
+    main-is: Formatting.hs
