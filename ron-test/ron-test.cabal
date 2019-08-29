@@ -98,8 +98,10 @@ test-suite formatting
     import: language
     build-depends:
         -- global
+        bytestring,
         directory,
         filepath,
+        typed-process,
         -- project
         ron,
     default-extensions:
