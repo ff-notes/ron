@@ -62,7 +62,7 @@ matrix:
         - (cd ron-storage && cabal check)
         # - (cd swarm       && cabal check)
     - name: weeder
-      install: $STACK build weeder
+      install: $STACK install weeder
       script: $STACK exec -- weeder
   allow_failures:
     - name: weeder
