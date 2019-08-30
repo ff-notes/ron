@@ -3,6 +3,11 @@ cabal-version:  2.2
 name:           ron-test
 version:        0
 
+flag style
+    description: Enable style check
+    default: False
+    manual: True
+
 common language
     build-depends: base >= 4.10 && < 4.13, integer-gmp
     default-extensions: MonadFailDesugaring NoImplicitPrelude StrictData
@@ -93,3 +98,22 @@ executable words
         ron-rdt
     hs-source-dirs: .
     main-is: Words.hs
+
+test-suite style
+    import: language
+    if flag(style)
+        buildable: True
+    else
+        buildable: False
+    build-depends:
+        -- global
+        bytestring,
+        directory,
+        extra,
+        filepath,
+        text,
+        typed-process,
+        -- project
+        ron,
+    type: exitcode-stdio-1.0
+    main-is: Style.hs

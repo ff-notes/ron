@@ -19,6 +19,7 @@ cache:
 addons:
   apt:
     packages:
+      - colordiff
       - libgmp-dev
 
 before_install:
@@ -64,5 +65,9 @@ matrix:
     - name: weeder
       install: $STACK install weeder
       script: $STACK exec -- weeder
+    - name: style
+      install: $STACK install ormolu
+      script: $STACK test --flag=ron-test:style :style
   allow_failures:
+    - name: style
     - name: weeder
