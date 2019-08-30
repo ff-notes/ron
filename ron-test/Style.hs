@@ -24,7 +24,7 @@ import System.Process.Typed
     )
 
 acceptableStyleFailRate :: Double
-acceptableStyleFailRate = 0.96
+acceptableStyleFailRate = 0.95
 
 main :: IO ()
 main =
