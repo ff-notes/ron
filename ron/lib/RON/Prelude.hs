@@ -23,6 +23,8 @@ module RON.Prelude (
     (?:),
 ) where
 
+import           RON.Prelude.Writer as X
+
 -- base
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
                                            many, optional, pure, some, (*>),
@@ -43,8 +45,6 @@ import           Control.Monad.State.Strict as X (MonadState, State, StateT,
                                                   modify', put, runState,
                                                   runStateT)
 import           Control.Monad.Trans as X (MonadTrans, lift)
-import           Control.Monad.Writer.Strict as X (MonadWriter, WriterT,
-                                                   runWriterT, tell)
 import           Data.Bifunctor as X (bimap)
 import           Data.Bool as X (Bool (False, True), not, otherwise, (&&), (||))
 import           Data.ByteString as X (ByteString)
@@ -53,10 +53,10 @@ import           Data.Coerce as X (Coercible, coerce)
 import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
-import           Data.Foldable as X (Foldable, and, asum, fold, foldMap, foldl',
-                                     foldr, for_, length, null, or, toList,
-                                     traverse_)
-import           Data.Function as X (const, flip, id, on, ($), (.))
+import           Data.Foldable as X (Foldable, and, asum, elem, fold, foldMap,
+                                     foldl', foldr, for_, length, null, or,
+                                     toList, traverse_)
+import           Data.Function as X (const, flip, id, on, ($), (&), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>), (<&>))
 import           Data.Functor.Identity as X (Identity)
 import           Data.Hashable as X (Hashable, hash)
@@ -95,7 +95,7 @@ import           GHC.Generics as X (Generic)
 import           GHC.Integer as X (Integer)
 import           GHC.Num as X (Num, negate, subtract, (*), (+), (-))
 import           GHC.Real as X (Integral, fromIntegral, mod, realToFrac, round,
-                                (^), (^^))
+                                (/), (^), (^^))
 import           GHC.Stack as X (HasCallStack)
 import           System.IO as X (FilePath, IO)
 import           Text.Read as X (readMaybe)

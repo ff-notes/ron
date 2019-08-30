@@ -23,7 +23,7 @@ import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.ByteString.Lazy.Char8 (cons, snoc, elem)
 import qualified Data.Map.Strict as Map
-import RON.Prelude
+import RON.Prelude hiding (elem)
 import RON.Text.Serialize.UUID
   ( serializeUuid,
     serializeUuidAtom,

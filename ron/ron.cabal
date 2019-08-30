@@ -41,6 +41,8 @@ library
         template-haskell,
         text,
         time,
+        transformers >= 0.5.6.0,
+            -- ^ Writer.CPS
         unordered-containers
     exposed-modules:
         RON.Base64
@@ -65,6 +67,7 @@ library
     other-modules:
         Attoparsec.Extra
         Data.ZigZag
+        RON.Prelude.Writer
     hs-source-dirs: lib
 
 benchmark bench
