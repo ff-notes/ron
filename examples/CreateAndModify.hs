@@ -2,7 +2,8 @@
 
 import           Control.Monad.Except
 import           Data.Text
-import           Debug.Trace
+import           Debug.Pretty.Simple
+import           Text.Pretty.Simple
 
 import           RON.Data
 import           RON.Data.ORSet as ORSet
@@ -11,12 +12,12 @@ import           RON.Event.Simulation
 
 main :: IO ()
 main =
-    print $ runExcept $ runNetworkSimT $ do
+    pPrint $ runExcept $ runNetworkSimT $ do
         state1 <-
             runReplicaSimT (applicationSpecific 1) $
                 newObjectFrame $ ORSet []
-        traceShowM state1
+        pTraceShowM state1
         state2 <-
             runReplicaSimT (applicationSpecific 2) $
                 execObjectState state1 $ ORSet.addValue $ ORSet ["ab" :: Text]
-        traceShowM state2
+        pTraceShowM state2
