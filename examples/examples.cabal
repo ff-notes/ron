@@ -10,6 +10,7 @@ common common
         base,
         mtl,
         text,
+        pretty-simple,
         -- project
         ron,
         ron-rdt,
