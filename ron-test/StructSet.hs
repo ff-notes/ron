@@ -36,7 +36,6 @@ example0 = StructSet13
     , str2 = Just $ RGA "275"
     , str3 = Just "190"
     , set4 = Nothing
-    , opt5 = Nothing
     , nst6 = Nothing
     }
 
@@ -49,12 +48,11 @@ state1expect = [s|
     *set    #B/0000000DrW+r3pl1c4           !
                                     @`}KUW  >int1   275
                                     @}OUW   >nst6
-                                    @}WUW   >opt5
-                                    @}lUW   >set4
-                                    @{10UW  >str2   >B/0000001GUW+r3pl1c4
-                                    @}LcW   >str3   '190'
+                                    @}WUW   >set4
+                                    @}lUW   >str2   >B/00000010UW+r3pl1c4
+                                    @{15cW  >str3   '190'
 
-    *rga    #{1GUW                  @0      !
+    *rga    #{10UW                  @0      !
                                     @`]g6   '2'
                                     @)7     '7'
                                     @)8     '5'
@@ -64,47 +62,44 @@ state1expect = [s|
 state4expect :: ByteStringL
 state4expect = [s|
     *set    #B/0000000DrW+r3pl1c4                   !
-                                    @`}WUW          >opt5
-                                    @{10UW          >str2 >B/0000001GUW+r3pl1c4
-                                    @}ZdW           >int1 166
-                                    @}k2W   :`{0KUW >int1 275
-                                    @{2OUW  :0      >str3 '206'
-                                    @}WUW   :`{1LcW >str3 '190'
-                                    @}lUW   :0      >set4 >B/00000030UW+r3pl1c4
-                                    @{3GUW  :`{0lUW >set4
-                                    @{5V2W  :0      >nst6 >B/0000005YMW+r3pl1c4
-                                    @{6lUW  :`{0OUW >nst6
+                                    @`}lUW          >str2 >B/00000010UW+r3pl1c4
+                                    @{1JdW          >int1 166
+                                    @}V2W   :`{0KUW >int1 275
+                                    @{28UW  :0      >str3 '206'
+                                    @}GUW   :`{15cW >str3 '190'
+                                    @}WUW   :0      >set4 >B/0000002lUW+r3pl1c4
+                                    @{30UW  :`{0WUW >set4
+                                    @{4~2W  :0      >nst6 >B/00000052MW+r3pl1c4
+                                    @{60UW  :`{0OUW >nst6
 
-    *rga    #{1GUW                  @0      :0      !
-                                    @`]g6   :`}nMW  '2'
-                                    @)7     :{21UW  '7'
-                                    @{2AUW  :0      '1'
-                                    @}KUW           '4'
+    *rga    #{10UW                  @0      :0      !
+                                    @`]g6   :`}YMW  '2'
+                                    @)7     :}mUW   '7'
+                                    @}vUW   :0      '1'
+                                    @{24UW          '4'
                                     @`]g8           '5'
 
-    *set    #{30UW                  @0              !
-                                    @`{5JdW         >}WUW
+    *set    #{2lUW                  @0              !
+                                    @`{4odW         >{3GUW
 
-            #}WUW                   @0              !
-                                    @`}lUW          >int1 135
-                                    @{40UW          >nst6
-                                    @}GUW           >opt5
-                                    @}WUW           >set4
-                                    @}lUW           >str2 >B/00000050UW+r3pl1c4
-                                    @{55cW          >str3 '137'
+            #{3GUW                  @0              !
+                                    @`}WUW          >int1 135
+                                    @}lUW           >nst6
+                                    @{40UW          >set4
+                                    @}GUW           >str2 >B/0000004WUW+r3pl1c4
+                                    @}acW           >str3 '137'
 
-    *rga    #{50UW                  @0              !
+    *rga    #{4WUW                  @0              !
                                     @`]g6           '1'
                                     @)7             '3'
                                     @)8             '6'
 
-    *set    #}YMW                   @0              !
-                                    @`}mUW          >int1 138
-                                    @}vUW           >nst6
-                                    @{64UW          >opt5
-                                    @}8UW           >set4
-                                    @}GUW           >str2
-                                    @}WUW           >str3
+    *set    #{52MW                  @0              !
+                                    @`}HUW          >int1 138
+                                    @}QUW           >nst6
+                                    @}_UW           >set4
+                                    @}dUW           >str2
+                                    @}lUW           >str3
     .
     |]
 
@@ -115,7 +110,6 @@ example4expect = StructSet13
     , str3 = Just "206"
     , set4 = Just $
         ORSet [def{int1 = Just 135, str2 = Just $ RGA "136", str3 = Just "137"}]
-    , opt5 = Nothing
     , nst6 = Just def{int1 = Just 138}
     }
 
@@ -161,8 +155,6 @@ prop_structSet = property $ do
             Just set4ref2 <- set4_get
             set4ref1 === set4ref2
             checkCausality
-            do  value <- opt5_read
-                value === Nothing
             do  value <- nst6_read
                 value === Nothing
             nst6_set def{int1 = Just 138}
