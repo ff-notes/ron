@@ -21,9 +21,6 @@ module LwwStruct.Types (
     nst5_read,
     nst5_set,
     nst5_zoom,
-    opt6_read,
-    opt6_set,
-    opt6_zoom,
     -- * tests
     tfp_field_read,
     tfp_field_set,
@@ -58,8 +55,7 @@ instance ReplicatedAsPayload Opaque49 where
         str2 RgaString
         str3 String
         set4 Alias69
-        nst5 Struct51
-        opt6 Integer)
+        nst5 Struct51)
 
     (struct_lww TestFieldPrefix
         #haskell {field_prefix "tfp_"}

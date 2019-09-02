@@ -20,9 +20,8 @@ import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Util (ByteStringL)
 
-import           LwwStruct.Types (Struct51 (..), int1_set, nst5_read, opt6_read,
-                                  opt6_set, set4_zoom, str2_zoom, str3_read,
-                                  str3_set)
+import           LwwStruct.Types (Struct51 (..), int1_set, nst5_read, nst5_set,
+                                  set4_zoom, str2_zoom, str3_read, str3_set)
 import           Orphans ()
 import           String (s)
 
@@ -33,7 +32,6 @@ example0 = Struct51
     , str3 = Just "190"
     , set4 = Just $ ORSet []
     , nst5 = Nothing
-    , opt6 = Just 74
     }
 
 -- | "r3pl1c4"
@@ -45,7 +43,6 @@ ex1expect = [s|
     *lww    #B/0000000DrW+r3pl1c4                   !
                                     @`      :int1   275
                                             :nst5
-                                            :opt6   74
                                             :set4   >}KUW
                                             :str2   >}OUW
                                             :str3   '190'
@@ -63,8 +60,7 @@ ex4expect :: ByteStringL
 ex4expect = [s|
     *lww    #B/0000000DrW+r3pl1c4                   !
                                     @`}WUW  :int1   166
-                                    @`      :nst5
-                                    @{23dW  :opt6
+                                    @{23dW  :nst5
                                     @`      :set4   >}KUW
                                             :str2   >}OUW
                                     @{1HUW  :str3   '206'
@@ -82,7 +78,6 @@ ex4expect = [s|
     *lww    #{1QUW                  @0              !
                                     @`      :int1   135
                                             :nst5
-                                            :opt6
                                             :set4   >}_UW
                                             :str2   >}dUW
                                             :str3   '137'
@@ -108,10 +103,8 @@ example4expect = Struct51
             , str3 = Just "137"
             , set4 = Just $ ORSet []
             , nst5 = Nothing
-            , opt6 = Nothing
             }]
     , nst5 = Nothing
-    , opt6 = Nothing
     }
 
 prop_lwwStruct :: Property
@@ -149,13 +142,10 @@ prop_lwwStruct = property $ do
                         , str3 = Just "137"
                         , set4 = Just $ ORSet []
                         , nst5 = Nothing
-                        , opt6 = Nothing
                         }
             nst5Value <- nst5_read
             nst5Value === Nothing
-            opt6Value <- opt6_read
-            opt6Value === Just 74
-            opt6_set Nothing
+            nst5_set Nothing
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState ex4state readObject
