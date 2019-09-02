@@ -18,9 +18,9 @@ module LwwStruct.Types (
     set4_read,
     set4_set,
     set4_zoom,
-    opt5_read,
-    opt5_set,
-    opt5_zoom,
+    nst5_read,
+    nst5_set,
+    nst5_zoom,
     opt6_read,
     opt6_set,
     opt6_zoom,
@@ -58,7 +58,7 @@ instance ReplicatedAsPayload Opaque49 where
         str2 RgaString
         str3 String
         set4 Alias69
-        opt5 Struct51
+        nst5 Struct51
         opt6 Integer)
 
     (struct_lww TestFieldPrefix

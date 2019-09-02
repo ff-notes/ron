@@ -20,7 +20,7 @@ import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Util (ByteStringL)
 
-import           LwwStruct.Types (Struct51 (..), int1_set, opt5_read, opt6_read,
+import           LwwStruct.Types (Struct51 (..), int1_set, nst5_read, opt6_read,
                                   opt6_set, set4_zoom, str2_zoom, str3_read,
                                   str3_set)
 import           Orphans ()
@@ -32,7 +32,7 @@ example0 = Struct51
     , str2 = Just $ RGA "275"
     , str3 = Just "190"
     , set4 = Just $ ORSet []
-    , opt5 = Nothing
+    , nst5 = Nothing
     , opt6 = Just 74
     }
 
@@ -44,7 +44,7 @@ ex1expect :: ByteStringL
 ex1expect = [s|
     *lww    #B/0000000DrW+r3pl1c4                   !
                                     @`      :int1   275
-                                            :opt5
+                                            :nst5
                                             :opt6   74
                                             :set4   >}KUW
                                             :str2   >}OUW
@@ -63,7 +63,7 @@ ex4expect :: ByteStringL
 ex4expect = [s|
     *lww    #B/0000000DrW+r3pl1c4                   !
                                     @`}WUW  :int1   166
-                                    @`      :opt5
+                                    @`      :nst5
                                     @{23dW  :opt6
                                     @`      :set4   >}KUW
                                             :str2   >}OUW
@@ -81,7 +81,7 @@ ex4expect = [s|
 
     *lww    #{1QUW                  @0              !
                                     @`      :int1   135
-                                            :opt5
+                                            :nst5
                                             :opt6
                                             :set4   >}_UW
                                             :str2   >}dUW
@@ -107,10 +107,10 @@ example4expect = Struct51
             , str2 = Just $ RGA "136"
             , str3 = Just "137"
             , set4 = Just $ ORSet []
-            , opt5 = Nothing
+            , nst5 = Nothing
             , opt6 = Nothing
             }]
-    , opt5 = Nothing
+    , nst5 = Nothing
     , opt6 = Nothing
     }
 
@@ -148,11 +148,11 @@ prop_lwwStruct = property $ do
                         , str2 = Just $ RGA "136"
                         , str3 = Just "137"
                         , set4 = Just $ ORSet []
-                        , opt5 = Nothing
+                        , nst5 = Nothing
                         , opt6 = Nothing
                         }
-            opt5Value <- opt5_read
-            opt5Value === Nothing
+            nst5Value <- nst5_read
+            nst5Value === Nothing
             opt6Value <- opt6_read
             opt6Value === Just 74
             opt6_set Nothing
