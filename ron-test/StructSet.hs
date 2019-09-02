@@ -172,7 +172,7 @@ prop_structSet = property $ do
                         , str2 = Nothing
                         , str3 = Just "166"
                         }
-                ORSet.removeObjectBy $ do
+                ORSet.removeObjectIf $ do
                     i1 <- int1_read
                     pure $ i1 == Just 135
             checkCausality
