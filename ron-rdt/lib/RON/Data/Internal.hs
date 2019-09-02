@@ -249,9 +249,11 @@ class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
     readObject :: (MonadE m, MonadObjectState a m) => m a
 
 objectFromRon :: MonadE m => (Object a -> m a) -> Payload -> m a
-objectFromRon handler atoms = case atoms of
-    [AUuid uuid] -> handler $ Object uuid
-    _            -> throwError "Expected object UUID"
+objectFromRon handler atoms =
+    errorContext "objectFromRon" $
+        case atoms of
+            [AUuid uuid] -> handler $ Object uuid
+            _            -> throwError "Expected object UUID"
 
 -- | Create new 'ObjectFrame' from a value
 newObjectFrame
