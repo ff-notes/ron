@@ -10,6 +10,7 @@ and this project adheres to
 - Function `ORSet.getFieldObject`
 - Export `ORSetRep` constructor
 - Extend error reporting
+- `ORSet.removeBy`
 
 ### Changed
 - Renamed `getObject` to `readObject`

@@ -18,6 +18,7 @@ module RON.Data.ORSet (
     addValue,
     findAnyAlive,
     findAnyAlive',
+    removeObjectBy,
     removeRef,
     removeValue,
     zoomItem,
@@ -40,8 +41,9 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Rep, Replicated (encoding),
                                     ReplicatedAsObject, ReplicatedAsPayload,
-                                    eqPayload, eqRef, fromPayload, fromRon,
-                                    getObjectState, getObjectStateChunk,
+                                    eqPayload, eqRef, evalObjectState,
+                                    fromPayload, fromRon, getObjectState,
+                                    getObjectStateChunk,
                                     modifyObjectStateChunk_, newObject, newRon,
                                     objectEncoding, rconcat, readObject,
                                     reduceObjectStates, reducibleOpType,
@@ -50,6 +52,7 @@ import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
 import           RON.Types (Atom (AUuid), Object (Object),
+                            ObjectFrame (ObjectFrame, frame, uuid),
                             Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk), StateFrame, UUID,
                             WireStateChunk (WireStateChunk, stateBody, stateType))
@@ -156,15 +159,18 @@ addRef (Object itemUuid) = commonAdd [AUuid itemUuid]
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
 commonRemove
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
-    => (Payload -> Bool) -> m ()
+    => (Payload -> m Bool) -> m ()
 commonRemove isTarget =
     modifyObjectStateChunk_ $ \(StateChunk chunk) -> do
         let state0@(ORSetRep opMap) = stateFromChunk chunk
-        let targetEvents =
-                [ op
-                | op@Op{refId = Zero, payload} <- toList opMap
-                , isTarget payload
-                ]
+        targetEvents <-
+            fmap catMaybes
+            $ for (toList opMap) $ \op@Op{refId, payload} ->
+                case refId of
+                    Zero -> do
+                        t <- isTarget payload
+                        pure $ if t then Just op else Nothing
+                    _ -> pure Nothing
         StateChunk <$>
             case targetEvents of
                 [] -> pure chunk
@@ -177,19 +183,28 @@ commonRemove isTarget =
                     let state' = state0 <> stateFromChunk patch
                     pure $ stateToChunk state'
 
+removeObjectBy
+    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
+    => ObjectStateT a m Bool -> m ()
+removeObjectBy isTarget = commonRemove $ \case
+    AUuid uuid' : _ -> do
+        frame <- get
+        evalObjectState ObjectFrame{uuid = uuid', frame} isTarget
+    _ -> pure False
+
 -- | Remove an atomic value from the OR-Set
 removeValue
     ::  ( ReplicatedAsPayload a
         , MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m
         )
     => a -> m ()
-removeValue = commonRemove . eqPayload
+removeValue v = commonRemove $ pure . eqPayload v
 
 -- | Remove an object reference from the OR-Set
 removeRef
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
     => Object a -> m ()
-removeRef = commonRemove . eqRef
+removeRef r = commonRemove $ pure . eqRef r
 
 -- | Reference to an item inside an 'ORSet'.
 newtype ORSetItem a = ORSetItem UUID

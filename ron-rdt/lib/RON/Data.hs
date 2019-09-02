@@ -190,15 +190,6 @@ instance Ord a => Semigroup (MaxOnFst a b) where
         | otherwise = mof1
 
 -- | Run ObjectFrame action
-evalObjectState :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m a
-evalObjectState ObjectFrame{uuid, frame} action =
-    evalStateT (runReaderT action $ Object uuid) frame
-
--- | Run ObjectFrame action, starting with an empty frame
-evalObjectState_ :: Monad m => StateT StateFrame m a -> m a
-evalObjectState_ action = evalStateT action mempty
-
--- | Run ObjectFrame action
 execObjectState
     :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m (ObjectFrame b)
 execObjectState state@ObjectFrame{uuid, frame} action = do

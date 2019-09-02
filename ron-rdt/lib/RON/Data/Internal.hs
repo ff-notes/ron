@@ -24,6 +24,8 @@ module RON.Data.Internal (
     advanceToObject,
     eqPayload,
     eqRef,
+    evalObjectState,
+    evalObjectState_,
     getObjectState,
     getObjectStateChunk,
     modifyObjectStateChunk,
@@ -403,3 +405,12 @@ getObjectState = do
 wireStateChunk :: forall rep . Reducible rep => StateChunk rep -> WireStateChunk
 wireStateChunk (StateChunk stateBody) =
     WireStateChunk{stateType = reducibleOpType @rep, stateBody}
+
+-- | Run ObjectFrame action
+evalObjectState :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m a
+evalObjectState ObjectFrame{uuid, frame} action =
+    evalStateT (runReaderT action $ Object uuid) frame
+
+-- | Run ObjectFrame action, starting with an empty frame
+evalObjectState_ :: Monad m => StateT StateFrame m a -> m a
+evalObjectState_ action = evalStateT action mempty

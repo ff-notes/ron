@@ -80,9 +80,10 @@ state4expect = [s|
                                     @`]g8           '5'
 
     *set    #{2lUW                  @0              !
-                                    @`{4odW         >{3GUW
+                                    @`{7lUW         >{6GUW
+                                    @{80UW  :`{4odW >{3GUW
 
-            #{3GUW                  @0              !
+            #{3GUW                  @0      :0      !
                                     @`}WUW          >int1 135
                                     @}lUW           >nst6
                                     @{40UW          >set4
@@ -100,6 +101,13 @@ state4expect = [s|
                                     @}_UW           >set4
                                     @}dUW           >str2
                                     @}lUW           >str3
+
+            #{6GUW                  @0              !
+                                    @`}WUW          >int1 164
+                                    @}lUW           >nst6
+                                    @{70UW          >set4
+                                    @}GUW           >str2
+                                    @}WUW           >str3 '166'
     .
     |]
 
@@ -108,8 +116,7 @@ example4expect = StructSet13
     { int1 = Just 166
     , str2 = Just $ RGA "145"
     , str3 = Just "206"
-    , set4 = Just $
-        ORSet [def{int1 = Just 135, str2 = Just $ RGA "136", str3 = Just "137"}]
+    , set4 = Just $ ORSet [def{int1 = Just 164, str3 = Just "166"}]
     , nst6 = Just def{int1 = Just 138}
     }
 
@@ -158,6 +165,16 @@ prop_structSet = property $ do
             do  value <- nst6_read
                 value === Nothing
             nst6_set def{int1 = Just 138}
+            checkCausality
+            set4_zoom $ do
+                ORSet.addValue
+                    def { int1 = Just 164
+                        , str2 = Nothing
+                        , str3 = Just "166"
+                        }
+                ORSet.removeObjectBy $ do
+                    i1 <- int1_read
+                    pure $ i1 == Just 135
             checkCausality
 
     -- decode object after modification
