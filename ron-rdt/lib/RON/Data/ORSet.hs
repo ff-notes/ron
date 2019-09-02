@@ -18,7 +18,7 @@ module RON.Data.ORSet (
     addValue,
     findAnyAlive,
     findAnyAlive',
-    removeObjectBy,
+    removeObjectIf,
     removeRef,
     removeValue,
     zoomItem,
@@ -183,10 +183,10 @@ commonRemove isTarget =
                     let state' = state0 <> stateFromChunk patch
                     pure $ stateToChunk state'
 
-removeObjectBy
+removeObjectIf
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
     => ObjectStateT a m Bool -> m ()
-removeObjectBy isTarget = commonRemove $ \case
+removeObjectIf isTarget = commonRemove $ \case
     AUuid uuid' : _ -> do
         frame <- get
         evalObjectState ObjectFrame{uuid = uuid', frame} isTarget
