@@ -319,6 +319,15 @@ mkAccessorsSet :: TH.Name -> Field Equipped -> TH.DecsQ
 mkAccessorsSet name' field = do
   a <- varT <$> newName "a"
   m <- varT <$> newName "m"
+  let addF =
+        [ sigD add
+            [t|
+              (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
+              => $guideType
+              -> $m ()
+              |],
+          valDP add [|ORSet.addFieldValue $ronName'|]
+          ]
   let setF =
         [ sigD set
             [t|
@@ -328,7 +337,7 @@ mkAccessorsSet name' field = do
               |],
           valDP set [|ORSet.assignField $ronName' . Just|]
           ]
-      clearF =
+  let clearF =
         [ sigD clear
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) => $m ()
@@ -336,7 +345,7 @@ mkAccessorsSet name' field = do
           valDP clear
             [|ORSet.assignField $ronName' (Nothing :: Maybe $guideType)|]
           ]
-      getF = do
+  let getF = do
         TObject _ <- [ronType]
         [ sigD getName
             [t|
@@ -345,7 +354,7 @@ mkAccessorsSet name' field = do
               |],
           valDP getName [|ORSet.getFieldObject $ronName'|]
           ]
-      readF =
+  let readF =
         [ sigD read
             [t|(MonadE $m, MonadObjectState $type' $m) => $m $fieldType|],
           valDP read
@@ -355,7 +364,7 @@ mkAccessorsSet name' field = do
                 $(orSetViewField mergeStrategy) $ronName' chunk
               |]
           ]
-      zoomF = do
+  let zoomF = do
         TObject _ <- [ronType]
         [ sigD zoom
             [t|
@@ -365,7 +374,7 @@ mkAccessorsSet name' field = do
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
-  sequenceA $ setF ++ clearF ++ getF ++ readF ++ zoomF
+  sequenceA $ addF ++ setF ++ clearF ++ getF ++ readF ++ zoomF
   where
     Field {ronType, annotations = FieldAnnotations {mergeStrategy}, ext} = field
     XFieldEquipped {haskellName, ronName} = ext
@@ -373,10 +382,11 @@ mkAccessorsSet name' field = do
     type' = conT name'
     fieldType = mkFieldType ronType mergeStrategy
     guideType = mkGuideType ronType
-    set     = mkNameT $ haskellName <> "_set"
+    add     = mkNameT $ haskellName <> "_add"
     clear   = mkNameT $ haskellName <> "_clear"
     getName = mkNameT $ haskellName <> "_get"
     read    = mkNameT $ haskellName <> "_read"
+    set     = mkNameT $ haskellName <> "_set"
     zoom    = mkNameT $ haskellName <> "_zoom"
 
 orSetViewField :: Maybe MergeStrategy -> TH.ExpQ

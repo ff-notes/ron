@@ -36,6 +36,7 @@ example0 = StructSet13
     , str2 = Just $ RGA "275"
     , str3 = Just "190"
     , set4 = Nothing
+    , set5 = []
     , nst6 = Nothing
     , ref7 = []
     }
@@ -68,6 +69,7 @@ state4expect = [s|
                                     @}lUW   :`{0acW >str3 '190'
                                     @{20UW  :0      >set4 >B/0000002GUW+r3pl1c4
                                     @{3k2W          >nst6 >B/0000003nMW+r3pl1c4
+                                    @{50UW          >set5 170
 
     *rga    #}WUW                   @0              !
                                     @`]g6   :`{12MW '2'
@@ -105,6 +107,7 @@ example4expect = StructSet13
     , str2 = Just $ RGA "145"
     , str3 = Just "206"
     , set4 = Just $ ORSet [def{int1 = Just 164, str3 = Just "166"}]
+    , set5 = [170]
     , nst6 = Just def{int1 = Just 138}
     , ref7 = []
     }
@@ -164,6 +167,8 @@ prop_structSet = property $ do
                 ORSet.removeObjectIf $ do
                     i1 <- int1_read
                     pure $ i1 == Just 135
+            checkCausality
+            set5_add 170
             checkCausality
 
     -- decode object after modification

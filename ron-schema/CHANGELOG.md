@@ -9,6 +9,8 @@ and this project adheres to
 ### Added
 - Generate `struct_set.$(field)_zoom` for opaque object field
 - Generate `struct_set.$(field)_get` for object field
+- `ObjectRef` is available in the schema language
+- Generate `struct_set.$(field)_add`
 
 ### Changed
 - `opaque atoms`  is now `opaque_atoms`
@@ -17,6 +19,8 @@ and this project adheres to
   - `struct_set.$(field)_set` now accepts only "whole" (not Nothing) values
   - `struct_set.$(field)_clear` assigns Nothing
 - Renamed `struct_lww.$(field)_assign` to `struct_lww.$(field)_set`
+- Type of `struct_set` fields with merge strategy `set` is now `[]` and its
+  value contains all alive versions.
 
 ### Removed
 - `TComposite`, now `TEnum _ :: RonType`

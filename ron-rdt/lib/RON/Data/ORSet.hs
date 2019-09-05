@@ -23,6 +23,7 @@ module RON.Data.ORSet (
     removeValue,
     zoomItem,
     -- * struct_set
+    addFieldValue,
     assignField,
     getFieldObject,
     newStruct,
@@ -248,7 +249,8 @@ findAnyAlive' = do
 
 type ORSetMap k v = ORSet (k, v)
 
--- | Assign a value to a field
+-- | Assign a value to a field, deleting all previous (observed) values.
+-- Assignment of 'Nothing' just deletes all values.
 assignField
     :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
     => UUID     -- ^ Field name
@@ -256,19 +258,38 @@ assignField
     -> m ()
 assignField field mvalue =
     modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
+        addOp <- case mvalue of
+            Just value -> do
+                event <- getEventUuid
+                valuePayload <- newRon value
+                pure $ Just Op
+                    { opId = event
+                    , refId = Zero
+                    , payload = AUuid field : valuePayload
+                    }
+            Nothing -> pure Nothing
+        let (observedOps, stateBody1) = partition (isAliveField field) stateBody
+        removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
+            tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
+            pure op{opId = tombstone, refId = observedEvent}
+        let stateBody2 = stateBody1 ++ toList addOp ++ removeOps
+        pure $ StateChunk stateBody2
+
+addFieldValue
+    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
+    => UUID  -- ^ Field name
+    -> a     -- ^ Value
+    -> m ()
+addFieldValue field value =
+    modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
         event <- getEventUuid
-        valuePayload <- maybe (pure []) newRon mvalue
+        valuePayload <- newRon value
         let addOp = Op
                 { opId = event
                 , refId = Zero
                 , payload = AUuid field : valuePayload
                 }
-        let (observedOps, stateBody1) = partition (isAliveField field) stateBody
-        removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
-            tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
-            pure op{opId = tombstone, refId = observedEvent}
-        let stateBody2 = sortOn opId $ addOp : removeOps ++ stateBody1
-        pure $ StateChunk stateBody2
+        pure $ StateChunk $ stateBody ++ [addOp]
 
 isAliveField :: UUID -> Op -> Bool
 isAliveField field = \case
