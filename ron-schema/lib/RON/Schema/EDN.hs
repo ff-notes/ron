@@ -50,6 +50,7 @@ prelude = Map.fromList
     , ("Day",           Type0 day)
     , ("Float",         Type0 $ TAtom TAFloat)
     , ("Integer",       Type0 $ TAtom TAInteger)
+    , ("ObjectRef",     Type1 $ TAtom . TObjectRef)
     , ("ORSet.Map",     Type2 $ \k v -> TObject $ TORSetMap k v)
     , ("ORSet",         Type1 $ TObject . TORSet)
     , ("RGA",           Type1 $ TObject . TRga)
@@ -90,10 +91,6 @@ instance FromEDN Opaque where
             name        <- parseSymbol' nameSym
             annotations <- parseAnnotations
             pure Opaque{name, annotations}
-            -- (`withSymbol'` kind) $ \case
-            --     "atoms"  -> go False
-            --     "object" -> go True
-            --     _        -> fail "opaque kind must be either atoms or object"
           where
             parseAnnotations = case annotationVals of
                 [] -> pure defaultOpaqueAnnotations

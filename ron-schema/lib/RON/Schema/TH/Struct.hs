@@ -55,6 +55,7 @@ import RON.Schema.TH.Common
   ( fieldExp',
     fieldPat',
     liftText,
+    mkFieldType,
     mkGuideType,
     mkNameT,
     newNameT,
@@ -81,7 +82,7 @@ equipStruct Struct {name, fields, annotations} = Struct
 
 mkReplicatedStructLww :: StructLww Resolved -> TH.DecsQ
 mkReplicatedStructLww structResolved = do
-  dataType <- mkDataType struct
+  dataType <- mkDataTypeLww struct
   [instanceReplicated] <- mkInstanceReplicated type'
   [instanceReplicatedAO] <- mkInstanceReplicatedAOLww struct
   accessors <- fold <$> traverse (mkAccessorsLww name') fields
@@ -93,7 +94,7 @@ mkReplicatedStructLww structResolved = do
 
 mkReplicatedStructSet :: StructSet Resolved -> TH.DecsQ
 mkReplicatedStructSet structResolved = do
-  dataType <- mkDataType struct
+  dataType <- mkDataTypeSet struct
   [instanceReplicated] <- mkInstanceReplicated type'
   [instanceReplicatedAO] <- mkInstanceReplicatedAOSet struct
   accessors <- fold <$> traverse (mkAccessorsSet name') fields
@@ -117,8 +118,8 @@ varBangType' name =
   TH.varBangType (mkNameT name)
     . TH.bangType (TH.bang TH.noSourceUnpackedness TH.sourceStrict)
 
-mkDataType :: Struct encoding Equipped -> TH.DecQ
-mkDataType Struct {name, fields} =
+mkDataTypeLww :: StructLww Equipped -> TH.DecQ
+mkDataTypeLww Struct {name, fields} =
   TH.dataD
     (TH.cxt [])
     name'
@@ -133,11 +134,28 @@ mkDataType Struct {name, fields} =
   where
     name' = mkNameT name
 
+mkDataTypeSet :: StructSet Equipped -> TH.DecQ
+mkDataTypeSet Struct {name, fields} =
+  TH.dataD
+    (TH.cxt [])
+    name'
+    []
+    Nothing
+    [ recC name'
+        [ varBangType' haskellName (mkFieldType ronType mergeStrategy)
+          | Field {ronType, annotations, ext} <- toList fields,
+            let FieldAnnotations {mergeStrategy} = annotations
+                XFieldEquipped {haskellName} = ext
+          ]
+      ]
+    []
+  where
+    name' = mkNameT name
+
 mkInstanceReplicated :: TH.TypeQ -> TH.DecsQ
 mkInstanceReplicated type' =
   [d|
     instance Replicated $type' where
-
       encoding = objectEncoding
     |]
 
@@ -195,7 +213,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
   vars <- traverse (newNameT . haskellName . ext) fields
   let packFields =
         listE
-          [ [|($ronName', fmap Instance $(varE var))|]
+          [ [|[($ronName', Instance val) | val <- toList $(varE var)]|]
             | Field {ext = XFieldEquipped {ronName}} <- toList fields,
               let ronName' = liftData ronName
             | var <- toList vars
@@ -235,7 +253,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
 
       type Rep $type' = ORSetRep
 
-      newObject $consP = ObjectRef <$> ORSet.newStruct $packFields
+      newObject $consP = ObjectRef <$> ORSet.newStruct (fold $packFields)
 
       readObject = errorContext $(liftText errCtx) $readObjectImpl
     |]
@@ -305,7 +323,8 @@ mkAccessorsSet name' field = do
         [ sigD set
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m)
-              => $guideType -> $m ()
+              => $guideType
+              -> $m ()
               |],
           valDP set [|ORSet.assignField $ronName' . Just|]
           ]
@@ -328,9 +347,7 @@ mkAccessorsSet name' field = do
           ]
       readF =
         [ sigD read
-            [t|
-              (MonadE $m, MonadObjectState $type' $m) => $m (Maybe $guideType)
-              |],
+            [t|(MonadE $m, MonadObjectState $type' $m) => $m $fieldType|],
           valDP read
             [|
               do
@@ -343,7 +360,8 @@ mkAccessorsSet name' field = do
         [ sigD zoom
             [t|
               (MonadE $m, ReplicaClock $m)
-              => ObjectStateT $guideType $m $a -> ObjectStateT $type' $m $a
+              => ObjectStateT $guideType $m $a
+              -> ObjectStateT $type' $m $a
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
@@ -353,6 +371,7 @@ mkAccessorsSet name' field = do
     XFieldEquipped {haskellName, ronName} = ext
     ronName' = liftData ronName
     type' = conT name'
+    fieldType = mkFieldType ronType mergeStrategy
     guideType = mkGuideType ronType
     set     = mkNameT $ haskellName <> "_set"
     clear   = mkNameT $ haskellName <> "_clear"

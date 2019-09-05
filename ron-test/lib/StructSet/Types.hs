@@ -14,11 +14,12 @@ import           RON.Schema.TH (mkReplicated)
 
 [mkReplicated|
     (struct_set StructSet13
-        int1 Integer    #ron{merge min}
+        int1 Integer                 #ron{merge min}
         str2 RgaString
-        str3 String     #ron{merge LWW}
+        str3 String                  #ron{merge LWW}
         set4 (ORSet StructSet13)
-        nst6 StructSet13)
+        nst6 StructSet13
+        ref7 (ObjectRef StructSet13) #ron{merge set})
 |]
 
 deriving instance Default StructSet13

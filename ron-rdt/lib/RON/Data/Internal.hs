@@ -416,3 +416,10 @@ evalObjectState ObjectFrame{uuid, frame} action =
 -- | Run ObjectFrame action, starting with an empty frame
 evalObjectState_ :: Monad m => StateT StateFrame m a -> m a
 evalObjectState_ action = evalStateT action mempty
+
+instance Replicated (ObjectRef a) where
+    encoding = payloadEncoding
+
+instance ReplicatedAsPayload (ObjectRef a) where
+    toPayload (ObjectRef uuid) = toPayload uuid
+    fromPayload = fmap ObjectRef . fromPayload

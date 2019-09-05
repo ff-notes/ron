@@ -41,7 +41,7 @@ type TypeName = Text
 data TypeExpr = Use TypeName | Apply TypeName [TypeExpr]
     deriving (Show)
 
-data TAtom = TAFloat | TAInteger | TAString | TAUuid
+data TAtom = TAFloat | TAInteger | TAString | TAUuid | TObjectRef RonType
     deriving (Show)
 
 data RonType
@@ -55,13 +55,13 @@ data TEnum = Enum {name :: Text, items :: [Text]}
     deriving (Show)
 
 data TObject
-    = TORSet        RonType
+    = TOpaqueObject Opaque
+    | TORSet        RonType
     | TORSetMap     RonType RonType
     | TRga          RonType
     | TStructLww    (StructLww Resolved)
     | TStructSet    (StructSet Resolved)
     | TVersionVector
-    | TOpaqueObject Opaque
     deriving (Show)
 
 data StructEncoding = SELww | SESet

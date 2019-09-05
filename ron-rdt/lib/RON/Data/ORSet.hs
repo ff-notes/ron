@@ -400,15 +400,13 @@ zoomFieldObject field innerModifier =
 -- | Create an ORSet object from a list of named fields.
 newStruct
     :: (MonadState StateFrame m, ReplicaClock m)
-    => [(UUID, Maybe (Instance Replicated))] -> m UUID
+    => [(UUID, Instance Replicated)] -> m UUID
 newStruct fields = do
     objectId <- getEventUuid
     stateBody <-
-        for fields $ \(name, mvalue) -> do
+        for fields $ \(name, Instance value) -> do
             opId <- getEventUuid -- TODO(2019-07-12, cblp, #15) sequential uuids
-            valuePayload <- case mvalue of
-                Just (Instance value) -> newRon value
-                Nothing               -> pure []
+            valuePayload <- newRon value
             pure Op{opId, refId = Zero, payload = AUuid name : valuePayload}
     modify' $ Map.insert objectId $ wireStateChunk stateBody
     pure objectId

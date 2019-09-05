@@ -8,6 +8,7 @@ module RON.Schema.TH.Common (
     fieldPat',
     let1S,
     liftText,
+    mkFieldType,
     mkGuideType,
     mkNameT,
     newNameT,
@@ -26,7 +27,7 @@ import           RON.Data.ORSet (ORSet, ORSetMap)
 import           RON.Data.RGA (RGA)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Schema as X
-import           RON.Types (UUID)
+import           RON.Types (ObjectRef, UUID)
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
@@ -46,10 +47,11 @@ valDP = valD . varP
 mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
     TAtom atom -> case atom of
-        TAFloat   -> [t| Double |]
-        TAInteger -> [t| Int64  |]
-        TAString  -> [t| Text   |]
-        TAUuid    -> [t| UUID   |]
+        TAFloat      -> [t| Double |]
+        TAInteger    -> [t| Int64  |]
+        TAString     -> [t| Text   |]
+        TAUuid       -> [t| UUID   |]
+        TObjectRef t -> wrap ''ObjectRef t
     TEnum Enum{name} -> conT $ mkNameT name
     TObject t -> case t of
         TOpaqueObject u            -> mkOpaque u
@@ -65,6 +67,15 @@ mkGuideType typ = case typ of
     wrap2 w a b = [t| $(conT w) $(mkGuideType a) $(mkGuideType b) |]
     mkOpaque Opaque{name, annotations = OpaqueAnnotations{haskellType}} =
         conT $ mkNameT $ fromMaybe name haskellType
+
+mkFieldType :: RonType -> Maybe MergeStrategy -> TH.TypeQ
+mkFieldType typ mergeStrategy = case (typ, mergeStrategy) of
+    (_, Just Set) -> listGuide
+    _ -> maybeGuide
+  where
+    listGuide  = [t| [ $guide ] |]
+    maybeGuide = [t| Maybe $guide |]
+    guide = mkGuideType typ
 
 liftText :: Text -> TH.ExpQ
 liftText t = [| Text.pack $(liftString $ Text.unpack t) |]
