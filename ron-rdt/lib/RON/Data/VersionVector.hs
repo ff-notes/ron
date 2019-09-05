@@ -22,7 +22,7 @@ import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
                                     stateToChunk)
 import           RON.Event (getEventUuid)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Object (Object), Op (Op, opId), UUID (UUID), WireStateChunk (WireStateChunk, stateBody, stateType))
+import           RON.Types (ObjectRef (ObjectRef), Op (Op, opId), UUID (UUID), WireStateChunk (WireStateChunk, stateBody, stateType))
 import qualified RON.UUID as UUID
 
 type Origin = Word64
@@ -79,6 +79,6 @@ instance ReplicatedAsObject VersionVector where
         oid <- getEventUuid
         let ops = Map.elems vv
         modify' $ Map.insert oid $ wireStateChunk ops
-        pure $ Object oid
+        pure $ ObjectRef oid
 
     readObject = getObjectState

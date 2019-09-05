@@ -51,8 +51,9 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Atom (AUuid), Object (Object),
+import           RON.Types (Atom (AUuid),
                             ObjectFrame (ObjectFrame, frame, uuid),
+                            ObjectRef (ObjectRef),
                             Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk), StateFrame, UUID,
                             WireStateChunk (WireStateChunk, stateBody, stateType))
@@ -125,7 +126,7 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
             pure $ Op event Zero payload
         oid <- getEventUuid
         modify' $ Map.insert oid $ wireStateChunk ops
-        pure $ Object oid
+        pure $ ObjectRef oid
 
     readObject = do
         StateChunk ops <- getObjectStateChunk
@@ -153,8 +154,8 @@ addValue item = do
 
 addRef
     :: (ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m)
-    => Object a -> m ()
-addRef (Object itemUuid) = commonAdd [AUuid itemUuid]
+    => ObjectRef a -> m ()
+addRef (ObjectRef itemUuid) = commonAdd [AUuid itemUuid]
 
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
 commonRemove
@@ -203,7 +204,7 @@ removeValue v = commonRemove $ pure . eqPayload v
 -- | Remove an object reference from the OR-Set
 removeRef
     :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
-    => Object a -> m ()
+    => ObjectRef a -> m ()
 removeRef r = commonRemove $ pure . eqRef r
 
 -- | Reference to an item inside an 'ORSet'.
@@ -224,7 +225,7 @@ zoomItem (ORSetItem key) innerModifier = do
         Just Op{payload} -> case payload of
             [AUuid itemValueRef] -> pure itemValueRef
             _ -> throwErrorText "item payload is not an object ref"
-    lift $ runReaderT innerModifier $ Object itemValueRef
+    lift $ runReaderT innerModifier $ ObjectRef itemValueRef
 
 -- | Find any alive item. If no alive item found, return 'Nothing'.
 findAnyAlive
@@ -298,7 +299,7 @@ filterAliveFieldIdsAndPayloads field ops =
 getFieldObject
     :: (MonadE m, MonadObjectState struct m, ReplicatedAsObject a)
     => UUID                 -- ^ Field name
-    -> m (Maybe (Object a))
+    -> m (Maybe (ObjectRef a))
 getFieldObject field =
     errorContext "ORSet.getFieldObject" $ do
         StateChunk ops <- getObjectStateChunk
@@ -306,7 +307,7 @@ getFieldObject field =
             refs = [ref | AUuid ref : _ <- payloads]
         case refs of
             []   -> pure Nothing
-            p:ps -> fmap Just $ reduceObjectStates $ fmap Object $ p :| ps
+            p:ps -> fmap Just $ reduceObjectStates $ fmap ObjectRef $ p :| ps
 
 -- | Decode field value, merge all versions, return 'Nothing' if no versions
 viewField
@@ -392,8 +393,8 @@ zoomFieldObject field innerModifier =
                 | AUuid objectId : _ <- filterAliveFieldPayloads field stateBody
                 ]
         object <- case objectIds of
-            []       -> Object <$> getEventUuid  -- create empty object
-            oid:oids -> reduceObjectStates @field $ fmap Object $ oid :| oids
+            []       -> ObjectRef <$> getEventUuid  -- create empty object
+            oid:oids -> reduceObjectStates @field $ fmap ObjectRef $ oid :| oids
         lift $ runReaderT innerModifier object
 
 -- | Create an ORSet object from a list of named fields.

@@ -54,7 +54,8 @@ import           RON.Data.Internal (MonadObjectState,
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Object (Object), Op (Op, opId, payload, refId),
+import           RON.Types (ObjectRef (ObjectRef),
+                            Op (Op, opId, payload, refId),
                             StateChunk (StateChunk), StateFrame, UUID,
                             WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util.Word (pattern B11, ls60)
@@ -337,7 +338,7 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
             payload <- newRon item
             pure $ Op vertexId Zero payload
         modify' $ Map.insert oid $ wireStateChunk ops
-        pure $ Object oid
+        pure $ ObjectRef oid
 
     readObject = do
         StateChunk stateBody <- getObjectStateChunk
@@ -399,13 +400,13 @@ type RgaString = RGA Char
 -- | Create an RGA from a list
 newFromList
     :: (Replicated a, MonadState StateFrame m, ReplicaClock m)
-    => [a] -> m (Object (RGA a))
+    => [a] -> m (ObjectRef (RGA a))
 newFromList = newObject . RGA
 
 -- | Create an 'RgaString' from a text
 newFromText
     :: (MonadState StateFrame m, ReplicaClock m)
-    => Text -> m (Object RgaString)
+    => Text -> m (ObjectRef RgaString)
 newFromText = newFromList . Text.unpack
 
 getAliveIndices :: (MonadE m, MonadObjectState (RGA a) m) => m [UUID]

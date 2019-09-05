@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Renamed `Object` to `ObjectRef`
+
 ### Removed
 - Types `NetworkSim`, `ReplicaSim`, functions `runNetworkSim`, `runReplicaSim`.
   Use `NetworkSimT`, `ReplicaSimT`, functions `runNetworkSimT`, `runReplicaSimT`

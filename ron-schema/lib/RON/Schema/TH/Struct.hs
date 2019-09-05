@@ -60,7 +60,7 @@ import RON.Schema.TH.Common
     newNameT,
     valDP
     )
-import RON.Types (Object (Object), UUID)
+import RON.Types (ObjectRef (ObjectRef), UUID)
 import qualified RON.UUID as UUID
 import RON.Util (Instance (Instance))
 
@@ -180,7 +180,7 @@ mkInstanceReplicatedAOLww Struct {name, fields} = do
 
       type Rep $type' = LwwRep
 
-      newObject $consP = Object <$> LWW.newStruct $packFields
+      newObject $consP = ObjectRef <$> LWW.newStruct $packFields
 
       readObject = errorContext $(liftText errCtx) $readObjectImpl
     |]
@@ -235,7 +235,7 @@ mkInstanceReplicatedAOSet Struct {name, fields} = do
 
       type Rep $type' = ORSetRep
 
-      newObject $consP = Object <$> ORSet.newStruct $packFields
+      newObject $consP = ObjectRef <$> ORSet.newStruct $packFields
 
       readObject = errorContext $(liftText errCtx) $readObjectImpl
     |]
@@ -322,7 +322,7 @@ mkAccessorsSet name' field = do
         [ sigD getName
             [t|
               (MonadE $m, MonadObjectState $type' $m)
-              => $m (Maybe (Object $guideType))
+              => $m (Maybe (ObjectRef $guideType))
               |],
           valDP getName [|ORSet.getFieldObject $ronName'|]
           ]

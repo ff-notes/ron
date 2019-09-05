@@ -22,7 +22,7 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
-import           RON.Types (Object, Op (Op, opId, refId), StateFrame, WireStateChunk (WireStateChunk, stateBody, stateType))
+import           RON.Types (ObjectRef, Op (Op, opId, refId), StateFrame, WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util (ByteStringL)
 import           RON.UUID (zero)
 
@@ -190,7 +190,7 @@ prop_structSet = property $ do
 checkCausality
     ::  ( HasCallStack
         , MonadTest m
-        , MonadReader (Object a) m
+        , MonadReader (ObjectRef a) m
         , MonadState StateFrame m
         , Typeable a
         )

@@ -12,7 +12,7 @@
 module RON.Types (
     Atom (..),
     ClosedOp (..),
-    Object (..),
+    ObjectRef (..),
     ObjectFrame (..),
     Op (..),
     OpTerm (..),
@@ -124,18 +124,18 @@ newtype StateChunk a = StateChunk [Op]
 type StateFrame = Map UUID WireStateChunk
 
 -- | Reference to an object
-newtype Object a = Object UUID
+newtype ObjectRef a = ObjectRef UUID
     deriving (Eq)
 
-instance Typeable a => Show (Object a) where
-    showsPrec a (Object b) =
+instance Typeable a => Show (ObjectRef a) where
+    showsPrec a (ObjectRef b) =
         showParen (a >= 11)
-            $ showString "Object @"
+            $ showString "ObjectRef @"
             . showsPrec 11 (typeRep $ Proxy @a)
             . showString " "
             . showsPrec 11 b
 
--- | Object accompanied with a frame
+-- | Object reference accompanied with a frame
 data ObjectFrame a = ObjectFrame{uuid :: UUID, frame :: StateFrame}
     deriving (Eq, Show)
 

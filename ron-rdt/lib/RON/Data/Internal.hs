@@ -61,8 +61,9 @@ import           RON.Error (Error (Error), MonadE, correct, errorContext,
                             liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid)
 import           RON.Semilattice (BoundedSemilattice)
-import           RON.Types (Atom (AInteger, AString, AUuid), Object (Object),
+import           RON.Types (Atom (AInteger, AString, AUuid),
                             ObjectFrame (ObjectFrame, frame, uuid),
+                            ObjectRef (ObjectRef),
                             Op (Op, opId, payload, refId), Payload,
                             StateChunk (StateChunk), StateFrame, UUID (UUID),
                             WireChunk,
@@ -180,7 +181,7 @@ fromRon = encodingFromRon encoding
 objectEncoding :: ReplicatedAsObject a => Encoding a
 objectEncoding = Encoding
     { encodingNewRon = \a -> do
-        Object uuid <- newObject a
+        ObjectRef uuid <- newObject a
         pure [AUuid uuid]
     , encodingFromRon = objectFromRon $ runReaderT readObject
     }
@@ -245,29 +246,30 @@ class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
     type Rep a
 
     -- | Encode data. Write frame and return id.
-    newObject :: (ReplicaClock m, MonadState StateFrame m) => a -> m (Object a)
+    newObject
+        :: (ReplicaClock m, MonadState StateFrame m) => a -> m (ObjectRef a)
 
     -- | Decode data
     readObject :: (MonadE m, MonadObjectState a m) => m a
 
-objectFromRon :: MonadE m => (Object a -> m a) -> Payload -> m a
+objectFromRon :: MonadE m => (ObjectRef a -> m a) -> Payload -> m a
 objectFromRon handler atoms =
     errorContext "objectFromRon" $
         case atoms of
-            [AUuid uuid] -> handler $ Object uuid
+            [AUuid uuid] -> handler $ ObjectRef uuid
             _            -> throwError "Expected object UUID"
 
 -- | Create new 'ObjectFrame' from a value
 newObjectFrame
     :: (ReplicatedAsObject a, ReplicaClock m) => a -> m (ObjectFrame a)
 newObjectFrame a = do
-    (Object uuid, frame) <- runStateT (newObject a) mempty
+    (ObjectRef uuid, frame) <- runStateT (newObject a) mempty
     pure $ ObjectFrame{uuid, frame}
 
 getObjectStateChunk
     :: forall a m . (MonadE m, MonadObjectState a m) => m (StateChunk (Rep a))
 getObjectStateChunk = do
-    Object uuid <- ask
+    ObjectRef uuid <- ask
     frame <- get
     WireStateChunk{stateType, stateBody} <-
         liftMaybe "no such object in chunk" $ Map.lookup uuid frame
@@ -285,7 +287,7 @@ modifyObjectStateChunk
     => (StateChunk (Rep a) -> m (b, StateChunk (Rep a))) -> m b
 modifyObjectStateChunk f = do
     advanceToObject
-    Object uuid <- ask
+    ObjectRef uuid <- ask
     chunk <- getObjectStateChunk
     (a, StateChunk chunk') <- f chunk
     modify' $
@@ -300,8 +302,8 @@ modifyObjectStateChunk_ f = modifyObjectStateChunk $ \chunk -> do
     chunk' <- f chunk
     pure ((), chunk')
 
-eqRef :: Object a -> Payload -> Bool
-eqRef (Object uuid) atoms = case atoms of
+eqRef :: ObjectRef a -> Payload -> Bool
+eqRef (ObjectRef uuid) atoms = case atoms of
     [AUuid ref] -> uuid == ref
     _           -> False
 
@@ -326,14 +328,14 @@ instance ReplicatedAsPayload Bool where
         [AFalse] -> pure False
         _        -> throwError "Expected single UUID `true` or `false`"
 
-type ObjectStateT b m a = ReaderT (Object b) (StateT StateFrame m) a
+type ObjectStateT b m a = ReaderT (ObjectRef b) (StateT StateFrame m) a
 
 type MonadObjectState a m =
-    (MonadReader (Object a) m, MonadState StateFrame m, Reducible (Rep a))
+    (MonadReader (ObjectRef a) m, MonadState StateFrame m, Reducible (Rep a))
 
 advanceToObject :: (MonadE m, MonadObjectState a m, ReplicaClock m) => m ()
 advanceToObject = do
-    Object uuid <- ask
+    ObjectRef uuid <- ask
     StateChunk chunk <- getObjectStateChunk
     advanceToUuid $
         maximumDef
@@ -356,13 +358,13 @@ reduceState (StateChunk s1) (StateChunk s2) =
 reduceObjectStates
     :: forall a m
     . (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
-    => NonEmpty (Object a) -> m (Object a)
+    => NonEmpty (ObjectRef a) -> m (ObjectRef a)
 reduceObjectStates (obj :| objs) = do
     c :| cs <- for (obj :| objs) $ runReaderT getObjectStateChunk
     let chunk = foldl' (reduceState @(Rep a)) c cs
-        oid = minimum [i | Object i <- obj:objs]
+        oid = minimum [i | ObjectRef i <- obj:objs]
     modify' $ Map.insert oid $ wireStateChunk chunk
-    pure $ Object oid
+    pure $ ObjectRef oid
 
 rconcat
     :: forall a m
@@ -370,7 +372,7 @@ rconcat
     => NonEmpty UUID -> m a
 rconcat uuids =
     errorContext "rconcat" $ do
-        Object ref <- reduceObjectStates @a $ Object <$> uuids
+        ObjectRef ref <- reduceObjectStates @a $ ObjectRef <$> uuids
         fromRon [AUuid ref]
 
 tryFromRon
@@ -409,7 +411,7 @@ wireStateChunk (StateChunk stateBody) =
 -- | Run ObjectFrame action
 evalObjectState :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m a
 evalObjectState ObjectFrame{uuid, frame} action =
-    evalStateT (runReaderT action $ Object uuid) frame
+    evalStateT (runReaderT action $ ObjectRef uuid) frame
 
 -- | Run ObjectFrame action, starting with an empty frame
 evalObjectState_ :: Monad m => StateT StateFrame m a -> m a

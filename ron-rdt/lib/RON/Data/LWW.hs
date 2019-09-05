@@ -34,7 +34,7 @@ import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Atom (AUuid), Object (Object),
+import           RON.Types (Atom (AUuid), ObjectRef (ObjectRef),
                             Op (Op, opId, payload, refId),
                             StateChunk (StateChunk), StateFrame, UUID,
                             WireStateChunk (WireStateChunk, stateBody, stateType))
@@ -144,4 +144,4 @@ zoomField field innerModifier =
         fieldObjectId <- errorContext "inner object" $ case payload of
             [AUuid oid] -> pure oid
             _           -> throwError "Expected object UUID"
-        lift $ runReaderT innerModifier $ Object fieldObjectId
+        lift $ runReaderT innerModifier $ ObjectRef fieldObjectId

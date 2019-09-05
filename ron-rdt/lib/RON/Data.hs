@@ -50,11 +50,11 @@ import           RON.Data.ORSet (ORSetRep)
 import           RON.Data.RGA (RgaRep)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
-import           RON.Types (ClosedOp (..), Object (Object),
-                            ObjectFrame (ObjectFrame, frame, uuid), Op (..),
-                            StateChunk (..), StateFrame, UUID,
-                            WireChunk (Closed, Query, Value), WireFrame,
-                            WireReducedChunk (..),
+import           RON.Types (ClosedOp (..),
+                            ObjectFrame (ObjectFrame, frame, uuid),
+                            ObjectRef (ObjectRef), Op (..), StateChunk (..),
+                            StateFrame, UUID, WireChunk (Closed, Query, Value),
+                            WireFrame, WireReducedChunk (..),
                             WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.UUID (pattern Zero)
 
@@ -193,7 +193,7 @@ instance Ord a => Semigroup (MaxOnFst a b) where
 execObjectState
     :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m (ObjectFrame b)
 execObjectState state@ObjectFrame{uuid, frame} action = do
-    frame' <- execStateT (runReaderT action $ Object uuid) frame
+    frame' <- execStateT (runReaderT action $ ObjectRef uuid) frame
     pure state{frame = frame'}
 
 -- | Run ObjectFrame action, starting with an empty frame
@@ -207,7 +207,7 @@ runObjectState
     -> ObjectStateT b m a
     -> m (a, ObjectFrame b)
 runObjectState state@ObjectFrame{uuid, frame} action =
-    runStateT (runReaderT action $ Object uuid) frame
+    runStateT (runReaderT action $ ObjectRef uuid) frame
     <&> \(a, frame') -> (a, state{frame = frame'})
 
 -- | Run ObjectFrame action, starting with an empty frame
@@ -216,6 +216,6 @@ runObjectState_ action = runStateT action mempty
 
 -- | Create new 'ObjectFrame' with an action
 newObjectFrameWith
-    :: Functor m => StateT StateFrame m (Object a) -> m (ObjectFrame a)
+    :: Functor m => StateT StateFrame m (ObjectRef a) -> m (ObjectFrame a)
 newObjectFrameWith action =
-    runObjectState_ action <&> \(Object uuid, frame) -> ObjectFrame{uuid, frame}
+    runObjectState_ action <&> \(ObjectRef uuid, frame) -> ObjectFrame{uuid, frame}
