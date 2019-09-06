@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron-rdt
-version:        0.9
+version:        0.9.1
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
@@ -40,7 +40,7 @@ library
         transformers,
         unordered-containers,
         -- project
-        ron
+        ron >= 0.9,
     exposed-modules:
         RON.Data
         RON.Data.LWW
