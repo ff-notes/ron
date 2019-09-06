@@ -13,6 +13,7 @@ and this project adheres to
 - `ORSet.removeObjectIf`
 - `ORSet.addFieldValue`
 - `ORSet.removeFieldValue`
+- `ORSet.removeFieldValueIf`
 
 ### Changed
 - Renamed `getObject` to `readObject`

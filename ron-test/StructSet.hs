@@ -13,8 +13,8 @@ import qualified Data.Map.Strict as Map
 import           Hedgehog (MonadTest, Property, annotate, evalEither,
                            evalExceptT, failure, property, (===))
 
-import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
-                           readObject)
+import           RON.Data (evalObjectState, execObjectState, newObject,
+                           newObjectFrame, readObject)
 import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
@@ -71,6 +71,7 @@ state4expect = [s|
                                     @{3k2W          >nst6 >B/0000003nMW+r3pl1c4
                                     @{5GUW          >set5 172
                                     @}WUW   :`}0UW  >set5 170
+                                    @{6GUW  :{60UW  >ref7 >B/0000005lUW+r3pl1c4
 
     *rga    #}WUW                   @0      :0      !
                                     @`]g6   :`{12MW '2'
@@ -99,6 +100,8 @@ state4expect = [s|
             #{4AUW                  @0              !
                                     @`}KUW          >int1 164
                                     @}OUW           >str3 '166'
+
+            #{5lUW                  @0              !
     .
     |]
 
@@ -175,7 +178,10 @@ prop_structSet = property $ do
             set5_remove 170
             set5_remove 175 -- nothing changes
             checkCausality
-            -- TODO ref7_removeObjectIf $ do
+            ss13 <- newObject def
+            ref7_add ss13
+            checkCausality
+            ref7_removeIf $ \r -> pure $ r == ss13
             checkCausality
 
     -- decode object after modification

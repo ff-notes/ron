@@ -371,7 +371,13 @@ mkAccessorsSet name' field = do
               (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m)
               => $guideType -> $m ()
               |],
-          valDP remove [|ORSet.removeFieldValue $ronName'|]
+          valDP remove [|ORSet.removeFieldValue $ronName'|],
+          sigD removeIf
+            [t|
+              (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m)
+              => ($guideType -> $m Bool) -> $m ()
+              |],
+          valDP removeIf [|ORSet.removeFieldValueIf $ronName'|]
           ]
   let zoomF = do
         TObject _ <- [ronType]
@@ -391,13 +397,14 @@ mkAccessorsSet name' field = do
     type' = conT name'
     fieldType = mkFieldType ronType mergeStrategy
     guideType = mkGuideType ronType
-    add     = mkNameT $ haskellName <> "_add"
-    clear   = mkNameT $ haskellName <> "_clear"
-    getName = mkNameT $ haskellName <> "_get"
-    read    = mkNameT $ haskellName <> "_read"
-    remove  = mkNameT $ haskellName <> "_remove"
-    set     = mkNameT $ haskellName <> "_set"
-    zoom    = mkNameT $ haskellName <> "_zoom"
+    add      = mkNameT $ haskellName <> "_add"
+    clear    = mkNameT $ haskellName <> "_clear"
+    getName  = mkNameT $ haskellName <> "_get"
+    read     = mkNameT $ haskellName <> "_read"
+    remove   = mkNameT $ haskellName <> "_remove"
+    removeIf = mkNameT $ haskellName <> "_removeIf"
+    set      = mkNameT $ haskellName <> "_set"
+    zoom     = mkNameT $ haskellName <> "_zoom"
 
 orSetViewField :: Maybe MergeStrategy -> TH.ExpQ
 orSetViewField = varE . \case

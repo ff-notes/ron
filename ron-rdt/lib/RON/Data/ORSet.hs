@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -28,6 +29,7 @@ module RON.Data.ORSet (
     getFieldObject,
     newStruct,
     removeFieldValue,
+    removeFieldValueIf,
     viewField,
     viewFieldLWW,
     viewFieldMax,
@@ -43,7 +45,7 @@ import qualified Data.Map.Strict as Map
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Rep, Replicated (encoding),
                                     ReplicatedAsObject,
-                                    ReplicatedAsPayload (fromPayload, toPayload),
+                                    ReplicatedAsPayload (fromPayload),
                                     eqPayload, eqRef, evalObjectState, fromRon,
                                     getObjectState, getObjectStateChunk,
                                     modifyObjectStateChunk_, newObject, newRon,
@@ -214,9 +216,33 @@ removeFieldValue
     -> a -- ^ Value
     -> m ()
 removeFieldValue field value =
+    removeFieldValueIfP field $ pure . eqPayload value
+
+-- | Remove from a field all values that obey the predicate.
+removeFieldValueIf
+    ::  ( MonadE m
+        , MonadObjectState struct m
+        , ReplicaClock m
+        , ReplicatedAsPayload a
+        )
+    => UUID -- ^ Field name
+    -> (a -> m Bool)
+    -> m ()
+removeFieldValueIf field isTarget =
+    removeFieldValueIfP field $ \valuePayload -> do
+        value <- fromPayload valuePayload
+        isTarget value
+
+-- | Remove from a field all payloads that obey the predicate.
+removeFieldValueIfP
+    :: (MonadE m, MonadObjectState struct m, ReplicaClock m)
+    => UUID -- ^ Field name
+    -> (Payload -> m Bool)
+    -> m ()
+removeFieldValueIfP field isTarget =
     modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
-        let (observedOps, stateBody1) =
-                partition isFieldAliveAndSameValue stateBody
+        (observedOps, stateBody1) <-
+            partitionM isFieldAliveAndSameValue stateBody
         removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
             tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
             pure op{opId = tombstone, refId = observedEvent}
@@ -224,9 +250,9 @@ removeFieldValue field value =
         pure $ StateChunk stateBody2
   where
     isFieldAliveAndSameValue = \case
-        Op{refId = Zero, payload = AUuid field' : valuePayload} ->
-            field' == field && valuePayload == toPayload value
-        _ -> False
+        Op{refId = Zero, payload = AUuid field' : valuePayload}
+            | field' == field -> isTarget valuePayload
+        _ -> pure False
 
 -- | Remove an object reference from the OR-Set
 removeRef
@@ -457,3 +483,11 @@ newStruct fields = do
             pure Op{opId, refId = Zero, payload = AUuid name : valuePayload}
     modify' $ Map.insert objectId $ wireStateChunk stateBody
     pure objectId
+
+partitionM :: Applicative m => (a -> m Bool) -> [a] -> m ([a], [a])
+partitionM f = \case
+    [] -> pure ([], [])
+    x:xs -> do
+        res <- f x
+        (as, bs) <- partitionM f xs
+        pure ([x | res] ++ as, [x | not res] ++ bs)

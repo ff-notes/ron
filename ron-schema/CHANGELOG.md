@@ -11,7 +11,8 @@ and this project adheres to
 - Generate `struct_set.$(field)_get` for object field
 - `ObjectRef` is available in the schema language
 - Generate `struct_set.$(field)_add`
-- Generate `struct_set.$(field)_removeValue` for set-merged fields
+- Generate `struct_set.$(field)_remove` for set-merged fields
+- Generate `struct_set.$(field)_removeIf` for set-merged fields
 
 ### Changed
 - `opaque atoms`  is now `opaque_atoms`
