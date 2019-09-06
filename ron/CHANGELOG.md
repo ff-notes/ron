@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.9] - 2019-09-06
 ### Changed
 - Renamed `Object` to `ObjectRef`
 
@@ -138,7 +140,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-0.8...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-0.9...HEAD
+[0.9]: https://github.com/ff-notes/ron/compare/ron-0.8...ron-0.9
 [0.8]: https://github.com/ff-notes/ron/compare/ron-0.7...ron-0.8
 [0.7]: https://github.com/ff-notes/ron/compare/ron-0.6...ron-0.7
 [0.6]: https://github.com/ff-notes/ron/compare/v0.5...ron-0.6
