@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.9] - 2019-09-06
 ### Added
 - Generate `struct_set.$(field)_zoom` for opaque object field
 - Generate `struct_set.$(field)_get` for object field
@@ -151,7 +153,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-schema-0.8...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-schema-0.9...HEAD
+[0.9]: https://github.com/ff-notes/ron/compare/ron-schema-0.8...ron-schema-0.9
 [0.8]: https://github.com/ff-notes/ron/compare/ron-schema-0.7...ron-schema-0.8
 [0.7]: https://github.com/ff-notes/ron/compare/ron-schema-0.6...ron-schema-0.7
 [0.6]: https://github.com/ff-notes/ff/compare/v0.5...ron-schema-0.6
