@@ -13,19 +13,8 @@ packages:
 extra-deps:
   # packages:
     # ron-test:
-      - hedgehog-1.0
-      - tasty-hedgehog-1.0.0.1
-    # demo:
-      - brick-0.47.1
-    # ron-test:
       - git: https://github.com/tweag/ormolu.git
         commit: '9dd08eea3bc023afa3045df73490b09c621eb8fe'
-  # extra-deps:
-    # brick:
-      - config-ini-0.2.4.0
-      - data-clist-0.1.2.3
-      - text-zipper-0.10.1
-      - word-wrap-0.4.1
 
 extra-lib-dirs:
   - swarm/_artifacts/lib
