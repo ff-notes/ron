@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron-storage
-version:        0.10
+version:        0.10.1
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
@@ -42,8 +42,8 @@ library
         transformers,
         tf-random,
         -- project
-        ron,
-        ron-rdt
+        ron     >= 0.9,
+        ron-rdt >= 0.9.1,
     exposed-modules:
         RON.Storage
         RON.Storage.Backend
