@@ -11,6 +11,8 @@ and this project adheres to
 - Export `ORSetRep` constructor
 - Extend error reporting
 - `ORSet.removeObjectIf`
+- `ORSet.addFieldValue`
+- `ORSet.removeFieldValue`
 
 ### Changed
 - Renamed `getObject` to `readObject`

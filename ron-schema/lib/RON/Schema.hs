@@ -160,4 +160,4 @@ data MergeStrategy
     | Max
     | Min
     | Set
-    deriving (Show)
+    deriving (Eq, Show)

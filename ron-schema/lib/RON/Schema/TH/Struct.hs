@@ -364,6 +364,15 @@ mkAccessorsSet name' field = do
                 $(orSetViewField mergeStrategy) $ronName' chunk
               |]
           ]
+  let removeF = do
+        guard $ mergeStrategy == Just Set
+        [ sigD remove
+            [t|
+              (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m)
+              => $guideType -> $m ()
+              |],
+          valDP remove [|ORSet.removeFieldValue $ronName'|]
+          ]
   let zoomF = do
         TObject _ <- [ronType]
         [ sigD zoom
@@ -374,7 +383,7 @@ mkAccessorsSet name' field = do
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
-  sequenceA $ addF ++ setF ++ clearF ++ getF ++ readF ++ zoomF
+  sequenceA $ addF ++ setF ++ clearF ++ getF ++ readF ++ removeF ++ zoomF
   where
     Field {ronType, annotations = FieldAnnotations {mergeStrategy}, ext} = field
     XFieldEquipped {haskellName, ronName} = ext
@@ -386,6 +395,7 @@ mkAccessorsSet name' field = do
     clear   = mkNameT $ haskellName <> "_clear"
     getName = mkNameT $ haskellName <> "_get"
     read    = mkNameT $ haskellName <> "_read"
+    remove  = mkNameT $ haskellName <> "_remove"
     set     = mkNameT $ haskellName <> "_set"
     zoom    = mkNameT $ haskellName <> "_zoom"
 

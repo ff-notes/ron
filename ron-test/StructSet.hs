@@ -69,9 +69,10 @@ state4expect = [s|
                                     @}lUW   :`{0acW >str3 '190'
                                     @{20UW  :0      >set4 >B/0000002GUW+r3pl1c4
                                     @{3k2W          >nst6 >B/0000003nMW+r3pl1c4
-                                    @{50UW          >set5 170
+                                    @{5GUW          >set5 172
+                                    @}WUW   :`}0UW  >set5 170
 
-    *rga    #}WUW                   @0              !
+    *rga    #}WUW                   @0      :0      !
                                     @`]g6   :`{12MW '2'
                                     @)7     :}HUW   '7'
                                     @{1QUW  :0      '1'
@@ -107,7 +108,7 @@ example4expect = StructSet13
     , str2 = Just $ RGA "145"
     , str3 = Just "206"
     , set4 = Just $ ORSet [def{int1 = Just 164, str3 = Just "166"}]
-    , set5 = [170]
+    , set5 = [172]
     , nst6 = Just def{int1 = Just 138}
     , ref7 = []
     }
@@ -169,6 +170,12 @@ prop_structSet = property $ do
                     pure $ i1 == Just 135
             checkCausality
             set5_add 170
+            set5_add 172
+            checkCausality
+            set5_remove 170
+            set5_remove 175 -- nothing changes
+            checkCausality
+            -- TODO ref7_removeObjectIf $ do
             checkCausality
 
     -- decode object after modification

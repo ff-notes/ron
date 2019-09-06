@@ -27,6 +27,7 @@ module RON.Data.ORSet (
     assignField,
     getFieldObject,
     newStruct,
+    removeFieldValue,
     viewField,
     viewFieldLWW,
     viewFieldMax,
@@ -41,10 +42,10 @@ import qualified Data.Map.Strict as Map
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Rep, Replicated (encoding),
-                                    ReplicatedAsObject, ReplicatedAsPayload,
-                                    eqPayload, eqRef, evalObjectState,
-                                    fromPayload, fromRon, getObjectState,
-                                    getObjectStateChunk,
+                                    ReplicatedAsObject,
+                                    ReplicatedAsPayload (fromPayload, toPayload),
+                                    eqPayload, eqRef, evalObjectState, fromRon,
+                                    getObjectState, getObjectStateChunk,
                                     modifyObjectStateChunk_, newObject, newRon,
                                     objectEncoding, rconcat, readObject,
                                     reduceObjectStates, reducibleOpType,
@@ -201,6 +202,31 @@ removeValue
         )
     => a -> m ()
 removeValue v = commonRemove $ pure . eqPayload v
+
+-- | Remove from a field all values that equal to the specified value.
+removeFieldValue
+    ::  ( MonadE m
+        , MonadObjectState struct m
+        , ReplicaClock m
+        , ReplicatedAsPayload a
+        )
+    => UUID -- ^ Field name
+    -> a -- ^ Value
+    -> m ()
+removeFieldValue field value =
+    modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
+        let (observedOps, stateBody1) =
+                partition isFieldAliveAndSameValue stateBody
+        removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
+            tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
+            pure op{opId = tombstone, refId = observedEvent}
+        let stateBody2 = stateBody1 ++ removeOps
+        pure $ StateChunk stateBody2
+  where
+    isFieldAliveAndSameValue = \case
+        Op{refId = Zero, payload = AUuid field' : valuePayload} ->
+            field' == field && valuePayload == toPayload value
+        _ -> False
 
 -- | Remove an object reference from the OR-Set
 removeRef
