@@ -23,18 +23,18 @@ import System.Process.Typed
     setStdin
     )
 
-acceptableStyleFailRate :: Double
-acceptableStyleFailRate = 0.95
+minimumStylishness :: Double
+minimumStylishness = 0.07
 
 main :: IO ()
 main =
   withCurrentDirectory projectDir $ do
     haskellFiles <- collectHaskellFiles
     styleOkCount <- sum . map fromEnum <$> for haskellFiles checkStyle
-    let styleFailRate =
-          1 - fromIntegral styleOkCount / genericLength haskellFiles :: Double
-    putStrLn $ "Style fail rate: " <> show styleFailRate
-    when (styleFailRate > acceptableStyleFailRate)
+    let stylishness =
+          fromIntegral styleOkCount / genericLength haskellFiles :: Double
+    putStrLn $ "Stylishness: " <> show stylishness
+    when (stylishness < minimumStylishness)
       $ fail "Bad style"
 
 isHaskellFile :: FilePath -> Bool
