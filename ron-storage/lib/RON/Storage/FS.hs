@@ -30,7 +30,7 @@ module RON.Storage.FS
     -- * Storage
     Storage,
     runStorage,
-    subscribeForever
+    watch
     )
 where
 
@@ -231,8 +231,17 @@ getMacAddress = do
         + (fromIntegral b1 `shiftL` 8)
         + fromIntegral b0
 
-subscribeForever :: Handle -> (CollectionDocId -> IO ()) -> IO ()
-subscribeForever Handle {onDocumentChanged} action = do
+{- |
+  Watch for changes,
+  calling the action each time a document changes inside a replica or outside.
+
+  This function blocks its thread.
+  -}
+watch
+  :: Handle
+  -> (CollectionDocId -> IO ()) -- ^ action
+  -> IO ()
+watch Handle {onDocumentChanged} action = do
   childChan <- atomically $ dupTChan onDocumentChanged
   forever $ do
     docId <- atomically $ readTChan childChan

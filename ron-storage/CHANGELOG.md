@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Renamed `subscribeForever` to `watch`
 
 ## [0.10] - 2019-09-06
 ### Added
