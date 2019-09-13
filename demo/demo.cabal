@@ -25,3 +25,21 @@ executable demo-text-editor-brick
     hs-source-dirs: text-editor-brick
     main-is: Main.hs
     other-modules: Types
+
+executable demo-text-editor-qt
+    import: language
+    build-depends:
+        -- global
+        containers,
+        hoppy-runtime,
+        qtah,
+        stm,
+        -- qtah-qt5,
+        text,
+        time,
+        -- project
+        ron-rdt,
+        ron-storage,
+    ghc-options: -dynamic -rtsopts -with-rtsopts=-N
+    hs-source-dirs: text-editor-qt
+    main-is: Main.hs
