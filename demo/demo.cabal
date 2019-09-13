@@ -17,5 +17,8 @@ executable demo-text-editor-brick
         vty
     default-language: Haskell2010
     ghc-options: -threaded
+    hs-source-dirs: text-editor-brick
     main-is: Main.hs
     other-modules: Types
+
+-- executable demo-text-editor-qt
