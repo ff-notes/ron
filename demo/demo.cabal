@@ -1,11 +1,11 @@
 cabal-version: >= 1.10
 
 name: demo
-version: 2019
+version: 0
 
 build-type: Simple
 
-executable demo
+executable demo-text-editor-brick
     build-depends:
         base,
         brick,
