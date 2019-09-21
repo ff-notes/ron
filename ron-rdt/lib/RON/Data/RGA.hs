@@ -30,6 +30,8 @@ module RON.Data.RGA
     newFromText,
     remove,
     rgaType,
+    RON.Data.RGA.toList,
+    toText,
   )
 where
 
@@ -553,3 +555,9 @@ remove position =
 
 wireStateChunk :: [Op] -> WireStateChunk
 wireStateChunk stateBody = WireStateChunk {stateType = rgaType, stateBody}
+
+toList :: RGA a -> [a]
+toList (RGA xs) = xs
+
+toText :: RgaString -> Text
+toText (RGA s) = Text.pack s
