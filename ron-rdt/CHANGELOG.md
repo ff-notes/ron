@@ -10,6 +10,9 @@ and this project adheres to
 - `RGA.toList`
 - `RGA.toText`
 
+### Fixed
+- Cabal-file: Diff dependency bounds
+
 ## [0.9] - 2019-09-06
 ### Added
 - Function `ORSet.getFieldObject`
