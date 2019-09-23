@@ -131,8 +131,8 @@ mkScopedName
     -> ByteString  -- ^ local name, max 10 Base64 letters
     -> m UUID
 mkScopedName scope nam = do
-    scope' <- maybe (fail "Bad scope") pure $ Base64.decode60 scope
-    nam'   <- maybe (fail "Bad name")  pure $ Base64.decode60 nam
+    scope' <- expectBase64x60 "UUID scope" scope $ Base64.decode60 scope
+    nam'   <- expectBase64x60 "UUID name"  nam   $ Base64.decode60 nam
     pure $ build UuidFields
         { uuidVariety = B0000
         , uuidValue   = scope'
@@ -140,6 +140,14 @@ mkScopedName scope nam = do
         , uuidVersion = B00
         , uuidOrigin  = nam'
         }
+  where
+    expectBase64x60 field input =
+        maybe
+            (fail
+                $   field
+                <>  ": expected a Base64-encoded 60-character string, got "
+                <>  show input)
+            pure
 
 -- | Convert UUID to a name
 getName
