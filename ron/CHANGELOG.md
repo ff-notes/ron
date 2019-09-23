@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Instances of `Generic` and `Hashable` for `ObjectRef`
 
 ## [0.9] - 2019-09-06
 ### Added

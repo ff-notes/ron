@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -125,7 +127,8 @@ type StateFrame = Map UUID WireStateChunk
 
 -- | Reference to an object
 newtype ObjectRef a = ObjectRef UUID
-    deriving (Eq)
+    deriving newtype (Eq, Hashable)
+    deriving stock (Generic)
 
 instance Typeable a => Show (ObjectRef a) where
     showsPrec a (ObjectRef b) =
