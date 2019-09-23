@@ -8,6 +8,9 @@ and this project adheres to
 ## [Unreleased]
 
 ## [0.9] - 2019-09-06
+### Added
+- A useful message when UUID parsing fails
+
 ### Changed
 - Renamed `Object` to `ObjectRef`
 
