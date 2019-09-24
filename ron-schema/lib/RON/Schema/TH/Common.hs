@@ -3,8 +3,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module RON.Schema.TH.Common (
-    fieldExp',
+module RON.Schema.TH.Common
+  ( fieldExp',
     fieldPat',
     let1S,
     liftText,
@@ -14,20 +14,19 @@ module RON.Schema.TH.Common (
     newNameT,
     valD,
     valDP,
-) where
-
-import           RON.Prelude
+  )
+where
 
 import qualified Data.Text as Text
-import           Language.Haskell.TH (Q, conT, normalB, varP)
+import Language.Haskell.TH (Q, conT, normalB, varP)
 import qualified Language.Haskell.TH as TH
-import           Language.Haskell.TH.Syntax (liftString)
-
-import           RON.Data.ORSet (ORSet, ORSetMap)
-import           RON.Data.RGA (RGA)
-import           RON.Data.VersionVector (VersionVector)
-import           RON.Schema as X
-import           RON.Types (ObjectRef, UUID)
+import Language.Haskell.TH.Syntax (liftString)
+import RON.Data.ORSet (ORSet, ORSetMap)
+import RON.Data.RGA (RGA)
+import RON.Data.VersionVector (VersionVector)
+import RON.Prelude
+import RON.Schema as X
+import RON.Types (ObjectRef, UUID)
 
 mkNameT :: Text -> TH.Name
 mkNameT = TH.mkName . Text.unpack
@@ -46,39 +45,39 @@ valDP = valD . varP
 -- a user type may be replicated different ways, with different guide types.
 mkGuideType :: RonType -> TH.TypeQ
 mkGuideType typ = case typ of
-    TAtom atom -> case atom of
-        TAFloat      -> [t| Double |]
-        TAInteger    -> [t| Int64  |]
-        TAString     -> [t| Text   |]
-        TAUuid       -> [t| UUID   |]
-        TObjectRef t -> wrap ''ObjectRef t
-    TEnum Enum{name} -> conT $ mkNameT name
-    TObject t -> case t of
-        TOpaqueObject u            -> mkOpaque u
-        TORSet        item         -> wrap  ''ORSet    item
-        TORSetMap     key value    -> wrap2 ''ORSetMap key value
-        TRga          item         -> wrap  ''RGA      item
-        TStructLww    Struct{name} -> conT $ mkNameT name
-        TStructSet    Struct{name} -> conT $ mkNameT name
-        TVersionVector             -> [t| VersionVector |]
-    TOpaqueAtoms t -> mkOpaque t
+  TAtom atom -> case atom of
+    TAFloat -> [t|Double|]
+    TAInteger -> [t|Int64|]
+    TAString -> [t|Text|]
+    TAUuid -> [t|UUID|]
+    TObjectRef t -> wrap ''ObjectRef t
+  TEnum Enum {name} -> conT $ mkNameT name
+  TObject t -> case t of
+    TOpaqueObject u -> mkOpaque u
+    TORSet item -> wrap ''ORSet item
+    TORSetMap key value -> wrap2 ''ORSetMap key value
+    TRga item -> wrap ''RGA item
+    TStructLww Struct {name} -> conT $ mkNameT name
+    TStructSet Struct {name} -> conT $ mkNameT name
+    TVersionVector -> [t|VersionVector|]
+  TOpaqueAtoms t -> mkOpaque t
   where
-    wrap  w a   = [t| $(conT w) $(mkGuideType a) |]
-    wrap2 w a b = [t| $(conT w) $(mkGuideType a) $(mkGuideType b) |]
-    mkOpaque Opaque{name, annotations = OpaqueAnnotations{haskellType}} =
-        conT $ mkNameT $ fromMaybe name haskellType
+    wrap w a = [t|$(conT w) $(mkGuideType a)|]
+    wrap2 w a b = [t|$(conT w) $(mkGuideType a) $(mkGuideType b)|]
+    mkOpaque Opaque {name, annotations = OpaqueAnnotations {haskellType}} =
+      conT $ mkNameT $ fromMaybe name haskellType
 
 mkFieldType :: RonType -> Maybe MergeStrategy -> TH.TypeQ
 mkFieldType typ mergeStrategy = case (typ, mergeStrategy) of
-    (_, Just Set) -> listGuide
-    _ -> maybeGuide
+  (_, Just Set) -> listGuide
+  _ -> maybeGuide
   where
-    listGuide  = [t| [ $guide ] |]
-    maybeGuide = [t| Maybe $guide |]
+    listGuide = [t|[$guide]|]
+    maybeGuide = [t|Maybe $guide|]
     guide = mkGuideType typ
 
 liftText :: Text -> TH.ExpQ
-liftText t = [| Text.pack $(liftString $ Text.unpack t) |]
+liftText t = [|Text.pack $(liftString $ Text.unpack t)|]
 
 let1S :: TH.PatQ -> TH.ExpQ -> TH.StmtQ
 let1S pat exp = TH.letS [valD pat exp]
