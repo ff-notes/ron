@@ -14,6 +14,7 @@ module RON.Storage.Backend
     DocVersion,
     IsTouched (..),
     MonadStorage (..),
+    RawDocId,
     createVersion,
     decodeDocId,
     readVersion
@@ -38,7 +39,9 @@ type DocVersion = FilePath
 
 -- | Document identifier (directory name),
 -- should be a RON-Base32-encoded RON-UUID.
-newtype DocId a = DocId FilePath
+type RawDocId = FilePath
+
+newtype DocId a = DocId RawDocId
   deriving (Eq, Ord)
 
 instance Collection a => Show (DocId a) where

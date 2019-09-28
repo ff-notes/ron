@@ -30,8 +30,8 @@ module RON.Storage.FS
     -- * Storage
     Storage,
     runStorage,
-    watch
-    )
+    watch,
+  )
 where
 
 import Control.Concurrent.STM
@@ -40,8 +40,8 @@ import Control.Concurrent.STM
     dupTChan,
     newBroadcastTChanIO,
     readTChan,
-    writeTChan
-    )
+    writeTChan,
+  )
 import Control.Monad (forever)
 import Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
@@ -55,21 +55,22 @@ import RON.Event
     advance,
     applicationSpecific,
     getEvents,
-    getPid
-    )
+    getPid,
+  )
 import RON.Prelude
 import RON.Storage as X
 import RON.Storage.Backend
   ( DocId (DocId),
     MonadStorage,
+    RawDocId,
     changeDocId,
     deleteVersion,
     getCollections,
     getDocumentVersions,
     getDocuments,
     loadVersionContent,
-    saveVersionContent
-    )
+    saveVersionContent,
+  )
 import System.Directory
   ( canonicalizePath,
     createDirectoryIfMissing,
@@ -77,8 +78,8 @@ import System.Directory
     doesPathExist,
     listDirectory,
     removeFile,
-    renameDirectory
-    )
+    renameDirectory,
+  )
 import System.FilePath ((</>))
 import System.IO.Error (isDoesNotExistError)
 import System.Random.TF (newTFGen)
@@ -111,7 +112,7 @@ instance MonadStorage Storage where
     Handle {dataDir} <- ask
     liftIO
       $ listDirectory dataDir
-      >>= filterM (doesDirectoryExist . (dataDir </>))
+        >>= filterM (doesDirectoryExist . (dataDir </>))
 
   getDocuments :: forall doc. Collection doc => Storage [DocId doc]
   getDocuments = map DocId <$> listDirectoryIfExists (collectionName @doc)
@@ -133,11 +134,12 @@ instance MonadStorage Storage where
 
   deleteVersion docid version = Storage $ do
     Handle {dataDir} <- ask
-    liftIO $ do
-      let file = dataDir </> docDir docid </> version
-      removeFile file
-      `catch` \e ->
-        unless (isDoesNotExistError e) $ throwIO e
+    liftIO
+      $ do
+        let file = dataDir </> docDir docid </> version
+        removeFile file
+        `catch` \e ->
+          unless (isDoesNotExistError e) $ throwIO e
 
   changeDocId old new = do
     renamed <- x
@@ -168,7 +170,7 @@ instance MonadStorage Storage where
                   "->",
                   newPathCanon,
                   "]: internal error: new document id is already taken"
-                  ]
+                ]
           liftIO $ renameDirectory oldPath newPath
         pure pathsDiffer
 
@@ -178,13 +180,13 @@ data Handle
       { clock :: IORef EpochTime,
         dataDir :: FilePath,
         replica :: ReplicaId,
-        onDocumentChanged :: TChan CollectionDocId
-        }
+        onDocumentChanged :: TChan (CollectionName, RawDocId)
+      }
 
 emitDocumentChanged :: Collection a => DocId a -> Storage ()
-emitDocumentChanged docid = Storage $ do
+emitDocumentChanged (DocId docid :: DocId a) = Storage $ do
   Handle {onDocumentChanged} <- ask
-  liftIO . atomically $ writeTChan onDocumentChanged $ CollectionDocId docid
+  liftIO . atomically $ writeTChan onDocumentChanged (collectionName @a, docid)
 
 -- | Create new storage handle.
 -- Uses MAC address for replica id or generates a random one.
@@ -239,10 +241,10 @@ getMacAddress = do
   -}
 watch
   :: Handle
-  -> (CollectionDocId -> IO ()) -- ^ action
+  -> (CollectionName -> RawDocId -> IO ()) -- ^ action
   -> IO ()
 watch Handle {onDocumentChanged} action = do
   childChan <- atomically $ dupTChan onDocumentChanged
   forever $ do
-    docId <- atomically $ readTChan childChan
-    action docId
+    (collection, docid) <- atomically $ readTChan childChan
+    action collection docid

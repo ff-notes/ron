@@ -6,8 +6,16 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Type `RawDocId`
+
 ### Changed
 - Renamed `subscribeForever` to `watch`
+- Pass raw document id and collection name through subscription channel instead
+  of existentially typed one
+
+### Removed
+- Type `CollectionDocId`
 
 ## [0.10] - 2019-09-06
 ### Added
