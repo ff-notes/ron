@@ -249,11 +249,7 @@ startWatching handle = do
   isWatching <- isJust <$> readIORef stopWatching
   unless isWatching $ do
     stopListening <-
-      FSNotify.watchTree
-        fsWatchManager
-        dataDir
-        isStorageEvent
-        translateAnFSChangeToDB
+      FSNotify.watchTree fsWatchManager dataDir isStorageEvent mapFSEventToDB
     writeIORef stopWatching $ Just stopListening
   where
     Handle {dataDir, fsWatchManager, stopWatching, onDocumentChanged} = handle
@@ -261,12 +257,12 @@ startWatching handle = do
       FSNotify.Added _ _ False -> True
       FSNotify.Modified _ _ False -> True
       _ -> False
-    translateAnFSChangeToDB event =
+    mapFSEventToDB event =
       case splitDirectories $ makeRelative dataDir file of
         [collection, docid, _version] ->
           atomically $ writeTChan onDocumentChanged (collection, docid)
         path ->
           hPutStrLn stderr
-            $ "translateAnFSChangeToDB: bad path " <> file <> " " <> show path
+            $ "mapFSEventToDB: bad path " <> file <> " " <> show path
       where
         file = FSNotify.eventPath event
