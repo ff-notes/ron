@@ -45,56 +45,49 @@ main :: IO ()
 main = do
   progName <- getProgName
   storage <- Storage.newHandle dataDir
-  dbChanges <- Storage.subscribe storage
+  changedDocs <- Storage.subscribe storage
   withApp $ \_ -> do
-    window <- newMainWindow progName
+    UI {window, editor} <- setupUI progName storage
     QWidget.show window
-    do
-      editor <- getEditor window
-      connect_ editor QTextEdit.textChangedSignal $ saveTheText storage editor
-    updateTheText storage window
-    do
-      always <- QTimer.new
-      connect_ always QTimer.timeoutSignal $ tryUpdate storage window dbChanges
-      QTimer.start always 0
+    updateTheText storage editor
+    whenUIIsIdleDo $ checkDBChange storage editor changedDocs
     QCoreApplication.exec
   where
     withApp = withScopedPtr $ do
       args <- getArgs
       QApplication.new args
 
-tryUpdate
-  :: Storage.Handle -> QMainWindow -> TChan (CollectionName, RawDocId) -> IO ()
-tryUpdate storage window dbChanges =
-  atomically (tryReadTChan dbChanges) >>= \case
-    Just (collection, docid) -> update storage window collection docid
+checkDBChange
+  :: Storage.Handle -> QTextEdit -> TChan (CollectionName, RawDocId) -> IO ()
+checkDBChange storage editor changedDocs =
+  atomically (tryReadTChan changedDocs) >>= \case
+    Just (collection, docid) -> update storage editor collection docid
     Nothing -> pure ()
 
-update :: Storage.Handle -> QMainWindow -> CollectionName -> RawDocId -> IO ()
-update storage window collection docid = case collection of
+update :: Storage.Handle -> QTextEdit -> CollectionName -> RawDocId -> IO ()
+update storage editor collection docid = case collection of
   "text"
-    | DocId docid == theDoc -> updateTheText storage window
-    | otherwise -> hPutStrLn stderr $ "update: unknown document " <> show docid
+    | DocId docid == theDoc -> updateTheText storage editor
+    | otherwise ->
+      hPutStrLn stderr $ "update: unknown document id " <> show docid
   _ -> hPutStrLn stderr $ "update: unknown document type " <> show docid
 
-updateTheText :: Storage.Handle -> QMainWindow -> IO ()
-updateTheText storage window = do
+updateTheText :: Storage.Handle -> QTextEdit -> IO ()
+updateTheText storage editor = do
   text <-
     runStorage storage $ do
       Document {objectFrame} <- loadDocument theDoc
       evalObjectState objectFrame RGA.getList
-  editor <- getEditor window
   QTextEdit.setPlainText editor text
 
-getEditor :: QMainWindow -> IO QTextEdit
-getEditor window = QTextEdit.downCast <$> QMainWindow.centralWidget window
-
-newMainWindow :: String -> IO QMainWindow
-newMainWindow progName = do
+setupUI :: String -> Storage.Handle -> IO UI
+setupUI progName storage = do
   window <- QMainWindow.new
   QWidget.setWindowTitle window progName
-  QMainWindow.setCentralWidget window =<< QTextEdit.new
-  pure window
+  editor <- QTextEdit.new
+  QMainWindow.setCentralWidget window editor
+  connect_ editor QTextEdit.textChangedSignal $ saveTheText storage editor
+  pure UI {window, editor}
 
 instance Collection RgaString where
   collectionName = "text"
@@ -103,3 +96,15 @@ saveTheText :: Storage.Handle -> QTextEdit -> IO ()
 saveTheText storage editor = do
   text <- QTextEdit.toPlainText editor
   runStorage storage $ modify theDoc $ RGA.edit text
+
+data UI
+  = UI
+      { window :: QMainWindow,
+        editor :: QTextEdit
+      }
+
+whenUIIsIdleDo :: IO () -> IO ()
+whenUIIsIdleDo action = do
+  t <- QTimer.new
+  connect_ t QTimer.timeoutSignal action
+  QTimer.start t 0
