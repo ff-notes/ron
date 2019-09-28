@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -30,7 +31,6 @@ module RON.Storage.FS
     -- ** Listening to changes
     StopListening,
     subscribe,
-    subscribeBlocking,
   )
 where
 
@@ -39,10 +39,8 @@ import Control.Concurrent.STM
     atomically,
     dupTChan,
     newBroadcastTChanIO,
-    readTChan,
     writeTChan,
   )
-import Control.Monad (forever)
 import Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Maybe (isJust)
@@ -245,22 +243,6 @@ subscribe :: Handle -> IO (TChan (CollectionName, RawDocId))
 subscribe handle@Handle {onDocumentChanged} = do
   startWatching handle
   atomically $ dupTChan onDocumentChanged
-
-{- |
-  Watch for changes,
-  calling the action each time a document changes inside the replica or outside.
-
-  This function blocks its thread.
-  -}
-subscribeBlocking
-  :: Handle
-  -> (CollectionName -> RawDocId -> IO ()) -- ^ action
-  -> IO ()
-subscribeBlocking handle action = do
-  chan <- subscribe handle
-  forever $ do
-    (collection, docid) <- atomically $ readTChan chan
-    action collection docid
 
 startWatching :: Handle -> IO ()
 startWatching handle = do
