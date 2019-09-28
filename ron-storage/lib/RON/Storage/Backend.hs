@@ -17,8 +17,8 @@ module RON.Storage.Backend
     RawDocId,
     createVersion,
     decodeDocId,
-    readVersion
-    )
+    readVersion,
+  )
 where
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -45,7 +45,6 @@ newtype DocId a = DocId RawDocId
   deriving (Eq, Ord)
 
 instance Collection a => Show (DocId a) where
-
   show (DocId file) = collectionName @a </> file
 
 -- | Collection (directory name)
@@ -104,7 +103,7 @@ readVersion docid version = do
   unless isObjectIdValid
     $ throwErrorString
     $ "Not a Base32 UUID "
-    ++ show docid
+      ++ show docid
   contents <- loadVersionContent docid version
   case parseStateFrame contents of
     Right frame ->
@@ -129,13 +128,14 @@ data Document a
       { objectFrame :: ObjectFrame a,
         versions :: NonEmpty DocVersion,
         isTouched :: IsTouched
-        }
+      }
   deriving (Show)
 
 -- | Create new version of an object/document.
 -- If the document doesn't exist yet, it will be created.
 createVersion
-  :: forall a m. (Collection a, MonadStorage m)
+  :: forall a m.
+     (Collection a, MonadStorage m)
   => Maybe (DocId a, Document a)
   -- ^ 'Just', if document exists already; 'Nothing' otherwise.
   -> ObjectFrame a
@@ -147,7 +147,7 @@ createVersion mDoc newObj = case mDoc of
           { objectFrame = oldObj,
             versions,
             isTouched = IsTouched isTouched
-            } =
+          } =
             oldDoc
     when (newObj /= oldObj || length versions /= 1 || isTouched)
       $ save docid
