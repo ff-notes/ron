@@ -13,7 +13,7 @@ packages:
 extra-deps:
   # packages:
     # demo
-      - git: https://gitlab.com/cblp/hoppy.git
+      - git: https://gitlab.com/khumba/hoppy.git
         commit:
           45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
           # 0.5.1 + Compatibility with GHC 8.6, Cabal 2.4

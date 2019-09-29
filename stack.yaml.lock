@@ -11,14 +11,14 @@ packages:
       sha256: a3133452c3948385920ccccd4c42c8c9336558029d78249dbdabd7f50d0b847d
     name: hoppy-generator
     version: 0.5.2
-    git: https://gitlab.com/cblp/hoppy.git
+    git: https://gitlab.com/khumba/hoppy.git
     pantry-tree:
       size: 1403
       sha256: 3e4f5fc5549249439b6383ea5bfb7025b250f3c6ecd853ac8da0c297a1313707
     commit: 45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
   original:
     subdir: generator
-    git: https://gitlab.com/cblp/hoppy.git
+    git: https://gitlab.com/khumba/hoppy.git
     commit: 45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
 - completed:
     subdir: runtime
@@ -27,14 +27,14 @@ packages:
       sha256: 3bfb035401a61f824d217d91f5db0a9f88cd2da8b3bed58fc4e4d0407688f484
     name: hoppy-runtime
     version: 0.5.1
-    git: https://gitlab.com/cblp/hoppy.git
+    git: https://gitlab.com/khumba/hoppy.git
     pantry-tree:
       size: 349
       sha256: f6688904217301d271cb2f070f1cd46d19cb864eea6ec1fcf9a88ca7cfd87147
     commit: 45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
   original:
     subdir: runtime
-    git: https://gitlab.com/cblp/hoppy.git
+    git: https://gitlab.com/khumba/hoppy.git
     commit: 45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
 - completed:
     subdir: std
@@ -43,14 +43,14 @@ packages:
       sha256: a6395cc46b53b0f1f594ca7fcf22288f47875cc23eac284d2650e242c61e8834
     name: hoppy-std
     version: 0.5.0
-    git: https://gitlab.com/cblp/hoppy.git
+    git: https://gitlab.com/khumba/hoppy.git
     pantry-tree:
       size: 1535
       sha256: 6ffaa4c5cecbb1af8f06770ef7e8c1571073b2171744dbf4fa97fa1409b68bb5
     commit: 45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
   original:
     subdir: std
-    git: https://gitlab.com/cblp/hoppy.git
+    git: https://gitlab.com/khumba/hoppy.git
     commit: 45dded1e21c29409a09eb88ec92bd33b4f6ed0f3
 - completed:
     subdir: qtah
@@ -63,11 +63,11 @@ packages:
     pantry-tree:
       size: 1064
       sha256: aa98c44e074dc2b014d4e166b4154517c239e6dab7634611caa058969a5ae2f5
-    commit: a714d248b7ccc397db5fa0c13924476458351047
+    commit: eafc0c3eb7639ae00e9e89abaaa96c09da650c2e
   original:
     subdir: qtah
     git: https://gitlab.com/cblp/qtah.git
-    commit: a714d248b7ccc397db5fa0c13924476458351047
+    commit: eafc0c3eb7639ae00e9e89abaaa96c09da650c2e
 - completed:
     subdir: qtah-cpp
     cabal-file:
@@ -79,11 +79,11 @@ packages:
     pantry-tree:
       size: 1853
       sha256: 56418688abb8891a671bf3f5bc557fef51e8ea8b6be2b50cc0a229f7b5fa5ffa
-    commit: a714d248b7ccc397db5fa0c13924476458351047
+    commit: eafc0c3eb7639ae00e9e89abaaa96c09da650c2e
   original:
     subdir: qtah-cpp
     git: https://gitlab.com/cblp/qtah.git
-    commit: a714d248b7ccc397db5fa0c13924476458351047
+    commit: eafc0c3eb7639ae00e9e89abaaa96c09da650c2e
 - completed:
     subdir: qtah-generator
     cabal-file:
@@ -94,12 +94,12 @@ packages:
     git: https://gitlab.com/cblp/qtah.git
     pantry-tree:
       size: 19641
-      sha256: 1b035dd4015b431f6a92ac5eccf7f0786f8dc914d54c7d4815330c20b5ade638
-    commit: a714d248b7ccc397db5fa0c13924476458351047
+      sha256: b6e61d5fe8f2e89c40898c443c330635a8834c282dbd6aa4392e3bbb206d62ac
+    commit: eafc0c3eb7639ae00e9e89abaaa96c09da650c2e
   original:
     subdir: qtah-generator
     git: https://gitlab.com/cblp/qtah.git
-    commit: a714d248b7ccc397db5fa0c13924476458351047
+    commit: eafc0c3eb7639ae00e9e89abaaa96c09da650c2e
 - completed:
     cabal-file:
       size: 7744
