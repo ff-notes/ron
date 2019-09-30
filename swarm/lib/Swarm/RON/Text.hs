@@ -1,6 +1,6 @@
 module Swarm.RON.Text
-  ( TextFrame (..)
-    )
+  ( TextFrame (..),
+  )
 where
 
 import Data.Proxy (Proxy)

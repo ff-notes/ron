@@ -9,8 +9,8 @@ module Swarm.DB.Replica
     createReplica,
     newTextReplica,
     open,
-    receive
-    )
+    receive,
+  )
 where
 
 import Control.Exception (mask_)
@@ -35,15 +35,15 @@ newtype TextReplica = TextReplica (ForeignPtr (Proxy TextReplica))
 do
   context
     $ cppCtx
-    <> bsCtx
-    <> fptrCtx
-    <> stdCtx
-    <> mempty
-      { ctxTypesTable =
-          Map.fromList
-            [ (TypeName "Status",      [t|Proxy Status|]),
-              (TypeName "TextFrame",   [t|Proxy TextFrame|]),
-              (TypeName "TextReplica", [t|Proxy TextReplica|])
+      <> bsCtx
+      <> fptrCtx
+      <> stdCtx
+      <> mempty
+        { ctxTypesTable =
+            Map.fromList
+              [ (TypeName "Status", [t|Proxy Status|]),
+                (TypeName "TextFrame", [t|Proxy TextFrame|]),
+                (TypeName "TextReplica", [t|Proxy TextReplica|])
               ]
         }
   include "<swarm/db/replica.hpp>"
