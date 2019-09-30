@@ -8,14 +8,16 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - Type `RawDocId`
+- `subscribe` function
+- Notifying about changes in database caused by other process
 
 ### Changed
-- Renamed `subscribeForever` to `watch`
 - Pass raw document id and collection name through subscription channel instead
   of existentially typed one
 
 ### Removed
 - Type `CollectionDocId`
+- `subscribeForever` function
 
 ## [0.10] - 2019-09-06
 ### Added
