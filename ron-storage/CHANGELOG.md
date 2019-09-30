@@ -10,6 +10,7 @@ and this project adheres to
 - Type `RawDocId`
 - `subscribe` function
 - Notifying about changes in database caused by other process
+- instance `Hashable` for `DocId`
 
 ### Changed
 - Pass raw document id and collection name through subscription channel instead

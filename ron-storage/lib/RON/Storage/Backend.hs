@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -42,7 +43,7 @@ type DocVersion = FilePath
 type RawDocId = FilePath
 
 newtype DocId a = DocId RawDocId
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Hashable)
 
 instance Collection a => Show (DocId a) where
   show (DocId file) = collectionName @a </> file
