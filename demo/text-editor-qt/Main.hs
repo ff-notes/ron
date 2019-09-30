@@ -50,7 +50,7 @@ main = do
     UI {window, editor} <- setupUI progName storage
     QWidget.show window
     updateTheText storage editor
-    whenUIIsIdleDo $ checkDBChange storage editor changedDocs
+    whenUIIsIdle $ checkDBChange storage editor changedDocs
     QCoreApplication.exec
   where
     withApp = withScopedPtr $ do
@@ -103,8 +103,8 @@ data UI
         editor :: QTextEdit
       }
 
-whenUIIsIdleDo :: IO () -> IO ()
-whenUIIsIdleDo action = do
+whenUIIsIdle :: IO () -> IO ()
+whenUIIsIdle action = do
   t <- QTimer.new
   connect_ t QTimer.timeoutSignal action
   QTimer.start t 0
