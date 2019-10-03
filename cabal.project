@@ -1,2 +1,3 @@
 packages:
   ron/ron.cabal
+  ron-rdt/ron-rdt.cabal
