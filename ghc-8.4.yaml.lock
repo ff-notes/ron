@@ -5,13 +5,6 @@
 
 packages:
 - completed:
-    hackage: transformers-0.5.6.2@sha256:6c959d14430f4deffb99579ba019de07c3d852a2122b6f449344386c7d75ff1d,3172
-    pantry-tree:
-      size: 2512
-      sha256: c79246ba7d61392c2f214376fed3c2a05e4b2649b93ec2c849a86493f278ace0
-  original:
-    hackage: transformers-0.5.6.2
-- completed:
     hackage: hedn-0.2.0.1@sha256:5fc70a561392a7b740a1e062d358bcbe6affc9501b901b8327e104b9c0fe23f3,2345
     pantry-tree:
       size: 1344

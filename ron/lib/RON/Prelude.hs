@@ -23,7 +23,8 @@ module RON.Prelude (
     (?:),
 ) where
 
-import           RON.Prelude.Writer as X
+-- TODO import           RON.Prelude.Writer as X
+import Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 
 -- base
 import           Control.Applicative as X (Alternative, Applicative, liftA2,

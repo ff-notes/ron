@@ -171,7 +171,7 @@ instance ReplicaClock m => ReplicaClock (StateT s m) where
     getEvents = lift . getEvents
     advance   = lift . advance
 
-instance ReplicaClock m => ReplicaClock (WriterT s m) where
+instance (Monoid s, ReplicaClock m) => ReplicaClock (WriterT s m) where
     getPid    = lift   getPid
     getEvents = lift . getEvents
     advance   = lift . advance
