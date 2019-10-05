@@ -18,6 +18,7 @@ module RON.Data.RGA
     edit,
     editText,
     getAliveIndices,
+    getAliveRefs,
     getList,
     getText,
     insert,
@@ -68,7 +69,8 @@ import RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import RON.Prelude
 import RON.Semilattice (Semilattice)
 import RON.Types
-  ( ObjectRef (ObjectRef),
+  ( Atom (AUuid),
+    ObjectRef (ObjectRef),
     Op (Op, opId, payload, refId),
     StateChunk (StateChunk),
     StateFrame,
@@ -450,16 +452,43 @@ newFromText
   -> m (ObjectRef RgaString)
 newFromText = newFromList . Text.unpack
 
+-- getAliveIndices :: (MonadE m, MonadObjectState (RGA a) m) => m [UUID]
+-- getAliveIndices = do
+--   StateChunk stateBody <- getObjectStateChunk
+--   let mItems =
+--         [ case refId of
+--             Zero -> Just opId
+--             _ -> Nothing
+--           | Op {opId, refId} <- stateBody
+--         ]
+--   pure $ catMaybes mItems
+getAliveOps :: (MonadE m, MonadObjectState (RGA a) m) => m [Op]
+getAliveOps = do
+  StateChunk stateBody <- getObjectStateChunk
+  let mOps =
+        [ case refId of
+            Zero -> Just op
+            _    -> Nothing
+        | op@Op{opId, refId} <- stateBody
+        ]
+  pure $ catMaybes mOps
+
 getAliveIndices :: (MonadE m, MonadObjectState (RGA a) m) => m [UUID]
 getAliveIndices = do
-  StateChunk stateBody <- getObjectStateChunk
-  let mItems =
-        [ case refId of
-            Zero -> Just opId
-            _ -> Nothing
-          | Op {opId, refId} <- stateBody
+  ops <- getAliveOps
+  pure $ refId <$> ops
+
+getAliveRefs :: (MonadE m, MonadObjectState (RGA a) m) => m [ObjectRef a]
+getAliveRefs = do
+  ops <- getAliveOps
+  let mOps =
+        [ case payload of
+            [AUuid u] -> Just $ ObjectRef u
+            _         -> Nothing
+        | op@Op{payload} <- ops
         ]
-  pure $ catMaybes mItems
+  pure $ catMaybes mOps
+
 
 -- | Read elements from RGA
 getList :: (Replicated a, MonadE m, MonadObjectState (RGA a) m) => m [a]
