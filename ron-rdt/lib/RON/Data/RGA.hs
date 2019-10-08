@@ -452,16 +452,6 @@ newFromText
   -> m (ObjectRef RgaString)
 newFromText = newFromList . Text.unpack
 
--- getAliveIndices :: (MonadE m, MonadObjectState (RGA a) m) => m [UUID]
--- getAliveIndices = do
---   StateChunk stateBody <- getObjectStateChunk
---   let mItems =
---         [ case refId of
---             Zero -> Just opId
---             _ -> Nothing
---           | Op {opId, refId} <- stateBody
---         ]
---   pure $ catMaybes mItems
 getAliveOps :: (MonadE m, MonadObjectState (RGA a) m) => m [Op]
 getAliveOps = do
   StateChunk stateBody <- getObjectStateChunk
@@ -478,7 +468,7 @@ getAliveIndices = do
   ops <- getAliveOps
   pure $ refId <$> ops
 
-getAliveRefs :: (MonadE m, MonadObjectState (RGA a) m) => m [ObjectRef a]
+getAliveRefs :: (MonadE m, MonadObjectState (RGA a) m, ReplicatedAsObject a) => m [ObjectRef a]
 getAliveRefs = do
   ops <- getAliveOps
   let mOps =
@@ -488,7 +478,6 @@ getAliveRefs = do
         | op@Op{payload} <- ops
         ]
   pure $ catMaybes mOps
-
 
 -- | Read elements from RGA
 getList :: (Replicated a, MonadE m, MonadObjectState (RGA a) m) => m [a]
