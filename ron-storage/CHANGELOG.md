@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.11] - 2019-10-08
 ### Added
 - Type `RawDocId`
 - `subscribe` function
@@ -150,7 +152,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-storage-0.10...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-storage-0.11...HEAD
+[0.11]: https://github.com/ff-notes/ron/compare/ron-storage-0.10...ron-storage-0.11
 [0.10]: https://github.com/ff-notes/ron/compare/ron-storage-0.9...ron-storage-0.10
 [0.9]: https://github.com/ff-notes/ron/compare/ron-storage-0.8...ron-storage-0.9
 [0.8]: https://github.com/ff-notes/ron/compare/ron-storage-0.7...ron-storage-0.8
