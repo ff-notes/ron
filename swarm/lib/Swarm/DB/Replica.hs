@@ -33,8 +33,8 @@ import Swarm.RON.Text (TextFrame)
 newtype TextReplica = TextReplica (ForeignPtr (Proxy TextReplica))
 
 do
-  context
-    $ cppCtx
+  context $
+    cppCtx
       <> bsCtx
       <> fptrCtx
       <> stdCtx
@@ -61,7 +61,7 @@ do
 
 -- foreign import ccall "&deleteTextFrame"
 --     deleteTextFrame :: FinalizerPtr (Proxy TextFrame)
---
+
 foreign import ccall "&deleteTextReplica"
   deleteTextReplica :: FinalizerPtr (Proxy TextReplica)
 
@@ -83,11 +83,13 @@ open (TextReplica replica) =
       } |]
 
 -- | Method @Status Receive(Builder& response, Cursor& query)@
-receive
-  :: UUID -- ^ object id
-  -> UUID -- ^ type
-  -> TextReplica
-  -> IO (Either Status ByteString)
+receive ::
+  -- | object id
+  UUID ->
+  -- | type
+  UUID ->
+  TextReplica ->
+  IO (Either Status ByteString)
 receive (UUID objectIdX objectIdY) (UUID rdtX rdtY) (TextReplica replicaPtr) =
   Status.with $ \statusPtr ->
     String.with $ \resultDataPtr -> do
@@ -97,12 +99,12 @@ receive (UUID objectIdX objectIdY) (UUID rdtX rdtY) (TextReplica replicaPtr) =
         TextFrame query = ron::Query<TextFrame>(
           Uuid{$(uint64_t objectIdX), $(uint64_t objectIdY)},
           Uuid{$(uint64_t rdtX     ), $(uint64_t rdtY     )}
-          );
+        );
         TextFrame::Cursor qc{query};
         status = $fptr-ptr:(TextReplica * replicaPtr)->Receive(result, qc);
         if (status)
           * $(std_string * resultDataPtr) = result.data();
-        } |]
+      } |]
       status <- Status.decode statusPtr
       case status of
         Status code _
@@ -123,7 +125,7 @@ receive (UUID objectIdX objectIdY) (UUID rdtX rdtY) (TextReplica replicaPtr) =
 -- newForeignTextFrame = mask_ $ do
 --     p <- [exp| TextFrame * { new TextFrame } |]
 --     newForeignPtr deleteTextFrame p
---
+
 newForeignTextReplica :: IO (ForeignPtr (Proxy TextReplica))
 newForeignTextReplica = mask_ $ do
   p <- [exp| TextReplica * { new TextReplica } |]
