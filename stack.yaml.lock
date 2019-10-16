@@ -101,19 +101,12 @@ packages:
     git: https://gitlab.com/cblp/qtah.git
     commit: 53216276acc884fc197a51f07917a5e3526d8bc7
 - completed:
-    cabal-file:
-      size: 7744
-      sha256: 71f3cb963a2722ded56fb2341d3ca0351e91647ebae6c8bf7c2df2cccf3b4567
-    name: ormolu
-    version: 0.0.1.0
-    git: https://github.com/tweag/ormolu.git
+    hackage: ormolu-0.0.1.0@sha256:f7648651995f484e6e8ac3b581dcfd600f670fc80f17ad2ceca115e0e9532425,7698
     pantry-tree:
-      size: 55671
-      sha256: 543011b738507659e59a9f9190c4c03906478ff49df139a46c67095786c8b259
-    commit: 9dd08eea3bc023afa3045df73490b09c621eb8fe
+      size: 59164
+      sha256: df7c0e686296a4b397e979e2533c9228e1ae37e6fd1b8a3208b13c50a447cf5f
   original:
-    git: https://github.com/tweag/ormolu.git
-    commit: 9dd08eea3bc023afa3045df73490b09c621eb8fe
+    hackage: ormolu-0.0.1.0
 snapshots:
 - completed:
     size: 523443

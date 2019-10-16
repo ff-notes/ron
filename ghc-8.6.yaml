@@ -22,8 +22,7 @@ extra-deps:
         commit: 53216276acc884fc197a51f07917a5e3526d8bc7 # 0.6.0 + patches
         subdirs: [qtah, qtah-cpp, qtah-generator]
     # ron-test:
-      - git: https://github.com/tweag/ormolu.git
-        commit: '9dd08eea3bc023afa3045df73490b09c621eb8fe'
+      - ormolu-0.0.1.0
 
 extra-lib-dirs:
   - swarm/_artifacts/lib
