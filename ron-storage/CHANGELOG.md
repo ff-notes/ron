@@ -11,7 +11,7 @@ and this project adheres to
 ### Added
 - Type `RawDocId`
 - `subscribe` function
-- Notifying about changes in database caused by other process
+- Notifying about changes in database caused by another process
 - instance `Hashable` for `DocId`
 
 ### Changed
