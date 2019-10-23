@@ -8,16 +8,16 @@ import           RON.Prelude
 
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
+import           Hedgehog (Property, PropertyT, evalEither, evalExceptT,
+                           property, (===))
 
-import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
-                           readObject)
-import           RON.Data.ORSet (ORSet (ORSet), addValue, findAnyAlive',
-                                 removeValue, zoomItem)
+import           RON.Data.ORSet (ORSet, addValue, findAnyAlive', removeValue)
+import           RON.Error (Error)
 import           RON.Event (ReplicaId, applicationSpecific)
-import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
+import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
+                                       runReplicaSimT)
 import           RON.Schema.TH (mkReplicated)
-import           RON.Text (parseObject, serializeObject)
+-- import           RON.Text (parseObject, serializeObject) -- what instead?
 
 import           Orphans ()
 import           String (s)
@@ -30,7 +30,10 @@ import           String (s)
 |]
 
 example0 :: Set27
-example0 = ORSet [ORSet [ORSet ["octaves"]]]
+example0 = do
+    set1 <- ORSet ["octaves"]
+    set2 <- ORSet [set1]
+    ORSet [set2]
 
 state1expect :: BSL.ByteString
 state1expect = [s|
@@ -43,8 +46,10 @@ state1expect = [s|
     .
     |]
 
-example4expect :: Set27
-example4expect = ORSet [ORSet [ORSet ["candies"]], ORSet []]
+example4expect :: Set27 -> ReplicaSimT (ExceptT Error (PropertyT IO))
+example4expect set = do
+    ORSet.toList set
+    -- ORSet [ORSet [ORSet ["candies"]], ORSet []]
 
 state4expect :: BSL.ByteString
 state4expect = [s|
@@ -92,7 +97,7 @@ prop_orSet =
 
         -- decode object after modification
         example4 <- evalEither $ evalObjectState state4 readObject
-        example4expect === example4
+        example4expect example4
 
         -- serialize object after modification
         prep state4expect === prep (snd $ serializeObject state4)

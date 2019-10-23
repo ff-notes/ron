@@ -10,32 +10,20 @@
 -- | Typed and untyped RON tools
 module RON.Data (
     Reducible (..),
+    Rep,
     Replicated (..),
-    ReplicatedAsObject (..),
-    ReplicatedAsPayload (..),
-    fromRon,
+    execDocState,
     getObjectStateChunk,
-    newRon,
-    objectEncoding,
-    payloadEncoding,
+    newDocFrameWith,
+    newEmptyDocFrame,
+    newObject,
     rconcat,
     reduceObject,
     reduceStateFrame,
     reduceWireFrame,
     stateFromWireChunk,
     stateToWireChunk,
-    -- * Object-state monad
-    ObjectStateT,
-    MonadObjectState,
-    evalObjectState,
-    evalObjectState_,
-    execObjectState,
-    execObjectState_,
-    newObjectFrame,
-    newObjectFrameWith,
-    runObjectState,
-    runObjectState_,
-) where
+    ) where
 
 import           RON.Prelude
 
@@ -49,11 +37,11 @@ import           RON.Data.ORSet (ORSetRep)
 import           RON.Data.RGA (RgaRep)
 import           RON.Data.VersionVector (VersionVector)
 import           RON.Error (MonadE, throwErrorString)
-import           RON.Types (ClosedOp (..),
-                            ObjectFrame (ObjectFrame, frame, uuid),
-                            ObjectRef (ObjectRef), Op (..), StateChunk (..),
-                            StateFrame, UUID, WireChunk (Closed, Query, Value),
-                            WireFrame, WireReducedChunk (..),
+import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Types (ClosedOp (..), ObjectRef (ObjectRef), Op (..),
+                            StateChunk (..), StateFrame, UUID,
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..),
                             WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.UUID (pattern Zero)
 
@@ -169,15 +157,17 @@ reduceStateFrame s1 s2 =
                 throwErrorString $
                 "Cannot reduce StateFrame of unknown type " ++ show stateType
 
+-- | Reduce object with frame from another version of the same object,
+-- ignoring its id.
 unsafeReduceObject
-    :: MonadE m => ObjectFrame a -> StateFrame -> m (ObjectFrame a)
-unsafeReduceObject obj@ObjectFrame{frame = s1} s2 = do
+    :: MonadE m => DocFrame a -> StateFrame -> m (DocFrame a)
+unsafeReduceObject obj@DocFrame{frame = s1} s2 = do
     frame' <- reduceStateFrame s1 s2
     pure obj{frame = frame'}
 
 -- | Reduce object with frame from another version of the same object.
-reduceObject :: MonadE m => ObjectFrame a -> ObjectFrame a -> m (ObjectFrame a)
-reduceObject o1@ObjectFrame{uuid = id1} ObjectFrame{uuid = id2, frame = frame2}
+reduceObject :: MonadE m => DocFrame a -> DocFrame a -> m (DocFrame a)
+reduceObject o1@DocFrame{uuid = id1} DocFrame{uuid = id2, frame = frame2}
     | id1 == id2 = unsafeReduceObject o1 frame2
     | otherwise  = throwErrorString $ "Object ids differ: " ++ show (id1, id2)
 
@@ -188,33 +178,27 @@ instance Ord a => Semigroup (MaxOnFst a b) where
         | a1 < a2   = mof2
         | otherwise = mof1
 
--- | Run ObjectFrame action
-execObjectState
-    :: Monad m => ObjectFrame b -> ObjectStateT b m a -> m (ObjectFrame b)
-execObjectState state@ObjectFrame{uuid, frame} action = do
-    frame' <- execStateT (runReaderT action $ ObjectRef uuid) frame
-    pure state{frame = frame'}
+-- execDocState_ :: Monad m => StateT StateFrame m a -> m StateFrame
+-- execDocState_ action = execStateT action mempty
 
--- | Run ObjectFrame action, starting with an empty frame
-execObjectState_ :: Monad m => StateT StateFrame m a -> m StateFrame
-execObjectState_ action = execStateT action mempty
+newEmptyDocFrame :: ReplicaClock m => m (DocFrame a)
+newEmptyDocFrame = do
+    uuid <- getEventUuid
+    pure DocFrame{uuid, frame = mempty}
 
--- | Run ObjectFrame action
-runObjectState
-    :: Functor m
-    => ObjectFrame b
-    -> ObjectStateT b m a
-    -> m (a, ObjectFrame b)
-runObjectState state@ObjectFrame{uuid, frame} action =
-    runStateT (runReaderT action $ ObjectRef uuid) frame
-    <&> \(a, frame') -> (a, state{frame = frame'})
+newDocFrameWith ::
+    ReplicaClock m => (ObjectRef a -> StateT StateFrame m b) -> m (DocFrame a)
+newDocFrameWith action = do
+    uuid <- getEventUuid
+    frame <- execStateT (action $ ObjectRef uuid) mempty
+    pure DocFrame{uuid, frame}
 
--- | Run ObjectFrame action, starting with an empty frame
-runObjectState_ :: StateT StateFrame m a -> m (a, StateFrame)
-runObjectState_ action = runStateT action mempty
+newObject :: ReplicaClock m => m (ObjectRef a)
+newObject = ObjectRef <$> getEventUuid
 
--- | Create new 'ObjectFrame' with an action
-newObjectFrameWith
-    :: Functor m => StateT StateFrame m (ObjectRef a) -> m (ObjectFrame a)
-newObjectFrameWith action =
-    runObjectState_ action <&> \(ObjectRef uuid, frame) -> ObjectFrame{uuid, frame}
+execDocState ::
+    Monad m =>
+    DocFrame a -> (ObjectRef a -> StateT StateFrame m b) -> m (DocFrame a)
+execDocState DocFrame{uuid, frame} action = do
+    frame' <- execStateT (action $ ObjectRef uuid) frame
+    pure DocFrame{uuid, frame = frame'}

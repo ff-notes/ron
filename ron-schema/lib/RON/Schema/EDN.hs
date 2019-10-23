@@ -55,7 +55,6 @@ prelude =
       ("Day", Type0 day),
       ("Float", Type0 $ TAtom TAFloat),
       ("Integer", Type0 $ TAtom TAInteger),
-      ("ObjectRef", Type1 $ TAtom . TObjectRef),
       ("ORSet.Map", Type2 $ \k v -> TObject $ TORSetMap k v),
       ("ORSet", Type1 $ TObject . TORSet),
       ("RGA", Type1 $ TObject . TRga),

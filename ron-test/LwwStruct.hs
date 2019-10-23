@@ -26,13 +26,15 @@ import           Orphans ()
 import           String (s)
 
 example0 :: Struct51
-example0 = Struct51
-    { int1 = Just 275
-    , str2 = Just $ RGA "275"
-    , str3 = Just "190"
-    , set4 = Just $ ORSet []
-    , nst5 = Nothing
-    }
+example0 = do
+    str2 <- RGA "275"
+    Struct51
+        { int1 = Just 275
+        , str2
+        , str3 = Just "190"
+        , set4 = Just $ ORSet []
+        , nst5 = Nothing
+        }
 
 -- | "r3pl1c4"
 replica :: ReplicaId

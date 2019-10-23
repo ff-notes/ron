@@ -1,6 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,9 +9,9 @@
 module RON.Storage.Backend
   ( Collection (..),
     CollectionName,
-    DocId (..),
+    ObjectRef (..),
     Document (..),
-    DocVersion,
+    ObjectVersion,
     IsTouched (..),
     MonadStorage (..),
     RawDocId,
@@ -23,80 +22,53 @@ module RON.Storage.Backend
 where
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import Data.String (fromString)
-import RON.Data (ReplicatedAsObject)
-import RON.Error (MonadE, liftMaybe, throwErrorString)
-import RON.Event (ReplicaClock, getEventUuid)
-import RON.Prelude
-import RON.Text (parseStateFrame, serializeStateFrame)
-import RON.Types (ObjectFrame (ObjectFrame, frame, uuid), UUID)
-import qualified RON.UUID as UUID
-import RON.Util (ByteStringL)
-import System.FilePath ((</>))
+import           Data.String (fromString)
+import           System.FilePath ((</>))
 import qualified Text.Show (show)
 
--- | Document version identifier (file name)
-type DocVersion = FilePath
-
--- | Document identifier (directory name),
--- should be a RON-Base32-encoded RON-UUID.
-type RawDocId = FilePath
-
-newtype DocId a = DocId RawDocId
-  deriving (Eq, Ord, Hashable)
-
-instance Collection a => Show (DocId a) where
-  show (DocId file) = collectionName @a </> file
-
--- | Collection (directory name)
-type CollectionName = FilePath
-
--- | A type that intended to be put in a separate collection must define a
--- Collection instance.
-class (ReplicatedAsObject a, Typeable a) => Collection a where
-
-  collectionName :: CollectionName
-
-  -- | Called when RON parser fails.
-  fallbackParse :: MonadE m => UUID -> ByteStringL -> m (ObjectFrame a)
-  fallbackParse _ _ = throwError "no fallback parser implemented"
+import           RON.Data (Replicated)
+import           RON.Error (MonadE, liftMaybe, throwErrorString)
+import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Prelude
+import           RON.Text (parseStateFrame, serializeStateFrame)
+import           RON.Types (DocFrame (DocFrame, frame, uuid), UUID)
+import           RON.Util (ByteStringL)
+import qualified RON.UUID as UUID
 
 -- | Storage backend interface
 class (ReplicaClock m, MonadE m) => MonadStorage m where
+  type CollectionName m
 
-  getCollections :: m [CollectionName]
+  getCollections :: m [CollectionName m]
 
   -- | Must return @[]@ for non-existent collection
-  getDocuments :: Collection a => m [DocId a]
+  getDocuments :: CollectionName m -> m [ObjectRef a]
 
-  -- | Must return @[]@ for non-existent document
-  getDocumentVersions :: Collection a => DocId a -> m [DocVersion]
+  -- | Must return @[]@ for non-existent object
+  getDocumentVersions :: CollectionName m -> ObjectRef a -> m [ObjectVersion]
 
-  -- | Must create collection and document if not exist
+  -- | Must create collection and object if not exist
   saveVersionContent
-    :: Collection a => DocId a -> DocVersion -> ByteStringL -> m ()
+    :: Collection a => ObjectRef a -> ObjectVersion -> ByteStringL -> m ()
 
-  loadVersionContent :: Collection a => DocId a -> DocVersion -> m ByteStringL
+  loadVersionContent :: Collection a => ObjectRef a -> ObjectVersion -> m ByteStringL
 
-  deleteVersion :: Collection a => DocId a -> DocVersion -> m ()
+  deleteVersion :: Collection a => ObjectRef a -> ObjectVersion -> m ()
 
-  changeDocId :: Collection a => DocId a -> DocId a -> m ()
+  changeDocId :: Collection a => ObjectRef a -> ObjectRef a -> m ()
 
 -- | Try decode UUID from a file name
 decodeDocId
-  :: DocId a
-  -> Maybe (Bool, UUID) -- ^ Bool = is document id a valid UUID encoding
-decodeDocId (DocId file) = do
+  :: ObjectRef a
+  -> Maybe (Bool, UUID) -- ^ Bool = is object id a valid UUID encoding
+decodeDocId (ObjectRef file) = do
   uuid <- UUID.decodeBase32 file
   pure (UUID.encodeBase32 uuid == file, uuid)
 
--- | Load document version as an object
-readVersion
-  :: MonadStorage m
-  => Collection a
-  => DocId a
-  -> DocVersion
-  -> m (ObjectFrame a, IsTouched)
+-- | Load object version as an object
+readVersion ::
+    (Collection a, MonadStorage m) =>
+    ObjectRef a -> ObjectVersion -> m (DocFrame a, IsTouched)
 readVersion docid version = do
   (isObjectIdValid, uuid) <-
     liftMaybe ("Bad Base32 UUID " <> show docid)
@@ -107,10 +79,8 @@ readVersion docid version = do
       ++ show docid
   contents <- loadVersionContent docid version
   case parseStateFrame contents of
-    Right frame ->
-      pure (ObjectFrame {uuid, frame}, IsTouched False)
-    Left ronError ->
-      do
+    Right frame -> pure (DocFrame{uuid, frame}, IsTouched False)
+    Left ronError -> do
         object <- fallbackParse uuid contents
         pure (object, IsTouched True)
         `catchError` \fallbackError ->
@@ -118,44 +88,42 @@ readVersion docid version = do
             '{' -> fallbackError
             _ -> fromString ronError
 
--- | A thing (e.g. document) was fixed during loading.
+-- | Indicator of fact that thing (e.g. object) was fixed during loading.
 -- It it was fixed during loading it must be saved to the storage.
 newtype IsTouched = IsTouched Bool
   deriving (Show)
 
--- | Result of DB reading, loaded document with information about its versions
-data Document a
-  = Document
-      { objectFrame :: ObjectFrame a,
-        versions :: NonEmpty DocVersion,
-        isTouched :: IsTouched
-      }
-  deriving (Show)
+-- | Result of DB reading, loaded object with information about its versions
+data Document a = Document {
+    docFrame  :: DocFrame a,
+    versions  :: NonEmpty ObjectVersion,
+    isTouched :: IsTouched
+    }
+    deriving (Show)
 
--- | Create new version of an object/document and delete older versions.
--- If the document doesn't exist yet, it will be created.
-createVersion
-  :: forall a m.
-     (Collection a, MonadStorage m)
-  => Maybe (DocId a, Document a)
-  -- ^ 'Just', if document exists already; 'Nothing' otherwise.
-  -> ObjectFrame a
-  -> m ()
-createVersion mDoc newObj = case mDoc of
-  Nothing -> save (DocId @a $ UUID.encodeBase32 uuid) []
-  Just (docid, oldDoc) -> do
-    let Document
-          { objectFrame = oldObj,
-            versions,
-            isTouched = IsTouched isTouched
-          } =
-            oldDoc
-    when (newObj /= oldObj || length versions /= 1 || isTouched)
-      $ save docid
-      $ toList versions
-  where
-    ObjectFrame {uuid, frame} = newObj
-    save docid oldVersions = do
-      newVersion <- UUID.encodeBase32 <$> getEventUuid
-      saveVersionContent docid newVersion (serializeStateFrame frame)
-      for_ oldVersions $ deleteVersion docid
+-- | Create new version of an object/object and delete older versions.
+-- If the object doesn't exist yet, it will be created.
+createVersion ::
+    forall a m.
+    (Collection a, MonadStorage m) =>
+    -- | 'Just', if object exists already; 'Nothing' otherwise.
+    Maybe (ObjectRef a, Document a) ->
+    DocFrame a ->
+    m ()
+createVersion mDoc newFrame = case mDoc of
+    Nothing -> save (ObjectRef @a $ UUID.encodeBase32 uuid) []
+    Just (docid, oldDoc) -> do
+        let Document {
+                docFrame = oldFrame,
+                versions,
+                isTouched = IsTouched isTouched
+                } =
+                    oldDoc
+        when (newFrame /= oldFrame || length versions /= 1 || isTouched) $
+            save docid $ toList versions
+    where
+        DocFrame{uuid, frame} = newFrame
+        save docid oldVersions = do
+            newVersion <- UUID.encodeBase32 <$> getEventUuid
+            saveVersionContent docid newVersion (serializeStateFrame frame)
+            for_ oldVersions $ deleteVersion docid

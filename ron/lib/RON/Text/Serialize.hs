@@ -7,9 +7,7 @@
 -- | RON-Text serialization
 module RON.Text.Serialize
   ( serializeAtom,
-    serializeObject,
     serializeRawOp,
-    serializeStateFrame,
     serializeString,
     serializeUuid,
     serializeWireFrame,
@@ -17,31 +15,19 @@ module RON.Text.Serialize
     )
 where
 
-import Control.Monad.State.Strict (state)
+import           Control.Monad.State.Strict (state)
 import qualified Data.Aeson as Json
+import           Data.ByteString.Lazy.Char8 (cons, elem, snoc)
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import Data.ByteString.Lazy.Char8 (cons, snoc, elem)
-import qualified Data.Map.Strict as Map
-import RON.Prelude hiding (elem)
-import RON.Text.Serialize.UUID
-  ( serializeUuid,
-    serializeUuidAtom,
-    serializeUuidKey
-    )
-import RON.Types
-  ( Atom (AFloat, AInteger, AString, AUuid),
-    ClosedOp (..),
-    ObjectFrame (..),
-    Op (..),
-    Payload,
-    StateFrame,
-    WireChunk (Closed, Query, Value),
-    WireFrame,
-    WireReducedChunk (..),
-    WireStateChunk (..)
-    )
-import RON.UUID (UUID, zero)
-import RON.Util (ByteStringL)
+import           RON.Prelude hiding (elem)
+import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
+                                          serializeUuidKey)
+import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
+                            ClosedOp (..), Op (..), Payload,
+                            WireChunk (Closed, Query, Value), WireFrame,
+                            WireReducedChunk (..), WireStateChunk (..))
+import           RON.Util (ByteStringL)
+import           RON.UUID (UUID, zero)
 
 -- | Serialize a common frame
 serializeWireFrame :: WireFrame -> ByteStringL
@@ -170,20 +156,6 @@ serializePayload
   -> ByteStringL
 serializePayload prev =
   BSL.unwords . (`evalState` prev) . traverse serializeAtomZip
-
--- | Serialize a state frame
-serializeStateFrame :: StateFrame -> ByteStringL
-serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs
-  where
-    wrapChunk (objectId, WireStateChunk {stateType, stateBody}) =
-      Value WireReducedChunk
-        { wrcHeader = opZero {reducerId = stateType, objectId},
-          wrcBody = stateBody
-          }
-
--- | Serialize an object. Return object id that must be stored separately.
-serializeObject :: ObjectFrame a -> (UUID, ByteStringL)
-serializeObject (ObjectFrame oid frame) = (oid, serializeStateFrame frame)
 
 opZero :: ClosedOp
 opZero = ClosedOp

@@ -15,14 +15,10 @@ import           RON.Prelude
 import           Data.Hashable (hashWithSalt)
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
-                                    ReplicatedAsObject, getObjectState,
-                                    newObject, objectEncoding, readObject,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk)
-import           RON.Event (getEventUuid)
+import           RON.Data.Internal (Reducible, Rep, reducibleOpType,
+                                    stateFromChunk, stateToChunk)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (ObjectRef (ObjectRef), Op (Op, opId), UUID (UUID), WireStateChunk (WireStateChunk, stateBody, stateType))
+import           RON.Types (Op (Op, opId), UUID (UUID))
 import qualified RON.UUID as UUID
 
 type Origin = Word64
@@ -62,23 +58,19 @@ instance Reducible VersionVector where
 
     stateToChunk (VersionVector vv) = Map.elems vv
 
-wireStateChunk :: [Op] -> WireStateChunk
-wireStateChunk stateBody = WireStateChunk{stateType = vvType, stateBody}
+-- wireStateChunk :: [Op] -> WireStateChunk
+-- wireStateChunk stateBody = WireStateChunk{stateType = vvType, stateBody}
 
 -- | Name-UUID to use as Version Vector type marker.
 vvType :: UUID
 vvType = $(UUID.liftName "vv")
 
-instance Replicated VersionVector where
-    encoding = objectEncoding
+type instance Rep VersionVector = VersionVector
 
-instance ReplicatedAsObject VersionVector where
-    type Rep VersionVector = VersionVector
+-- newObject (VersionVector vv) = do
+--     oid <- getEventUuid
+--     let ops = Map.elems vv
+--     modify' $ Map.insert oid $ wireStateChunk ops
+--     pure $ ObjectRef oid
 
-    newObject (VersionVector vv) = do
-        oid <- getEventUuid
-        let ops = Map.elems vv
-        modify' $ Map.insert oid $ wireStateChunk ops
-        pure $ ObjectRef oid
-
-    readObject = getObjectState
+-- readObject = getObjectState

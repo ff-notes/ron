@@ -18,25 +18,21 @@ module RON.Data.LWW (
     newStruct,
     readField,
     viewField,
-    zoomField,
 ) where
 
 import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
-                                    Rep, Replicated, ReplicatedAsObject,
-                                    getObjectStateChunk,
-                                    modifyObjectStateChunk_, newRon,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk, tryOptionFromRon)
+import           RON.Data.Internal (Reducible, Rep, Replicated, reducibleOpType,
+                                    stateFromChunk, stateToChunk, toPayload,
+                                    tryOptionFromRon)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Semilattice (Semilattice)
-import           RON.Types (Atom (AUuid), ObjectRef (ObjectRef),
-                            Op (Op, opId, payload, refId),
-                            StateChunk (StateChunk), StateFrame, UUID,
+import           RON.Store (MonadStore)
+import           RON.Types (Atom, ObjectRef, Op (Op, opId, payload, refId),
+                            Payload, StateChunk (StateChunk), UUID,
                             WireStateChunk (WireStateChunk, stateBody, stateType))
 import           RON.Util (Instance (Instance))
 import qualified RON.UUID as UUID
@@ -73,24 +69,9 @@ wireStateChunk stateBody = WireStateChunk{stateType = lwwType, stateBody}
 lwwType :: UUID
 lwwType = $(UUID.liftName "lww")
 
--- | Create an LWW object from a list of named fields.
-newStruct
-    :: (MonadState StateFrame m, ReplicaClock m)
-    => [(UUID, Maybe (Instance Replicated))] -> m UUID
-newStruct fields = do
-    event <- getEventUuid
-    stateBody <-
-        for fields $ \(name, mvalue) -> do
-            payload <- case mvalue of
-                Just (Instance value) -> newRon value
-                Nothing               -> pure []
-            pure $ Op event name payload
-    modify' $ Map.insert event $ wireStateChunk stateBody
-    pure event
-
 -- | Decode field value
 viewField
-    :: (Replicated a, MonadE m, MonadState StateFrame m)
+    :: (Replicated a, MonadE m)
     => UUID               -- ^ Field name
     -> StateChunk LwwRep  -- ^ LWW object chunk
     -> m (Maybe a)
@@ -101,47 +82,33 @@ viewField field (StateChunk ops) =
     filter (\Op{refId} -> refId == field) ops
 
 -- | Read field value
-readField
-    ::  ( MonadE m
-        , MonadObjectState struct m
-        , Rep struct ~ LwwRep
-        , Replicated field
-        )
-    =>  UUID  -- ^ Field name
-    ->  m (Maybe field)
+readField ::
+    (   MonadE m,
+        MonadState (StateChunk LwwRep) m,
+        Replicated field
+        ) =>
+    -- | Key/field name
+    Atom ->
+    m (Maybe field)
 readField field = do
-    stateChunk <- getObjectStateChunk
+    stateChunk <- get
     viewField field stateChunk
 
 -- | Assign a value to a field
-assignField
-    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
-    => UUID     -- ^ Field name
-    -> Maybe a  -- ^ Value
-    -> m ()
+assignField ::
+    (MonadStore m, Rep a ~ LwwRep) =>
+    -- | Key/field name
+    Atom ->
+    -- | Value
+    Payload ->
+    -- | Object
+    ObjectRef a ->
+    m ()
 assignField field mvalue =
-    modifyObjectStateChunk_ $ \(StateChunk ops) -> do
-        let chunk = filter (\Op{refId} -> refId /= field) ops
-        event <- getEventUuid
-        p <- maybe (pure []) newRon mvalue
-        let newOp = Op event field p
-        pure $ StateChunk $ sortOn refId $ newOp : chunk
-
--- | Pseudo-lens to an object inside a specified field
-zoomField
-    :: (MonadE m, ReplicatedAsObject struct)
-    => UUID                     -- ^ Field name
-    -> ObjectStateT field  m a  -- ^ Inner object modifier
-    -> ObjectStateT struct m a
-zoomField field innerModifier =
-    errorContext ("LWW.zoomField" <> show field) $ do
-        StateChunk ops <- getObjectStateChunk
-        let fieldOps = filter (\Op{refId} -> refId == field) ops
-        Op{payload} <- case fieldOps of
-            []   -> throwError "empty chunk"
-            [op] -> pure op
-            _    -> throwError "unreduced state"
-        fieldObjectId <- errorContext "inner object" $ case payload of
-            [AUuid oid] -> pure oid
-            _           -> throwError "Expected object UUID"
-        lift $ runReaderT innerModifier $ ObjectRef fieldObjectId
+    undefined
+    -- modifyObjectStateChunk_ $ \(StateChunk ops) -> do
+    --     let chunk = filter (\Op{refId} -> refId /= field) ops
+    --     event <- getEventUuid
+    --     let payload = maybe [] toPayload mvalue
+    --     let newOp = Op event field payload
+    --     pure $ StateChunk $ sortOn refId $ newOp : chunk

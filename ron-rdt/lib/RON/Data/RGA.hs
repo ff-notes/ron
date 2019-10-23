@@ -4,6 +4,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -13,26 +14,25 @@
 
 -- | Replicated Growable Array (RGA)
 module RON.Data.RGA
-  ( RGA (..),
+  ( Position,
+    RGA,
     RgaRep,
     RgaString,
     edit,
     editText,
     getAliveIndices,
-    getList,
-    getText,
+    -- TODO getList,
+    -- TODO getText,
     insert,
     insertAfter,
     insertAtBegin,
     insertText,
     insertTextAfter,
     insertTextAtBegin,
-    newFromList,
-    newFromText,
+    -- TODO newFromList,
+    -- TODO newFromText,
     remove,
     rgaType,
-    RON.Data.RGA.toList,
-    toText,
   )
 where
 
@@ -49,24 +49,18 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
-import           RON.Data.Internal (MonadObjectState,
-                                    ReducedChunk (ReducedChunk, rcBody, rcRef),
-                                    Reducible, Rep, Replicated (encoding),
-                                    ReplicatedAsObject, ReplicatedAsPayload,
-                                    Unapplied, applyPatches, fromRon,
-                                    getObjectStateChunk,
-                                    modifyObjectStateChunk_, newObject, newRon,
-                                    objectEncoding, readObject,
-                                    reduceUnappliedPatches, reducibleOpType,
-                                    stateFromChunk, stateToChunk, toPayload)
+import           RON.Data.Internal (ReducedChunk (ReducedChunk, rcBody, rcRef),
+                                    Reducible, Rep, Replicated, Unapplied,
+                                    applyPatches, reduceUnappliedPatches,
+                                    reducibleOpType, stateFromChunk,
+                                    stateToChunk, toPayload)
 import           RON.Error (MonadE, errorContext, throwErrorText)
 import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
 import           RON.Prelude
 import           RON.Semilattice (Semilattice)
-import           RON.Types (ObjectRef (ObjectRef),
-                            Op (Op, opId, payload, refId),
-                            StateChunk (StateChunk), StateFrame, UUID,
-                            WireStateChunk (WireStateChunk, stateBody, stateType))
+import           RON.Store (MonadStore, loadObjectChunk', modifyObjectChunk_)
+import           RON.Types (ObjectRef, Op (Op, opId, payload, refId),
+                            StateChunk (StateChunk), UUID)
 import           RON.Util.Word (pattern B11, ls60)
 import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
@@ -346,203 +340,183 @@ rgaType :: UUID
 rgaType = $(UUID.liftName "rga")
 
 -- | Typed RGA
-newtype RGA a = RGA [a]
-  deriving (Eq, Show)
+data RGA a
 
-instance Replicated a => Replicated (RGA a) where encoding = objectEncoding
+-- | Position (vertex id) in a typed array @RGA a@
+newtype Position a = Position UUID
 
-instance Replicated a => ReplicatedAsObject (RGA a) where
+type instance Rep (RGA a) = RgaRep
 
-  type Rep (RGA a) = RgaRep
+-- TODO
+-- newObject (RGA items) = do
+--   oid <- getEventUuid
+--   vertexIds <- getEventUuids $ ls60 $ genericLength items
+--   ops <-
+--     for (zip items vertexIds) $ \(item, vertexId) -> do
+--       payload <- newRon item
+--       pure $ Op vertexId Zero payload
+--   modify' $ Map.insert oid $ wireStateChunk ops
+--   pure $ ObjectRef oid
 
-  newObject (RGA items) = do
-    oid <- getEventUuid
-    vertexIds <- getEventUuids $ ls60 $ genericLength items
-    ops <-
-      for (zip items vertexIds) $ \(item, vertexId) -> do
-        payload <- newRon item
-        pure $ Op vertexId Zero payload
-    modify' $ Map.insert oid $ wireStateChunk ops
-    pure $ ObjectRef oid
+-- TODO
+-- readObject = do
+--   StateChunk stateBody <- getObjectStateChunk
+--   mItems <-
+--     for stateBody $ \Op {refId, payload} -> case refId of
+--       Zero -> Just <$> fromRon payload
+--       _ -> pure Nothing
+--   pure . RGA $ catMaybes mItems
 
-  readObject = do
-    StateChunk stateBody <- getObjectStateChunk
-    mItems <-
-      for stateBody $ \Op {refId, payload} -> case refId of
-        Zero -> Just <$> fromRon payload
-        _ -> pure Nothing
-    pure . RGA $ catMaybes mItems
-
--- | Replace content of the RGA throug introducing changes detected by
+-- | Replace content of the RGA through introducing changes detected by
 -- 'getGroupedDiffBy'.
-edit
-  :: ( ReplicatedAsPayload a,
-       ReplicaClock m,
-       MonadE m,
-       MonadObjectState (RGA a) m
-     )
-  => [a]
-  -> m ()
+edit ::
+    (MonadE m, MonadStore m, ReplicaClock m, Replicated a, Typeable a) =>
+    [a] -> ObjectRef (RGA a) -> m ()
 edit newItems =
-  modifyObjectStateChunk_ $ \chunk@(StateChunk stateBody) -> do
-    let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
-    -- TODO(2019-04-17, #59, cblp) replace 'toPayload' with 'newRon' and
-    -- relax constraint on 'a' from 'ReplicatedAsPayload' to
-    -- 'Replicated'
-    let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
-    (stateBody', Last lastEvent) <-
-      runWriterT . fmap fold . for diff $ \case
-        First removed -> for removed $ \case
-          op@Op {refId = Zero} -> do
-            -- not deleted yet
-            -- TODO(2018-11-03, #15, cblp) get sequential ids
-            tombstone <- getEventUuid
-            tell . Last $ Just tombstone
-            pure op {refId = tombstone}
-          op ->
-            -- deleted already
-            pure op
-        Both v _ -> pure v
-        Second added -> for added $ \op -> do
-          -- TODO(2018-11-03, #15, cblp) get sequential ids
-          opId <- getEventUuid
-          tell . Last $ Just opId
-          pure op {opId}
-    pure $ case lastEvent of
-      Nothing -> chunk
-      Just _ -> StateChunk stateBody'
-  where
-    eqAliveOnPayload
-      Op {refId = Zero, payload = p1}
-      Op {refId = Zero, payload = p2} =
-        p1 == p2
-    eqAliveOnPayload _ _ = False
+    modifyObjectChunk_ $ \chunk@(StateChunk stateBody) -> do
+        let newItems' = [Op Zero Zero $ toPayload item | item <- newItems]
+        let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
+        (stateBody', Last lastEvent) <-
+            runWriterT . fmap fold . for diff $ \case
+                First removed -> for removed $ \case
+                    op@Op{refId = Zero} -> do
+                        -- not deleted yet
+                        -- TODO(2018-11-03, #15, cblp) get sequential ids
+                        tombstone <- getEventUuid
+                        tell . Last $ Just tombstone
+                        pure op{refId = tombstone}
+                    op ->
+                        -- deleted already
+                        pure op
+                Both v _ -> pure v
+                Second added -> for added $ \op -> do
+                    -- TODO(2018-11-03, #15, cblp) get sequential ids
+                    opId <- getEventUuid
+                    tell . Last $ Just opId
+                    pure op{opId}
+        pure $ case lastEvent of
+            Nothing -> chunk
+            Just _  -> StateChunk stateBody'
+
+eqAliveOnPayload :: Op -> Op -> Bool
+eqAliveOnPayload
+    Op{refId = Zero, payload = p1}
+    Op{refId = Zero, payload = p2}
+  =
+    p1 == p2
+eqAliveOnPayload _ _ = False
 
 -- | Speciaization of 'edit' for 'Text'
-editText
-  :: (ReplicaClock m, MonadE m, MonadObjectState RgaString m) => Text -> m ()
+editText ::
+    (MonadE m, MonadStore m, ReplicaClock m) =>
+    Text -> ObjectRef RgaString -> m ()
 editText = edit . Text.unpack
 
 -- | Speciaization of 'RGA' to 'Char'.
 -- This is the recommended way to store a string.
 type RgaString = RGA Char
 
--- | Create an RGA from a list
-newFromList
-  :: (Replicated a, MonadState StateFrame m, ReplicaClock m)
-  => [a]
-  -> m (ObjectRef (RGA a))
-newFromList = newObject . RGA
+-- | TODO Create an RGA from a list
+-- newFromList
+--   :: (Replicated a, MonadStore m, ReplicaClock m)
+--   => [a]
+--   -> m (ObjectRef (RGA a))
+-- newFromList = newObject . RGA
 
--- | Create an 'RgaString' from a text
-newFromText
-  :: (MonadState StateFrame m, ReplicaClock m)
-  => Text
-  -> m (ObjectRef RgaString)
-newFromText = newFromList . Text.unpack
+-- | TODO Create an 'RgaString' from a text
+-- newFromText
+--   :: (MonadStore m, ReplicaClock m)
+--   => Text
+--   -> m (ObjectRef RgaString)
+-- newFromText = newFromList . Text.unpack
 
-getAliveIndices :: (MonadE m, MonadObjectState (RGA a) m) => m [UUID]
-getAliveIndices = do
-  StateChunk stateBody <- getObjectStateChunk
-  pure [opId | Op {opId, refId = Zero} <- stateBody]
+getAliveIndices ::
+    (MonadE m, MonadStore m, Typeable a) => ObjectRef (RGA a) -> m [UUID]
+getAliveIndices ref = do
+    StateChunk stateBody <- loadObjectChunk' ref
+    pure [opId | Op{opId, refId = Zero} <- stateBody]
 
--- | Read elements from RGA
-getList :: (Replicated a, MonadE m, MonadObjectState (RGA a) m) => m [a]
-getList = coerce <$> readObject
+-- | TODO Read elements from RGA
+-- getList :: (MonadE m, Replicated a, MonadObjectState (RGA a) m) => m [a]
+-- getList = coerce <$> readObject
 
--- | Read characters from 'RgaString'
-getText :: (MonadE m, MonadObjectState RgaString m) => m Text
-getText = Text.pack <$> getList
+-- | TODO Read characters from 'RgaString'
+-- getText :: (MonadE m, MonadObjectState RgaString m) => m Text
+-- getText = Text.pack <$> getList
 
 -- | Insert a sequence of elements after the specified position.
 -- Position is identified by 'UUID'. 'Nothing' means the beginning.
-insert
-  :: (Replicated a, MonadE m, MonadObjectState (RGA a) m, ReplicaClock m)
-  => [a]
-  -> Maybe UUID -- ^ position
-  -> m ()
-insert [] _ = pure ()
+insert ::
+    (MonadE m, MonadStore m, ReplicaClock m, Replicated a, Typeable a) =>
+    [a] -> Maybe (Position a) -> ObjectRef (RGA a) -> m ()
+insert []    _         = const $ pure ()
 insert items mPosition =
-  modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
-    vertexIds <- getEventUuids $ ls60 $ genericLength items
-    ops <-
-      for (zip items vertexIds) $ \(item, vertexId) -> do
-        payload <- newRon item
-        pure $ Op vertexId Zero payload
-    stateBody' <-
-      case mPosition of
-        Nothing -> pure $ ops <> stateBody
-        Just position -> findAndInsertAfter position ops stateBody
-    pure $ StateChunk stateBody'
-  where
-    findAndInsertAfter pos newOps = go
-      where
-        go = \case
-          [] -> throwErrorText "Position not found"
-          op@Op {opId} : ops
-            | opId == pos -> pure $ op : newOps ++ ops
-            | otherwise -> (op :) <$> go ops
+    modifyObjectChunk_ $ \(StateChunk stateBody) -> do
+        vertexIds <- getEventUuids $ ls60 $ genericLength items
+        let ops =
+                [   Op vertexId Zero $ toPayload item
+                    | item <- items
+                    | vertexId <- vertexIds
+                    ]
+        stateBody' <-
+            case mPosition of
+                Nothing -> pure $ ops <> stateBody
+                Just position -> findAndInsertAfter position ops stateBody
+        pure $ StateChunk stateBody'
+    where
+        findAndInsertAfter (Position pos) newOps = go
+            where
+                go = \case
+                    [] -> throwErrorText "Position not found"
+                    op@Op {opId} : ops
+                        | opId == pos -> pure $ op : newOps ++ ops
+                        | otherwise   -> (op :) <$> go ops
 
-insertAtBegin
-  :: (Replicated a, MonadE m, MonadObjectState (RGA a) m, ReplicaClock m)
-  => [a]
-  -> m ()
+insertAtBegin ::
+    (MonadE m, MonadStore m, ReplicaClock m, Replicated a, Typeable a) =>
+    [a] -> ObjectRef (RGA a) -> m ()
 insertAtBegin items = insert items Nothing
 
-insertAfter
-  :: (Replicated a, MonadE m, MonadObjectState (RGA a) m, ReplicaClock m)
-  => [a]
-  -> UUID -- ^ position
-  -> m ()
+insertAfter ::
+    (MonadE m, MonadStore m, ReplicaClock m, Replicated a, Typeable a) =>
+    [a] -> Position a -> ObjectRef (RGA a) -> m ()
 insertAfter items = insert items . Just
 
 -- | Insert a text after the specified position.
--- Position is identified by 'UUID'. 'Nothing' means the beginning.
-insertText
-  :: (ReplicaClock m, MonadE m, MonadObjectState RgaString m)
-  => Text
-  -> Maybe UUID -- ^ position
-  -> m ()
+-- Position 'Nothing' means the beginning.
+insertText ::
+    (MonadE m, MonadStore m, ReplicaClock m) =>
+    Text -> Maybe (Position Char) -> ObjectRef RgaString -> m ()
 insertText = insert . Text.unpack
 
-insertTextAtBegin
-  :: (ReplicaClock m, MonadE m, MonadObjectState RgaString m) => Text -> m ()
+insertTextAtBegin ::
+    (MonadE m, MonadStore m, ReplicaClock m) =>
+    Text -> ObjectRef RgaString -> m ()
 insertTextAtBegin text = insertText text Nothing
 
-insertTextAfter
-  :: (ReplicaClock m, MonadE m, MonadObjectState RgaString m)
-  => Text
-  -> UUID -- ^ position
-  -> m ()
+insertTextAfter ::
+    (MonadE m, MonadStore m, ReplicaClock m) =>
+    Text -> Position Char -> ObjectRef RgaString -> m ()
 insertTextAfter text = insertText text . Just
 
 -- | Record a removal of a specific item
-remove
-  :: (MonadE m, MonadObjectState (RGA a) m, ReplicaClock m)
-  => UUID -- ^ position
-  -> m ()
-remove position =
-  errorContext "RGA.remove"
-    $ errorContext ("position = " <> show position)
-    $ modifyObjectStateChunk_
-    $ \(StateChunk stateBody) -> do
-      event <- getEventUuid
-      stateBody' <- findAndTombstone event stateBody
-      pure $ StateChunk stateBody'
-  where
-    findAndTombstone event = go
-      where
-        go = \case
-          [] -> throwErrorText "Position not found"
-          op@Op {opId} : ops
-            | opId == position -> pure $ op {refId = event} : ops
-            | otherwise -> (op :) <$> go ops
-
-wireStateChunk :: [Op] -> WireStateChunk
-wireStateChunk stateBody = WireStateChunk {stateType = rgaType, stateBody}
-
-toList :: RGA a -> [a]
-toList (RGA xs) = xs
-
-toText :: RgaString -> Text
-toText (RGA s) = Text.pack s
+remove ::
+    (MonadE m, MonadStore m, ReplicaClock m, Typeable a) =>
+    Position a -> ObjectRef (RGA a) -> m ()
+remove (Position position) ref =
+    errorContext "RGA.remove" $
+        errorContext ("position = " <> show position) $
+        modifyObjectChunk_
+            (\(StateChunk stateBody) -> do
+                event      <- getEventUuid
+                stateBody' <- findAndTombstone event stateBody
+                pure $ StateChunk stateBody')
+            ref
+    where
+        findAndTombstone event = go
+            where
+                go = \case
+                    [] -> throwErrorText "Position not found"
+                    op@Op{opId} : ops
+                        | opId == position -> pure $ op{refId = event} : ops
+                        | otherwise -> (op :) <$> go ops

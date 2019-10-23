@@ -20,8 +20,8 @@ import           RON.Schema.TH (mkReplicated)
         (set4 merge (ORSet StructSet13))
         (set5 set   Integer)
         (nst6 merge StructSet13)
-        (ref7 set   (ObjectRef StructSet13)))
-|]
+        (ref7 set   StructSet13))
+    |]
 
 deriving instance Default StructSet13
 deriving instance Eq      StructSet13

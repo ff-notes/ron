@@ -16,22 +16,18 @@ module RON.Storage
 where
 
 import qualified Data.Text as Text
-import RON.Data (ObjectStateT, reduceObject, runObjectState)
-import RON.Error (Error (Error), errorContext, throwErrorString)
-import RON.Prelude
-import RON.Storage.Backend
-  ( Collection (..),
-    CollectionName,
-    DocId (DocId),
-    Document (Document, isTouched, objectFrame, versions),
-    IsTouched (IsTouched),
-    MonadStorage,
-    createVersion,
-    decodeDocId,
-    getDocumentVersions,
-    readVersion
-    )
-import RON.Types (ObjectFrame, UUID)
+
+import           RON.Data (reduceObject)
+import           RON.Error (Error (Error), errorContext, throwErrorString)
+import           RON.Prelude
+import           RON.Storage.Backend (Collection (..), CollectionName,
+                                      DocId (DocId),
+                                      Document (Document, docFrame, isTouched, versions),
+                                      IsTouched (IsTouched), MonadStorage,
+                                      createVersion, decodeDocId,
+                                      getDocumentVersions, readVersion)
+import           RON.Types (DocFrame (DocFrame, frame, uuid),
+                            ObjectRef (ObjectRef), StateFrame, UUID)
 import qualified RON.UUID as UUID
 
 -- | Load all versions of a document
@@ -50,8 +46,8 @@ loadDocument docid = loadRetry (3 :: Int)
                 ++ " has not found."
             v : vs -> do
               let versions = v :| vs
-              let wrapDoc (objectFrame, isTouched) =
-                    Document {objectFrame, versions, isTouched}
+              let wrapDoc (docFrame, isTouched) =
+                      Document{docFrame, versions, isTouched}
               readResults <-
                 errorContext ("document " <> show docid)
                   $ for versions $ \ver ->
@@ -62,33 +58,35 @@ loadDocument docid = loadRetry (3 :: Int)
       | otherwise = throwError "Maximum retries exceeded"
 
 -- | Validation-like version of 'sconcat'.
-vsconcat
-  :: NonEmpty (Either Error (ObjectFrame a, IsTouched))
-  -> Either Error (ObjectFrame a, IsTouched)
-vsconcat = foldr1 vappend
-  where
+vsconcat ::
+    NonEmpty (Either Error (DocFrame a, IsTouched)) ->
+    Either Error (DocFrame a, IsTouched)
+vsconcat = foldr1 vappend where
     vappend (Left e1) (Left e2) = Left $ Error "vappend" [e1, e2]
     vappend e1@(Left _) (Right _) = e1
     vappend (Right _) e2@(Left _) = e2
     vappend (Right r1) (Right r2) =
-      (,IsTouched (t1 || t2)) <$> reduceObject a1 a2
-      where
-        (a1, IsTouched t1) = r1
-        (a2, IsTouched t2) = r2
+        (, IsTouched (t1 || t2)) <$> reduceObject a1 a2
+        where
+            (a1, IsTouched t1) = r1
+            (a2, IsTouched t2) = r2
 
 try :: MonadError e m => m a -> m (Either e a)
 try ma = (Right <$> ma) `catchError` (pure . Left)
 
 -- | Load document, apply changes and put it back to storage
-modify :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m b -> m b
+modify ::
+    (Collection a, MonadStorage m) =>
+    DocId a -> (ObjectRef a -> StateT StateFrame m b) -> m b
 modify docid f = do
-  oldDoc <- loadDocument docid
-  (b, objectFrame') <- runObjectState (objectFrame oldDoc) f
-  createVersion (Just (docid, oldDoc)) objectFrame'
-  pure b
+    oldDoc@Document{docFrame} <- loadDocument docid
+    let DocFrame{uuid, frame} = docFrame
+    (b, frame') <- runStateT (f $ ObjectRef uuid) frame
+    createVersion (Just (docid, oldDoc)) docFrame{frame = frame'}
+    pure b
 
 -- | Create document assuming it doesn't exist yet.
-createDocument :: (Collection a, MonadStorage m) => ObjectFrame a -> m ()
+createDocument :: (Collection a, MonadStorage m) => DocFrame a -> m ()
 createDocument = createVersion Nothing
 
 docIdFromUuid :: UUID -> DocId a

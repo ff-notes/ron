@@ -9,8 +9,7 @@ import qualified Data.Text.IO as Text
 import           Data.Text.Metrics (levenshteinNorm)
 import           System.IO (print)
 
-import           RON.Data (evalObjectState, execObjectState, newObjectFrameWith,
-                           reduceObject)
+import           RON.Data (newObjectFrameWith, reduceObject)
 import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
 import           RON.Event (applicationSpecific)

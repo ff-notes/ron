@@ -139,7 +139,8 @@ prop_structSet = property $ do
             checkCausality
             int1_set 166  -- plain field
             checkCausality
-            str2_zoom $ RGA.edit "145"
+            str2 <- str2_get
+            execObjectState str2 $ RGA.edit "145"
             checkCausality
             do  value <- str3_read
                 value === Just "190"

@@ -48,7 +48,7 @@ type TypeName = Text
 data TypeExpr = Use TypeName | Apply TypeName [TypeExpr]
   deriving (Show)
 
-data TAtom = TAFloat | TAInteger | TAString | TAUuid | TObjectRef RonType
+data TAtom = TAFloat | TAInteger | TAString | TAUuid
   deriving (Show)
 
 data RonType
@@ -151,8 +151,8 @@ defaultOpaqueAnnotations = OpaqueAnnotations {haskellType = Nothing}
 data Opaque = Opaque {name :: Text, annotations :: OpaqueAnnotations}
   deriving (Show)
 
-opaqueObject :: Text -> OpaqueAnnotations -> RonType
-opaqueObject tyname = TObject . TOpaqueObject . Opaque tyname
+opaqueObject :: Text -> OpaqueAnnotations -> TObject
+opaqueObject tyname = TOpaqueObject . Opaque tyname
 
 opaqueAtoms :: Text -> OpaqueAnnotations -> RonType
 opaqueAtoms tyname = TOpaqueAtoms . Opaque tyname

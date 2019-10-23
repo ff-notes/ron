@@ -10,13 +10,10 @@ import           RON.Prelude
 
 import           Data.Time (Day, fromGregorian, toGregorian)
 
-import           RON.Data (Replicated (..), ReplicatedAsPayload (..),
-                           payloadEncoding)
-import           RON.Types (Atom (..))
+import           RON.Data (Replicated, fromPayload, toPayload)
+import           RON.Types (Atom (AInteger))
 
-instance Replicated Day where encoding = payloadEncoding
-
-instance ReplicatedAsPayload Day where
+instance Replicated Day where
     toPayload
         = (\(y, m, d) ->
             map AInteger [fromIntegral y, fromIntegral m, fromIntegral d])

@@ -23,11 +23,11 @@ import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
                                             quoteExp, quotePat, quoteType)
 import           Language.Haskell.TH.Syntax (dataToPatQ, liftData)
 
-import           RON.Data (Replicated (..), ReplicatedAsPayload (..))
+import           RON.Data (Replicated (fromPayload, toPayload))
 import           RON.Error (throwErrorString)
 import           RON.Schema
 import qualified RON.Schema.EDN as EDN
-import           RON.Schema.TH.Common (mkGuideType, mkNameT)
+import           RON.Schema.TH.Common (mkGuideType, mkNameT, mkObjectGuideType)
 import           RON.Schema.TH.Struct (mkReplicatedStructLww,
                                        mkReplicatedStructSet)
 import qualified RON.UUID as UUID
@@ -63,43 +63,39 @@ mkEnum Enum{name, items} = do
     itemsUuids <- for items $ \item -> do
         uuid <- UUID.mkName $ Text.encodeUtf8 item
         pure (mkNameT item, uuid)
-    dataType <- mkDataType
-    [instanceReplicated] <- mkInstanceReplicated
-    [instanceReplicatedAsPayload] <- mkInstanceReplicatedAsPayload itemsUuids
-    pure [dataType, instanceReplicated, instanceReplicatedAsPayload]
+    dataType             <- mkDataType
+    [instanceReplicated] <- mkInstanceReplicated itemsUuids
+    pure [dataType, instanceReplicated]
 
-  where
+    where
+        typeName = conT $ mkNameT name
 
-    typeName = conT $ mkNameT name
+        mkDataType = TH.dataD (TH.cxt []) (mkNameT name) [] Nothing
+            [TH.normalC (mkNameT item) [] | item <- items] []
 
-    mkDataType = TH.dataD (TH.cxt []) (mkNameT name) [] Nothing
-        [TH.normalC (mkNameT item) [] | item <- items] []
-
-    mkInstanceReplicated = [d|
-        instance Replicated $typeName where
-            encoding = payloadEncoding
-        |]
-
-    mkInstanceReplicatedAsPayload itemsUuids = [d|
-        instance ReplicatedAsPayload $typeName where
-            toPayload = toPayload . $toUuid
-            fromPayload = fromPayload >=> $fromUuid
-        |]
-      where
-        toUuid = lamCaseE
-            [ match (conP itemName []) (liftData uuid)
-            | (itemName, uuid) <- itemsUuids
-            ]
-        fromUuid = lamCaseE
-            $   [ match (liftDataP uuid) [| pure $(conE itemName) |]
-                | (itemName, uuid) <- itemsUuids
-                ]
-            ++  [match
-                    TH.wildP
-                    [| throwErrorString "expected one of enum items" |]]
-        liftDataP = dataToPatQ $ const Nothing
-        match pat body = TH.match pat (normalB body) []
+        mkInstanceReplicated itemsUuids = [d|
+            instance Replicated $typeName where
+                toPayload   = toPayload    .  $toUuid
+                fromPayload = fromPayload >=> $fromUuid
+            |]
+            where
+                toUuid = lamCaseE
+                    [ match (conP itemName []) (liftData uuid)
+                    | (itemName, uuid) <- itemsUuids
+                    ]
+                fromUuid = lamCaseE
+                    $   [ match (liftDataP uuid) [| pure $(conE itemName) |]
+                        | (itemName, uuid) <- itemsUuids
+                        ]
+                    ++  [match
+                            TH.wildP
+                            [| throwErrorString "expected one of enum items" |]]
+                liftDataP = dataToPatQ $ const Nothing
+                match pat body = TH.match pat (normalB body) []
 
 mkAlias :: Alias Resolved -> TH.DecsQ
-mkAlias Alias{name, target} =
-    (:[]) <$> TH.tySynD (mkNameT name) [] (mkGuideType target)
+mkAlias Alias{name, target} = do
+    dec <- TH.tySynD (mkNameT name) [] $ case target of
+        TObject obj -> mkObjectGuideType obj
+        _           -> mkGuideType target
+    pure [dec]

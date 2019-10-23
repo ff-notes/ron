@@ -8,9 +8,7 @@
 -- | RON-Text parsing
 module RON.Text.Parse (
     parseAtom,
-    parseObject,
     parseOp,
-    parseStateFrame,
     parseString,
     parseUuid,
     parseUuidKey,
@@ -31,16 +29,15 @@ import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust, isNothing)
 
 import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            ClosedOp (..), ObjectFrame (ObjectFrame), Op (..),
+                            ClosedOp (..), Op (..),
                             OpTerm (TClosed, THeader, TQuery, TReduced),
-                            Payload, StateFrame, UUID (UUID),
+                            Payload, UUID (UUID),
                             WireChunk (Closed, Query, Value), WireFrame,
-                            WireReducedChunk (..), WireStateChunk (..))
+                            WireReducedChunk (..))
 import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word2, Word4, Word60, b00, b0000, b01, b10, b11,
                                 ls60, safeCast)
@@ -393,26 +390,6 @@ term = do
         ',' -> pure TReduced
         ';' -> pure TClosed
         _   -> fail "not a term"
-
--- | Parse a state frame
-parseStateFrame :: ByteStringL -> Either String StateFrame
-parseStateFrame = parseWireFrame >=> findObjects
-
--- | Parse a state frame as an object
-parseObject :: UUID -> ByteStringL -> Either String (ObjectFrame a)
-parseObject oid bytes = ObjectFrame oid <$> parseStateFrame bytes
-
--- | Extract object states from a common frame
-findObjects :: WireFrame -> Either String StateFrame
-findObjects = fmap Map.fromList . traverse loadBody where
-    loadBody = \case
-        Value WireReducedChunk{wrcHeader, wrcBody} -> do
-            let ClosedOp{reducerId, objectId} = wrcHeader
-            pure
-                ( objectId
-                , WireStateChunk{stateType = reducerId, stateBody = wrcBody}
-                )
-        _ -> Left "expected reduced chunk"
 
 opZero :: ClosedOp
 opZero = ClosedOp
