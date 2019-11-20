@@ -73,15 +73,13 @@ data TObject
 
 data StructEncoding = SELww | SESet
 
-data Struct (encoding :: StructEncoding) stage
-  = Struct
-      { name :: Text,
-        fields :: Map Text (Field stage),
-        annotations :: StructAnnotations
-      }
+data Struct (encoding :: StructEncoding) stage = Struct
+  { name :: Text
+  , fields :: Map Text (Field stage)
+  , annotations :: StructAnnotations
+  }
 
-deriving instance
-  (Show (UseType stage), Show (XField stage)) => Show (Struct encoding stage)
+deriving instance Show (Field stage) => Show (Struct encoding stage)
 
 type StructLww = Struct SELww
 
@@ -103,31 +101,28 @@ defaultStructAnnotations = StructAnnotations
 data CaseTransform = TitleCase
   deriving (Show)
 
-data Field (stage :: Stage)
-  = Field
-      { ronType :: UseType stage,
-        annotations :: FieldAnnotations,
-        ext :: XField stage
-      }
+data Field (stage :: Stage) = Field
+  { mergeStrategy :: MergeStrategy
+    -- ^ Used only for 'StructSet'; for 'StructLww' must be 'LWW'
+  , ronType     :: UseType stage
+  , annotations :: FieldAnnotations
+  , ext         :: XField stage
+  }
 
 deriving instance
   (Show (UseType stage), Show (XField stage)) => Show (Field stage)
 
-newtype FieldAnnotations
-  = FieldAnnotations {mergeStrategy :: Maybe MergeStrategy}
-  deriving (Show)
+data FieldAnnotations = FieldAnnotations deriving (Show)
 
 defaultFieldAnnotations :: FieldAnnotations
-defaultFieldAnnotations = FieldAnnotations {mergeStrategy = Nothing}
+defaultFieldAnnotations = FieldAnnotations
 
 type family XField (stage :: Stage)
-
-type instance XField Parsed = ()
-
+type instance XField Parsed   = ()
 type instance XField Resolved = ()
 
 type family UseType (stage :: Stage) where
-  UseType Parsed = TypeExpr
+  UseType Parsed   = TypeExpr
   UseType Resolved = RonType
   UseType Equipped = RonType
 
@@ -140,11 +135,12 @@ data Declaration stage
   | DStructSet (StructSet stage)
 
 deriving instance
-  (Show (UseType stage), Show (XField stage)) => Show (Declaration stage)
+  (Show (Alias stage), Show (StructLww stage), Show (StructSet stage)) =>
+  Show (Declaration stage)
 
 type family Schema (stage :: Stage) where
-  Schema 'Parsed = [Declaration 'Parsed]
-  Schema 'Resolved = Map TypeName (Declaration 'Resolved)
+  Schema Parsed   = [Declaration 'Parsed]
+  Schema Resolved = Map TypeName (Declaration 'Resolved)
 
 newtype OpaqueAnnotations = OpaqueAnnotations {haskellType :: Maybe Text}
   deriving (Show)
@@ -168,5 +164,5 @@ data Alias stage = Alias {name :: Text, target :: UseType stage}
 
 deriving instance Show (UseType stage) => Show (Alias stage)
 
-data MergeStrategy = LWW | Max | Min | Set
+data MergeStrategy = LWW | Max | Min | Set | DelegateMonoid
   deriving (Eq, Show)
