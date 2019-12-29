@@ -6,6 +6,15 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Struct field syntax made explicit.
+- `struct_set` field merge strategy is now explicit positional attribute,
+  not an annotation.
+- New field syntax:
+  ```
+  (struct_lww STRUCT_NAME (FIELD_NAME TYPE))
+  (struct_set STRUCT_NAME (FIELD_NAME MERGE_STRATEGY TYPE))
+  ```
 
 ## [0.9] - 2019-09-06
 ### Added
