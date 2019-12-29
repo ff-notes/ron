@@ -32,7 +32,7 @@ executable demo-text-editor-qt
         -- global
         containers,
         hoppy-runtime,
-        qtah-qt5,
+        qtah,
         stm,
         text,
         time,
