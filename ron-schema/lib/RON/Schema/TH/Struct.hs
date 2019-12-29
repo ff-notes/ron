@@ -381,23 +381,23 @@ mkAccessorsSet name' field = do
   where
     Field{mergeStrategy, ronType, ext} = field
     XFieldEquipped{haskellName, ronName} = ext
-    ronName' = liftData ronName
-    type' = conT name'
+    ronName'  = liftData ronName
+    type'     = conT name'
     fieldType = mkFieldType ronType mergeStrategy
     guideType = mkGuideType ronType
-    add = mkNameT $ haskellName <> "_add"
-    clear = mkNameT $ haskellName <> "_clear"
-    getName = mkNameT $ haskellName <> "_get"
-    read = mkNameT $ haskellName <> "_read"
-    remove = mkNameT $ haskellName <> "_remove"
-    removeIf = mkNameT $ haskellName <> "_removeIf"
-    set = mkNameT $ haskellName <> "_set"
-    zoom = mkNameT $ haskellName <> "_zoom"
+    add       = mkNameT $ haskellName <> "_add"
+    clear     = mkNameT $ haskellName <> "_clear"
+    getName   = mkNameT $ haskellName <> "_get"
+    read      = mkNameT $ haskellName <> "_read"
+    remove    = mkNameT $ haskellName <> "_remove"
+    removeIf  = mkNameT $ haskellName <> "_removeIf"
+    set       = mkNameT $ haskellName <> "_set"
+    zoom      = mkNameT $ haskellName <> "_zoom"
 
 orSetViewField :: MergeStrategy -> TH.ExpQ
 orSetViewField = varE . \case
-  DelegateMonoid -> 'ORSet.viewField
-  LWW            -> 'ORSet.viewFieldLWW
-  Max            -> 'ORSet.viewFieldMax
-  Min            -> 'ORSet.viewFieldMin
-  Set            -> 'ORSet.viewFieldSet
+  Monoid -> 'ORSet.viewField
+  LWW    -> 'ORSet.viewFieldLWW
+  Max    -> 'ORSet.viewFieldMax
+  Min    -> 'ORSet.viewFieldMin
+  Set    -> 'ORSet.viewFieldSet

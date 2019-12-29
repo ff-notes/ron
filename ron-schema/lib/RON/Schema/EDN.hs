@@ -142,36 +142,36 @@ declarationName = \case
 instance FromEDN (StructLww Parsed) where
   parseEDN =
     parseStruct
-      StructConfig
-        { keyword            = "struct_lww"
-        , parseMergeStrategy = \vs -> pure (LWW, vs)
-        , errorMessage       =
-            "Expected field declaration in the form\
-            \ (<name:symbol> <type:type_expression>)"
-        }
+      StructConfig{
+        keyword            = "struct_lww",
+        parseMergeStrategy = \vs -> pure (LWW, vs),
+        errorMessage       =
+          "Expected field declaration in the form\
+          \ (<name:symbol> <type:type_expression>)"
+      }
 
 instance FromEDN (StructSet Parsed) where
   parseEDN =
     parseStruct
-      StructConfig
-        { keyword            = "struct_set"
-        , parseMergeStrategy = \case
-            mergeStrategyVal : rest -> do
-              mergeStrategy <- parseEDN mergeStrategyVal
-              pure (mergeStrategy, rest)
-            [] -> fail errorMessage
-        , errorMessage
-        }
+      StructConfig{
+        keyword            = "struct_set",
+        parseMergeStrategy = \case
+          mergeStrategyVal : rest -> do
+            mergeStrategy <- parseEDN mergeStrategyVal
+            pure (mergeStrategy, rest)
+          [] -> fail errorMessage,
+        errorMessage
+      }
     where
       errorMessage =
         "Expected field declaration in the form\
         \ (<name:symbol> <merge_strategy:symbol> <type:type_expression>)"
 
-data StructConfig = StructConfig
-  { keyword            :: String
-  , parseMergeStrategy :: [TaggedValue] -> Parser (MergeStrategy, [TaggedValue])
-  , errorMessage       :: String
-  }
+data StructConfig = StructConfig{
+  keyword            :: String,
+  parseMergeStrategy :: [TaggedValue] -> Parser (MergeStrategy, [TaggedValue]),
+  errorMessage       :: String
+}
 
 parseStruct :: StructConfig -> TaggedValue -> Parser (Struct encoding Parsed)
 parseStruct config@StructConfig{keyword} =
@@ -183,10 +183,9 @@ parseStruct config@StructConfig{keyword} =
       annotations <- parseList annotationVals
       pure Struct{..}
     [] ->
-      fail $
-        "Expected declaration in the form ("
-        ++ keyword
-        ++ " <name:symbol> <annotations>... <fields>...)"
+      fail
+      $   "Expected declaration in the form (" ++ keyword
+      ++  " <name:symbol> <annotations>... <fields>...)"
 
 parseFields ::
   StructConfig -> [Tagged Text Value] -> Parser (Map Text (Field Parsed))
@@ -196,7 +195,7 @@ parseFields parseMergeStrategy =
 parseField ::
   StructConfig -> TaggedValue -> StateT (Map Text (Field Parsed)) Parser ()
 parseField StructConfig{parseMergeStrategy, errorMessage} tv = do
-  NamedField{name, field} <- lift $ parseNamedField tv
+  (name, field)  <- lift $ parseNamedField tv
   definedAlready <- gets $ Map.member name
   if definedAlready then
     fail $ "Field " <> Text.unpack name <> " is defined already"
@@ -210,13 +209,13 @@ parseField StructConfig{parseMergeStrategy, errorMessage} tv = do
         ronType <- case rest2 of
           [typeVal] -> parseEDN typeVal
           _         -> fail errorMessage
-        pure NamedField{name, field = Field{ronType, mergeStrategy, annotations = FieldAnnotations, ext = ()}}
+        pure
+          ( name,
+            Field{
+              ronType, mergeStrategy, annotations = FieldAnnotations, ext = ()
+            }
+          )
       _ -> fail errorMessage
-
-data NamedField = NamedField
-  { name  :: Text
-  , field :: Field Parsed
-  }
 
 instance FromEDN StructAnnotations where
   parseEDN = withNoTag . withList $ \annTaggedValues -> do
@@ -327,7 +326,7 @@ evalSchema env = fst <$> userTypes'
     evalDeclaration = \case
       DAlias Alias{name, target} ->
         let target' = evalType target
-         in (DAlias Alias{name, target = target'}, Type0 target')
+        in  (DAlias Alias{name, target = target'}, Type0 target')
       DEnum t -> (DEnum t, Type0 $ TEnum t)
       DOpaqueAtoms t -> (DOpaqueAtoms t, Type0 $ TOpaqueAtoms t)
       DOpaqueObject t -> (DOpaqueObject t, Type0 $ TObject $ TOpaqueObject t)
@@ -367,7 +366,7 @@ evalSchema env = fst <$> userTypes'
 instance FromEDN (Alias 'Parsed) where
   parseEDN = withNoTag . withList $ \case
     [nameSym, targetVal] -> do
-      name <- parseSymbol' nameSym
+      name   <- parseSymbol' nameSym
       target <- parseEDN targetVal
       pure Alias{name, target}
     _ ->
@@ -383,15 +382,16 @@ unwrapTag = \case
   Tagged prefix tag value ->
     let name = case prefix of
           "" -> tag
-          _ -> prefix <> "/" <> tag
-     in pure (name, value)
+          _  -> prefix <> "/" <> tag
+    in  pure (name, value)
   NoTag _ -> fail "annotation must be a tagged value"
 
 instance FromEDN MergeStrategy where
   parseEDN = withSymbol' $ \case
-    "lww" -> pure LWW
-    "max" -> pure Max
-    "min" -> pure Min
-    "set" -> pure Set
-    "merge" -> pure DelegateMonoid
-    s -> fail $ "unknown merge strategy " <> show s
+    "lww"    -> pure LWW
+    "max"    -> pure Max
+    "merge"  -> pure Monoid
+    "min"    -> pure Min
+    "monoid" -> pure Monoid
+    "set"    -> pure Set
+    s        -> fail $ "unknown merge strategy " <> show s
