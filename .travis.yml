@@ -76,12 +76,12 @@ matrix:
         - (cd ron-schema  && cabal check)
         - (cd ron-storage && cabal check)
         # - (cd swarm       && cabal check)
-    - name: weeder
-      install: $STACK install weeder
-      script: $STACK exec -- weeder
-    - name: style
-      install: $STACK install ormolu
-      script: $STACK test --flag=ron-test:style :style
-  allow_failures:
-    - name: style
-    - name: weeder
+  #   - name: weeder
+  #     install: $STACK install weeder
+  #     script: $STACK exec -- weeder
+  #   - name: style
+  #     install: $STACK install ormolu
+  #     script: $STACK test --flag=ron-test:style :style
+  # allow_failures:
+  #   - name: style
+  #   - name: weeder
