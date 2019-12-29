@@ -296,28 +296,27 @@ validateResolved = traverse_ $ \case
           where
             Field{ronType, mergeStrategy} = field
             goAtom a = case (mergeStrategy, a) of
-              (DelegateMonoid, _) -> fail' "atoms are not monoid"
-              (LWW, _) -> pure ()
-              (Set, _) -> pure ()
-              (Max, TAInteger) -> pure ()
-              (Max, TAFloat) -> pure ()
-              (Min, TAInteger) -> pure ()
-              (Min, TAFloat) -> pure ()
-              (Max, _) ->
-                fail' "max strategy requires either integer or float field"
-              (Min, _) ->
-                fail' "min strategy requires either integer or float field"
+              (Monoid, _        ) -> fail' "atoms are not monoid"
+              (LWW,    _        ) -> pure ()
+              (Set,    _        ) -> pure ()
+              (Max,    TAInteger) -> pure ()
+              (Max,    TAFloat  ) -> pure ()
+              (Min,    TAInteger) -> pure ()
+              (Min,    TAFloat  ) -> pure ()
+              (Max,    _        ) -> fail' $ ordMessage "max"
+              (Min,    _        ) -> fail' $ ordMessage "min"
+            ordMessage = (<> " strategy requires either integer or float field")
             goObject = case mergeStrategy of
-              DelegateMonoid -> pure ()
-              Set -> pure ()
-              LWW -> fail'' "LWW is not safe for objects"
-              Max -> fail'' "objects are not ordered"
-              Min -> fail'' "objects are not ordered"
+              Monoid -> pure ()
+              Set    -> pure ()
+              LWW    -> fail'' "LWW is not safe for objects"
+              Max    -> fail'' "objects are not ordered"
+              Min    -> fail'' "objects are not ordered"
             fail' msg =
               fail $ Text.unpack $ structName <> "." <> fieldName <> ": " <> msg
             fail'' msg =
-              fail'
-              $ msg <> ", valid merge strategies for objects are: monoid, set"
+              fail' $
+                msg <> ", valid merge strategies for objects are: monoid, set"
 
 evalSchema :: Env -> Schema 'Resolved
 evalSchema env = fst <$> userTypes'

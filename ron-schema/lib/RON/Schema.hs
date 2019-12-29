@@ -164,5 +164,11 @@ data Alias stage = Alias {name :: Text, target :: UseType stage}
 
 deriving instance Show (UseType stage) => Show (Alias stage)
 
-data MergeStrategy = LWW | Max | Min | Set | DelegateMonoid
+data MergeStrategy
+  = LWW    -- ^ Keep the last value,    use 'Nothing' if no values
+  | Max    -- ^ Keep the maximum value, use 'Nothing' if no values
+  | Min    -- ^ Keep the minimum value, use 'Nothing' if no values
+  | Set    -- ^ Keep all values,        use 'mempty'  if no values
+  | Monoid -- ^ Merge all values,       use 'mempty'  if no values
+  -- TODO Semigroup -- ^ Merge all values, use 'Nothing' if no values
   deriving (Eq, Show)

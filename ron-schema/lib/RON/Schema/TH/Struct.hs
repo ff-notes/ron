@@ -44,17 +44,17 @@ import qualified RON.UUID as UUID
 
 type instance XField Equipped = XFieldEquipped
 
-data XFieldEquipped = XFieldEquipped
-  { haskellName :: Text
-  , ronName :: UUID
-  }
+data XFieldEquipped = XFieldEquipped{
+  haskellName :: Text,
+  ronName :: UUID
+}
 
 equipStruct :: Struct e Resolved -> Struct e Equipped
-equipStruct Struct{name, fields, annotations} = Struct
-  { name
-  , fields = Map.mapWithKey (equipField annotations) fields
-  , annotations
-  }
+equipStruct Struct{name, fields, annotations} = Struct{
+  name,
+  fields = Map.mapWithKey (equipField annotations) fields,
+  annotations
+}
 
 mkReplicatedStructLww :: StructLww Resolved -> TH.DecsQ
 mkReplicatedStructLww structResolved = do
@@ -104,7 +104,7 @@ mkDataTypeLww Struct{name, fields} =
     [ recC
         name'
         [ varBangType' haskellName [t|Maybe $(mkGuideType ronType)|]
-        | Field{ronType, ext = XFieldEquipped{haskellName}} <- toList fields
+          | Field{ronType, ext = XFieldEquipped{haskellName}} <- toList fields
         ]
     ]
     []
@@ -121,8 +121,8 @@ mkDataTypeSet Struct{name, fields} =
     [ recC
         name'
         [ varBangType' haskellName (mkFieldType ronType mergeStrategy)
-        | Field{ronType, mergeStrategy, ext} <- toList fields
-        , let XFieldEquipped{haskellName} = ext
+          | Field{ronType, mergeStrategy, ext} <- toList fields,
+            let XFieldEquipped{haskellName} = ext
         ]
     ]
     []
@@ -168,10 +168,10 @@ mkInstanceReplicatedAOLww Struct{name, fields} = do
             | var <- toList vars
           ]
   let readObjectImpl =
-        doE $
-          bindS (varP ops) [|getObjectStateChunk|]
-            : unpackFields
-            ++ [noBindS [|pure $consE|]]
+        doE
+        $   bindS (varP ops) [|getObjectStateChunk|]
+        :   unpackFields
+        ++  [noBindS [|pure $consE|]]
   [d|
     instance ReplicatedAsObject $type' where
 
@@ -245,11 +245,11 @@ mkInstanceReplicatedAOSet Struct{name, fields} = do
 mkHaskellFieldName :: StructAnnotations -> Text -> Text
 mkHaskellFieldName annotations base = prefix <> base'
   where
-    StructAnnotations
-      { haskellFieldPrefix = prefix
-      , haskellFieldCaseTransform = caseTransform
-      } =
-        annotations
+    StructAnnotations{
+      haskellFieldPrefix = prefix,
+      haskellFieldCaseTransform = caseTransform
+    } =
+      annotations
     base' = case caseTransform of
       Nothing -> base
       Just TitleCase -> case Text.uncons base of
@@ -265,8 +265,7 @@ mkAccessorsLww name' field = do
             set
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
-              Maybe $guideType ->
-              $m ()
+              Maybe $guideType -> $m ()
               |],
           valDP set [|LWW.assignField $ronName'|]
         ]
@@ -283,8 +282,7 @@ mkAccessorsLww name' field = do
             zoom
             [t|
               MonadE $m =>
-              ObjectStateT $guideType $m $a ->
-              ObjectStateT $type' $m $a
+              ObjectStateT $guideType $m $a -> ObjectStateT $type' $m $a
               |],
           valDP zoom [|LWW.zoomField $ronName'|]
         ]
@@ -307,8 +305,7 @@ mkAccessorsSet name' field = do
             add
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
-              $guideType ->
-              $m ()
+              $guideType -> $m ()
               |],
           valDP add [|ORSet.addFieldValue $ronName'|]
         ]
@@ -317,8 +314,7 @@ mkAccessorsSet name' field = do
             set
             [t|
               (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
-              $guideType ->
-              $m ()
+              $guideType -> $m ()
               |],
           valDP set [|ORSet.assignField $ronName' . Just|]
         ]
@@ -360,16 +356,14 @@ mkAccessorsSet name' field = do
             remove
             [t|
               (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m) =>
-              $guideType ->
-              $m ()
+              $guideType -> $m ()
               |],
           valDP remove [|ORSet.removeFieldValue $ronName'|],
           sigD
             removeIf
             [t|
               (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m) =>
-              ($guideType -> $m Bool) ->
-              $m ()
+              ($guideType -> $m Bool) -> $m ()
               |],
           valDP removeIf [|ORSet.removeFieldValueIf $ronName'|]
           ]
@@ -379,8 +373,7 @@ mkAccessorsSet name' field = do
             zoom
             [t|
               (MonadE $m, ReplicaClock $m) =>
-              ObjectStateT $guideType $m $a ->
-              ObjectStateT $type' $m $a
+              ObjectStateT $guideType $m $a -> ObjectStateT $type' $m $a
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
@@ -404,7 +397,7 @@ mkAccessorsSet name' field = do
 orSetViewField :: MergeStrategy -> TH.ExpQ
 orSetViewField = varE . \case
   DelegateMonoid -> 'ORSet.viewField
-  LWW -> 'ORSet.viewFieldLWW
-  Max -> 'ORSet.viewFieldMax
-  Min -> 'ORSet.viewFieldMin
-  Set -> 'ORSet.viewFieldSet
+  LWW            -> 'ORSet.viewFieldLWW
+  Max            -> 'ORSet.viewFieldMax
+  Min            -> 'ORSet.viewFieldMin
+  Set            -> 'ORSet.viewFieldSet
