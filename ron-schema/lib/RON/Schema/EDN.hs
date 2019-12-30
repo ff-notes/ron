@@ -14,38 +14,25 @@ module RON.Schema.EDN
   )
 where
 
-import Control.Arrow ((&&&))
-import Data.EDN
-  ( FromEDN,
-    Tagged (NoTag, Tagged),
-    TaggedValue,
-    Value (List, Symbol),
-    mapGetSymbol,
-    parseEDN,
-    -- renderText,
-    unexpected,
-    withList,
-    withMap,
-    withNoTag,
-  )
-import Data.EDN.Class.Parser (Parser, parseM)
-import Data.EDN.Extra
-  ( decodeMultiDoc,
-    isTagged,
-    parseList,
-    parseSymbol',
-    withNoPrefix,
-    withSymbol',
-  )
-import Data.Map.Strict ((!?))
+import           RON.Prelude
+
+import           Control.Arrow ((&&&))
+import           Data.EDN (FromEDN, Tagged (NoTag, Tagged), TaggedValue,
+                           Value (List, Symbol), mapGetSymbol, parseEDN,
+                           unexpected, withList, withMap, withNoTag)
+import           Data.EDN.Class.Parser (Parser, parseM)
+import           Data.EDN.Extra (decodeMultiDoc, isTagged, parseList,
+                                 parseSymbol', withNoPrefix, withSymbol')
+import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import RON.Prelude
-import RON.Schema
+import           Language.Haskell.TH (Loc)
 
-readSchema :: MonadFail m => String -> Text -> m (Schema 'Resolved)
-readSchema sourceName source = do
-  parsed <- parseSchema sourceName source
+import           RON.Schema
+
+readSchema :: MonadFail m => Loc -> Text -> m (Schema 'Resolved)
+readSchema sourceLoc source = do
+  parsed <- parseSchema sourceLoc source
   env <- (`execStateT` Env{userTypes = Map.empty}) $ collectDeclarations parsed
   validateParsed env parsed
   let resolved = evalSchema env
@@ -234,9 +221,9 @@ instance FromEDN CaseTransform where
     "title" -> pure TitleCase
     _ -> fail "unknown case transformation"
 
-parseSchema :: MonadFail m => String -> Text -> m (Schema 'Parsed)
-parseSchema sourceName source = do
-  values <- decodeMultiDoc sourceName source
+parseSchema :: MonadFail m => Loc -> Text -> m (Schema 'Parsed)
+parseSchema sourceLoc source = do
+  values <- decodeMultiDoc sourceLoc source
   parseM (traverse parseEDN) values
 
 instance FromEDN TypeExpr where

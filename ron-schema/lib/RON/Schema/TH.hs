@@ -15,8 +15,7 @@ import           RON.Prelude
 
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Language.Haskell.TH (Loc (Loc), conE, conP, conT, lamCaseE,
-                                      normalB)
+import           Language.Haskell.TH (conE, conP, conT, lamCaseE, normalB)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
                                             quoteExp, quotePat, quoteType)
@@ -37,8 +36,8 @@ mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
   where
     e = error "declaration only"
     quoteDec source = do
-        Loc{loc_filename} <- TH.location
-        schema <- EDN.readSchema loc_filename $ Text.pack source
+        loc    <- TH.location
+        schema <- EDN.readSchema loc $ Text.pack source
         mkReplicated' schema
 
 -- | Generate Haskell types from RON-Schema

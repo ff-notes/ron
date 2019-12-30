@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Positions to syntax errors.
+
 ### Changed
 - Struct field syntax made explicit.
 - `struct_set` field merge strategy is now explicit positional attribute,
