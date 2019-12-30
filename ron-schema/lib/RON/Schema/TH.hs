@@ -6,16 +6,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module RON.Schema.TH(
-    module X,
+    module RON.Schema,
     mkReplicated,
     mkReplicated',
 ) where
 
 import           RON.Prelude
 
+import           Data.EDN.Extra (SourcePos (..), mkPos)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import           Language.Haskell.TH (conE, conP, conT, lamCaseE, normalB)
+import           Language.Haskell.TH (Loc (Loc), conE, conP, conT, lamCaseE,
+                                      normalB)
 import qualified Language.Haskell.TH as TH
 import           Language.Haskell.TH.Quote (QuasiQuoter (QuasiQuoter), quoteDec,
                                             quoteExp, quotePat, quoteType)
@@ -23,7 +25,7 @@ import           Language.Haskell.TH.Syntax (dataToPatQ, liftData)
 
 import           RON.Data (Replicated (..), ReplicatedAsPayload (..))
 import           RON.Error (throwErrorString)
-import           RON.Schema as X
+import           RON.Schema
 import qualified RON.Schema.EDN as EDN
 import           RON.Schema.TH.Common (mkGuideType, mkNameT)
 import           RON.Schema.TH.Struct (mkReplicatedStructLww,
@@ -36,8 +38,13 @@ mkReplicated = QuasiQuoter{quoteDec, quoteExp = e, quotePat = e, quoteType = e}
   where
     e = error "declaration only"
     quoteDec source = do
-        loc    <- TH.location
-        schema <- EDN.readSchema loc $ Text.pack source
+        Loc{loc_filename, loc_start = (line, column)} <- TH.location
+        let sourcePos = SourcePos{
+                sourceName = loc_filename,
+                sourceLine = mkPos line,
+                sourceColumn = mkPos column
+            }
+        schema <- EDN.readSchema sourcePos $ Text.pack source
         mkReplicated' schema
 
 -- | Generate Haskell types from RON-Schema
