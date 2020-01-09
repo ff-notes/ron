@@ -1,4 +1,4 @@
-resolver: lts-14.10
+resolver: lts-14.20
 
 packages:
   - ron
@@ -16,15 +16,14 @@ extra-deps:
       - hoppy-generator-0.7.0
       - hoppy-runtime-0.7.0
       - hoppy-std-0.7.0
-      # - qtah-cpp-qt5-0.6.0
-      # - qtah-generator-0.6.0
-      # - qtah-qt5-0.6.0
-      - git: https://gitlab.com/cblp/qtah.git
-        commit:
-          4ad4c8194c034c1d949ad16207a8cdabed7848e5  # 0.6.0 + fixes
+      # - qtah-cpp-qt5-0.6.1
+      # - qtah-generator-0.6.1
+      # - qtah-qt5-0.6.1
+      - git: https://gitlab.com/khumba/qtah.git
+        commit: 0b952b894d20e4cf602ad4423f66f8b63f684970  # 0.6.1-unreleased
         subdirs: [qtah, qtah-cpp, qtah-generator]
     # ron-test:
-      - ormolu-0.0.1.0
+      # - ormolu-0.0.2.0
 
 extra-lib-dirs:
   - swarm/_artifacts/lib
