@@ -132,7 +132,7 @@ data Document a
       }
   deriving (Show)
 
--- | Create new version of an object/document.
+-- | Create new version of an object/document and delete older versions.
 -- If the document doesn't exist yet, it will be created.
 createVersion
   :: forall a m.

@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Fixed
+- `createVersion` doc: reflect deletion of older versions.
 
 ## [0.11] - 2019-10-08
 ### Added
