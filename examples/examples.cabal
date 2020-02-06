@@ -25,3 +25,7 @@ executable TypicalUsage
 executable CreateAndModify
     import: common
     main-is: CreateAndModify.hs
+
+executable RecursiveStruct
+    import: common
+    main-is: RecursiveStruct.hs
