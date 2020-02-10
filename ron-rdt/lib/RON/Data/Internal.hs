@@ -264,7 +264,7 @@ newObjectFrame
     :: (ReplicatedAsObject a, ReplicaClock m) => a -> m (ObjectFrame a)
 newObjectFrame a = do
     (ObjectRef uuid, frame) <- runStateT (newObject a) mempty
-    pure $ ObjectFrame{uuid, frame}
+    pure ObjectFrame{uuid, frame}
 
 getObjectStateChunk
     :: forall a m . (MonadE m, MonadObjectState a m) => m (StateChunk (Rep a))
@@ -291,8 +291,12 @@ modifyObjectStateChunk f = do
     chunk <- getObjectStateChunk
     (a, StateChunk chunk') <- f chunk
     modify' $
-        Map.insert uuid $
-        WireStateChunk{stateType = reducibleOpType @(Rep a), stateBody = chunk'}
+        Map.insert
+            uuid
+            WireStateChunk{
+                stateType = reducibleOpType @(Rep a),
+                stateBody = chunk'
+                }
     pure a
 
 modifyObjectStateChunk_

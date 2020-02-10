@@ -1,0 +1,2 @@
+# Add custom hints for this project
+- error: {lhs: a $ b, rhs: a b, side: isRecUpdate b || isRecConstr b}

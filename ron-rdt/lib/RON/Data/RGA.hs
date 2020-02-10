@@ -126,8 +126,7 @@ vertexListToOps v@VertexList {..} = go listHead listItems
 vertexListFromOps :: [Vertex] -> Maybe VertexList
 vertexListFromOps = foldr go mempty
   where
-    go v@Op {opId} vlist =
-      Just $ VertexList {listHead = opId, listItems = vlist'}
+    go v@Op{opId} vlist = Just VertexList{listHead = opId, listItems = vlist'}
       where
         item itemNext = VertexListItem {itemValue = v, itemNext}
         vlist' = case vlist of
