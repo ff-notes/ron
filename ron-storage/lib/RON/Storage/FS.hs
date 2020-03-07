@@ -34,59 +34,37 @@ module RON.Storage.FS
   )
 where
 
-import Control.Concurrent.STM
-  ( TChan,
-    atomically,
-    dupTChan,
-    newBroadcastTChanIO,
-    writeTChan,
-  )
-import Data.Bits (shiftL)
+import           RON.Prelude
+
+import           Control.Concurrent.STM (TChan, atomically, dupTChan,
+                                         newBroadcastTChanIO, writeTChan)
+import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Maybe (isJust)
-import Network.Info (MAC (MAC), getNetworkInterfaces, mac)
-import RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
-import RON.Error (Error, throwErrorString)
-import RON.Event
-  ( EpochTime,
-    ReplicaClock,
-    ReplicaId,
-    advance,
-    applicationSpecific,
-    getEvents,
-    getPid,
-  )
-import RON.Prelude
-import RON.Storage as X
-import RON.Storage.Backend
-  ( DocId (DocId),
-    MonadStorage,
-    RawDocId,
-    changeDocId,
-    deleteVersion,
-    getCollections,
-    getDocumentVersions,
-    getDocuments,
-    loadVersionContent,
-    saveVersionContent,
-  )
-import System.Directory
-  ( canonicalizePath,
-    createDirectoryIfMissing,
-    doesDirectoryExist,
-    doesPathExist,
-    listDirectory,
-    makeAbsolute,
-    removeFile,
-    renameDirectory,
-  )
+import           Data.Foldable (find)
+import           Data.Maybe (isJust)
+import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
+import           System.Directory (canonicalizePath, createDirectoryIfMissing,
+                                   doesDirectoryExist, doesPathExist,
+                                   listDirectory, makeAbsolute, removeFile,
+                                   renameDirectory)
+import           System.FilePath (makeRelative, splitDirectories, (</>))
+import           System.FSNotify (StopListening)
 import qualified System.FSNotify as FSNotify
-import System.FSNotify (StopListening)
-import System.FilePath ((</>), makeRelative, splitDirectories)
-import System.IO (hPutStrLn, stderr)
-import System.IO.Error (isDoesNotExistError)
-import System.Random.TF (newTFGen)
-import System.Random.TF.Instances (random)
+import           System.IO (hPutStrLn, stderr)
+import           System.IO.Error (isDoesNotExistError)
+import           System.Random.TF (newTFGen)
+import           System.Random.TF.Instances (random)
+
+import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
+import           RON.Error (Error, throwErrorString)
+import           RON.Event (EpochTime, ReplicaClock, ReplicaId, advance,
+                            applicationSpecific, getEvents, getPid)
+import           RON.Storage as X
+import           RON.Storage.Backend (DocId (DocId), MonadStorage, RawDocId,
+                                      changeDocId, deleteVersion,
+                                      getCollections, getDocumentVersions,
+                                      getDocuments, loadVersionContent,
+                                      saveVersionContent)
 
 -- | Environment is the dataDir
 newtype Storage a = Storage (ExceptT Error (ReaderT Handle EpochClock) a)
@@ -229,8 +207,7 @@ getMacAddress = do
   macAddress <- getMac
   pure $ decodeMac <$> macAddress
   where
-    getMac =
-      listToMaybe . filter (/= minBound) . map mac <$> getNetworkInterfaces
+    getMac = find (/= minBound) . map mac <$> getNetworkInterfaces
     decodeMac (MAC b5 b4 b3 b2 b1 b0) =
       (fromIntegral b5 `shiftL` 40)
         + (fromIntegral b4 `shiftL` 32)

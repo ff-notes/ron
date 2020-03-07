@@ -43,18 +43,11 @@ serializeUuidKey
     -> ByteStringL
 serializeUuidKey prevKey prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
-        B00 -> minimumByLength
-            $   unzipped thisFields
-            :   [ z
-                | uuidVariant (split prevKey) == B00
-                , Just z <- [zipUuid (split prevKey) thisFields]
-                ]
-            ++  [ "`" <> z
-                | prev /= zero
-                , uuidVariant (split prev) == B00
-                , Just z <- [zipUuid (split prev) thisFields]
-                ]
-        _   -> serializeUuidGeneric this
+        B00 -> minimumByLength $
+                unzipped thisFields
+            :   zipIfDefaultVariant prevKey this
+            ++  ["`" <> z | prev /= zero, z <- zipIfDefaultVariant prev this]
+        _ -> serializeUuidGeneric this
   where
     thisFields = split this
 
@@ -65,16 +58,19 @@ serializeUuidAtom
     -> ByteStringL
 serializeUuidAtom prev this =
     BSL.fromStrict $ case uuidVariant thisFields of
-        B00 -> minimumByLength
-            $   unzipped thisFields
-            :   [ z
-                | prev /= zero
-                , uuidVariant (split prev) == B00
-                , Just z <- [zipUuid (split prev) thisFields]
-                ]
-        _   -> serializeUuidGeneric this
+        B00 -> minimumByLength $
+                unzipped thisFields
+            :   (guard (prev /= zero) *> zipIfDefaultVariant prev this)
+        _ -> serializeUuidGeneric this
   where
     thisFields = split this
+
+zipIfDefaultVariant :: UUID -> UUID -> [ByteString]
+zipIfDefaultVariant prev this =
+    [ z
+    | uuidVariant (split prev) == B00
+    , Just z <- [zipUuid (split prev) (split this)]
+    ]
 
 unzipped :: UuidFields -> ByteString
 unzipped UuidFields{..} = x' <> y'

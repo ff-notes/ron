@@ -35,49 +35,35 @@ module RON.Data.RGA
   )
 where
 
-import Data.Algorithm.Diff (Diff (Both, First, Second), getGroupedDiffBy)
+import           Data.Algorithm.Diff (Diff (Both, First, Second),
+                                      getGroupedDiffBy)
+import           Data.Bifunctor (second)
 import qualified Data.HashMap.Strict as HashMap
-import Data.Map.Strict ((!?))
+import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import RON.Data.Internal
-  ( MonadObjectState,
-    ReducedChunk (ReducedChunk, rcBody, rcRef),
-    Reducible,
-    Rep,
-    Replicated (encoding),
-    ReplicatedAsObject,
-    ReplicatedAsPayload,
-    Unapplied,
-    applyPatches,
-    fromRon,
-    getObjectStateChunk,
-    modifyObjectStateChunk_,
-    newObject,
-    newRon,
-    objectEncoding,
-    readObject,
-    reduceUnappliedPatches,
-    reducibleOpType,
-    stateFromChunk,
-    stateToChunk,
-    toPayload,
-  )
-import RON.Error (MonadE, errorContext, throwErrorText)
-import RON.Event (ReplicaClock, getEventUuid, getEventUuids)
-import RON.Prelude
-import RON.Semilattice (Semilattice)
-import RON.Types
-  ( ObjectRef (ObjectRef),
-    Op (Op, opId, payload, refId),
-    StateChunk (StateChunk),
-    StateFrame,
-    UUID,
-    WireStateChunk (WireStateChunk, stateBody, stateType),
-  )
-import RON.UUID (uuidVersion, pattern Zero)
+
+import           RON.Data.Internal (MonadObjectState,
+                                    ReducedChunk (ReducedChunk, rcBody, rcRef),
+                                    Reducible, Rep, Replicated (encoding),
+                                    ReplicatedAsObject, ReplicatedAsPayload,
+                                    Unapplied, applyPatches, fromRon,
+                                    getObjectStateChunk,
+                                    modifyObjectStateChunk_, newObject, newRon,
+                                    objectEncoding, readObject,
+                                    reduceUnappliedPatches, reducibleOpType,
+                                    stateFromChunk, stateToChunk, toPayload)
+import           RON.Error (MonadE, errorContext, throwErrorText)
+import           RON.Event (ReplicaClock, getEventUuid, getEventUuids)
+import           RON.Prelude
+import           RON.Semilattice (Semilattice)
+import           RON.Types (ObjectRef (ObjectRef),
+                            Op (Op, opId, payload, refId),
+                            StateChunk (StateChunk), StateFrame, UUID,
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
+import           RON.Util.Word (pattern B11, ls60)
+import           RON.UUID (pattern Zero, uuidVersion)
 import qualified RON.UUID as UUID
-import RON.Util.Word (ls60, pattern B11)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
 
@@ -201,7 +187,7 @@ instance Reducible RgaRep where
   stateToChunk (RgaRep rga) = maybe [] vertexListToOps rga
 
   applyPatches rga (patches, ops) =
-    bimap id patchSetToChunks . reapplyPatchSetToState rga
+    second patchSetToChunks . reapplyPatchSetToState rga
       $ foldMap patchSetFromChunk patches <> foldMap patchSetFromRawOp ops
 
   reduceUnappliedPatches (patches, ops) =
