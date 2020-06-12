@@ -57,7 +57,11 @@ script:
 
 matrix:
   include:
+    - compiler: GHC 8.8
+      env: STACK_YAML="ghc-8.8.yaml"
+      install: build_deps
     - compiler: GHC 8.6
+      env: STACK_YAML="ghc-8.6.yaml"
       install: build_deps
     - compiler: GHC 8.4
       env: STACK_YAML="ghc-8.4.yaml"
