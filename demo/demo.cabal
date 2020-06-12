@@ -28,6 +28,7 @@ executable demo-text-editor-brick
 
 executable demo-text-editor-qt
     import: language
+    buildable: False
     build-depends:
         -- global
         containers,
