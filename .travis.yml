@@ -30,6 +30,7 @@ before_install:
   - sudo add-apt-repository ppa:hvr/ghc -y
   - sudo add-apt-repository ppa:hvr/ghcjs -y
   - sudo apt-get update -q
+  - sudo apt-get install npm node-gyp nodejs-dev libssl1.0-dev -y
   - sudo apt-get install cabal-install-3.0 ghc-8.4.4 ghcjs-8.4 -y
   - export PATH=/opt/ghcjs/8.4/bin:/opt/ghc/bin:$PATH
 
