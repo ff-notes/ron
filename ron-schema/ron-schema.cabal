@@ -23,8 +23,8 @@ extra-source-files:
     CHANGELOG.md
 
 common language
-    build-depends: base >= 4.10 && < 4.13, integer-gmp
-    default-extensions: MonadFailDesugaring NoImplicitPrelude StrictData
+    build-depends: base >= 4.10 && < 4.15, integer-gmp
+    default-extensions: NoImplicitPrelude StrictData
     default-language: Haskell2010
 
 library
@@ -33,7 +33,7 @@ library
         -- global
         bytestring,
         containers,
-        hedn >= 0.2 && < 0.3,
+        hedn >= 0.2 && < 0.4,
         megaparsec,
         mtl,
         template-haskell,

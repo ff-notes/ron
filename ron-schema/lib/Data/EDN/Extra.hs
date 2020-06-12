@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -52,8 +53,11 @@ decodeMultiDoc sourcePos input =
     $ Mpc.runParser' parseMultiDoc initState
   where
     initState = Mpc.State{
-        stateInput    = input,
-        stateOffset   = 0,
+        stateInput       = input,
+        stateOffset      = 0,
+#if MIN_VERSION_megaparsec(8,0,0)
+        stateParseErrors = [],
+#endif
         statePosState = Mpc.PosState{
             pstateInput      = input,
             pstateOffset     = 0,

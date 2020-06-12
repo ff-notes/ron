@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -35,8 +36,13 @@ module RON.Data.RGA
   )
 where
 
+#if MIN_VERSION_Diff(0,4,0)
+import           Data.Algorithm.Diff (PolyDiff (Both, First, Second),
+                                      getGroupedDiffBy)
+#else
 import           Data.Algorithm.Diff (Diff (Both, First, Second),
                                       getGroupedDiffBy)
+#endif
 import           Data.Bifunctor (second)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))

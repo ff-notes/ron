@@ -38,9 +38,8 @@ import           Data.Hashable (hashUsing, hashWithSalt)
 import           Data.Time (fromGregorianValid, makeTimeOfDayValid)
 
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
-                                pattern B11, Word12, Word16, Word2, Word24,
-                                Word32, Word6, Word60, Word64, Word8,
-                                leastSignificant12, leastSignificant2,
+                                pattern B11, Word12, Word2, Word24, Word6,
+                                Word60, leastSignificant12, leastSignificant2,
                                 leastSignificant24, leastSignificant4,
                                 leastSignificant6, ls12, ls24, ls6, ls60,
                                 safeCast)
