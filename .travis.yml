@@ -74,7 +74,6 @@ matrix:
     - name: haddock
       script: $STACK haddock --no-haddock-deps $EXPORTED_PACKAGES
     - name: 'cabal check'
-      install: $STACK install cabal-install
       script:
         - (cd ron         && cabal check)
         - (cd ron-rdt     && cabal check)
