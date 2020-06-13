@@ -57,16 +57,16 @@ script:
 
 matrix:
   include:
-    - compiler: GHC 8.8
+    - name: GHC 8.8
       env: STACK_YAML="ghc-8.8.yaml"
       install: build_deps
-    - compiler: GHC 8.6
+    - name: GHC 8.6
       env: STACK_YAML="ghc-8.6.yaml"
       install: build_deps
-    - compiler: GHC 8.4
+    - name: GHC 8.4
       env: STACK_YAML="ghc-8.4.yaml"
       install: build_deps
-    - compiler: GHCJS 8.4
+    - name: GHCJS 8.4
       script: cabal v2-build --ghcjs --with-compiler=ghcjs all
     - name: hlint
       install: $STACK build hlint
