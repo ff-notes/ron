@@ -12,8 +12,9 @@ packages:
 
 extra-deps:
   # packages:
+    # ron-schema:
       - hedn-0.3.0.1
-    # demo
+    # demo:
       # - hoppy-generator-0.7.1
       # - hoppy-runtime-0.7.0
       # - hoppy-std-0.7.1
