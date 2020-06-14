@@ -7,6 +7,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.11] - 2020-06-14
+### Added
+- Support for GHC 8.8.
+
 ## [0.10] - 2019-10-07
 ### Added
 - Instances of `Generic` and `Hashable` for `ObjectRef`
