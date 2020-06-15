@@ -48,6 +48,7 @@ library
         RON.Data.RGA
         RON.Data.Time
         RON.Data.VersionVector
+        RON.Store
     other-modules:
         RON.Data.Internal
     hs-source-dirs: lib
