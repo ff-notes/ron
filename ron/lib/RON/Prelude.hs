@@ -24,7 +24,7 @@ module RON.Prelude (
 ) where
 
 -- TODO import           RON.Prelude.Writer as X
-import Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
+import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 
 -- base
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
@@ -81,12 +81,14 @@ import           Data.Ord as X (Down (Down), Ord, Ordering (EQ, GT, LT),
 import           Data.Proxy as X (Proxy (Proxy))
 import           Data.Ratio as X ((%))
 import           Data.Semigroup as X (Semigroup, sconcat, (<>))
+import           Data.Sequence as X (Seq)
 import           Data.String as X (String)
 import           Data.Text as X (Text)
 import           Data.Time as X (UTCTime)
 import           Data.Traversable as X (for, sequence, sequenceA, traverse)
 import           Data.Tuple as X (fst, snd, uncurry)
 import           Data.Typeable as X (Typeable)
+import           Data.Vector as X (Vector)
 import           Data.Word as X (Word, Word16, Word32, Word64, Word8)
 import           GHC.Enum as X (Bounded, Enum, fromEnum, maxBound, minBound,
                                 pred, succ, toEnum)

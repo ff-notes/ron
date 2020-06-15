@@ -40,13 +40,15 @@ module RON.Types
   )
 where
 
-import Data.Typeable (typeRep)
-import RON.Prelude
-import RON.UUID (UUID (UUID), uuidVersion)
-import qualified RON.UUID as UUID
-import RON.Util.Word (Word2, pattern B00, pattern B10, pattern B11)
-import Text.Show (showParen, showString, showsPrec)
+import           RON.Prelude
+
+import           Data.Typeable (typeRep)
+import           Text.Show (showParen, showString, showsPrec)
 import qualified Text.Show
+
+import           RON.Util.Word (pattern B00, pattern B10, pattern B11, Word2)
+import           RON.UUID (UUID (UUID), uuidVersion)
+import qualified RON.UUID as UUID
 
 -- | Atom — a payload element
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
@@ -139,10 +141,10 @@ newtype ObjectRef a = ObjectRef UUID
 instance Typeable a => Show (ObjectRef a) where
   showsPrec a (ObjectRef b) =
     showParen (a >= 11) $
-      showString "ObjectRef @"
-        . showsPrec 11 (typeRep $ Proxy @a)
-        . showString " "
-        . showsPrec 11 b
+        showString "ObjectRef @"
+      . showsPrec 11 (typeRep $ Proxy @a)
+      . showString " "
+      . showsPrec 11 b
 
 -- | Object reference accompanied with a frame
 data ObjectFrame a = ObjectFrame {uuid :: UUID, frame :: StateFrame}
