@@ -77,32 +77,5 @@ instance MonadStore StoreSim where
             atCollection = #collections . at collection . non mempty
             atObject = at objectId . non emptyObject
 
-    -- saveVersionContent (DocId docid :: DocId a) version content = do
-    --     let document = BSLC.lines content
-    --     let insertDocumentVersion =
-    --             Just . Map.insertWith (<>) version document . fromMaybe mempty
-    --     let alterDocument
-    --             = Just
-    --             . Map.alter insertDocumentVersion docid
-    --             . fromMaybe mempty
-    --     let alterCollection = Map.alter alterDocument (collectionName @a)
-    --     StorageSim $ modify' alterCollection
-
-    -- loadVersionContent (DocId dir :: DocId a) version = StorageSim $ do
-    --     db <- get
-    --     pure $ BSLC.unlines $ db !. collectionName @a !. dir ! version
-
-    -- deleteVersion (DocId doc :: DocId a) version
-    --     = StorageSim
-    --     . modify'
-    --     . (`Map.adjust` collectionName @a)
-    --     . (`Map.adjust` doc)
-    --     $ Map.delete version
-
-    -- changeDocId (DocId old :: DocId a) (DocId new :: DocId a) = StorageSim $
-    --     modify' $ (`Map.adjust` collectionName @a) $ \collection ->
-    --         maybe collection (uncurry $ Map.insert new) $
-    --         mapTake old collection
-
 (!.) :: Ord a => Map a (Map b c) -> a -> Map b c
 m !. a = fromMaybe Map.empty $ m !? a
