@@ -46,6 +46,10 @@ executable demo-text-editor-qt
 
 executable demo-chat
     import: language
+    build-depends:
+        -- project
+        ron,
+        ron-rdt,
     ghc-options: -dynamic -rtsopts -with-rtsopts=-N
     hs-source-dirs: chat
     main-is: Main.hs
