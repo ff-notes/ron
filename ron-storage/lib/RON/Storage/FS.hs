@@ -66,7 +66,6 @@ import           RON.Storage.Backend (DocId (DocId), MonadStorage, RawDocId,
                                       getDocuments, loadVersionContent,
                                       saveVersionContent)
 
--- | Environment is the dataDir
 newtype Storage a = Storage (ExceptT Error (ReaderT Handle EpochClock) a)
   deriving (Applicative, Functor, Monad, MonadError Error, MonadIO)
 
@@ -193,7 +192,7 @@ newHandleWithReplicaId dataDir' replicaId = do
 
 listDirectoryIfExists :: FilePath -> Storage [FilePath]
 listDirectoryIfExists relpath = Storage $ do
-  Handle {dataDir} <- ask
+  Handle{dataDir} <- ask
   let dir = dataDir </> relpath
   liftIO $ do
     exists <- doesDirectoryExist dir

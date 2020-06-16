@@ -31,13 +31,18 @@ library
     import: language
     build-depends:
         -- global
+        bytestring,
         containers,
         Diff < 0.5,
+        directory,
+        filepath,
         generic-lens,
         hashable,
         lens,
         mtl,
+        network-info,
         text,
+        tf-random,
         time,
         transformers,
         unordered-containers,
@@ -51,6 +56,7 @@ library
         RON.Data.Time
         RON.Data.VersionVector
         RON.Store
+        RON.Store.FS
         RON.Store.Test
     other-modules:
         RON.Data.Internal

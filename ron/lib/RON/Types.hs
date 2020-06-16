@@ -55,15 +55,13 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
   deriving (Data, Eq, Generic, Hashable, Show)
 
 -- | Closed op
-data ClosedOp
-  = ClosedOp
-      { -- | type
-        reducerId :: UUID,
-        -- | object id
-        objectId :: UUID,
-        -- | other keys and payload, that are common with reduced op
-        op :: Op
-      }
+data ClosedOp = ClosedOp { -- | type
+  reducerId :: UUID,
+  -- | object id
+  objectId :: UUID,
+  -- | other keys and payload, that are common with reduced op
+  op :: Op
+  }
   deriving (Data, Eq, Generic)
 
 type Payload = [Atom]
@@ -96,11 +94,10 @@ instance Show ClosedOp where
         c : cs -> c : k : cs
 
 -- | Common reduced chunk
-data WireReducedChunk
-  = WireReducedChunk
-      { wrcHeader :: ClosedOp,
-        wrcBody :: [Op]
-      }
+data WireReducedChunk = WireReducedChunk {
+  wrcHeader :: ClosedOp,
+  wrcBody   :: [Op]
+  }
   deriving (Data, Eq, Generic, Show)
 
 -- | Common chunk

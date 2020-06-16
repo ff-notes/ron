@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 
 import           RON.Store (getObjects)
-import           RON.Store.Test (emptyDB, runStoreSim)
+import           RON.Store.FS (newHandle, runStore)
 import           RON.Types.Experimental (CollectionName)
 
 data Message
@@ -12,6 +12,6 @@ messagesCollection = "messages"
 
 main :: IO ()
 main = do
-    let messagesResult =
-            runStoreSim emptyDB $ getObjects @_ @Message messagesCollection
-    print messagesResult
+  db <- newHandle "./data"
+  messagesResult <- runStore db $ getObjects @_ @Message messagesCollection
+  print messagesResult
