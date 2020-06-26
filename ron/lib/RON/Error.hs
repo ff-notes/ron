@@ -17,15 +17,8 @@ import           RON.Prelude
 
 import           Data.String (IsString, fromString)
 
-data Error = Error Text [Error]
+data Error = Error{description :: Text, reasons :: [Error]}
     deriving (Eq, Show)
-{-  TODO(2019-08-09, cblp)
-    data Error = Error
-        { context :: [Text]
-        , desc    :: Text
-        , reasons :: [Error]
-        }
--}
 
 instance Exception Error
 

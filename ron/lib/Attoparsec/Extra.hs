@@ -26,6 +26,7 @@ import           GHC.Real (toInteger)
 
 import           RON.Util (ByteStringL)
 
+-- | TODO(2020-06-17, cblp) make parser lazy/incremental
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
 parseOnlyL p = parseOnly p . toStrict
 

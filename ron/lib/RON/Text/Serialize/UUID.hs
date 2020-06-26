@@ -9,6 +9,8 @@ module RON.Text.Serialize.UUID (
     serializeUuid,
     serializeUuidAtom,
     serializeUuidKey,
+    uuidToString,
+    uuidToText,
 ) where
 
 import           RON.Prelude
@@ -17,7 +19,9 @@ import           Data.Bits (countLeadingZeros, shiftL, xor)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (minimumBy)
+import qualified Data.Text as Text
 
 import qualified RON.Base64 as Base64
 import           RON.Util (ByteStringL)
@@ -34,6 +38,12 @@ serializeUuid this =
         _   -> serializeUuidGeneric this
   where
     thisFields@UuidFields{..} = split this
+
+uuidToString :: UUID -> String
+uuidToString = BSLC.unpack . serializeUuid
+
+uuidToText :: UUID -> Text
+uuidToText = Text.pack . uuidToString
 
 -- | Serialize UUID in op key context
 serializeUuidKey

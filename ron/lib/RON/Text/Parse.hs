@@ -10,6 +10,7 @@ module RON.Text.Parse (
     parseAtom,
     parseObject,
     parseOp,
+    parseStateChunk,
     parseStateFrame,
     parseString,
     parseUuid,
@@ -17,6 +18,8 @@ module RON.Text.Parse (
     parseUuidAtom,
     parseWireFrame,
     parseWireFrames,
+    uuidFromString,
+    uuidFromText,
 ) where
 
 import           RON.Prelude hiding (takeWhile)
@@ -31,8 +34,11 @@ import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
 import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (isJust, isNothing)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 import qualified RON.Base64 as Base64
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
@@ -65,7 +71,7 @@ chunksTill end = label "[WireChunk]" $ go opZero
 
 -- | Returns a chunk and the last op in it
 pChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
-pChunk prev = label "WireChunk" $ wireStateChunk prev <+> chunkClosed prev
+pChunk prev = label "WireChunk" $ wireReducedChunk prev <+> chunkClosed prev
 
 chunkClosed :: ClosedOp -> Parser (WireChunk, ClosedOp)
 chunkClosed prev = label "WireChunk-closed" $ do
@@ -76,8 +82,8 @@ chunkClosed prev = label "WireChunk-closed" $ do
     pure (Closed x, x)
 
 -- | Returns a chunk and the last op (converted to closed) in it
-wireStateChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
-wireStateChunk prev = label "WireChunk-reduced" $ do
+wireReducedChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
+wireReducedChunk prev = label "WireChunk-reduced" $ do
     (wrcHeader, isQuery) <- header prev
     let reducedOps y = do
             skipSpace
@@ -95,6 +101,14 @@ wireStateChunk prev = label "WireChunk-reduced" $ do
     pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
   where
     stop = pure []
+
+parseStateChunk :: ByteStringL -> Either String WireStateChunk
+parseStateChunk = parseOnlyL $ do
+  (Value value, _) <- wireReducedChunk opZero
+  let
+    WireReducedChunk{wrcHeader, wrcBody} = value
+    ClosedOp{reducerId} = wrcHeader
+  pure WireStateChunk{stateType = reducerId, stateBody = wrcBody}
 
 frame :: Parser WireFrame
 frame = label "WireFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
@@ -116,6 +130,12 @@ parseOp = parseOnlyL $ do
 parseUuid :: ByteStringL -> Either String UUID
 parseUuid = parseOnlyL $
     uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
+
+uuidFromText :: Text -> Either String UUID
+uuidFromText = parseUuid . BSL.fromStrict . Text.encodeUtf8
+
+uuidFromString :: String -> Either String UUID
+uuidFromString = uuidFromText . Text.pack
 
 -- | Parse a UUID in key position
 parseUuidKey
@@ -395,6 +415,7 @@ term = do
         _   -> fail "not a term"
 
 -- | Parse a state frame
+-- TODO deprecate multi-object states
 parseStateFrame :: ByteStringL -> Either String StateFrame
 parseStateFrame = parseWireFrame >=> findObjects
 
@@ -403,6 +424,7 @@ parseObject :: UUID -> ByteStringL -> Either String (ObjectFrame a)
 parseObject oid bytes = ObjectFrame oid <$> parseStateFrame bytes
 
 -- | Extract object states from a common frame
+-- TODO deprecate multi-object states
 findObjects :: WireFrame -> Either String StateFrame
 findObjects = fmap Map.fromList . traverse loadBody where
     loadBody = \case

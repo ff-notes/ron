@@ -7,31 +7,28 @@ module RON.Store.Test (emptyDB, runStoreSim) where
 
 import           RON.Prelude
 
-import           Control.Lens (at, non, zoom, (.=), (<>=))
 import           Data.Generics.Labels ()
-import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
-import qualified Data.Sequence as Seq
 
 import           RON.Error (Error)
 import           RON.Event (ReplicaClock, ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
-import           RON.Types (Op, StateChunk (..), UUID)
-import           RON.Types.Experimental (CollectionName, ObjectRef (..))
+import           RON.Types (Op, UUID, WireStateChunk (..))
+import           RON.Types.Experimental (CollectionName)
 
 type Collection = Map ObjectId Object
 
 data Object = Object
-    { value :: [Op]
-    , logs  :: ObjectLogs
+    { cachedState :: Maybe WireStateChunk
+    , logs        :: ObjectLogs
     }
     deriving (Eq, Generic, Show)
 
-emptyObject :: Object
-emptyObject = Object{value = [], logs = HashMap.empty}
+-- emptyObject :: Object
+-- emptyObject = Object{cachedState = Nothing, logs = HashMap.empty}
 
 type ObjectId = UUID
 
@@ -56,31 +53,31 @@ thisReplicaId :: ReplicaId
 thisReplicaId = applicationSpecific 2020
 
 instance MonadStore StoreSim where
-    getCollections = StoreSim $ gets $ Map.keys . collections
+  getCollections = StoreSim $ gets $ Map.keys . collections
 
-    getObjects collection =
-        StoreSim $ do
-            TestDB{collections} <- get
-            pure $ map (ObjectRef collection) $ Map.keys $
-                collections !. collection
+  getObjectsImpl collection =
+    StoreSim $ do
+      TestDB{collections} <- get
+      pure $ Map.keys $ collections !. collection
 
-    loadObjectChunk (ObjectRef collection objectId) =
-        StoreSim $ do
-            TestDB{collections} <- get
-            pure $ fmap (StateChunk . \Object{value} -> value) $
-                Map.lookup objectId $ collections !. collection
+  loadCachedObjectImpl collection objectId =
+    StoreSim $ do
+      TestDB{collections} <- get
+      pure $ do
+        Object{cachedState} <- Map.lookup objectId (collections !. collection)
+        cachedState
 
-    savePatchAndObjectChunk
-        (ObjectRef collection objectId)
-        (patch, StateChunk value)
-        =
-            StoreSim $
-                atCollection . atObject `zoom` do
-                    #value .= value
-                    #logs . at thisReplicaId . non Seq.empty <>= patch
-        where
-            atCollection = #collections . at collection . non Map.empty
-            atObject = at objectId . non emptyObject
+  -- savePatchAndObjectChunk
+  --     (ObjectRef collection objectId)
+  --     (patch, StateChunk value)
+  --     =
+  --         StoreSim $
+  --             atCollection . atObject `zoom` do
+  --                 #value .= value
+  --                 #logs . at thisReplicaId . non Seq.empty <>= patch
+  --     where
+  --         atCollection = #collections . at collection . non Map.empty
+  --         atObject = at objectId . non emptyObject
 
 (!.) :: Ord a => Map a (Map b c) -> a -> Map b c
 m !. a = fromMaybe Map.empty $ m !? a
