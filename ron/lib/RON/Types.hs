@@ -55,7 +55,8 @@ data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
   deriving (Data, Eq, Generic, Hashable, Show)
 
 -- | Closed op
-data ClosedOp = ClosedOp { -- | type
+data ClosedOp = ClosedOp {
+  -- | type
   reducerId :: UUID,
   -- | object id
   objectId :: UUID,
@@ -67,15 +68,14 @@ data ClosedOp = ClosedOp { -- | type
 type Payload = [Atom]
 
 -- | Open op (operation)
-data Op
-  = Op
-      { -- | event id (usually timestamp)
-        opId :: UUID,
-        -- | reference to other op; actual semantics depends on the type
-        refId :: UUID,
-        -- | payload
-        payload :: Payload
-      }
+data Op = Op{
+  -- | event id (usually timestamp)
+  opId :: UUID,
+  -- | reference to other op; actual semantics depends on the type
+  refId :: UUID,
+  -- | payload
+  payload :: Payload
+  }
   deriving (Data, Eq, Generic, Hashable, Show)
 
 instance Show ClosedOp where
@@ -94,9 +94,9 @@ instance Show ClosedOp where
         c : cs -> c : k : cs
 
 -- | Common reduced chunk
-data WireReducedChunk = WireReducedChunk {
-  wrcHeader :: ClosedOp,
-  wrcBody   :: [Op]
+data WireReducedChunk = WireReducedChunk
+  { wrcHeader :: ClosedOp
+  , wrcBody   :: [Op]
   }
   deriving (Data, Eq, Generic, Show)
 
@@ -115,11 +115,10 @@ data OpTerm = TClosed | TReduced | THeader | TQuery
   deriving (Eq, Show)
 
 -- | Reduced chunk representing an object state (i. e. high-level value)
-data WireStateChunk
-  = WireStateChunk
-      { stateType :: UUID,
-        stateBody :: [Op]
-      }
+data WireStateChunk = WireStateChunk
+  { stateType :: UUID
+  , stateBody :: [Op]
+  }
   deriving (Eq, Show)
 
 -- | Type-tagged version of 'WireStateChunk'

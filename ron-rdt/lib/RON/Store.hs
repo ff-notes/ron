@@ -1,13 +1,18 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module RON.Store (
   MonadStore (..),
+  createObject,
   getObjects,
   ) where
 
 import           RON.Prelude
 
-import           RON.Types (UUID, WireStateChunk)
+import           RON.Data (Reducible, reducibleOpType)
+import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Types (Op (..), UUID)
 import           RON.Types.Experimental (CollectionName, ObjectRef (..))
 
 class Monad m => MonadStore m where
@@ -21,14 +26,14 @@ class Monad m => MonadStore m where
     -}
   getObjectsImpl :: CollectionName -> m [UUID]
 
-  {- |
-    Load object by ref. If object doesn't exist, return 'Nothing'.
-    @Just []@ means existing but empty object.
-    -}
-  loadCachedObjectImpl :: CollectionName -> UUID -> m (Maybe WireStateChunk)
+  -- {- |
+  --   Load object by ref. If object doesn't exist, return 'Nothing'.
+  --   @Just []@ means existing but empty object.
+  --   -}
+  -- loadCachedObjectImpl :: CollectionName -> UUID -> m (Maybe WireStateChunk)
 
-  -- -- | Save new state of the object and patch.
-  -- savePatchAndObjectChunk :: ObjectRef a -> (Seq Op, StateChunk a) -> m ()
+  -- | Add a sequence of operations to an existing object
+  addPatch :: CollectionName -> UUID -> [Op] -> m ()
 
 -- loadObjectChunk :: ObjectRef a -> m (Maybe (StateChunk a))
 -- loadObjectChunk =
@@ -64,5 +69,16 @@ class Monad m => MonadStore m where
   Get all object ids in a collection.
   Returns @[]@ for non-existent collection.
   -}
-getObjects :: MonadStore m => CollectionName -> m [ObjectRef a]
+getObjects :: forall a m. MonadStore m => CollectionName -> m [ObjectRef a]
 getObjects collection = map (ObjectRef collection) <$> getObjectsImpl collection
+
+createObject ::
+  forall a m.
+  (MonadStore m, Reducible a, ReplicaClock m) =>
+  CollectionName -> m (ObjectRef a)
+createObject collection = do
+  objectId <- getEventUuid
+  let type_ = reducibleOpType @a
+  let initOp = Op{opId = objectId, refId = type_, payload = []}
+  addPatch collection objectId [initOp]
+  pure $ ObjectRef collection objectId

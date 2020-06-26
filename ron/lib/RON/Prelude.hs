@@ -2,6 +2,7 @@
 
 module RON.Prelude (
     module X,
+    ByteStringL,
     fmapL,
     foldr1,
     headMay,
@@ -106,10 +107,13 @@ import           Text.Show as X (Show)
 
 --------------------------------------------------------------------------------
 
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Foldable
 import           Data.List (last, maximum, maximumBy, minimum, minimumBy)
 import           Data.String (IsString, fromString)
 import qualified Text.Show
+
+type ByteStringL = BSL.ByteString
 
 fmapL :: (a -> b) -> Either a c -> Either b c
 fmapL f = either (Left . f) Right

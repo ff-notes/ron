@@ -22,18 +22,19 @@ module RON.Storage.Backend
   )
 where
 
+import           RON.Prelude
+
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import Data.String (fromString)
-import RON.Data (ReplicatedAsObject)
-import RON.Error (MonadE, liftMaybe, throwErrorString)
-import RON.Event (ReplicaClock, getEventUuid)
-import RON.Prelude
-import RON.Text (parseStateFrame, serializeStateFrame)
-import RON.Types (ObjectFrame (ObjectFrame, frame, uuid), UUID)
-import qualified RON.UUID as UUID
-import RON.Util (ByteStringL)
-import System.FilePath ((</>))
+import           Data.String (fromString)
+import           System.FilePath ((</>))
 import qualified Text.Show (show)
+
+import           RON.Data (ReplicatedAsObject)
+import           RON.Error (MonadE, liftMaybe, throwErrorString)
+import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Text (parseStateFrame, serializeStateFrame)
+import           RON.Types (ObjectFrame (ObjectFrame, frame, uuid), UUID)
+import qualified RON.UUID as UUID
 
 -- | Document version identifier (file name)
 type DocVersion = FilePath

@@ -24,7 +24,6 @@ import           Data.Foldable (minimumBy)
 import qualified Data.Text as Text
 
 import qualified RON.Base64 as Base64
-import           RON.Util (ByteStringL)
 import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
                                 pattern B10, pattern B11, Word2, Word60, ls60,
                                 safeCast)

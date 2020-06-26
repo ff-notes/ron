@@ -48,7 +48,6 @@ import           RON.Types (Atom (AInteger, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
                             ObjectFrame, Op (Op, opId, payload, refId),
                             UUID (UUID), WireChunk (Closed))
-import           RON.Util (ByteStringL)
 import qualified RON.UUID as UUID
 
 import qualified Gen

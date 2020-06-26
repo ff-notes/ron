@@ -28,7 +28,6 @@ import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 
-import           RON.Util (ByteStringL)
 import           RON.Util.Word (Word4, Word6 (W6), Word60, leastSignificant4,
                                 leastSignificant6, leastSignificant60, safeCast)
 

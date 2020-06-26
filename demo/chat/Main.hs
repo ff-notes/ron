@@ -3,11 +3,12 @@
 
 import           System.Environment (getArgs, getProgName)
 
-import           RON.Store (getObjects)
+import           RON.Data.ORSet (ORSetRep)
+import           RON.Store (createObject, getObjects)
 import           RON.Store.FS (newHandle, runStore)
 import           RON.Types.Experimental (CollectionName)
 
-data Message
+type Message = ORSetRep
 
 messagesCollection :: CollectionName
 messagesCollection = "messages"
@@ -19,9 +20,11 @@ main = do
   args <- getArgs
   case args of
     [] -> do
-      messagesResult <- runStore db $ getObjects @_ @Message messagesCollection
+      messagesResult <- runStore db $ getObjects @Message messagesCollection
       print messagesResult
-    [_name, _text] -> undefined
+    [_name, _text] -> do
+      messageRef <- runStore db $ createObject @Message messagesCollection
+      putStrLn $ "created message: " <> show messageRef
     _ ->
       putStrLn $
       unlines

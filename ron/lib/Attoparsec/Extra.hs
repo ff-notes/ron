@@ -24,8 +24,6 @@ import           Data.ByteString.Lazy (fromStrict, toStrict)
 import qualified Data.Scientific as Sci
 import           GHC.Real (toInteger)
 
-import           RON.Util (ByteStringL)
-
 -- | TODO(2020-06-17, cblp) make parser lazy/incremental
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
 parseOnlyL p = parseOnly p . toStrict

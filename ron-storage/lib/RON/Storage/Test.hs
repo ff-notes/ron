@@ -17,7 +17,6 @@ import           RON.Error (Error)
 import           RON.Event (ReplicaClock, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
-import           RON.Util (ByteStringL)
 
 import           RON.Storage (Collection, CollectionName, collectionName)
 import           RON.Storage.Backend (DocId (DocId), DocVersion, MonadStorage,

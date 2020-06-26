@@ -8,6 +8,7 @@
 module RON.Text.Serialize (
     serializeAtom,
     serializeObject,
+    serializeOp,
     serializeRawOp,
     serializeStateFrame,
     serializeString,
@@ -18,12 +19,14 @@ module RON.Text.Serialize (
     uuidToText,
     ) where
 
+import           RON.Prelude hiding (elem)
+
 import           Control.Monad.State.Strict (state)
 import qualified Data.Aeson as Json
 import           Data.ByteString.Lazy.Char8 (cons, elem, snoc)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Data.Map.Strict as Map
-import           RON.Prelude hiding (elem)
+
 import           RON.Text.Serialize.UUID (serializeUuid, serializeUuidAtom,
                                           serializeUuidKey, uuidToString,
                                           uuidToText)
@@ -32,7 +35,6 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             StateFrame, WireChunk (Closed, Query, Value),
                             WireFrame, WireReducedChunk (..),
                             WireStateChunk (..))
-import           RON.Util (ByteStringL)
 import           RON.UUID (UUID, zero)
 
 -- | Serialize a common frame
@@ -81,7 +83,7 @@ serializeClosedOpZip this = state $ \prev ->
       ref = serializeUuidKey (refId prev') (opId this') (refId this')
       payloadAtoms = serializePayload (objectId this) (payload this')
    in ( BSL.intercalate "\t"
-          $ key '*' typ
+          $  key '*' typ
           ++ key '#' obj
           ++ key '@' evt
           ++ key ':' ref
@@ -108,6 +110,14 @@ serializeReducedOpZip opObject this = state $ \prev ->
    in (BSL.intercalate "\t" op, this)
   where
     key c u = [c `cons` u | not $ BSL.null u]
+
+serializeOp :: Op -> ByteStringL
+serializeOp Op{opId, refId, payload} =
+  BSL.intercalate "\t"
+    [ '@' `cons` serializeUuid opId
+    , ':' `cons` serializeUuid refId
+    , serializePayload opId payload
+    ]
 
 -- | Serialize a context-free atom
 serializeAtom :: Atom -> ByteStringL
@@ -179,7 +189,7 @@ serializeObject (ObjectFrame oid frame) = (oid, serializeStateFrame frame)
 
 opZero :: ClosedOp
 opZero = ClosedOp
-  { reducerId = zero,
-    objectId = zero,
-    op = Op {opId = zero, refId = zero, payload = []}
-    }
+  { reducerId = zero
+  , objectId  = zero
+  , op        = Op{opId = zero, refId = zero, payload = []}
+  }

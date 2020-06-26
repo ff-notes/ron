@@ -23,7 +23,6 @@ import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Types (ObjectRef, Op (Op, opId, refId), StateFrame, WireStateChunk (WireStateChunk, stateBody, stateType))
-import           RON.Util (ByteStringL)
 import           RON.UUID (zero)
 
 import           Orphans ()

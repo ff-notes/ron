@@ -60,6 +60,7 @@ library
         RON.Text
         RON.Text.Parse
         RON.Text.Serialize
+        RON.Text.Serialize.Experimental
         RON.Text.Serialize.UUID
         RON.Types
         RON.Types.Experimental

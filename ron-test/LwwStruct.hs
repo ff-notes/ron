@@ -18,7 +18,6 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
-import           RON.Util (ByteStringL)
 
 import           LwwStruct.Types (Struct51 (..), int1_set, nst5_read, nst5_set,
                                   set4_zoom, str2_zoom, str3_read, str3_set)

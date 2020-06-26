@@ -33,7 +33,6 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             Payload, UUID (UUID),
                             WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (..))
-import           RON.Util (ByteStringL)
 import           RON.Util.Word (safeCast)
 
 -- | 'Parser' for descriptor

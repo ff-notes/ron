@@ -1,5 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RON.Error (
     Error (..),
@@ -11,14 +13,26 @@ module RON.Error (
     liftMaybe,
     throwErrorString,
     throwErrorText,
+    tryIO,
 ) where
 
 import           RON.Prelude
 
+import           Control.Exception (SomeException, try)
 import           Data.String (IsString, fromString)
+import qualified Data.Text as Text
+import           GHC.Stack (callStack, getCallStack, prettySrcLoc)
+import qualified Text.Show
 
 data Error = Error{description :: Text, reasons :: [Error]}
-    deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show Error where
+  show =
+    unlines . go
+    where
+      go Error{description, reasons} =
+        Text.unpack description : foldMap (map ("  " ++) . go) reasons
 
 instance Exception Error
 
@@ -48,3 +62,17 @@ correct def action =
     `catchError` \_e ->
         -- TODO(2019-08-06, cblp) $logWarnSH e
         pure def
+
+tryIO :: (MonadE m, MonadIO m, HasCallStack) => IO a -> m a
+tryIO action = do
+  e <- liftIO $ try action
+  case e of
+    Right a  -> pure a
+    Left exc -> do
+      let
+        description =
+          case getCallStack callStack of
+            [] -> "tryIO"
+            (f, loc) : _ -> Text.pack $ f ++ ", called at " ++ prettySrcLoc loc
+      throwError
+        Error{description, reasons = [fromString (show (exc :: SomeException))]}
