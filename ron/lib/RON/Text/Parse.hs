@@ -10,6 +10,7 @@ module RON.Text.Parse (
     parseAtom,
     parseObject,
     parseOp,
+    parsePatch,
     parseStateChunk,
     parseStateFrame,
     parseString,
@@ -57,7 +58,7 @@ parseWireFrame :: ByteStringL -> Either String WireFrame
 parseWireFrame = parseOnlyL frame
 
 chunksTill :: Parser () -> Parser [WireChunk]
-chunksTill end = label "[WireChunk]" $ go opZero
+chunksTill end = label "[WireChunk]" $ go closedOpZero
   where
     go prev = do
         skipSpace
@@ -103,7 +104,7 @@ wireReducedChunk prev = label "WireChunk-reduced" $ do
 
 parseStateChunk :: ByteStringL -> Either String WireStateChunk
 parseStateChunk = parseOnlyL $ do
-  (Value value, _) <- wireReducedChunk opZero
+  (Value value, _) <- wireReducedChunk closedOpZero
   let
     WireReducedChunk{wrcHeader, wrcBody} = value
     ClosedOp{reducerId} = wrcHeader
@@ -122,7 +123,7 @@ frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
 -- | Parse a single context-free op
 parseOp :: ByteStringL -> Either String ClosedOp
 parseOp = parseOnlyL $ do
-    (_, x) <- closedOp opZero <* skipSpace <* endOfInputEx
+    (_, x) <- closedOp closedOpZero <* skipSpace <* endOfInputEx
     pure x
 
 -- | Parse a single context-free UUID
@@ -160,34 +161,50 @@ closedOp prev = label "ClosedOp-cont" $ do
     (hasTyp, reducerId) <- key "reducer" '*' (reducerId prev)  UUID.zero
     (hasObj, objectId)  <- key "object"  '#' (objectId  prev)  reducerId
     (hasEvt, opId)      <- key "opId"    '@' (opId      prev') objectId
-    (hasLoc, refId)     <- key "ref"     ':' (refId     prev') opId
-    payload <- payloadP objectId
+    (hasRef, refId)     <- key "ref"     ':' (refId     prev') opId
+    payload <- pPayload objectId
     let op = Op{..}
     pure
-        ( hasTyp || hasObj || hasEvt || hasLoc || not (null payload)
+        ( hasTyp || hasObj || hasEvt || hasRef || not (null payload)
         , ClosedOp{..}
         )
   where
     prev' = op prev
 
 reducedOp :: UUID -> Op -> Parser (Bool, Op)
-reducedOp opObject prev = label "Op-cont" $ do
+reducedOp opObject prev = label "Op-reduced-cont" $ do
     (hasEvt, opId)  <- key "event" '@' (opId  prev) opObject
-    (hasLoc, refId) <- key "ref"   ':' (refId prev) opId
-    payload <- payloadP opObject
+    (hasRef, refId) <- key "ref"   ':' (refId prev) opId
+    payload <- pPayload opObject
     let op = Op{opId, refId, payload}
-    pure (hasEvt || hasLoc || not (null payload), op)
+    pure (hasEvt || hasRef || not (null payload), op)
+
+openOp :: Op -> Parser Op
+openOp prev =
+  label "Op-open-cont" $ do
+    opId    <- openKey "event" '@' <|> pure (UUID.succValue $ opId  prev)
+    refId   <- openKey "ref"   ':' <|> pure (                 refId prev)
+    payload <- pPayload opId
+    pure Op{opId, refId, payload}
 
 key :: String -> Char -> UUID -> UUID -> Parser (Bool, UUID)
-key name keyChar prevOpSameKey sameOpPrevUuid = label name $ do
+key name keyChar prevOpSameKey sameOpPrevUuid =
+  label name $ do
     skipSpace
     isKeyPresent <- isSuccessful $ char keyChar
     if isKeyPresent then do
-        u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
-        pure (True, u)
+      u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
+      pure (True, u)
     else
-        -- no key => use previous key
-        pure (False, prevOpSameKey)
+      -- no key => use previous key
+      pure (False, prevOpSameKey)
+
+openKey :: String -> Char -> Parser UUID
+openKey name keyChar =
+  label name $ do
+    skipSpace
+    _ <- char keyChar
+    uuid UUID.zero UUID.zero PrevOpSameKey
 
 uuid :: UUID -> UUID -> UuidZipBase -> Parser UUID
 uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $
@@ -332,8 +349,8 @@ pUuidVersion = label "UUID-version" $
         '-' -> pure b11
         _   -> fail "not a UUID-version"
 
-payloadP :: UUID -> Parser Payload
-payloadP = label "payload" . go
+pPayload :: UUID -> Parser Payload
+pPayload = label "payload" . go
   where
     go prevUuid = do
         ma <- optional $ atom prevUuid
@@ -435,9 +452,12 @@ findObjects = fmap Map.fromList . traverse loadBody where
                 )
         _ -> Left "expected reduced chunk"
 
-opZero :: ClosedOp
-opZero = ClosedOp
-    { reducerId = UUID.zero
-    , objectId  = UUID.zero
-    , op        = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
-    }
+closedOpZero :: ClosedOp
+closedOpZero =
+  ClosedOp{reducerId = UUID.zero, objectId = UUID.zero, op = opZero}
+
+opZero :: Op
+opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
+
+parsePatch :: ByteStringL -> Either String [Op]
+parsePatch = parseOnlyL $ manyTill (openOp opZero) endOfInputEx

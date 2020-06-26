@@ -68,13 +68,12 @@ data ClosedOp = ClosedOp {
 type Payload = [Atom]
 
 -- | Open op (operation)
-data Op = Op{
-  -- | event id (usually timestamp)
-  opId :: UUID,
-  -- | reference to other op; actual semantics depends on the type
-  refId :: UUID,
-  -- | payload
-  payload :: Payload
+data Op = Op
+  { opId :: UUID
+    -- ^ event id (usually timestamp)
+  , refId :: UUID
+    -- ^ reference to other op; actual semantics depends on the type
+  , payload :: Payload
   }
   deriving (Data, Eq, Generic, Hashable, Show)
 

@@ -4,81 +4,57 @@
 
 module RON.Store (
   MonadStore (..),
-  createObject,
-  getObjects,
+  newObject,
+  listObjects,
+  readObject,
   ) where
 
+import           Debug.Trace
 import           RON.Prelude
 
-import           RON.Data (Reducible, reducibleOpType)
+import           RON.Data (Reducible, reducibleOpType, stateFromChunk)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Op (..), UUID)
 import           RON.Types.Experimental (CollectionName, ObjectRef (..))
 
 class Monad m => MonadStore m where
 
-  -- | Get all collections in database.
-  getCollections :: m [CollectionName]
+  -- | Get list of all collections in database.
+  listCollections :: m [CollectionName]
 
   {- |
-    Get all object ids in a collection.
+    Get list of all object ids in a collection.
     Must return @[]@ for non-existent collection.
     -}
-  getObjectsImpl :: CollectionName -> m [UUID]
+  listObjectsImpl :: CollectionName -> m [UUID]
 
-  -- {- |
-  --   Load object by ref. If object doesn't exist, return 'Nothing'.
-  --   @Just []@ means existing but empty object.
-  --   -}
-  -- loadCachedObjectImpl :: CollectionName -> UUID -> m (Maybe WireStateChunk)
+  -- | Append a sequence of operations to an existing object
+  appendPatch :: CollectionName -> UUID -> [Op] -> m ()
 
-  -- | Add a sequence of operations to an existing object
-  addPatch :: CollectionName -> UUID -> [Op] -> m ()
-
--- loadObjectChunk :: ObjectRef a -> m (Maybe (StateChunk a))
--- loadObjectChunk =
---     loadCachedObjectImpl
---     -- TODO check if there are logs newer than cached object state
-
--- {- |
---     Load object checking it exists.
---     We cannot assume it exists and return empty if it is not found locally,
---     because we must detect yet not loaded object.
---     -}
--- loadObjectChunk' ::
---     (MonadE m, MonadStore m, Typeable a) => ObjectRef a -> m (StateChunk a)
--- loadObjectChunk' ref = do
---     mobject <- loadObjectChunk ref
---     case mobject of
---         Just obj -> pure obj
---         Nothing  ->
---             throwErrorString $
---                 "loadObjectChunk': Object " ++ show ref ++ " not found"
-
--- loadObject' :: ObjectRef a -> m (Rep a)
--- loadObject' = undefined
-
--- -- | Convenient function that saves us from forgotten 'savePatchAndObjectChunk'.
--- modifyObjectChunk_ ::
---     (MonadE m, MonadStore m, Typeable a) =>
---     (StateChunk a -> m (Seq Op, StateChunk a)) -> ObjectRef a -> m ()
--- modifyObjectChunk_ f ref =
---     loadObjectChunk' ref >>= f >>= savePatchAndObjectChunk ref
+  -- | Get all object logs split by replicas. Replicas order is not guaranteed.
+  loadObjectLog :: CollectionName -> UUID -> m [[Op]]
 
 {- |
-  Get all object ids in a collection.
+  Get list of all object ids in a collection.
   Returns @[]@ for non-existent collection.
   -}
-getObjects :: forall a m. MonadStore m => CollectionName -> m [ObjectRef a]
-getObjects collection = map (ObjectRef collection) <$> getObjectsImpl collection
+listObjects :: forall a m. MonadStore m => CollectionName -> m [ObjectRef a]
+listObjects collection =
+  map (ObjectRef collection) <$> listObjectsImpl collection
 
-createObject ::
+newObject ::
   forall a m.
   (MonadStore m, Reducible a, ReplicaClock m) =>
   CollectionName -> m (ObjectRef a)
-createObject collection = do
+newObject collection = do
   objectId <- getEventUuid
   let type_ = reducibleOpType @a
   let initOp = Op{opId = objectId, refId = type_, payload = []}
-  addPatch collection objectId [initOp]
+  appendPatch collection objectId [initOp]
   pure $ ObjectRef collection objectId
+
+readObject :: (MonadStore m, Reducible a) => ObjectRef a -> m a
+readObject (ObjectRef collection objectId) = do
+  logsByReplicas <- loadObjectLog collection objectId
+  traceShowM logsByReplicas
+  pure $ stateFromChunk $ sortOn opId $ fold logsByReplicas

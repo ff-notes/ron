@@ -2,6 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module RON.Store.Test (emptyDB, runStoreSim) where
 
@@ -14,7 +15,7 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 
-import           RON.Error (Error)
+import           RON.Error (Error, liftMaybe)
 import           RON.Event (ReplicaClock, ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
@@ -51,17 +52,13 @@ thisReplicaId :: ReplicaId
 thisReplicaId = applicationSpecific 2020
 
 instance MonadStore StoreSim where
-  getCollections = StoreSim $ gets $ Map.keys . collections
+  listCollections = StoreSim $ gets $ Map.keys . collections
 
-  getObjectsImpl collection = do
+  listObjectsImpl collection = do
     TestDB{collections} <- StoreSim get
     pure $ Map.keys $ collections !. collection
 
-  -- loadCachedObjectImpl collection objectId = do
-  --   TestDB{collections} <- StoreSim get
-  --   pure $ cachedState =<< Map.lookup objectId (collections !. collection)
-
-  addPatch collectionName objectId patch =
+  appendPatch collectionName objectId patch =
     StoreSim $ collection . object . #logs . replica <>= Seq.fromList patch
     where
       collection  = #collections . at collectionName . non Map.empty
@@ -69,5 +66,11 @@ instance MonadStore StoreSim where
       replica     = at thisReplicaId . non Seq.empty
       emptyObject = Object{{- cachedState = Nothing, -} logs = HashMap.empty}
 
-(!.) :: Ord a => Map a (Map b c) -> a -> Map b c
-m !. a = fromMaybe Map.empty $ m !? a
+  loadObjectLog collection objectId = do
+    TestDB{collections} <- StoreSim get
+    Object{logs} <-
+      liftMaybe "object not found" $ collections !. collection !? objectId
+    pure $ map toList $ toList logs
+
+(!.) :: (Ord k, Monoid v) => Map k v -> k -> v
+m !. k = fromMaybe mempty $ m !? k
