@@ -47,6 +47,8 @@ executable demo-text-editor-qt
 executable demo-chat
     import: language
     build-depends:
+        -- global
+        text,
         -- project
         ron,
         ron-rdt,
