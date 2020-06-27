@@ -67,6 +67,7 @@ library
         RON.Util
         RON.Util.Word
         RON.UUID
+        RON.UUID.Experimental
     other-modules:
         Attoparsec.Extra
         Data.ZigZag

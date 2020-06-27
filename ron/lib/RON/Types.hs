@@ -42,6 +42,7 @@ where
 
 import           RON.Prelude
 
+import           Data.String (IsString, fromString)
 import           Data.Typeable (typeRep)
 import           Text.Show (showParen, showString, showsPrec)
 import qualified Text.Show
@@ -53,6 +54,9 @@ import qualified RON.UUID as UUID
 -- | Atom — a payload element
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
   deriving (Data, Eq, Generic, Hashable, Show)
+
+instance IsString Atom where
+  fromString = AString . fromString
 
 -- | Closed op
 data ClosedOp = ClosedOp {

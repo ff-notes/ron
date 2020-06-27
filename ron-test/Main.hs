@@ -1,6 +1,8 @@
 {-# OPTIONS -Wno-missing-signatures #-}
 
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -8,12 +10,14 @@
 
 import           RON.Prelude
 
+import           Control.Lens ((+~))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy.Encoding as TextL
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
                            annotateShow, evalExceptT, forAll, property,
                            tripping, (===))
@@ -43,12 +47,14 @@ import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
+import qualified RON.Text.Serialize.Experimental as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
                             ObjectFrame, Op (Op, opId, payload, refId),
                             UUID (UUID), WireChunk (Closed))
 import qualified RON.UUID as UUID
+import qualified RON.UUID.Experimental as UUID
 
 import qualified Gen
 import           HexDump (hexdump)
@@ -473,3 +479,76 @@ prepObj = prep . snd . RT.serializeObject
 
 prep :: ByteStringL -> [[ByteStringL]]
 prep = filter (not . null) . map BSLC.words . BSLC.lines
+
+-- example taken from https://replicated.cc/
+replicatedCcExampleLaptopText =
+  TextL.encodeUtf8
+    [s|
+      @1fLDV+biQFvtGV :lww,
+                        'id'        '20MF000CUS',
+                        'type'      'laptop',
+                        'cpu'       'i7-8850H',
+                        'display'   '15.6” UHD IPS multi-touch, 400nits',
+                        'RAM'       '16 GB DDR4 2666MHz',
+                        'storage'   '512 GB SSD, PCIe-NVME M.2',
+                        'graphics'  'NVIDIA GeForce GTX 1050Ti 4GB',
+      @1fLDk4+biQFvtGV  'wlan'      'Intel 9560 802.11AC vPro',
+                        'camera'    'IR & 720p HD Camera with microphone',
+      @sha3             'SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq';
+    |]
+
+replicatedCcExampleLaptopFrame =
+  [ opZero{opId = oid,    refId = lwwType}
+  , opZero{opId = oid' 1, refId = oid, payload = ["id", "20MF000CUS"]}
+  , opZero{opId = oid' 2, refId = oid' 1, payload = ["type", "laptop"]}
+  , opZero{opId = oid' 3, refId = oid' 2, payload = ["cpu", "i7-8850H"]}
+  , opZero
+    { opId    = oid' 4
+    , refId   = oid' 3
+    , payload = ["display", "15.6” UHD IPS multi-touch, 400nits"]
+    }
+  , opZero
+    {opId = oid' 5, refId = oid' 4, payload = ["RAM", "16 GB DDR4 2666MHz"]}
+  , opZero
+    { opId    = oid' 6
+    , refId   = oid' 5
+    , payload = ["storage", "512 GB SSD, PCIe-NVME M.2"]
+    }
+  , opZero
+    { opId    = oid' 7
+    , refId   = oid' 6
+    , payload = ["graphics", "NVIDIA GeForce GTX 1050Ti 4GB"]
+    }
+  , opZero
+    { opId    = oid' 0x_4_0400_0000
+      --                8_0400_0000
+    , refId   = oid' 7
+    , payload = ["wlan", "Intel 9560 802.11AC vPro"]
+    }
+  , opZero
+    { opId    = oid' 0x_4_0400_0001
+    , refId   = oid' 0x_4_0400_0000
+    , payload = ["camera", "IR & 720p HD Camera with microphone"]
+    }
+  , opZero
+    { opId    = $(UUID.liftName "sha3")
+    , refId   = oid' 0x_4_0400_0001
+    , payload = ["SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq"]
+    }
+  ]
+  where
+    oid = UUID 0x_006a_54d7_c000_0000 0x_29ad_68fe_b841_f000
+    oid' n = oid & UUID.value +~ n
+
+prop_replicatedCcExampleLaptopParse =
+  property $ do
+    parsed <- evalEitherS $ RT.parsePatch replicatedCcExampleLaptopText
+    replicatedCcExampleLaptopFrame === parsed
+
+prop_replicatedCcExampleLaptopSerialize =
+  property
+    (   prep replicatedCcExampleLaptopText
+    === prep (RT.serializePatch replicatedCcExampleLaptopFrame)
+    )
+
+opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}

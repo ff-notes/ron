@@ -459,5 +459,6 @@ closedOpZero =
 opZero :: Op
 opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
 
+-- TODO rename to parseFrame (parseOpenFrame?)
 parsePatch :: ByteStringL -> Either String [Op]
 parsePatch = parseOnlyL $ manyTill (openOp opZero) endOfInputEx
