@@ -498,47 +498,23 @@ replicatedCcExampleLaptopText =
     |]
 
 replicatedCcExampleLaptopFrame =
-  [ opZero{opId = oid,    refId = lwwType}
-  , opZero{opId = oid' 1, refId = oid, payload = ["id", "20MF000CUS"]}
-  , opZero{opId = oid' 2, refId = oid' 1, payload = ["type", "laptop"]}
-  , opZero{opId = oid' 3, refId = oid' 2, payload = ["cpu", "i7-8850H"]}
-  , opZero
-    { opId    = oid' 4
-    , refId   = oid' 3
-    , payload = ["display", "15.6” UHD IPS multi-touch, 400nits"]
-    }
-  , opZero
-    {opId = oid' 5, refId = oid' 4, payload = ["RAM", "16 GB DDR4 2666MHz"]}
-  , opZero
-    { opId    = oid' 6
-    , refId   = oid' 5
-    , payload = ["storage", "512 GB SSD, PCIe-NVME M.2"]
-    }
-  , opZero
-    { opId    = oid' 7
-    , refId   = oid' 6
-    , payload = ["graphics", "NVIDIA GeForce GTX 1050Ti 4GB"]
-    }
-  , opZero
-    { opId    = oid' 0x_4_0400_0000
-      --                8_0400_0000
-    , refId   = oid' 7
-    , payload = ["wlan", "Intel 9560 802.11AC vPro"]
-    }
-  , opZero
-    { opId    = oid' 0x_4_0400_0001
-    , refId   = oid' 0x_4_0400_0000
-    , payload = ["camera", "IR & 720p HD Camera with microphone"]
-    }
-  , opZero
-    { opId    = $(UUID.liftName "sha3")
-    , refId   = oid' 0x_4_0400_0001
-    , payload = ["SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq"]
-    }
+  [ Op (oi  0) lwwType []
+  , Op (oi  1) (oi  0) ["id", "20MF000CUS"]
+  , Op (oi  2) (oi  1) ["type", "laptop"]
+  , Op (oi  3) (oi  2) ["cpu", "i7-8850H"]
+  , Op (oi  4) (oi  3) ["display", "15.6” UHD IPS multi-touch, 400nits"]
+  , Op (oi  5) (oi  4) ["RAM", "16 GB DDR4 2666MHz"]
+  , Op (oi  6) (oi  5) ["storage", "512 GB SSD, PCIe-NVME M.2"]
+  , Op (oi  7) (oi  6) ["graphics", "NVIDIA GeForce GTX 1050Ti 4GB"]
+  , Op (oi' 0) (oi  7) ["wlan", "Intel 9560 802.11AC vPro"]
+  , Op (oi' 1) (oi' 0) ["camera", "IR & 720p HD Camera with microphone"]
+  , Op sha3    (oi' 1) ["SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq"]
   ]
   where
-    oid = UUID 0x_006a_54d7_c000_0000 0x_29ad_68fe_b841_f000
-    oid' n = oid & UUID.value +~ n
+    object = UUID 0x_006a_54d7_c000_0000 0x_29ad_68fe_b841_f000
+    oi  n = object & UUID.value +~ n
+    oi' n = object & UUID.value +~ 0x_4_0400_0000 + n
+    sha3 = $(UUID.liftName "sha3")
 
 prop_replicatedCcExampleLaptopParse =
   property $ do
@@ -550,5 +526,3 @@ prop_replicatedCcExampleLaptopSerialize =
     (   prep replicatedCcExampleLaptopText
     === prep (RT.serializePatch replicatedCcExampleLaptopFrame)
     )
-
-opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
