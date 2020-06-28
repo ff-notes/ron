@@ -7,7 +7,7 @@ import           RON.Prelude
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 import           RON.Text.Serialize (serializeOpenOp)
-import           RON.Types (opId)
+import           RON.Types (Op (opId))
 import           RON.Types.Experimental (OpenFrame)
 import qualified RON.UUID as UUID
 
