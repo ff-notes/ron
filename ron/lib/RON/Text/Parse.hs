@@ -179,12 +179,14 @@ reducedOp opObject prev = label "Op-reduced-cont" $ do
     let op = Op{opId, refId, payload}
     pure (hasEvt || hasRef || not (null payload), op)
 
-openOp :: Op -> Parser Op
+openOp :: UUID -> Parser Op
 openOp prev =
   label "Op-open-cont" $ do
-    opId    <- openKey "event" '@' <|> pure (UUID.succValue $ opId  prev)
-    refId   <- openKey "ref"   ':' <|> pure (                 refId prev)
+    opId    <- openKey "event" '@' <|> pure (UUID.succValue prev)
+    refId   <- openKey "ref"   ':' <|> pure                 prev
     payload <- pPayload opId
+    t <- term
+    guard $ t == TReduced || t == TClosed
     pure Op{opId, refId, payload}
 
 key :: String -> Char -> UUID -> UUID -> Parser (Bool, UUID)
@@ -461,4 +463,13 @@ opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
 
 -- TODO rename to parseFrame (parseOpenFrame?)
 parsePatch :: ByteStringL -> Either String [Op]
-parsePatch = parseOnlyL $ manyTill (openOp opZero) endOfInputEx
+parsePatch =
+  parseOnlyL $ go UUID.zero <* skipSpace <* endOfInputEx
+  where
+    go :: UUID -> Parser [Op]
+    go prev =
+      do
+        op@Op{opId} <- openOp prev
+        (op :) <$> go opId
+      <|>
+        pure []
