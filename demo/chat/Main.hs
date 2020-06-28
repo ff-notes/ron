@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -20,7 +21,7 @@ import           RON.Data.Experimental (Rep, ReplicatedObject, view)
 import           RON.Data.ORSet.Experimental (ORSetRep)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import qualified RON.Epoch as Epoch
-import           RON.Error (errorContext, liftMaybe, throwError)
+import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorText)
 import           RON.Event (decodeEvent)
 import           RON.Store (listObjects, newObject, readObject)
 import           RON.Store.FS (newHandle, runStore)
@@ -42,18 +43,17 @@ instance ReplicatedObject Message where
       postTime <-
         liftMaybe "decode objectId" $
         decodeEvent objectId ^? #localTime . #_TEpoch . to Epoch.decode
-      usernameP <-
-        liftMaybe "lookup username" $ ORSet.lookupLww "username" orset
-      username <-
-        case usernameP of
-          AString username : _ -> pure username
-          _ -> throwError "Message.username is expected to be a string"
-      textP <- liftMaybe "lookup text" $ ORSet.lookupLww "text" orset
-      text <-
-        case textP of
-          AString text : _ -> pure text
-          _ -> throwError "Message.text is expected to be a string"
+      username <- lookupLwwText "username" orset
+      text     <- lookupLwwText "text" orset
       pure Message{..}
+
+lookupLwwText :: MonadE m => Atom -> ORSetRep -> m Text
+lookupLwwText key orset = do
+  payload <- liftMaybe ("lookup " <> show key) $ ORSet.lookupLww key orset
+  case payload of
+    AString text : _ -> pure text
+    _ ->
+      throwErrorText $ "Value at " <> show key <> " is expected to be a string"
 
 messagesCollection :: CollectionName
 messagesCollection = "messages"
