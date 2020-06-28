@@ -22,6 +22,7 @@ module RON.Data.ORSet (
     removeObjectIf,
     removeRef,
     removeValue,
+    setType,
     zoomItem,
     -- * struct_set
     addFieldValue,

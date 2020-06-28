@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -9,10 +10,11 @@ module RON.Store (
   readObject,
   ) where
 
-import           Debug.Trace
 import           RON.Prelude
 
-import           RON.Data (Reducible, reducibleOpType, stateFromChunk)
+import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
+                                        stateFromFrame, view)
+import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (Op (..), UUID)
 import           RON.Types.Experimental (CollectionName, ObjectRef (..))
@@ -44,17 +46,18 @@ listObjects collection =
 
 newObject ::
   forall a m.
-  (MonadStore m, Reducible a, ReplicaClock m) =>
+  (MonadStore m, ReplicatedObject a, ReplicaClock m) =>
   CollectionName -> m (ObjectRef a)
 newObject collection = do
   objectId <- getEventUuid
-  let type_ = reducibleOpType @a
-  let initOp = Op{opId = objectId, refId = type_, payload = []}
+  let typeId = replicatedTypeId @(Rep a)
+  let initOp = Op{opId = objectId, refId = typeId, payload = []}
   appendPatch collection objectId [initOp]
   pure $ ObjectRef collection objectId
 
-readObject :: (MonadStore m, Reducible a) => ObjectRef a -> m a
-readObject (ObjectRef collection objectId) = do
-  logsByReplicas <- loadObjectLog collection objectId
-  traceShowM logsByReplicas
-  pure $ stateFromChunk $ sortOn opId $ fold logsByReplicas
+readObject ::
+  (MonadE m, MonadStore m, ReplicatedObject a, Typeable a) => ObjectRef a -> m a
+readObject object@(ObjectRef collection objectId) =
+  errorContext ("readObject " <> show object) $ do
+    logsByReplicas <- loadObjectLog collection objectId
+    view $ stateFromFrame $ sortOn opId $ fold logsByReplicas

@@ -11,6 +11,7 @@ module RON.Error (
     liftEither,
     liftEitherString,
     liftMaybe,
+    throwError,
     throwErrorString,
     throwErrorText,
     tryIO,

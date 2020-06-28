@@ -48,6 +48,7 @@ executable demo-chat
     import: language
     build-depends:
         -- global
+        pretty-simple,
         text,
         -- project
         ron,
