@@ -1,0 +1,9 @@
+cabal-version: 2.2
+
+name: ron-tool
+version: 0
+
+executable ron-tool
+    build-depends: base
+    default-language: Haskell2010
+    main-is: Main.hs

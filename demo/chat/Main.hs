@@ -34,14 +34,6 @@ data Message = Message
   }
   deriving (Show)
 
-newMessage ::
-  (MonadStore m, ReplicaClock m) => Text -> Text -> m (ObjectRef Message)
-newMessage username text = do
-  obj <- newObject messagesCollection
-  ORSet.add_ obj ["username", AString username]
-  ORSet.add_ obj ["text",     AString text    ]
-  pure obj
-
 instance ReplicatedObject Message where
   type Rep Message = ORSetRep
 
@@ -53,6 +45,14 @@ instance ReplicatedObject Message where
       username <- lookupLwwText "username" orset
       text     <- lookupLwwText "text" orset
       pure Message{..}
+
+newMessage ::
+  (MonadStore m, ReplicaClock m) => Text -> Text -> m (ObjectRef Message)
+newMessage username text = do
+  obj <- newObject messagesCollection
+  ORSet.add_ obj ["username", AString username]
+  ORSet.add_ obj ["text",     AString text    ]
+  pure obj
 
 lookupLwwText :: MonadE m => Atom -> ORSetRep -> m Text
 lookupLwwText key orset = do
