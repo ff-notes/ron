@@ -1,4 +1,3 @@
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 
 module RON.UUID.Experimental (value) where
@@ -22,7 +21,7 @@ value :: Lens' UUID Word60
 value =
   lens
     (\(UUID x _) -> ls60 x)
-    (\(UUID x y) v -> UUID (x .&. 0x_F000_0000_0000_0000 .|. safeCast v) y)
+    (\(UUID x y) v -> UUID (x .&. 0xF000000000000000 .|. safeCast v) y)
 
 type Lens s t a b = forall f. Functor f => (a -> f b) -> s -> f t
 

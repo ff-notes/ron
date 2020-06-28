@@ -2,7 +2,6 @@
 
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -511,9 +510,9 @@ replicatedCcExampleLaptopFrame =
   , Op sha3    (oi' 1) ["SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq"]
   ]
   where
-    object = UUID 0x_006a_54d7_c000_0000 0x_29ad_68fe_b841_f000
+    object = UUID 0x006a54d7c0000000 0x29ad68feb841f000
     oi  n = object & UUID.value +~ n
-    oi' n = object & UUID.value +~ 0x_4_0400_0000 + n
+    oi' n = object & UUID.value +~ 0x404000000 + n
     sha3 = $(UUID.liftName "sha3")
 
 prop_replicatedCcExampleLaptopParse =
