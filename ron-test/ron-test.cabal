@@ -63,6 +63,7 @@ test-suite test
         data-default,
         directory,
         hedgehog >= 1,
+        lens,
         mtl,
         tasty-hedgehog,
         tasty-th,

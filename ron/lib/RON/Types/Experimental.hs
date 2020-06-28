@@ -1,14 +1,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module RON.Types.Experimental (CollectionName, ObjectRef (..)) where
+module RON.Types.Experimental (CollectionName, ObjectRef (..), OpenFrame) where
 
 import           RON.Prelude
 
 import           Data.Typeable (typeRep)
 import           Text.Show (showParen, showString, showsPrec)
 
-import           RON.Types (UUID)
+import           RON.Types (Op, UUID)
 
 type CollectionName = ByteString
 
@@ -24,3 +24,5 @@ instance Typeable a => Show (ObjectRef a) where
       . showsPrec 11 c
       . showString " "
       . showsPrec 11 u
+
+type OpenFrame = [Op]

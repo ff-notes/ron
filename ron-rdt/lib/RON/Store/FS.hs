@@ -22,11 +22,12 @@ import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
 
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
-import           RON.Error (Error, MonadE, tryIO)
+import           RON.Error (Error, MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
                             applicationSpecific, getEventUuid)
 import           RON.Store (MonadStore (..))
-import           RON.Text.Serialize.Experimental (serializePatch)
+import           RON.Text.Parse (parseOpenFrame)
+import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (Op, UUID)
 import qualified RON.UUID as UUID
 
@@ -49,28 +50,40 @@ newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
     (Applicative, Functor, Monad, MonadError Error, MonadIO, ReplicaClock)
 
 instance MonadStore Store where
-  getCollections = do
+  listCollections = do
     Handle{dataDir} <- Store ask
-    collectionDirs  <- liftIO $ do
+    collectionDirs  <- tryIO $ do
       entries <- listDirectory dataDir
       filterM (doesDirectoryExist . (dataDir </>)) entries
     pure $ map collectionNameFromFileName collectionDirs
 
-  getObjectsImpl collectionName = do
+  listObjectsImpl collectionName = do
     Handle{dataDir} <- Store ask
     let collectionDir = dataDir </> collectionNameToFileName collectionName
     objectDirs <-
-      liftIO $ do
+      tryIO $ do
         exists <- doesDirectoryExist collectionDir
         if exists then listDirectory collectionDir else pure []
     traverse uuidFromFileName objectDirs
 
-  addPatch = addPatchFS
+  appendPatch = appendPatchFS
 
-  -- loadCachedObjectImpl = loadCachedObjectImplFS
+  loadObjectLog collectionName objectId = do
+    Handle{dataDir} <- Store ask
+    let
+      objectLogsDir
+        =   dataDir
+        </> collectionNameToFileName collectionName
+        </> uuidToFileName objectId
+        </> "log"
+    patchNames <- tryIO $ listDirectory objectLogsDir
+    for patchNames $ \patchName -> do
+      let patchFile = objectLogsDir </> patchName
+      patchContent <- tryIO $ BSL.readFile patchFile
+      liftEitherString $ parseOpenFrame patchContent
 
-addPatchFS :: CollectionName -> UUID -> [Op] -> Store ()
-addPatchFS collectionName objectId patch = do
+appendPatchFS :: CollectionName -> UUID -> [Op] -> Store ()
+appendPatchFS collectionName objectId patch = do
   Handle{dataDir} <- Store ask
   let
     objectLogsDir
@@ -78,35 +91,10 @@ addPatchFS collectionName objectId patch = do
       </> collectionNameToFileName collectionName
       </> uuidToFileName objectId
       </> "log"
-  liftIO $ createDirectoryIfMissing True objectLogsDir
+  tryIO $ createDirectoryIfMissing True objectLogsDir
   patchVersion <- getEventUuid
   let patchFile = objectLogsDir </> uuidToFileName patchVersion
-  tryIO $ BSL.writeFile patchFile $ serializePatch patch
-
--- loadCachedObjectImplFS :: CollectionName -> UUID -> Store (Maybe WireStateChunk)
--- loadCachedObjectImplFS collectionName objectId = do
---   Handle{dataDir} <- Store ask
---   let
---     objectDir
---       =   dataDir
---       </> collectionNameToFileName collectionName
---       </> uuidToFileName objectId
---   objectPathExists <- liftIO $ doesPathExist objectDir
---   if objectPathExists then
---     Just <$> do
---       objectIsDir <- liftIO $ doesDirectoryExist objectDir
---       unless objectIsDir $
---         throwErrorString $
---         unwords ["object path", objectDir, "is expected to be a directory"]
---       let objectCachedStateDir = objectDir </> "state"
---       objectStateFiles <- liftIO $ listDirectory objectCachedStateDir
---       case objectStateFiles of
---         [objectStateFile] -> do
---           objectStateSerialized <- liftIO $ BSL.readFile objectStateFile
---           liftEitherString $ parseStateChunk objectStateSerialized
---         _ -> undefined
---   else
---     pure Nothing
+  tryIO $ BSL.writeFile patchFile $ serializeOpenFrame patch
 
 -- | Run a 'Store' action
 runStore :: Handle -> Store a -> IO a

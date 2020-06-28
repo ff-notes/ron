@@ -1,6 +1,7 @@
 {-# OPTIONS -Wno-missing-signatures #-}
 
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -8,12 +9,14 @@
 
 import           RON.Prelude
 
+import           Control.Lens ((+~))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Maybe (fromJust)
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy.Encoding as TextL
 import           Hedgehog (Gen, MonadTest, Property, PropertyT, annotate,
                            annotateShow, evalExceptT, forAll, property,
                            tripping, (===))
@@ -43,12 +46,14 @@ import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
 import qualified RON.Text.Serialize as RT
+import qualified RON.Text.Serialize.Experimental as RT
 import qualified RON.Text.Serialize.UUID as RT
 import           RON.Types (Atom (AInteger, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
                             ObjectFrame, Op (Op, opId, payload, refId),
                             UUID (UUID), WireChunk (Closed))
 import qualified RON.UUID as UUID
+import qualified RON.UUID.Experimental as UUID
 
 import qualified Gen
 import           HexDump (hexdump)
@@ -473,3 +478,50 @@ prepObj = prep . snd . RT.serializeObject
 
 prep :: ByteStringL -> [[ByteStringL]]
 prep = filter (not . null) . map BSLC.words . BSLC.lines
+
+-- example taken from https://replicated.cc/
+replicatedCcExampleLaptopText =
+  TextL.encodeUtf8
+    [s|
+      @1fLDV+biQFvtGV :lww,
+                        'id'        '20MF000CUS',
+                        'type'      'laptop',
+                        'cpu'       'i7-8850H',
+                        'display'   '15.6” UHD IPS multi-touch, 400nits',
+                        'RAM'       '16 GB DDR4 2666MHz',
+                        'storage'   '512 GB SSD, PCIe-NVME M.2',
+                        'graphics'  'NVIDIA GeForce GTX 1050Ti 4GB',
+      @1fLDk4+biQFvtGV  'wlan'      'Intel 9560 802.11AC vPro',
+                        'camera'    'IR & 720p HD Camera with microphone',
+      @sha3             'SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq';
+    |]
+
+replicatedCcExampleLaptopFrame =
+  [ Op (oi  0) lwwType []
+  , Op (oi  1) (oi  0) ["id", "20MF000CUS"]
+  , Op (oi  2) (oi  1) ["type", "laptop"]
+  , Op (oi  3) (oi  2) ["cpu", "i7-8850H"]
+  , Op (oi  4) (oi  3) ["display", "15.6” UHD IPS multi-touch, 400nits"]
+  , Op (oi  5) (oi  4) ["RAM", "16 GB DDR4 2666MHz"]
+  , Op (oi  6) (oi  5) ["storage", "512 GB SSD, PCIe-NVME M.2"]
+  , Op (oi  7) (oi  6) ["graphics", "NVIDIA GeForce GTX 1050Ti 4GB"]
+  , Op (oi' 0) (oi  7) ["wlan", "Intel 9560 802.11AC vPro"]
+  , Op (oi' 1) (oi' 0) ["camera", "IR & 720p HD Camera with microphone"]
+  , Op sha3    (oi' 1) ["SfiKqD1atGU5xxv1NLp8uZbAcHQDcX~a1HVk5rQFy_nq"]
+  ]
+  where
+    object = UUID 0x006a54d7c0000000 0x29ad68feb841f000
+    oi  n = object & UUID.value +~ n
+    oi' n = object & UUID.value +~ 0x404000000 + n
+    sha3 = $(UUID.liftName "sha3")
+
+prop_replicatedCcExampleLaptopParse =
+  property $ do
+    parsed <- evalEitherS $ RT.parseOpenFrame replicatedCcExampleLaptopText
+    replicatedCcExampleLaptopFrame === parsed
+
+prop_replicatedCcExampleLaptopSerialize =
+  property
+    (   prep replicatedCcExampleLaptopText
+    === prep (RT.serializeOpenFrame replicatedCcExampleLaptopFrame)
+    )

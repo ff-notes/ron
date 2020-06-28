@@ -18,7 +18,7 @@ import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
 import           RON.Event (EpochEvent (EpochEvent), EpochTime,
                             LocalTime (TEpoch), ReplicaClock, ReplicaId,
                             advance, getEvents, getPid)
-import           RON.Util.Word (leastSignificant60, ls60, safeCast, word60add)
+import           RON.Util.Word (leastSignificant60, safeCast)
 
 -- | Real epoch clock.
 -- Uses kind of global variable to ensure strict monotonicity.
@@ -32,11 +32,11 @@ instance ReplicaClock EpochClock where
         atomicModifyIORef' timeVar $ \t0 -> (max time t0, ())
 
     getEvents n0 = EpochClock $ ReaderT $ \(pid, timeVar) -> do
-        let n = max n0 $ ls60 1
+        let n = max n0 1
         realTime <- getCurrentEpochTime
         (begin, end) <- atomicModifyIORef' timeVar $ \timeCur -> let
             begin = max realTime $ succ timeCur
-            end   = begin `word60add` pred n
+            end   = begin + pred n
             in (end, (begin, end))
         pure [EpochEvent t pid | t <- [begin .. end]]
 

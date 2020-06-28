@@ -9,6 +9,7 @@ module RON.Text.Serialize (
     serializeAtom,
     serializeObject,
     serializeOp,
+    serializeOpenOp,
     serializeRawOp,
     serializeStateFrame,
     serializeString,
@@ -36,6 +37,7 @@ import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             WireFrame, WireReducedChunk (..),
                             WireStateChunk (..))
 import           RON.UUID (UUID, zero)
+import qualified RON.UUID as UUID
 
 -- | Serialize a common frame
 serializeWireFrame :: WireFrame -> ByteStringL
@@ -118,6 +120,23 @@ serializeOp Op{opId, refId, payload} =
     , ':' `cons` serializeUuid refId
     , serializePayload opId payload
     ]
+
+serializeOpenOp ::
+  -- | Previous op id
+  UUID ->
+  -- | Current op
+  Op ->
+  ByteStringL
+serializeOpenOp prevId Op{opId, refId, payload} =
+  BSL.intercalate "\t" $ idS : refS : payloadS
+  where
+    idS
+      | opId /= UUID.succValue prevId = '@' `cons` serializeUuid opId
+      | otherwise                     = ""
+    refS
+      | refId /= prevId = ':' `cons` serializeUuid refId
+      | otherwise       = ""
+    payloadS = [serializePayload opId payload | not $ null payload]
 
 -- | Serialize a context-free atom
 serializeAtom :: Atom -> ByteStringL

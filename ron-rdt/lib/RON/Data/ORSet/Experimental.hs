@@ -5,7 +5,7 @@ module RON.Data.ORSet.Experimental (add, add_) where
 import           RON.Prelude
 
 import           RON.Event (ReplicaClock, getEventUuid)
-import           RON.Store (MonadStore, addPatch)
+import           RON.Store (MonadStore, appendPatch)
 import           RON.Types (Op (..), Payload, UUID)
 import           RON.Types.Experimental (ObjectRef (..))
 
@@ -13,7 +13,7 @@ import           RON.Types.Experimental (ObjectRef (..))
 add :: (MonadStore m, ReplicaClock m) => ObjectRef a -> Payload -> m UUID
 add (ObjectRef collection object) payload = do
   opId <- getEventUuid
-  addPatch collection object [Op{opId, refId = object, payload}]
+  appendPatch collection object [Op{opId, refId = object, payload}]
   pure opId
 
 -- | Add value to the set.

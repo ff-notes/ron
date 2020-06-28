@@ -39,7 +39,6 @@ module RON.Util.Word (
     leastSignificant60,
     ls60,
     toWord60,
-    word60add,
     -- * Word64
     Word64,
     -- * SafeCast
@@ -51,6 +50,7 @@ import           RON.Prelude
 import           Data.Bits ((.&.))
 import           Data.Fixed (Fixed, HasResolution)
 import           Data.Hashable (hashUsing, hashWithSalt)
+import           GHC.Num (abs, fromInteger, signum)
 
 newtype Word2 = W2 Word8
     deriving (Eq, Ord, Show)
@@ -140,6 +140,14 @@ ls24 = W24 . (0xFFF .&.)
 newtype Word60 = W60 Word64
     deriving (Enum, Eq, Ord, Show)
 
+instance Num Word60 where
+    W60 x + W60 y = ls60 $ x + y
+    W60 x * W60 y = ls60 $ x * y
+    abs = id
+    signum (W60 x) = W60 $ signum x
+    fromInteger = leastSignificant60
+    negate (W60 x) = W60 $ 0x1000000000000000 - x
+
 instance Bounded Word60 where
     minBound = W60 0
     maxBound = W60 0xFFFFFFFFFFFFFFF
@@ -160,9 +168,6 @@ toWord60 :: Word64 -> Maybe Word60
 toWord60 w
     | w < 0x1000000000000000 = Just $ W60 w
     | otherwise              = Nothing
-
-word60add :: Word60 -> Word60 -> Word60
-word60add (W60 a) (W60 b) = leastSignificant60 $ a + b
 
 class SafeCast v w where
     safeCast :: v -> w
