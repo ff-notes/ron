@@ -11,10 +11,7 @@ import           RON.Prelude
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
-import           RON.Types.Experimental (CollectionName)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
                                    listDirectory, makeAbsolute)
 import           System.FilePath ((</>))
@@ -37,7 +34,7 @@ data Handle = Handle
   , dataDir :: FilePath
   -- fsWatchManager    :: FSNotify.WatchManager,
   -- stopWatching      :: IORef (Maybe StopListening),
-  -- onDocumentChanged :: TChan (CollectionName, RawDocId),
+  -- onDocumentChanged :: TChan RawDocId,
   -- ^ A channel of changes in the database.
   -- To activate it, call 'startWatching'.
   -- You should NOT read from it directly,
@@ -50,47 +47,29 @@ newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
     (Applicative, Functor, Monad, MonadError Error, MonadIO, ReplicaClock)
 
 instance MonadStore Store where
-  listCollections = do
+  listObjectsImpl = do
     Handle{dataDir} <- Store ask
-    collectionDirs  <- tryIO $ do
-      entries <- listDirectory dataDir
-      filterM (doesDirectoryExist . (dataDir </>)) entries
-    pure $ map collectionNameFromFileName collectionDirs
-
-  listObjectsImpl collectionName = do
-    Handle{dataDir} <- Store ask
-    let collectionDir = dataDir </> collectionNameToFileName collectionName
     objectDirs <-
       tryIO $ do
-        exists <- doesDirectoryExist collectionDir
-        if exists then listDirectory collectionDir else pure []
+        exists <- doesDirectoryExist dataDir
+        if exists then listDirectory dataDir else pure []
     traverse uuidFromFileName objectDirs
 
   appendPatch = appendPatchFS
 
-  loadObjectLog collectionName objectId = do
+  loadObjectLog objectId = do
     Handle{dataDir} <- Store ask
-    let
-      objectLogsDir
-        =   dataDir
-        </> collectionNameToFileName collectionName
-        </> uuidToFileName objectId
-        </> "log"
+    let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
     patchNames <- tryIO $ listDirectory objectLogsDir
     for patchNames $ \patchName -> do
       let patchFile = objectLogsDir </> patchName
       patchContent <- tryIO $ BSL.readFile patchFile
       liftEitherString $ parseOpenFrame patchContent
 
-appendPatchFS :: CollectionName -> UUID -> [Op] -> Store ()
-appendPatchFS collectionName objectId patch = do
+appendPatchFS :: UUID -> [Op] -> Store ()
+appendPatchFS objectId patch = do
   Handle{dataDir} <- Store ask
-  let
-    objectLogsDir
-      =   dataDir
-      </> collectionNameToFileName collectionName
-      </> uuidToFileName objectId
-      </> "log"
+  let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
   tryIO $ createDirectoryIfMissing True objectLogsDir
   patchVersion <- getEventUuid
   let patchFile = objectLogsDir </> uuidToFileName patchVersion
@@ -138,12 +117,6 @@ getMacAddress =
       + (fromIntegral b2 `shiftL` 16)
       + (fromIntegral b1 `shiftL` 8)
       +  fromIntegral b0
-
-collectionNameFromFileName :: FilePath -> CollectionName
-collectionNameFromFileName = Text.encodeUtf8 . Text.pack
-
-collectionNameToFileName :: CollectionName -> FilePath
-collectionNameToFileName = Text.unpack . Text.decodeUtf8
 
 uuidFromFileName :: MonadE m => FilePath -> m UUID
 uuidFromFileName =

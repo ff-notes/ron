@@ -5,8 +5,7 @@
 module RON.Data.Experimental (Replicated (..), ReplicatedObject (..)) where
 
 import           RON.Error (MonadE)
-import           RON.Types (UUID)
-import           RON.Types.Experimental (OpenFrame)
+import           RON.Types (OpenFrame, UUID)
 
 class Replicated a where
   -- | UUID of the type

@@ -17,6 +17,7 @@ module RON.Types
     ObjectRef (..),
     ObjectFrame (..),
     Op (..),
+    OpenFrame,
     OpTerm (..),
     Payload,
     StateChunk (..),
@@ -193,3 +194,5 @@ opPattern Op {opId, refId} =
 
 mapBoth :: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (x, y) = (f x, f y)
+
+type OpenFrame = [Op]
