@@ -10,7 +10,7 @@ module RON.Text.Parse (
     parseAtom,
     parseObject,
     parseOp,
-    parsePatch,
+    parseOpenFrame,
     parseStateChunk,
     parseStateFrame,
     parseString,
@@ -461,9 +461,8 @@ closedOpZero =
 opZero :: Op
 opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
 
--- TODO rename to parseFrame (parseOpenFrame?)
-parsePatch :: ByteStringL -> Either String [Op]
-parsePatch =
+parseOpenFrame :: ByteStringL -> Either String [Op]
+parseOpenFrame =
   parseOnlyL $ go UUID.zero <* skipSpace <* endOfInputEx
   where
     go :: UUID -> Parser [Op]

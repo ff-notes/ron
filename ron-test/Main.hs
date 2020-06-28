@@ -518,11 +518,11 @@ replicatedCcExampleLaptopFrame =
 
 prop_replicatedCcExampleLaptopParse =
   property $ do
-    parsed <- evalEitherS $ RT.parsePatch replicatedCcExampleLaptopText
+    parsed <- evalEitherS $ RT.parseOpenFrame replicatedCcExampleLaptopText
     replicatedCcExampleLaptopFrame === parsed
 
 prop_replicatedCcExampleLaptopSerialize =
   property
     (   prep replicatedCcExampleLaptopText
-    === prep (RT.serializePatch replicatedCcExampleLaptopFrame)
+    === prep (RT.serializeOpenFrame replicatedCcExampleLaptopFrame)
     )

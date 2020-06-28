@@ -6,7 +6,6 @@
 
 module RON.Store.FS (newHandle, runStore) where
 
-import           Debug.Trace
 import           RON.Prelude
 
 import           Data.Bits (shiftL)
@@ -27,8 +26,8 @@ import           RON.Error (Error, MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
                             applicationSpecific, getEventUuid)
 import           RON.Store (MonadStore (..))
-import           RON.Text.Parse (parsePatch)
-import           RON.Text.Serialize.Experimental (serializePatch)
+import           RON.Text.Parse (parseOpenFrame)
+import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (Op, UUID)
 import qualified RON.UUID as UUID
 
@@ -78,13 +77,10 @@ instance MonadStore Store where
         </> uuidToFileName objectId
         </> "log"
     patchNames <- tryIO $ listDirectory objectLogsDir
-    traceShowM patchNames
     for patchNames $ \patchName -> do
       let patchFile = objectLogsDir </> patchName
-      traceShowM patchFile
       patchContent <- tryIO $ BSL.readFile patchFile
-      traceShowM patchContent
-      liftEitherString $ parsePatch patchContent
+      liftEitherString $ parseOpenFrame patchContent
 
 appendPatchFS :: CollectionName -> UUID -> [Op] -> Store ()
 appendPatchFS collectionName objectId patch = do
@@ -98,7 +94,7 @@ appendPatchFS collectionName objectId patch = do
   tryIO $ createDirectoryIfMissing True objectLogsDir
   patchVersion <- getEventUuid
   let patchFile = objectLogsDir </> uuidToFileName patchVersion
-  tryIO $ BSL.writeFile patchFile $ serializePatch patch
+  tryIO $ BSL.writeFile patchFile $ serializeOpenFrame patch
 
 -- | Run a 'Store' action
 runStore :: Handle -> Store a -> IO a
