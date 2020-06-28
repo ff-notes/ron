@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 import           Prelude hiding (show)
@@ -22,11 +21,11 @@ import           RON.Data.ORSet.Experimental (ORSetRep)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import qualified RON.Epoch as Epoch
 import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorText)
-import           RON.Event (decodeEvent)
-import           RON.Store (listObjects, newObject, readObject)
+import           RON.Event (ReplicaClock, decodeEvent)
+import           RON.Store (MonadStore, listObjects, newObject, readObject)
 import           RON.Store.FS (newHandle, runStore)
 import           RON.Types (Atom (AString))
-import           RON.Types.Experimental (CollectionName)
+import           RON.Types.Experimental (CollectionName, ObjectRef)
 
 data Message = Message
   { postTime :: UTCTime
@@ -34,6 +33,14 @@ data Message = Message
   , text     :: Text
   }
   deriving (Show)
+
+newMessage ::
+  (MonadStore m, ReplicaClock m) => Text -> Text -> m (ObjectRef Message)
+newMessage username text = do
+  obj <- newObject messagesCollection
+  ORSet.add_ obj ["username", AString username]
+  ORSet.add_ obj ["text",     AString text    ]
+  pure obj
 
 instance ReplicatedObject Message where
   type Rep Message = ORSetRep
@@ -67,18 +74,12 @@ main = do
     [] -> do
       messagesResult <-
         runStore db $ do
-          messageRefs <- listObjects @Message messagesCollection
+          messageRefs <- listObjects messagesCollection
           for messageRefs readObject
       pPrint $ sortOn postTime messagesResult
     [username, text] -> do
       messageRef <-
-        runStore db $ do
-          messageRef <- newObject @Message messagesCollection
-          ORSet.add_
-            messageRef
-            [AString "username", AString $ Text.pack username]
-          ORSet.add_ messageRef [AString "text", AString $ Text.pack text]
-          pure messageRef
+        runStore db $ newMessage (Text.pack username) (Text.pack text)
       putStrLn $ "created message: " <> show messageRef
     _ ->
       putStrLn $
