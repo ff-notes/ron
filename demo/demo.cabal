@@ -48,8 +48,11 @@ executable demo-chat
     import: language
     build-depends:
         -- global
+        generic-lens,
+        lens,
         pretty-simple,
         text,
+        time,
         -- project
         ron,
         ron-rdt,

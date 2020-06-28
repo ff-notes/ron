@@ -18,4 +18,9 @@ class (Replicated (Rep a)) => ReplicatedObject a where
   -- | RON representation type
   type Rep a
 
-  view :: MonadE m => Rep a -> m a
+  view ::
+    MonadE m =>
+      -- | Object id
+      UUID ->
+      Rep a ->
+      m a

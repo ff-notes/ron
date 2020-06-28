@@ -71,7 +71,7 @@ data LocalTime
         -- ^ https://en.wikipedia.org/wiki/Logical_clock
     | TEpoch !EpochTime
     | TUnknown !Word60
-    deriving (Eq, Show)
+    deriving (Eq, Generic, Show)
 
 -- | Replica id assignment style
 data Naming
@@ -91,8 +91,8 @@ data ReplicaId = ReplicaId !Naming !Word60
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.
 -- If you want comparable events, use specific 'EpochEvent'.
-data Event = Event !LocalTime !ReplicaId
-    deriving (Eq, Show)
+data Event = Event{localTime :: !LocalTime, replicaId :: !ReplicaId}
+    deriving (Eq, Generic, Show)
 
 -- | Calendar-based Lamport time event, specific case of 'Event'.
 data CalendarEvent = CalendarEvent !CalendarTime !ReplicaId

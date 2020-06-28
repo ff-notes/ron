@@ -60,4 +60,4 @@ readObject ::
 readObject object@(ObjectRef collection objectId) =
   errorContext ("readObject " <> show object) $ do
     logsByReplicas <- loadObjectLog collection objectId
-    view $ stateFromFrame $ sortOn opId $ fold logsByReplicas
+    view objectId $ stateFromFrame $ sortOn opId $ fold logsByReplicas

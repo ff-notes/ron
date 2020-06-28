@@ -1,13 +1,17 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 import           Prelude hiding (show)
-import           RON.Prelude (show)
+import           RON.Prelude (show, sortOn)
 
+import           Control.Lens (to, (^?))
+import           Data.Generics.Labels ()
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Time (UTCTime)
 import           Data.Traversable (for)
 import           System.Environment (getArgs, getProgName)
 import           Text.Pretty.Simple (pPrint)
@@ -15,14 +19,17 @@ import           Text.Pretty.Simple (pPrint)
 import           RON.Data.Experimental (Rep, ReplicatedObject, view)
 import           RON.Data.ORSet.Experimental (ORSetRep)
 import qualified RON.Data.ORSet.Experimental as ORSet
+import qualified RON.Epoch as Epoch
 import           RON.Error (errorContext, liftMaybe, throwError)
+import           RON.Event (decodeEvent)
 import           RON.Store (listObjects, newObject, readObject)
 import           RON.Store.FS (newHandle, runStore)
 import           RON.Types (Atom (AString))
 import           RON.Types.Experimental (CollectionName)
 
 data Message = Message
-  { username :: Text
+  { postTime :: UTCTime
+  , username :: Text
   , text     :: Text
   }
   deriving (Show)
@@ -30,10 +37,13 @@ data Message = Message
 instance ReplicatedObject Message where
   type Rep Message = ORSetRep
 
-  view orset =
+  view objectId orset =
     errorContext "view @Message" $ do
+      postTime <-
+        liftMaybe "decode objectId" $
+        decodeEvent objectId ^? #localTime . #_TEpoch . to Epoch.decode
       usernameP <-
-        liftMaybe ("lookup username in " <> show orset) $ ORSet.lookupLww "username" orset
+        liftMaybe "lookup username" $ ORSet.lookupLww "username" orset
       username <-
         case usernameP of
           AString username : _ -> pure username
@@ -59,7 +69,7 @@ main = do
         runStore db $ do
           messageRefs <- listObjects @Message messagesCollection
           for messageRefs readObject
-      pPrint messagesResult
+      pPrint $ sortOn postTime messagesResult
     [username, text] -> do
       messageRef <-
         runStore db $ do
