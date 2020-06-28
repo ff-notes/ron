@@ -33,17 +33,18 @@ newtype ORSetRep = ORSetRep (Map UUID (UUID, Payload))
 
 instance Replicated ORSetRep where
   replicatedTypeId = setType
-  stateFromFrame = ORSetRep . \case
+  stateFromFrame objectId = ORSetRep . \case
     [] -> Map.empty
-    Op{opId = object} : ops ->
+    ops ->
       Map.fromListWith
         (maxOn fst)
         [ (itemId, (opId, payload))
         | Op{opId, refId, payload} <- ops
+        , opId /= objectId
         , let
           itemId
-            | refId == object = opId
-            | otherwise       = refId
+            | refId == objectId = opId
+            | otherwise         = refId
         ]
 
 instance ReplicatedObject ORSetRep where

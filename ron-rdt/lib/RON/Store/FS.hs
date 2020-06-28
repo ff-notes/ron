@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module RON.Store.FS (newHandle, runStore) where
+module RON.Store.FS (Handle, newHandle, runStore) where
 
 import           RON.Prelude
 
@@ -60,11 +60,15 @@ instance MonadStore Store where
   loadObjectLog objectId = do
     Handle{dataDir} <- Store ask
     let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
-    patchNames <- tryIO $ listDirectory objectLogsDir
-    for patchNames $ \patchName -> do
-      let patchFile = objectLogsDir </> patchName
-      patchContent <- tryIO $ BSL.readFile patchFile
-      liftEitherString $ parseOpenFrame patchContent
+    objectExists <- tryIO $ doesDirectoryExist objectLogsDir
+    if objectExists then do
+      patchNames <- tryIO $ listDirectory objectLogsDir
+      for patchNames $ \patchName -> do
+        let patchFile = objectLogsDir </> patchName
+        patchContent <- tryIO $ BSL.readFile patchFile
+        liftEitherString $ parseOpenFrame patchContent
+    else
+      pure []
 
 appendPatchFS :: UUID -> [Op] -> Store ()
 appendPatchFS objectId patch = do

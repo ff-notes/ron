@@ -11,7 +11,7 @@ class Replicated a where
   -- | UUID of the type
   replicatedTypeId :: UUID
 
-  stateFromFrame :: OpenFrame -> a
+  stateFromFrame :: UUID -> OpenFrame -> a
 
 class (Replicated (Rep a)) => ReplicatedObject a where
   -- | RON representation type

@@ -6,10 +6,13 @@
 {-# LANGUAGE TypeFamilies #-}
 
 import           Prelude hiding (show)
-import           RON.Prelude (show, sortOn)
+import           RON.Prelude (show)
 
 import           Control.Lens (to, (^?))
+import           Control.Monad.IO.Class (liftIO)
 import           Data.Generics.Labels ()
+import           Data.List (sortOn)
+import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Time (UTCTime)
@@ -24,7 +27,7 @@ import qualified RON.Epoch as Epoch
 import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorText)
 import           RON.Event (ReplicaClock, decodeEvent)
 import           RON.Store (MonadStore, newObject, readObject)
-import           RON.Store.FS (newHandle, runStore)
+import           RON.Store.FS (Handle, newHandle, runStore)
 import           RON.Types (Atom (AString, AUuid), ObjectRef (..))
 import qualified RON.UUID as UUID
 
@@ -74,15 +77,7 @@ main = do
   progName <- getProgName
   args <- getArgs
   case args of
-    [] -> do
-      messagesResult <-
-        runStore db $ do
-          messageSet <- readObject messages
-          let
-            messageRefsEncoded = ORSet.toList messageSet
-            messageRefs = [ObjectRef uuid | [AUuid uuid] <- messageRefsEncoded]
-          for messageRefs readObject
-      pPrint $ sortOn postTime messagesResult
+    [] -> showMessages db
     [username, text] -> do
       messageRef <-
         runStore db $ newMessage (Text.pack username) (Text.pack text)
@@ -98,3 +93,20 @@ main = do
         , unwords [progName, "NAME TEXT"]
         , "\t post a message"
         ]
+
+showMessages :: Handle -> IO ()
+showMessages db = do
+  mMessages <-
+    runStore db $ do
+      mMessageSet <- readObject messages
+      case mMessageSet of
+        Nothing -> do
+          liftIO $ putStrLn "!!! messages collection doesn't exist !!!"
+          pure []
+        Just messageSet -> do
+          let
+            messageRefsEncoded = ORSet.toList messageSet
+            messageRefs =
+              [ObjectRef uuid | [AUuid uuid] <- messageRefsEncoded]
+          for messageRefs readObject
+  pPrint $ sortOn postTime $ catMaybes mMessages

@@ -42,9 +42,17 @@ newObject = do
   appendPatch objectId [initOp]
   pure $ ObjectRef objectId
 
+-- | Nothing if object doesn't exist in the replica.
 readObject ::
-  (MonadE m, MonadStore m, ReplicatedObject a, Typeable a) => ObjectRef a -> m a
+  (MonadE m, MonadStore m, ReplicatedObject a, Typeable a) =>
+  ObjectRef a -> m (Maybe a)
 readObject object@(ObjectRef objectId) =
   errorContext ("readObject " <> show object) $ do
     logsByReplicas <- loadObjectLog objectId
-    view objectId $ stateFromFrame $ sortOn opId $ fold logsByReplicas
+    case logsByReplicas of
+      [] -> pure Nothing
+      _ ->
+        Just
+        <$> view
+              objectId
+              (stateFromFrame objectId $ sortOn opId $ fold logsByReplicas)
