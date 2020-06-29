@@ -11,6 +11,7 @@ module RON.Text.Parse (
     parseObject,
     parseOp,
     parseOpenFrame,
+    parseOpenOp,
     parseStateChunk,
     parseStateFrame,
     parseString,
@@ -472,3 +473,6 @@ parseOpenFrame =
         (op :) <$> go opId
       <|>
         pure []
+
+parseOpenOp :: ByteStringL -> Either String Op
+parseOpenOp = parseOnlyL $ openOp UUID.zero <* skipSpace <* endOfInputEx

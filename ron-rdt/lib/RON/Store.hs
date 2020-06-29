@@ -28,6 +28,8 @@ class Monad m => MonadStore m where
   -- | Get all object logs split by replicas. Replicas order is not guaranteed.
   loadObjectLog :: UUID -> m [[Op]]
 
+  openGlobalObject :: ReplicatedObject a => UUID -> m (ObjectRef a)
+
 -- | Get list of all object ids in the database.
 listObjects :: forall a m. MonadStore m => m [ObjectRef a]
 listObjects = map ObjectRef <$> listObjectsImpl
@@ -52,7 +54,7 @@ readObject object@(ObjectRef objectId) =
     case logsByReplicas of
       [] -> pure Nothing
       _ ->
-        Just
-        <$> view
-              objectId
-              (stateFromFrame objectId $ sortOn opId $ fold logsByReplicas)
+        Just <$>
+        view
+          objectId
+          (stateFromFrame objectId $ sortOn opId $ fold logsByReplicas)

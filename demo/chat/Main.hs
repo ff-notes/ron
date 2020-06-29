@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -26,9 +27,9 @@ import qualified RON.Data.ORSet.Experimental as ORSet
 import qualified RON.Epoch as Epoch
 import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorText)
 import           RON.Event (ReplicaClock, decodeEvent)
-import           RON.Store (MonadStore, newObject, readObject)
+import           RON.Store (MonadStore, newObject, openGlobalObject, readObject)
 import           RON.Store.FS (Handle, newHandle, runStore)
-import           RON.Types (Atom (AString, AUuid), ObjectRef (..))
+import           RON.Types (Atom (AString, AUuid), ObjectRef (..), UUID)
 import qualified RON.UUID as UUID
 
 data Message = Message
@@ -53,10 +54,11 @@ instance ReplicatedObject Message where
 newMessage ::
   (MonadStore m, ReplicaClock m) => Text -> Text -> m (ObjectRef Message)
 newMessage username text = do
+  gMessages :: ObjectRef ORSetRep <- openGlobalObject gMessagesId
   msgRef@(ObjectRef msgId) <- newObject
   ORSet.add_ msgRef ["username", AString username]
   ORSet.add_ msgRef ["text",     AString text    ]
-  ORSet.add_ messages [AUuid msgId]
+  ORSet.add_ gMessages [AUuid msgId]
   pure msgRef
 
 lookupLwwText :: MonadE m => Atom -> ORSetRep -> m Text
@@ -67,9 +69,8 @@ lookupLwwText key orset = do
     _ ->
       throwErrorText $ "Value at " <> show key <> " is expected to be a string"
 
--- messages :: ObjectRef (ORSet (ObjectRef Message))
-messages :: ObjectRef ORSetRep
-messages = ObjectRef $(UUID.liftName "messages")
+gMessagesId :: UUID
+gMessagesId = $(UUID.liftName "messages")
 
 main :: IO ()
 main = do
@@ -98,7 +99,8 @@ showMessages :: Handle -> IO ()
 showMessages db = do
   mMessages <-
     runStore db $ do
-      mMessageSet <- readObject messages
+      gMessages   <- openGlobalObject gMessagesId
+      mMessageSet <- readObject gMessages
       case mMessageSet of
         Nothing -> do
           liftIO $ putStrLn "!!! messages collection doesn't exist !!!"
