@@ -52,7 +52,8 @@ instance ReplicatedObject Message where
       pure Message{..}
 
 newMessage ::
-  (MonadStore m, ReplicaClock m) => Text -> Text -> m (ObjectRef Message)
+  (MonadE m, MonadStore m, ReplicaClock m) =>
+  Text -> Text -> m (ObjectRef Message)
 newMessage username text = do
   gMessages :: ObjectRef ORSetRep <- openGlobalObject gMessagesId
   msgRef@(ObjectRef msgId) <- newObject

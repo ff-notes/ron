@@ -1,18 +1,16 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module RON.Store.Test (emptyDB, runStoreSim) where
 
 import           RON.Prelude
 
-import           Control.Lens (at, non, zoom, (<>=))
+import           Control.Lens (at, non, zoom, (<>=), (?=))
 import           Data.Generics.Labels ()
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))
@@ -57,34 +55,20 @@ instance MonadStore StoreSim where
     where
       atObject    = at objectId . non emptyObject
       atReplica   = at thisReplicaId . non Seq.empty
-      emptyObject = Object{init = Nothing, logs = HashMap.empty}
 
   loadObjectLog objectId = do
     db <- StoreSim get
     Object{logs} <- liftMaybe "object not found" $ db !? objectId
     pure $ map toList $ toList logs
 
-  openGlobalObject = openGlobalObjectTest
+  loadObjectInit objectId = do
+    db <- StoreSim get
+    case db !? objectId of
+      Just Object{init} -> pure init
+      Nothing           -> pure Nothing
 
-openGlobalObjectTest ::
-  forall a. ReplicatedObject a => UUID -> StoreSim (ObjectRef a)
-openGlobalObjectTest objectId = do
-  StoreSim $
-    at objectId `zoom` do
-      get >>= \case
-        Just Object{init} ->
-          -- check type
-          when (init /= Just canonicalInitOp) $
-            throwError $
-            Error
-              "Bad init"
-              [ fromString $ "got "      <> show init
-              , fromString $ "expected " <> show canonicalInitOp
-              ]
-        Nothing ->
-          -- create
-          put $ Just Object{init = Just canonicalInitOp, logs = mempty}
-  pure (ObjectRef objectId)
-  where
-    canonicalInitOp =
-      Op{opId = objectId, refId = replicatedTypeId @(Rep a), payload = []}
+  saveObjectInit objectId init =
+    StoreSim $ at objectId . non emptyObject . #init ?= init
+
+emptyObject :: Object
+emptyObject = Object{init = Nothing, logs = HashMap.empty}

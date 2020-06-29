@@ -1,20 +1,24 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
 module RON.Store (
   MonadStore (..),
-  newObject,
   listObjects,
+  newObject,
+  openGlobalObject,
   readObject,
   ) where
 
 import           RON.Prelude
 
+import           Data.String (fromString)
+
 import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
                                         stateFromFrame, view)
-import           RON.Error (MonadE, errorContext)
+import           RON.Error (Error (..), MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Types (ObjectRef (..), Op (..), UUID)
 
@@ -28,7 +32,9 @@ class Monad m => MonadStore m where
   -- | Get all object logs split by replicas. Replicas order is not guaranteed.
   loadObjectLog :: UUID -> m [[Op]]
 
-  openGlobalObject :: ReplicatedObject a => UUID -> m (ObjectRef a)
+  loadObjectInit :: UUID -> m (Maybe Op)
+
+  saveObjectInit :: UUID -> Op -> m ()
 
 -- | Get list of all object ids in the database.
 listObjects :: forall a m. MonadStore m => m [ObjectRef a]
@@ -58,3 +64,23 @@ readObject object@(ObjectRef objectId) =
         view
           objectId
           (stateFromFrame objectId $ sortOn opId $ fold logsByReplicas)
+
+openGlobalObject ::
+  forall a m. (MonadE m, MonadStore m, ReplicatedObject a) => UUID -> m (ObjectRef a)
+openGlobalObject objectId =
+  do
+    errorContext ("openGlobalObject " <> show objectId) $ do
+      loadObjectInit objectId >>= \case
+        Just init ->
+          when (init /= canonicalInit) $
+            throwError $
+            Error
+              "Bad init"
+              [ fromString $ "got "      <> show init
+              , fromString $ "expected " <> show canonicalInit
+              ]
+        Nothing -> saveObjectInit objectId canonicalInit
+    pure (ObjectRef objectId)
+  where
+    canonicalInit =
+      Op{opId = objectId, refId = replicatedTypeId @(Rep a), payload = []}

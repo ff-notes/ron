@@ -4,7 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module RON.Store.FS (Handle, newHandle, runStore) where
 
@@ -13,7 +12,6 @@ import           RON.Prelude
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
-import           Data.String (fromString)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
                                    doesFileExist, listDirectory, makeAbsolute)
@@ -21,16 +19,14 @@ import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
 
-import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId)
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
-import           RON.Error (Error (..), MonadE, errorContext, liftEitherString,
-                            tryIO)
+import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
                             applicationSpecific, getEventUuid)
 import           RON.Store (MonadStore (..))
 import           RON.Text.Parse (parseOpenFrame, parseOpenOp)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
-import           RON.Types (ObjectRef (..), Op (..), UUID)
+import           RON.Types (Op (..), UUID)
 import qualified RON.UUID as UUID
 
 -- | Store handle (uses the “Handle pattern”).
@@ -62,49 +58,40 @@ instance MonadStore Store where
 
   appendPatch = appendPatchFS
 
-  loadObjectLog objectId = do
+  loadObjectLog = loadObjectLogFS
+
+  loadObjectInit objectId = do
     Handle{dataDir} <- Store ask
-    let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
-    objectExists <- tryIO $ doesDirectoryExist objectLogsDir
-    if objectExists then do
-      patchNames <- tryIO $ listDirectory objectLogsDir
-      for patchNames $ \patchName -> do
-        let patchFile = objectLogsDir </> patchName
-        patchContent <- tryIO $ BSL.readFile patchFile
-        liftEitherString $ parseOpenFrame patchContent
-    else
-      pure []
+    let initFile = dataDir </> uuidToFileName objectId </> "init"
+    initExists <- tryIO $ doesFileExist initFile
+    if initExists then do
+      initContent <- tryIO $ BSL.readFile initFile
+      initOp <- liftEitherString $ parseOpenOp initContent
+      pure $ Just initOp
+    else do
+      pure Nothing
 
-  openGlobalObject = openGlobalObjectFS
-
-openGlobalObjectFS ::
-  forall a. ReplicatedObject a => UUID -> Store (ObjectRef a)
-openGlobalObjectFS objectId =
-  errorContext ("openGlobalObject " <> show objectId) $ do
+  saveObjectInit objectId init = do
     Handle{dataDir} <- Store ask
     let
       objectDir = dataDir </> uuidToFileName objectId
       initFile  = objectDir </> "init"
-    initExists <- tryIO $ doesFileExist initFile
-    if initExists then do
-      -- check type
-      initContent <- tryIO $ BSL.readFile initFile
-      initOp <- liftEitherString $ parseOpenOp initContent
-      when (initOp /= canonicalInitOp) $
-        throwError $
-        Error
-          "Bad init"
-          [ fromString $ "got "      <> show initOp
-          , fromString $ "expected " <> show canonicalInitOp
-          ]
-    else do
-      -- create
-      tryIO $ createDirectoryIfMissing True objectDir
-      tryIO $ BSL.writeFile initFile $ serializeOpenFrame [canonicalInitOp]
-    pure (ObjectRef objectId)
-  where
-    canonicalInitOp =
-      Op{opId = objectId, refId = replicatedTypeId @(Rep a), payload = []}
+    tryIO $ createDirectoryIfMissing True objectDir
+    tryIO $ BSL.writeFile initFile $ serializeOpenFrame [init]
+
+loadObjectLogFS :: UUID -> Store [[Op]]
+loadObjectLogFS objectId = do
+  Handle{dataDir} <- Store ask
+  let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
+  objectExists <- tryIO $ doesDirectoryExist objectLogsDir
+  if objectExists then do
+    patchNames <- tryIO $ listDirectory objectLogsDir
+    for patchNames $ \patchName -> do
+      let patchFile = objectLogsDir </> patchName
+      patchContent <- tryIO $ BSL.readFile patchFile
+      liftEitherString $ parseOpenFrame patchContent
+  else
+    pure []
 
 appendPatchFS :: UUID -> [Op] -> Store ()
 appendPatchFS objectId patch = do
