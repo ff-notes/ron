@@ -134,6 +134,7 @@ newtype StateChunk a = StateChunk [Op]
 type StateFrame = Map UUID WireStateChunk
 
 -- | Reference to an object
+-- TODO hide data constructor in Internal module
 newtype ObjectRef a = ObjectRef UUID
   deriving newtype (Eq, Hashable)
   deriving stock (Generic)
