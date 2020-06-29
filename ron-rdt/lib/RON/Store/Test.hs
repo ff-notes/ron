@@ -10,21 +10,19 @@ module RON.Store.Test (emptyDB, runStoreSim) where
 
 import           RON.Prelude
 
-import           Control.Lens (at, non, zoom, (<>=), (?=))
+import           Control.Lens (at, non, (<>=), (?=))
 import           Data.Generics.Labels ()
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
-import           Data.String (fromString)
 
-import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId)
 import           RON.Error (Error (..), liftMaybe)
 import           RON.Event (ReplicaClock, ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
-import           RON.Types (ObjectRef (..), Op (..), UUID)
+import           RON.Types (Op (..), UUID)
 
 data Object = Object
   { init :: Maybe Op
@@ -48,7 +46,7 @@ thisReplicaId :: ReplicaId
 thisReplicaId = applicationSpecific 2020
 
 instance MonadStore StoreSim where
-  listObjectsImpl = StoreSim $ gets Map.keys
+  listObjects = StoreSim $ gets Map.keys
 
   appendPatch objectId patch =
     StoreSim $ atObject . #logs . atReplica <>= Seq.fromList patch

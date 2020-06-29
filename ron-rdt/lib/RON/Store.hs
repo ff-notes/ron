@@ -6,7 +6,6 @@
 
 module RON.Store (
   MonadStore (..),
-  listObjects,
   newObject,
   openGlobalObject,
   readObject,
@@ -24,7 +23,7 @@ import           RON.Types (ObjectRef (..), Op (..), UUID)
 
 class Monad m => MonadStore m where
   -- | Get list of all object ids in the database.
-  listObjectsImpl :: m [UUID]
+  listObjects :: m [UUID]
 
   -- | Append a sequence of operations to an existing object
   appendPatch :: UUID -> [Op] -> m ()
@@ -35,10 +34,6 @@ class Monad m => MonadStore m where
   loadObjectInit :: UUID -> m (Maybe Op)
 
   saveObjectInit :: UUID -> Op -> m ()
-
--- | Get list of all object ids in the database.
-listObjects :: forall a m. MonadStore m => m [ObjectRef a]
-listObjects = map ObjectRef <$> listObjectsImpl
 
 newObject ::
   forall a m.

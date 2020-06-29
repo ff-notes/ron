@@ -48,7 +48,7 @@ newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
     (Applicative, Functor, Monad, MonadError Error, MonadIO, ReplicaClock)
 
 instance MonadStore Store where
-  listObjectsImpl = do
+  listObjects = do
     Handle{dataDir} <- Store ask
     objectDirs <-
       tryIO $ do
