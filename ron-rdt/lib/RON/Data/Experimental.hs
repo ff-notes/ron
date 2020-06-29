@@ -1,11 +1,18 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.Experimental (Replicated (..), ReplicatedObject (..)) where
+module RON.Data.Experimental (
+  AsAtoms (..),
+  Replicated (..),
+  ReplicatedObject (..),
+  ) where
+
+import           RON.Prelude
 
 import           RON.Error (MonadE)
-import           RON.Types (OpenFrame, UUID)
+import           RON.Types (Atom, OpenFrame, UUID)
 
 class Replicated a where
   -- | UUID of the type
@@ -23,3 +30,11 @@ class (Replicated (Rep a)) => ReplicatedObject a where
       UUID ->
       Rep a ->
       m a
+
+class AsAtoms a where
+  toAtoms   :: a -> [Atom]
+  fromAtoms :: MonadE m => [Atom] -> m a
+
+instance AsAtoms [Atom] where
+  toAtoms   = id
+  fromAtoms = pure
