@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.Experimental (
@@ -11,8 +13,9 @@ module RON.Data.Experimental (
 
 import           RON.Prelude
 
-import           RON.Error (MonadE)
-import           RON.Types (Atom, OpenFrame, UUID)
+import           RON.Error (MonadE, throwErrorText)
+import           RON.Types (Atom (AString, AUuid), ObjectRef (..), OpenFrame,
+                            UUID)
 
 class Replicated a where
   -- | UUID of the type
@@ -38,3 +41,32 @@ class AsAtoms a where
 instance AsAtoms [Atom] where
   toAtoms   = id
   fromAtoms = pure
+
+instance AsAtoms Atom where
+  toAtoms a = [a]
+
+  fromAtoms = \case
+    [a] -> pure a
+    as  -> throwErrorText $ "Expected 1 atom, got " <> show (length as)
+
+instance AsAtoms UUID where
+  toAtoms u = [AUuid u]
+
+  fromAtoms as = do
+    a <- fromAtoms as
+    case a of
+      AUuid u -> pure u
+      _       -> throwErrorText $ "Expected UUID, got " <> show a
+
+instance AsAtoms Text where
+  toAtoms u = [AString u]
+
+  fromAtoms as = do
+    a <- fromAtoms as
+    case a of
+      AString u -> pure u
+      _         -> throwErrorText $ "Expected string atom, got " <> show a
+
+instance AsAtoms (ObjectRef a) where
+  toAtoms (ObjectRef uuid) = toAtoms uuid
+  fromAtoms = fmap ObjectRef . fromAtoms
