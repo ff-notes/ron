@@ -9,7 +9,7 @@ import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       progDesc, strOption, subparser, (<**>))
 
 import           RON.Store (listObjects)
-import           RON.Store.FS (newHandle, runStore)
+import           RON.Store.FS (debugDump, newHandle, runStore)
 import           RON.Text (uuidToString)
 
 main :: IO ()
@@ -17,6 +17,7 @@ main = do
   Options{..} <- parseOptions
   db <- newHandle dbPath
   case cmd of
+    Dump -> debugDump dbPath
     List -> runStore db listObjects >>= traverse_ (putStrLn . uuidToString)
 
 data Options = Options
@@ -25,7 +26,7 @@ data Options = Options
   }
   deriving (Show)
 
-data Command = List
+data Command = Dump | List
   deriving (Show)
 
 parseOptions :: IO Options
@@ -40,7 +41,11 @@ parseOptions =
       cmd <- subparser commands
       pure Options{..}
 
-    commands = fold [command "list" $ i (pure List) "list objects"]
+    commands =
+      fold
+        [ command "dump" $ i (pure Dump) "dump objects"
+        , command "list" $ i (pure List) "list objects"
+        ]
 
 prefs :: ParserPrefs
 prefs =

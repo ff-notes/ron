@@ -42,14 +42,10 @@ readObject ::
   ObjectRef a -> m (Maybe a)
 readObject object@(ObjectRef objectId) =
   errorContext ("readObject " <> show object) $ do
-    logsByReplicas <- loadObjectLog objectId
-    case logsByReplicas of
+    ops <- fold <$> loadObjectLog objectId
+    case ops of
       [] -> pure Nothing
-      _ ->
-        Just <$>
-        view
-          objectId
-          (stateFromFrame objectId $ sortOn opId $ fold logsByReplicas)
+      _  -> Just <$> view objectId (stateFromFrame objectId $ sortOn opId ops)
 
 -- | Read global variable identified by atom and return result as set.
 readGlobalSet ::

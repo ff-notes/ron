@@ -5,12 +5,13 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module RON.Store.FS (Handle, newHandle, runStore) where
+module RON.Store.FS (Handle, Store, debugDump, newHandle, runStore) where
 
 import           RON.Prelude
 
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (find)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
@@ -133,3 +134,16 @@ uuidFromFileName =
 
 uuidToFileName :: UUID -> FilePath
 uuidToFileName = UUID.encodeBase32
+
+debugDump :: FilePath -> IO ()
+debugDump dataDir = do
+  objectDirs <- do
+    exists <- doesDirectoryExist dataDir
+    if exists then listDirectory dataDir else pure []
+  for_ (sort objectDirs) $ \objectDir -> do
+    let logsDir = dataDir </> objectDir </> "log"
+    logs <- listDirectory logsDir
+    for_ (sort logs) $ \logName -> do
+      let logPath = logsDir </> logName
+      BSL.putStr =<< BSL.readFile logPath
+    BSLC.putStrLn ""

@@ -68,7 +68,7 @@ import           Data.IORef as X (IORef, atomicModifyIORef', newIORef,
                                   readIORef, writeIORef)
 import           Data.List as X (drop, filter, genericLength, intercalate,
                                  isPrefixOf, isSuffixOf, lookup, map, partition,
-                                 repeat, replicate, sortBy, sortOn, span,
+                                 repeat, replicate, sort, sortBy, sortOn, span,
                                  splitAt, take, takeWhile, unlines, unwords,
                                  zip, zipWith, (++))
 import           Data.List.NonEmpty as X (NonEmpty ((:|)), nonEmpty)
