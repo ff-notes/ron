@@ -14,7 +14,7 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
-                                   doesFileExist, listDirectory, makeAbsolute)
+                                   listDirectory, makeAbsolute)
 import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
@@ -24,7 +24,7 @@ import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
                             applicationSpecific, getEventUuid)
 import           RON.Store (MonadStore (..))
-import           RON.Text.Parse (parseOpenFrame, parseOpenOp)
+import           RON.Text.Parse (parseOpenFrame)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (Op (..), UUID)
 import qualified RON.UUID as UUID
@@ -59,25 +59,6 @@ instance MonadStore Store where
   appendPatch = appendPatchFS
 
   loadObjectLog = loadObjectLogFS
-
-  loadObjectInit objectId = do
-    Handle{dataDir} <- Store ask
-    let initFile = dataDir </> uuidToFileName objectId </> "init"
-    initExists <- tryIO $ doesFileExist initFile
-    if initExists then do
-      initContent <- tryIO $ BSL.readFile initFile
-      initOp <- liftEitherString $ parseOpenOp initContent
-      pure $ Just initOp
-    else do
-      pure Nothing
-
-  saveObjectInit objectId init = do
-    Handle{dataDir} <- Store ask
-    let
-      objectDir = dataDir </> uuidToFileName objectId
-      initFile  = objectDir </> "init"
-    tryIO $ createDirectoryIfMissing True objectDir
-    tryIO $ BSL.writeFile initFile $ serializeOpenFrame [init]
 
 loadObjectLogFS :: UUID -> Store [[Op]]
 loadObjectLogFS objectId = do

@@ -58,6 +58,7 @@ library
         RON.Data.Time
         RON.Data.VersionVector
         RON.Store
+        RON.Store.Class
         RON.Store.FS
         RON.Store.Test
     other-modules:

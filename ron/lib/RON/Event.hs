@@ -177,7 +177,10 @@ instance (Monoid s, ReplicaClock m) => ReplicaClock (WriterT s m) where
 
 -- | 'advance' variant for any UUID
 advanceToUuid :: ReplicaClock clock => UUID -> clock ()
-advanceToUuid = advance . uuidValue . UUID.split
+advanceToUuid uuid =
+  when (uuidVariant == B00 && uuidVersion == B10) $ advance uuidValue
+  where
+    UuidFields{uuidValue, uuidVariant, uuidVersion} = UUID.split uuid
 
 -- | Get a single event
 getEvent :: (HasCallStack, ReplicaClock m) => m EpochEvent

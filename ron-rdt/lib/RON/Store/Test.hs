@@ -10,7 +10,7 @@ module RON.Store.Test (emptyDB, runStoreSim) where
 
 import           RON.Prelude
 
-import           Control.Lens (at, non, (<>=), (?=))
+import           Control.Lens (at, non, (<>=))
 import           Data.Generics.Labels ()
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))
@@ -24,9 +24,8 @@ import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
 import           RON.Store (MonadStore (..))
 import           RON.Types (Op (..), UUID)
 
-data Object = Object
-  { init :: Maybe Op
-  , logs :: HashMap ReplicaId (Seq Op)
+newtype Object = Object
+  { logs :: HashMap ReplicaId (Seq Op)
   }
   deriving (Eq, Generic, Show)
 
@@ -59,14 +58,5 @@ instance MonadStore StoreSim where
     Object{logs} <- liftMaybe "object not found" $ db !? objectId
     pure $ map toList $ toList logs
 
-  loadObjectInit objectId = do
-    db <- StoreSim get
-    case db !? objectId of
-      Just Object{init} -> pure init
-      Nothing           -> pure Nothing
-
-  saveObjectInit objectId init =
-    StoreSim $ at objectId . non emptyObject . #init ?= init
-
 emptyObject :: Object
-emptyObject = Object{init = Nothing, logs = HashMap.empty}
+emptyObject = Object{logs = HashMap.empty}

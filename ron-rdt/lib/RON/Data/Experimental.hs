@@ -42,6 +42,10 @@ class AsAtom a where
   toAtom   :: a -> Atom
   fromAtom :: MonadE m => Atom -> m a
 
+instance AsAtom Atom where
+  toAtom = id
+  fromAtom = pure
+
 instance AsAtom Text where
   toAtom = AString
 

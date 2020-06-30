@@ -2,38 +2,29 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module RON.Store (
   MonadStore (..),
   newObject,
-  openGlobalObject,
+  openNamedObject,
+  readGlobalSet,
   readObject,
   ) where
 
 import           RON.Prelude
 
-import           Data.String (fromString)
-
-import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
-                                        stateFromFrame, view)
-import           RON.Error (Error (..), MonadE, errorContext)
+import           RON.Data.Experimental (AsAtoms, Rep, ReplicatedObject,
+                                        replicatedTypeId, stateFromFrame, view)
+import           RON.Data.ORSet (setType)
+import           RON.Data.ORSet.Experimental (ORMap)
+import qualified RON.Data.ORSet.Experimental as ORMap
+import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
-import           RON.Types (ObjectRef (..), Op (..), UUID)
-
-class Monad m => MonadStore m where
-  -- | Get list of all object ids in the database.
-  listObjects :: m [UUID]
-
-  -- | Append a sequence of operations to an existing object
-  appendPatch :: UUID -> [Op] -> m ()
-
-  -- | Get all object logs split by replicas. Replicas order is not guaranteed.
-  loadObjectLog :: UUID -> m [[Op]]
-
-  loadObjectInit :: UUID -> m (Maybe Op)
-
-  saveObjectInit :: UUID -> Op -> m ()
+import           RON.Store.Class (MonadStore (..))
+import           RON.Types (Atom, ObjectRef (..), Op (..), UUID)
+import qualified RON.UUID as UUID
 
 newObject ::
   forall a m.
@@ -60,22 +51,39 @@ readObject object@(ObjectRef objectId) =
           objectId
           (stateFromFrame objectId $ sortOn opId $ fold logsByReplicas)
 
-openGlobalObject ::
-  forall a m. (MonadE m, MonadStore m, ReplicatedObject a) => UUID -> m (ObjectRef a)
-openGlobalObject objectId =
-  do
-    errorContext ("openGlobalObject " <> show objectId) $ do
-      loadObjectInit objectId >>= \case
-        Just init ->
-          when (init /= canonicalInit) $
-            throwError $
-            Error
-              "Bad init"
-              [ fromString $ "got "      <> show init
-              , fromString $ "expected " <> show canonicalInit
-              ]
-        Nothing -> saveObjectInit objectId canonicalInit
-    pure (ObjectRef objectId)
+-- | Read global variable identified by atom and return result as set.
+readGlobalSet ::
+  (MonadE m, MonadStore m, AsAtoms a, Typeable a) => Atom -> m [a]
+readGlobalSet name =
+  errorContext ("readGlobalSet " <> show name) $ do
+    mGlobals <- readObject globalsRef
+    globals <- case mGlobals of
+      Just globals -> pure globals
+      Nothing      -> do
+        createGlobals
+        pure ORMap.empty
+    ORMap.lookupSet name globals
   where
-    canonicalInit =
-      Op{opId = objectId, refId = replicatedTypeId @(Rep a), payload = []}
+    createGlobals =
+      appendPatch
+        globalsId
+        [Op{opId = globalsId, refId = setType, payload = []}]
+
+globalsId :: UUID
+globalsId = $(UUID.liftName "globals")
+
+globalsRef :: ObjectRef (ORMap Atom a)
+globalsRef = ObjectRef globalsId
+
+openNamedObject ::
+  (MonadE m, MonadStore m, ReplicaClock m, ReplicatedObject a, Typeable a) =>
+  Atom -> m (ObjectRef a)
+openNamedObject name = do
+  set <- readGlobalSet name
+  case set of
+    [obj] -> pure obj
+    [] -> do
+      obj <- newObject
+      ORMap.add_ globalsRef (name, obj)
+      pure obj
+    _ -> error "TODO: merge objects"

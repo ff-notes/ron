@@ -3,7 +3,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -29,10 +28,9 @@ import qualified RON.Data.ORSet.Experimental as ORMap
 import qualified RON.Epoch as Epoch
 import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, decodeEvent)
-import           RON.Store (MonadStore, newObject, openGlobalObject, readObject)
+import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
 import           RON.Store.FS (Handle, newHandle, runStore)
-import           RON.Types (Atom (AString), ObjectRef (..), Payload, UUID)
-import qualified RON.UUID as UUID
+import           RON.Types (Atom (AString), ObjectRef (..), Payload)
 
 data Message = Message
   { postTime :: UTCTime
@@ -57,16 +55,17 @@ newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
   Text -> Text -> m (ObjectRef Message)
 newMessage username text = do
-  gMessages :: ObjectRef (ORSet (ObjectRef Message)) <-
-    openGlobalObject gMessagesId
+  gMessages <- openMessages
   msgRef <- newObject @Message
   ORSet.add_ msgRef ("username", [AString username])
   ORSet.add_ msgRef ("text",     [AString text    ])
   ORSet.add_ gMessages msgRef
   pure msgRef
 
-gMessagesId :: UUID
-gMessagesId = $(UUID.liftName "messages")
+openMessages ::
+  (MonadE m, MonadStore m, ReplicaClock m) =>
+  m (ObjectRef (ORSet (ObjectRef Message)))
+openMessages = openNamedObject "messages"
 
 main :: IO ()
 main = do
@@ -95,13 +94,13 @@ showMessages :: Handle -> IO ()
 showMessages db = do
   mMessages <-
     runStore db $ do
-      gMessages   <- openGlobalObject gMessagesId
+      gMessages   <- openMessages
       mMessageSet <- readObject gMessages
       case mMessageSet of
         Nothing -> do
           liftIO $ putStrLn "!!! messages collection doesn't exist !!!"
           pure []
         Just messageSet -> do
-          messageRefs <- sequence $ ORSet.toList messageSet
+          messageRefs <- ORSet.toList messageSet
           for messageRefs readObject
   pPrint $ sortOn postTime $ catMaybes mMessages

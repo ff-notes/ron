@@ -11,8 +11,10 @@ module RON.Data.ORSet.Experimental (
   ORMap,
   add,
   add_,
+  empty,
   lookupLww,
   lookupLww',
+  lookupSet,
   toList,
 ) where
 
@@ -29,7 +31,7 @@ import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Store (MonadStore, appendPatch)
+import           RON.Store.Class (MonadStore, appendPatch)
 import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (ObjectRef (..), Op (..), Payload, UUID)
 
@@ -81,9 +83,9 @@ add_ ::
   ObjectRef container -> item -> m ()
 add_ objectRef payload = void $ add objectRef payload
 
-toList :: (AsAtoms a, MonadE m) => ORSet a -> [m a]
+toList :: (AsAtoms a, MonadE m) => ORSet a -> m [a]
 toList (ORSet rep) =
-  [fromAtoms payload | (_item, payload@(_:_)) <- Map.elems rep]
+  traverse fromAtoms [payload | (_item, payload@(_:_)) <- Map.elems rep]
 
 type ORMap k v = ORSet (k, v)
 
@@ -104,3 +106,12 @@ lookupLww' key obj =
     fromAtoms atoms
   where
     ashow = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom
+
+empty :: ORSet a
+empty = ORSet Map.empty
+
+lookupSet :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m [v]
+lookupSet key (ORSet s) =
+  traverse
+    fromAtoms
+    [value | (_item, k : value) <- Map.elems s, k == toAtom key]
