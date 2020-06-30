@@ -22,7 +22,7 @@ import           Data.Traversable (for)
 import           System.Environment (getArgs, getProgName)
 import           Text.Pretty.Simple (pPrint)
 
-import           RON.Data.Experimental (Rep, ReplicatedObject, fromAtoms, view)
+import           RON.Data.Experimental (Rep, ReplicatedObject, view)
 import           RON.Data.ORSet.Experimental (ORMap, ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import qualified RON.Data.ORSet.Experimental as ORMap
@@ -44,13 +44,13 @@ data Message = Message
 instance ReplicatedObject Message where
   type Rep Message = ORMap Text Payload
 
-  view objectId orset =
+  view objectId ormap =
     errorContext "view @Message" $ do
       postTime <-
         liftMaybe "decode objectId" $
         decodeEvent objectId ^? #localTime . #_TEpoch . to Epoch.decode
-      username <- lookupLwwText "username" orset
-      text     <- lookupLwwText "text"     orset
+      username <- ORMap.lookupLww' "username" ormap
+      text     <- ORMap.lookupLww' "text"     ormap
       pure Message{..}
 
 newMessage ::
@@ -64,12 +64,6 @@ newMessage username text = do
   ORSet.add_ msgRef ("text",     [AString text    ])
   ORSet.add_ gMessages msgRef
   pure msgRef
-
-lookupLwwText :: MonadE m => Text -> ORMap Text Payload -> m Text
-lookupLwwText key obj = do
-  mAtoms <- ORMap.lookupLww key obj
-  atoms  <- liftMaybe ("key " <> key <> " must present") mAtoms
-  fromAtoms atoms
 
 gMessagesId :: UUID
 gMessagesId = $(UUID.liftName "messages")

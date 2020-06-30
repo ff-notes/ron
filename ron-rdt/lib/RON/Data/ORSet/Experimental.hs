@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Data.ORSet.Experimental (
@@ -11,21 +12,25 @@ module RON.Data.ORSet.Experimental (
   add,
   add_,
   lookupLww,
+  lookupLww',
   toList,
 ) where
 
 import           RON.Prelude hiding (toList)
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Text.Lazy as TextL
+import qualified Data.Text.Lazy.Encoding as TextL
 
 import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
                                         ReplicatedObject, fromAtoms,
                                         replicatedTypeId, stateFromFrame,
                                         toAtom, toAtoms, view)
 import           RON.Data.ORSet (setType)
-import           RON.Error (MonadE)
+import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Store (MonadStore, appendPatch)
+import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (ObjectRef (..), Op (..), Payload, UUID)
 
 -- | Observed-Remove Set.
@@ -89,3 +94,13 @@ lookupLww key (ORSet s) = do
     maximumMayOn
       fst
       [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
+
+-- | Like 'lookupLww' but assert that key exists.
+lookupLww' :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k Payload -> m v
+lookupLww' key obj =
+  do
+    mAtoms <- lookupLww key obj
+    atoms  <- liftMaybe ("key " <> ashow key <> " must present") mAtoms
+    fromAtoms atoms
+  where
+    ashow = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom

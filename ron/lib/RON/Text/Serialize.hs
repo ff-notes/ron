@@ -10,6 +10,7 @@ module RON.Text.Serialize (
     serializeObject,
     serializeOp,
     serializeOpenOp,
+    serializePayload,
     serializeRawOp,
     serializeStateFrame,
     serializeString,
@@ -83,7 +84,7 @@ serializeClosedOpZip this = state $ \prev ->
       obj = serializeUuidKey (objectId prev) (reducerId this) (objectId this)
       evt = serializeUuidKey (opId prev') (objectId this) (opId this')
       ref = serializeUuidKey (refId prev') (opId this') (refId this')
-      payloadAtoms = serializePayload (objectId this) (payload this')
+      payloadAtoms = serializePayloadZip (objectId this) (payload this')
    in ( BSL.intercalate "\t"
           $  key '*' typ
           ++ key '#' obj
@@ -104,7 +105,7 @@ serializeReducedOpZip
 serializeReducedOpZip opObject this = state $ \prev ->
   let evt = serializeUuidKey (opId prev) opObject (opId this)
       ref = serializeUuidKey (refId prev) (opId this) (refId this)
-      payloadAtoms = serializePayload opObject (payload this)
+      payloadAtoms = serializePayloadZip opObject (payload this)
       keys
         | BSL.null evt && BSL.null ref = ["@"]
         | otherwise = key '@' evt ++ key ':' ref
@@ -118,7 +119,7 @@ serializeOp Op{opId, refId, payload} =
   BSL.intercalate "\t"
     [ '@' `cons` serializeUuid opId
     , ':' `cons` serializeUuid refId
-    , serializePayload opId payload
+    , serializePayloadZip opId payload
     ]
 
 serializeOpenOp ::
@@ -136,7 +137,7 @@ serializeOpenOp prevId Op{opId, refId, payload} =
     refS
       | refId /= prevId = ':' `cons` serializeUuid refId
       | otherwise       = ""
-    payloadS = [serializePayload opId payload | not $ null payload]
+    payloadS = [serializePayloadZip opId payload | not $ null payload]
 
 -- | Serialize a context-free atom
 serializeAtom :: Atom -> ByteStringL
@@ -185,12 +186,16 @@ serializeUuidAtom' u =
   state $ \prev -> (cons '>' $ serializeUuidAtom prev u, u)
 
 -- | Serialize a payload in stream context
-serializePayload
+serializePayloadZip
   :: UUID -- ^ previous UUID (default is 'zero')
   -> Payload
   -> ByteStringL
-serializePayload prev =
+serializePayloadZip prev =
   BSL.unwords . (`evalState` prev) . traverse serializeAtomZip
+
+-- | Serialize an abstract payload
+serializePayload :: Payload -> ByteStringL
+serializePayload = serializePayloadZip UUID.zero
 
 -- | Serialize a state frame
 serializeStateFrame :: StateFrame -> ByteStringL
