@@ -4,6 +4,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 import           Prelude hiding (show)
@@ -21,15 +22,16 @@ import           Data.Traversable (for)
 import           System.Environment (getArgs, getProgName)
 import           Text.Pretty.Simple (pPrint)
 
-import           RON.Data.Experimental (Rep, ReplicatedObject, view)
-import           RON.Data.ORSet.Experimental (ORSetRep)
+import           RON.Data.Experimental (Rep, ReplicatedObject, fromAtoms, view)
+import           RON.Data.ORSet.Experimental (ORMap, ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
+import qualified RON.Data.ORSet.Experimental as ORMap
 import qualified RON.Epoch as Epoch
-import           RON.Error (MonadE, errorContext, liftMaybe, throwErrorText)
+import           RON.Error (MonadE, errorContext, liftMaybe)
 import           RON.Event (ReplicaClock, decodeEvent)
 import           RON.Store (MonadStore, newObject, openGlobalObject, readObject)
 import           RON.Store.FS (Handle, newHandle, runStore)
-import           RON.Types (Atom (AString, AUuid), ObjectRef (..), UUID)
+import           RON.Types (Atom (AString), ObjectRef (..), Payload, UUID)
 import qualified RON.UUID as UUID
 
 data Message = Message
@@ -40,7 +42,7 @@ data Message = Message
   deriving (Show)
 
 instance ReplicatedObject Message where
-  type Rep Message = ORSetRep
+  type Rep Message = ORMap Text Payload
 
   view objectId orset =
     errorContext "view @Message" $ do
@@ -48,27 +50,26 @@ instance ReplicatedObject Message where
         liftMaybe "decode objectId" $
         decodeEvent objectId ^? #localTime . #_TEpoch . to Epoch.decode
       username <- lookupLwwText "username" orset
-      text     <- lookupLwwText "text" orset
+      text     <- lookupLwwText "text"     orset
       pure Message{..}
 
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
   Text -> Text -> m (ObjectRef Message)
 newMessage username text = do
-  gMessages :: ObjectRef ORSetRep <- openGlobalObject gMessagesId
-  msgRef@(ObjectRef msgId) <- newObject
-  ORSet.add_ msgRef ["username", AString username]
-  ORSet.add_ msgRef ["text",     AString text    ]
-  ORSet.add_ gMessages [AUuid msgId]
+  gMessages :: ObjectRef (ORSet (ObjectRef Message)) <-
+    openGlobalObject gMessagesId
+  msgRef <- newObject @Message
+  ORSet.add_ msgRef ("username", [AString username])
+  ORSet.add_ msgRef ("text",     [AString text    ])
+  ORSet.add_ gMessages msgRef
   pure msgRef
 
-lookupLwwText :: MonadE m => Atom -> ORSetRep -> m Text
-lookupLwwText key orset = do
-  payload <- liftMaybe ("lookup " <> show key) $ ORSet.lookupLww key orset
-  case payload of
-    [AString text] -> pure text
-    _ ->
-      throwErrorText $ "Value at " <> show key <> " is expected to be a string"
+lookupLwwText :: MonadE m => Text -> ORMap Text Payload -> m Text
+lookupLwwText key obj = do
+  mAtoms <- ORMap.lookupLww key obj
+  atoms  <- liftMaybe ("key " <> key <> " must present") mAtoms
+  fromAtoms atoms
 
 gMessagesId :: UUID
 gMessagesId = $(UUID.liftName "messages")
@@ -107,9 +108,6 @@ showMessages db = do
           liftIO $ putStrLn "!!! messages collection doesn't exist !!!"
           pure []
         Just messageSet -> do
-          let
-            messageRefsEncoded = ORSet.toList messageSet
-            messageRefs =
-              [ObjectRef uuid | [AUuid uuid] <- messageRefsEncoded]
+          messageRefs <- sequence $ ORSet.toList messageSet
           for messageRefs readObject
   pPrint $ sortOn postTime $ catMaybes mMessages
