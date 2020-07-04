@@ -1,12 +1,14 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
 import           Control.Applicative ((<|>))
-import           Data.Aeson (Value, object, (.=))
+import           Data.Aeson (Value, (.=))
+import qualified Data.Aeson as Json
 import qualified Data.Aeson.Encode.Pretty as Json
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import           Data.Foldable (traverse_)
+import           Data.Foldable (for_)
 import           Data.Function ((&))
 import qualified Data.Yaml.Pretty as Yaml
 import           Options.Applicative (InfoMod, Parser, ParserInfo,
@@ -15,20 +17,23 @@ import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       fullDesc, help, helper, info, long,
                                       metavar, progDesc, short, strOption,
                                       subparser, (<**>))
+import           System.Directory (makeAbsolute)
 
 import           RON.Store (listObjects)
-import           RON.Store.FS (Handle, debugDump, newHandle, runStore)
+import           RON.Store.FS (debugDump, newHandle, runStore)
 import           RON.Text (uuidToString, uuidToText)
 
 main :: IO ()
 main = do
   Options{..} <- parseOptions
-  db <- newHandle dbPath
   case cmd of
     Dump DumpRon  -> debugDump dbPath
-    Dump DumpJson -> dump db >>= printJson
-    Dump DumpYaml -> dump db >>= printYaml
-    List -> runStore db listObjects >>= traverse_ (putStrLn . uuidToString)
+    Dump DumpJson -> dumpDB dbPath >>= printJson
+    Dump DumpYaml -> dumpDB dbPath >>= printYaml
+    List -> do
+      db <- newHandle dbPath
+      objects <- runStore db listObjects
+      for_ objects $ putStrLn . uuidToString
 
 data Options = Options
   { dbPath :: FilePath
@@ -78,10 +83,17 @@ i prsr desc = i_ prsr desc mempty
 i_ :: Parser a -> String -> InfoMod a -> ParserInfo a
 i_ prsr desc m = info (prsr <**> helper) $ fullDesc <> progDesc desc <> m
 
-dump :: Handle -> IO Value
-dump db = do
+dumpDB :: FilePath -> IO Value
+dumpDB dbPath = do
+  dbPathAbs <- makeAbsolute dbPath
+  db        <- newHandle dbPath
   objectIds <- runStore db listObjects
-  pure $ object [uuidToText objectId .= () | objectId <- objectIds]
+  pure $
+    Json.object
+      [ "database" .= dbPathAbs
+      , "objects" .=
+        Json.object [uuidToText objectId .= () | objectId <- objectIds]
+      ]
 
 printJson :: Value -> IO ()
 printJson =
