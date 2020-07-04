@@ -19,25 +19,28 @@ module Gen (
 import           RON.Prelude
 
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (choice, double, enumBounded, integral, list,
-                               text, unicodeAll, word64, word8)
+import           Hedgehog.Gen (choice, double, integral, list, text, unicodeAll,
+                               word64, word8)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
 import           RON.Event (CalendarTime (CalendarTime), Event (Event),
                             LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
-                            ReplicaId (ReplicaId), days, hours, minutes, months,
-                            nanosecHundreds, seconds)
+                            ReplicaId, days, decodeReplicaId, hours, minutes,
+                            months, nanosecHundreds, seconds)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
                             Op (Op, opId, payload, refId), Payload, StateFrame,
                             UUID, WireChunk (Closed, Query, Value), WireFrame,
                             WireReducedChunk (WireReducedChunk, wrcBody, wrcHeader),
                             WireStateChunk (WireStateChunk, stateBody, stateType))
-import           RON.Util.Word (Word60, leastSignificant2, leastSignificant4,
-                                ls12, ls24, ls6, ls60)
+import           RON.Util.Word (Word2, Word60, leastSignificant2,
+                                leastSignificant4, ls12, ls24, ls6, ls60)
 import           RON.UUID (UuidFields (UuidFields))
 import qualified RON.UUID as UUID
+
+word2 :: MonadGen gen => gen Word2
+word2 = leastSignificant2 <$> word8 (Range.exponential 0 3)
 
 word60 :: MonadGen gen => gen Word60
 word60 = ls60 <$> word64 (Range.exponential 0 $ 2 ^ (60 :: Int) - 1)
@@ -135,7 +138,7 @@ event :: MonadGen gen => gen Event
 event = Event <$> eventTime <*> replicaId
 
 replicaId :: MonadGen gen => gen ReplicaId
-replicaId = ReplicaId <$> enumBounded <*> word60
+replicaId = decodeReplicaId <$> word2 <*> word60
 
 shortText :: MonadGen gen => gen Text
 shortText = text (Range.linear 0 10) unicodeAll

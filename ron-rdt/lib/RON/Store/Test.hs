@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module RON.Store.Test (emptyDB, runStoreSim) where
 
@@ -17,6 +18,7 @@ import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 
+import           RON.Data.VersionVector ((·≼))
 import           RON.Error (Error (..), liftMaybe)
 import           RON.Event (ReplicaClock, ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
@@ -53,10 +55,16 @@ instance MonadStore StoreSim where
       atObject    = at objectId . non emptyObject
       atReplica   = at thisReplicaId . non Seq.empty
 
-  loadObjectLog objectId = do
-    db <- StoreSim get
-    Object{logs} <- liftMaybe "object not found" $ db !? objectId
-    pure $ map toList $ toList logs
+  loadObjectLog objectId version =
+    do
+      db <- StoreSim get
+      Object{logs} <- liftMaybe "object not found" $ db !? objectId
+      pure
+        [ filter (not . isKnown) $ toList @Seq replicaLog
+        | replicaLog <- HashMap.elems logs
+        ]
+    where
+      isKnown Op{opId} = opId ·≼ version
 
 emptyObject :: Object
 emptyObject = Object{logs = HashMap.empty}

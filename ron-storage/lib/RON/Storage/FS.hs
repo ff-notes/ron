@@ -65,6 +65,7 @@ import           RON.Storage.Backend (DocId (DocId), MonadStorage, RawDocId,
                                       getCollections, getDocumentVersions,
                                       getDocuments, loadVersionContent,
                                       saveVersionContent)
+import           RON.Util.Word (Word60, leastSignificant60)
 
 newtype Storage a = Storage (ExceptT Error (ReaderT Handle EpochClock) a)
   deriving (Applicative, Functor, Monad, MonadError Error, MonadIO)
@@ -170,9 +171,9 @@ newHandle hDataDir = do
     case macAddress of
       Just macAddress' -> pure macAddress'
       Nothing -> fst . random <$> newTFGen
-  newHandleWithReplicaId hDataDir replicaId
+  newHandleWithReplicaId hDataDir $ leastSignificant60 replicaId
 
-newHandleWithReplicaId :: FilePath -> Word64 -> IO Handle
+newHandleWithReplicaId :: FilePath -> Word60 -> IO Handle
 newHandleWithReplicaId dataDir' replicaId = do
   dataDir <- makeAbsolute dataDir'
   time <- getCurrentEpochTime

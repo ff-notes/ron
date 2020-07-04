@@ -19,6 +19,7 @@ module RON.Event (
     advanceToUuid,
     applicationSpecific,
     decodeEvent,
+    decodeReplicaId,
     encodeEvent,
     fromCalendarEvent,
     fromEpochEvent,
@@ -29,6 +30,7 @@ module RON.Event (
     mkCalendarDateTime,
     mkCalendarDateTimeNano,
     toEpochEvent,
+    trieForked,
 ) where
 
 import           RON.Prelude
@@ -41,8 +43,8 @@ import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word2, Word24, Word6,
                                 Word60, leastSignificant12, leastSignificant2,
                                 leastSignificant24, leastSignificant4,
-                                leastSignificant6, ls12, ls24, ls6, ls60,
-                                safeCast)
+                                leastSignificant6, leastSignificant60, ls12,
+                                ls24, ls6, ls60, safeCast)
 import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin, uuidValue,
                            uuidVariant, uuidVariety, uuidVersion)
 import qualified RON.UUID as UUID
@@ -84,26 +86,28 @@ data Naming
 instance Hashable Naming where
     hashWithSalt = hashUsing fromEnum
 
--- | Replica identifier
-data ReplicaId = ReplicaId !Naming !Word60
-    deriving (Eq, Show, Generic, Hashable)
+-- | Replica identifier.
+-- Implementation: naming (62-61) and origin (60-0 bits) fields from UUID
+newtype ReplicaId = ReplicaId Word64
+  deriving (Eq, Show, Generic, Hashable, Ord)
 
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.
 -- If you want comparable events, use specific 'EpochEvent'.
-data Event = Event{localTime :: !LocalTime, replicaId :: !ReplicaId}
-    deriving (Eq, Generic, Show)
+data Event = Event
+  { localTime :: !LocalTime
+  , replicaId :: !ReplicaId
+  }
+  deriving (Eq, Generic, Show)
 
 -- | Calendar-based Lamport time event, specific case of 'Event'.
 data CalendarEvent = CalendarEvent !CalendarTime !ReplicaId
     deriving (Eq, Show)
 
 instance Ord CalendarEvent where
-    compare (CalendarEvent t1 (ReplicaId n1 r1))
-            (CalendarEvent t2 (ReplicaId n2 r2))
-        = compare
-            (t1, fromEnum n1, r1)
-            (t2, fromEnum n2, r2)
+    compare (CalendarEvent t1 (ReplicaId r1))
+            (CalendarEvent t2 (ReplicaId r2))
+        = compare (t1, r1) (t2, r2)
 
 fromCalendarEvent :: CalendarEvent -> Event
 fromCalendarEvent (CalendarEvent t r) = Event (TCalendar t) r
@@ -113,11 +117,9 @@ data EpochEvent = EpochEvent !EpochTime !ReplicaId
     deriving (Eq, Show)
 
 instance Ord EpochEvent where
-    compare (EpochEvent t1 (ReplicaId n1 r1))
-            (EpochEvent t2 (ReplicaId n2 r2))
-        = compare
-            (t1, fromEnum n1, r1)
-            (t2, fromEnum n2, r2)
+    compare (EpochEvent t1 (ReplicaId r1))
+            (EpochEvent t2 (ReplicaId r2))
+        = compare (t1, r1) (t2, r2)
 
 fromEpochEvent :: EpochEvent -> Event
 fromEpochEvent (EpochEvent t r) = Event (TEpoch t) r
@@ -257,12 +259,13 @@ decodeEvent uuid = Event
     UuidFields{uuidVariety, uuidValue, uuidOrigin} = UUID.split uuid
 
 decodeReplicaId :: Word2 -> Word60 -> ReplicaId
-decodeReplicaId varietyLS2 = ReplicaId $ toEnum $ safeCast varietyLS2
+decodeReplicaId naming origin =
+  ReplicaId $ (safeCast naming `shiftL` 60) .|. safeCast origin
 
 encodeReplicaId :: ReplicaId -> (Word2, Word60)
-encodeReplicaId (ReplicaId naming origin) =
-    ( leastSignificant2 $ fromEnum naming
-    , origin
+encodeReplicaId (ReplicaId r) =
+    ( leastSignificant2 $ r `shiftR` 60
+    , leastSignificant60 r
     )
 
 -- | Make a calendar timestamp from a date
@@ -303,5 +306,10 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) hns = do
         }
 
 -- | Make an 'ApplicationSpecific' replica id from arbitrary number
-applicationSpecific :: Word64 -> ReplicaId
-applicationSpecific = ReplicaId ApplicationSpecific . ls60
+applicationSpecific :: Word60 -> ReplicaId
+applicationSpecific =
+  decodeReplicaId $ leastSignificant2 $ fromEnum ApplicationSpecific
+
+-- | Make an 'TrieForked' replica id from arbitrary number
+trieForked :: Word60 -> ReplicaId
+trieForked = decodeReplicaId $ leastSignificant2 $ fromEnum TrieForked

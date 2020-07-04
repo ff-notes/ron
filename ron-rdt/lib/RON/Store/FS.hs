@@ -20,6 +20,7 @@ import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
 
+import           RON.Data.VersionVector (VersionVector, (·≼))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
@@ -28,6 +29,7 @@ import           RON.Store (MonadStore (..))
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (Op (..), UUID)
+import           RON.Util.Word (Word60, leastSignificant60)
 import qualified RON.UUID as UUID
 
 -- | Store handle (uses the “Handle pattern”).
@@ -61,17 +63,22 @@ instance MonadStore Store where
 
   loadObjectLog = loadObjectLogFS
 
-loadObjectLogFS :: UUID -> Store [[Op]]
-loadObjectLogFS objectId = do
+loadObjectLogFS :: UUID -> VersionVector -> Store [[Op]]
+loadObjectLogFS objectId version = do
   Handle{dataDir} <- Store ask
   let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
   objectExists <- tryIO $ doesDirectoryExist objectLogsDir
   if objectExists then do
     patchNames <- tryIO $ listDirectory objectLogsDir
-    for patchNames $ \patchName -> do
-      let patchFile = objectLogsDir </> patchName
-      patchContent <- tryIO $ BSL.readFile patchFile
-      liftEitherString $ parseOpenFrame patchContent
+    fmap catMaybes . for patchNames $ \patchName -> do
+      patchTimestamp <- uuidFromFileName patchName
+      if patchTimestamp ·≼ version then
+        pure Nothing
+      else do
+        let patchFile = objectLogsDir </> patchName
+        patchContent <- tryIO $ BSL.readFile patchFile
+        patch <- liftEitherString $ parseOpenFrame patchContent
+        pure $ Just patch
   else
     pure []
 
@@ -99,9 +106,9 @@ newHandle hDataDir = do
     case macAddress of
       Just macAddress' -> pure macAddress'
       Nothing          -> fst . random <$> newTFGen
-  newHandleWithReplicaId hDataDir replicaId
+  newHandleWithReplicaId hDataDir $ leastSignificant60 replicaId
 
-newHandleWithReplicaId :: FilePath -> Word64 -> IO Handle
+newHandleWithReplicaId :: FilePath -> Word60 -> IO Handle
 newHandleWithReplicaId dataDir' replicaId = do
   dataDir <- makeAbsolute dataDir'
   time    <- getCurrentEpochTime

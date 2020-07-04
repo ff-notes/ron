@@ -97,6 +97,8 @@ data VertexList
 instance Semigroup VertexList where
   (<>) = merge
 
+instance Semilattice VertexList where
+
 vertexListToOps :: VertexList -> [Vertex]
 vertexListToOps v@VertexList {..} = go listHead listItems
   where

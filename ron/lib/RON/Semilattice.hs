@@ -1,14 +1,14 @@
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DefaultSignatures #-}
 
 module RON.Semilattice (
-    Semilattice,
+    Semilattice (..),
     BoundedSemilattice,
 ) where
 
-import           Data.Maybe (Maybe)
-import           Data.Monoid (Monoid)
-import           Data.Ord (Ord)
-import           Data.Semigroup (Max, Semigroup)
+import           Prelude
+
+import           Data.Semigroup (Max)
 import           Data.Set (Set)
 
 {- |
@@ -27,8 +27,18 @@ In addition to 'Semigroup', Semilattice defines these laws:
 [idempotency]
 
     @x '<>' x == x@
+
+[relation-operation equivalence]
+
+    @x '≼' y == (x '<>' y == y)@
+    @x '<>' y == minimum \z -> x '≼' z && y '≼' z@
 -}
-class Semigroup a => Semilattice a
+class Semigroup a => Semilattice a where
+
+    -- | Semilattice relation.
+    (≼) :: a -> a -> Bool
+    default (≼) :: Eq a => a -> a -> Bool
+    a ≼ b = a <> b == b
 
 {- |
 A bounded semilattice.
@@ -44,4 +54,7 @@ instance Ord a => Semilattice (Max a)
 
 instance Ord a => Semilattice (Set a)
 
-instance Semilattice a => Semilattice (Maybe a)
+instance Semilattice a => Semilattice (Maybe a) where
+    Nothing ≼ _       = True
+    _       ≼ Nothing = False
+    Just a  ≼ Just b  = a ≼ b

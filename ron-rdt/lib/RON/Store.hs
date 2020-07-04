@@ -42,7 +42,7 @@ readObject ::
   ObjectRef a -> m (Maybe a)
 readObject object@(ObjectRef objectId) =
   errorContext ("readObject " <> show object) $ do
-    ops <- fold <$> loadObjectLog objectId
+    ops <- fold <$> loadObjectLog objectId mempty
     case ops of
       [] -> pure Nothing
       _  -> Just <$> view objectId (stateFromFrame objectId $ sortOn opId ops)

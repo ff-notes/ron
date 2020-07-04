@@ -40,7 +40,7 @@ import           Control.Monad.Except as X (ExceptT (ExceptT), MonadError,
 import           Control.Monad.Fail as X (MonadFail, fail)
 import           Control.Monad.IO.Class as X (MonadIO, liftIO)
 import           Control.Monad.Reader as X (MonadReader, ReaderT (ReaderT), ask,
-                                            reader, runReaderT)
+                                            asks, reader, runReaderT)
 import           Control.Monad.State.Strict as X (MonadState, State, StateT,
                                                   evalState, evalStateT,
                                                   execStateT, get, gets,
@@ -55,9 +55,9 @@ import           Data.Coerce as X (Coercible, coerce)
 import           Data.Data as X (Data)
 import           Data.Either as X (Either (Left, Right), either)
 import           Data.Eq as X (Eq, (/=), (==))
-import           Data.Foldable as X (Foldable, and, asum, elem, fold, foldMap,
-                                     foldl', foldr, for_, length, null, or,
-                                     toList, traverse_)
+import           Data.Foldable as X (Foldable, all, and, any, asum, elem, fold,
+                                     foldMap, foldl', foldr, for_, length, null,
+                                     or, toList, traverse_)
 import           Data.Function as X (const, flip, id, on, ($), (&), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>), (<&>))
 import           Data.Functor.Identity as X (Identity)

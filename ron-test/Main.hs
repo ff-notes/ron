@@ -41,7 +41,7 @@ import qualified RON.Data.RGA as RGA
 import           RON.Event (CalendarEvent (CalendarEvent), Naming (TrieForked),
                             ReplicaId (ReplicaId), applicationSpecific,
                             decodeEvent, encodeEvent, fromCalendarEvent,
-                            mkCalendarDateTime)
+                            mkCalendarDateTime, trieForked)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import qualified RON.Text as RT
 import qualified RON.Text.Parse as RT
@@ -260,7 +260,7 @@ prop_ron_json_example = let
                 (fromJust $ mkCalendarDateTime (2017, 10, 31) (10, 27, 00))
                 replicaGritzko
     gritzko = fromJust $ Base64.decode60 "gritzko"
-    replicaGritzko = ReplicaId TrieForked gritzko
+    replicaGritzko = trieForked gritzko
     in
     property $ do
         parsed <- evalEitherS $ RT.parseWireFrame input

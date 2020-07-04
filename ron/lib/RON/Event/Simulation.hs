@@ -43,7 +43,7 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
         (t0, t1) <-
             lift $ NetworkSim $ state $ \replicaStates -> let
                 t0orig = HM.lookupDefault (ls60 0) rid replicaStates
-                ReplicaId _ r = rid
+                ReplicaId r = rid
                 randomLeap =
                     ls60 . fromIntegral $ hash (t0orig, n, r) `mod` 0x10000
                 t0 = t0orig + randomLeap
