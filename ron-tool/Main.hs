@@ -5,10 +5,10 @@ import           Control.Applicative ((<|>))
 import           Data.Aeson (Value, object, (.=))
 import qualified Data.Aeson.Encode.Pretty as Json
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy.Char8 as BSLC
+import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (traverse_)
-import           Data.List (sort)
-import qualified Data.Yaml as Yaml
+import           Data.Function ((&))
+import qualified Data.Yaml.Pretty as Yaml
 import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       ParserPrefs (..), command,
                                       customExecParser, defaultPrefs, flag',
@@ -81,10 +81,18 @@ i_ prsr desc m = info (prsr <**> helper) $ fullDesc <> progDesc desc <> m
 dump :: Handle -> IO Value
 dump db = do
   objectIds <- runStore db listObjects
-  pure $ object [uuidToText objectId .= () | objectId <- sort objectIds]
+  pure $ object [uuidToText objectId .= () | objectId <- objectIds]
 
 printJson :: Value -> IO ()
-printJson = BSLC.putStrLn . Json.encodePretty
+printJson =
+  BSL.putStr . Json.encodePretty' config
+  where
+    config =
+      Json.defConfig
+        {Json.confCompare = compare, Json.confTrailingNewline = True}
 
 printYaml :: Value -> IO ()
-printYaml = BS.putStr . Yaml.encode
+printYaml =
+  BS.putStr . Yaml.encodePretty config
+  where
+    config = Yaml.defConfig & Yaml.setConfCompare compare
