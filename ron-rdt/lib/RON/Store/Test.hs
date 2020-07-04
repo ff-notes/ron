@@ -13,7 +13,6 @@ import           RON.Prelude
 
 import           Control.Lens (at, non, (<>=))
 import           Data.Generics.Labels ()
-import qualified Data.HashMap.Strict as HashMap
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -25,10 +24,9 @@ import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
 import           RON.Types (Op (..), UUID)
+import           RON.Util.Word (Word60)
 
-newtype Object = Object
-  { logs :: HashMap ReplicaId (Seq Op)
-  }
+newtype Object = Object{logs :: Map ReplicaId (Seq Op)}
   deriving (Eq, Generic, Show)
 
 type TestDB = Map UUID Object
@@ -61,10 +59,10 @@ instance MonadStore StoreSim where
       Object{logs} <- liftMaybe "object not found" $ db !? objectId
       pure
         [ filter (not . isKnown) $ toList @Seq replicaLog
-        | replicaLog <- HashMap.elems logs
+        | replicaLog <- Map.elems logs
         ]
     where
       isKnown Op{opId} = opId ·≼ version
 
 emptyObject :: Object
-emptyObject = Object{logs = HashMap.empty}
+emptyObject = Object{logs = Map.empty}
