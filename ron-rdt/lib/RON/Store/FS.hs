@@ -20,7 +20,7 @@ import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
 
-import           RON.Data.VersionVector (VersionVector, (·≼))
+import           RON.Data.VersionVector (VV, makeVV, (·≼))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
@@ -63,24 +63,33 @@ instance MonadStore Store where
 
   loadObjectLog = loadObjectLogFS
 
-loadObjectLogFS :: UUID -> VersionVector -> Store [[Op]]
+  getObjectVersion objectId = do
+    patchNames <- getObjectPatches objectId
+    makeVV <$> for patchNames uuidFromFileName
+
+askObjectLogsDir :: MonadReader Handle m => UUID -> m FilePath
+askObjectLogsDir objectId =
+  asks $ (</> uuidToFileName objectId </> "log") . dataDir
+
+getObjectPatches :: UUID -> Store [FilePath]
+getObjectPatches objectId = do
+  objectLogsDir <- Store $ askObjectLogsDir objectId
+  objectExists  <- tryIO $ doesDirectoryExist objectLogsDir
+  if objectExists then tryIO $ listDirectory objectLogsDir else pure []
+
+loadObjectLogFS :: UUID -> VV -> Store [[Op]]
 loadObjectLogFS objectId version = do
-  Handle{dataDir} <- Store ask
-  let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
-  objectExists <- tryIO $ doesDirectoryExist objectLogsDir
-  if objectExists then do
-    patchNames <- tryIO $ listDirectory objectLogsDir
-    fmap catMaybes . for patchNames $ \patchName -> do
-      patchTimestamp <- uuidFromFileName patchName
-      if patchTimestamp ·≼ version then
-        pure Nothing
-      else do
-        let patchFile = objectLogsDir </> patchName
-        patchContent <- tryIO $ BSL.readFile patchFile
-        patch <- liftEitherString $ parseOpenFrame patchContent
-        pure $ Just patch
-  else
-    pure []
+  objectLogsDir <- Store $ askObjectLogsDir objectId
+  patchNames    <- getObjectPatches objectId
+  fmap catMaybes . for patchNames $ \patchName -> do
+    patchTimestamp <- uuidFromFileName patchName
+    if patchTimestamp ·≼ version then
+      pure Nothing
+    else do
+      let patchFile = objectLogsDir </> patchName
+      patchContent <- tryIO $ BSL.readFile patchFile
+      patch <- liftEitherString $ parseOpenFrame patchContent
+      pure $ Just patch
 
 appendPatchFS :: UUID -> [Op] -> Store ()
 appendPatchFS objectId patch = do

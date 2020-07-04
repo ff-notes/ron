@@ -8,7 +8,9 @@
 -- | Version Vector
 module RON.Data.VersionVector (
     VersionVector,
+    VV (..),
     lookup,
+    makeVV,
     (·≼),
 ) where
 
@@ -22,9 +24,12 @@ import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
                                     newObject, objectEncoding, readObject,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
-import           RON.Event (ReplicaId, decodeEvent, getEventUuid, replicaId)
+import           RON.Event (Event (..), ReplicaId, decodeEvent, getEventUuid,
+                            replicaId)
 import           RON.Semilattice (Semilattice, (≼))
 import           RON.Types (ObjectRef (ObjectRef), Op (Op, opId), UUID (UUID), WireStateChunk (WireStateChunk, stateBody, stateType))
+import           RON.Util.Word (Word60)
+import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
 opTime :: Op -> Word64
@@ -96,10 +101,33 @@ instance ReplicatedAsObject VersionVector where
 
     readObject = getObjectState
 
-(·≼) :: UUID -> VersionVector -> Bool
-uuid@(UUID time _) ·≼ VersionVector vv =
-  maybe False ((time <=) . opTime) $
-  Map.lookup (replicaId $ decodeEvent uuid) vv
-
 lookup :: ReplicaId -> VersionVector -> Maybe Op
 lookup replica (VersionVector vv) = Map.lookup replica vv
+
+type LocalTime = Word60
+
+-- | Simplified version vector
+newtype VV = VV (Map ReplicaId LocalTime)
+
+instance Semigroup VV where
+  VV a <> VV b = VV $ Map.unionWith max a b
+
+instance Monoid VV where
+  mempty = VV Map.empty
+
+makeVV :: [UUID] -> VV
+makeVV uuids =
+  VV $
+    Map.fromList
+      [ (replicaId, uuidValue)
+      | uuid <- uuids
+      , let
+        UuidFields{uuidValue} = UUID.split uuid
+        Event{replicaId} = decodeEvent uuid
+      ]
+
+(·≼) :: UUID -> VV -> Bool
+uuid ·≼ VV vv =
+  maybe False (uuidValue <=) $ Map.lookup (replicaId $ decodeEvent uuid) vv
+  where
+    UuidFields{uuidValue} = UUID.split uuid

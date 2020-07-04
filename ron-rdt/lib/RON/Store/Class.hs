@@ -2,7 +2,7 @@ module RON.Store.Class (MonadStore (..)) where
 
 import           RON.Prelude
 
-import           RON.Data.VersionVector (VersionVector)
+import           RON.Data.VersionVector (VV)
 import           RON.Types (Op, UUID)
 
 class Monad m => MonadStore m where
@@ -21,5 +21,8 @@ class Monad m => MonadStore m where
     -- | Object id
     UUID ->
     -- | Base version. To get full object logs, pass 'mempty'.
-    VersionVector ->
+    VV ->
     m [[Op]]
+
+  -- | Last version of an object known to the replica.
+  getObjectVersion :: UUID -> m VV

@@ -15,16 +15,16 @@ import           Control.Lens (at, non, (<>=))
 import           Data.Generics.Labels ()
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
+import           Data.Sequence (Seq ((:|>)))
 import qualified Data.Sequence as Seq
 
-import           RON.Data.VersionVector ((·≼))
+import           RON.Data.VersionVector (makeVV, (·≼))
 import           RON.Error (Error (..), liftMaybe)
 import           RON.Event (ReplicaClock, ReplicaId, applicationSpecific)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
 import           RON.Types (Op (..), UUID)
-import           RON.Util.Word (Word60)
 
 newtype Object = Object{logs :: Map ReplicaId (Seq Op)}
   deriving (Eq, Generic, Show)
@@ -63,6 +63,11 @@ instance MonadStore StoreSim where
         ]
     where
       isKnown Op{opId} = opId ·≼ version
+
+  getObjectVersion objectId = do
+    db <- StoreSim get
+    Object{logs} <- liftMaybe "object not found" $ db !? objectId
+    pure $ makeVV [opId | _ :|> Op{opId} <- Map.elems logs]
 
 emptyObject :: Object
 emptyObject = Object{logs = Map.empty}
