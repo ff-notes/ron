@@ -3,13 +3,17 @@
 {-# LANGUAGE RecordWildCards #-}
 
 import           Control.Applicative ((<|>))
-import           Data.Aeson (Value, (.=))
+import           Data.Aeson (ToJSON, Value, toJSON, (.=))
 import qualified Data.Aeson as Json
 import qualified Data.Aeson.Encode.Pretty as Json
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
 import           Data.Function ((&))
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
+import           Data.Traversable (for)
+import           Data.Word (Word64)
 import qualified Data.Yaml.Pretty as Yaml
 import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       ParserPrefs (..), command,
@@ -19,9 +23,11 @@ import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       subparser, (<**>))
 import           System.Directory (makeAbsolute)
 
-import           RON.Store (listObjects)
+import           RON.Data.VersionVector (VV (..))
+import           RON.Store (getObjectVersion, listObjects)
 import           RON.Store.FS (debugDump, newHandle, runStore)
 import           RON.Text (uuidToString, uuidToText)
+import           RON.Util.Word (safeCast)
 
 main :: IO ()
 main = do
@@ -87,12 +93,19 @@ dumpDB :: FilePath -> IO Value
 dumpDB dbPath = do
   dbPathAbs <- makeAbsolute dbPath
   db        <- newHandle dbPath
-  objectIds <- runStore db listObjects
+  objects   <- runStore db $ do
+    objectIds <- listObjects
+    for objectIds $ \objectId -> do
+      version <- getObjectVersion objectId
+      pure (objectId, version)
   pure $
     Json.object
       [ "database" .= dbPathAbs
       , "objects" .=
-        Json.object [uuidToText objectId .= () | objectId <- objectIds]
+        Json.object
+          [ uuidToText objectId .= Json.object ["version" .= VVJson version]
+          | (objectId, version) <- objects
+          ]
       ]
 
 printJson :: Value -> IO ()
@@ -108,3 +121,12 @@ printYaml =
   BS.putStr . Yaml.encodePretty config
   where
     config = Yaml.defConfig & Yaml.setConfCompare compare
+
+newtype VVJson = VVJson VV
+
+instance ToJSON VVJson where
+  toJSON (VVJson (VV m)) =
+    Json.object
+      [ Text.pack (show replicaId) .= (safeCast value :: Word64)
+      | (replicaId, value) <- Map.assocs m
+      ]

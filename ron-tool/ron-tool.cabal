@@ -10,8 +10,10 @@ executable ron
         aeson-pretty,
         base,
         bytestring,
+        containers,
         directory,
         optparse-applicative,
+        text,
         yaml,
         -- project
         ron,

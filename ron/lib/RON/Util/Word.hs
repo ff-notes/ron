@@ -53,7 +53,7 @@ import           Data.Hashable (hashUsing, hashWithSalt)
 import           GHC.Num (abs, fromInteger, signum)
 
 newtype Word2 = W2 Word8
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Hashable, Ord, Show)
 
 b00, b01, b10, b11 :: Word2
 b00 = W2 0b00

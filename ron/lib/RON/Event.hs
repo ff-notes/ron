@@ -1,6 +1,7 @@
 {-# LANGUAGE BinaryLiterals #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -13,11 +14,11 @@ module RON.Event (
     EpochTime,
     Event (..),
     LocalTime (..),
-    Naming (..),
+    Naming (.., TrieForked, CryptoForked, RecordForked, ApplicationSpecific),
     ReplicaClock (..),
     ReplicaId (..),
     advanceToUuid,
-    applicationSpecific,
+    applicationSpecificReplica,
     decodeEvent,
     decodeReplicaId,
     encodeEvent,
@@ -30,15 +31,17 @@ module RON.Event (
     mkCalendarDateTime,
     mkCalendarDateTimeNano,
     toEpochEvent,
-    trieForked,
+    trieForkedReplica,
 ) where
 
 import           RON.Prelude
 
 import           Data.Bits (shiftL, shiftR, (.|.))
-import           Data.Hashable (hashUsing, hashWithSalt)
+import qualified Data.ByteString.Char8 as BSC
 import           Data.Time (fromGregorianValid, makeTimeOfDayValid)
+import qualified Text.Show
 
+import           RON.Base64 (encode60short)
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word2, Word24, Word6,
                                 Word60, leastSignificant12, leastSignificant2,
@@ -76,20 +79,39 @@ data LocalTime
     deriving (Eq, Generic, Show)
 
 -- | Replica id assignment style
-data Naming
-    = TrieForked
-    | CryptoForked
-    | RecordForked
-    | ApplicationSpecific
-    deriving (Bounded, Enum, Eq, Show)
+newtype Naming = Naming Word2
+  deriving newtype (Hashable)
 
-instance Hashable Naming where
-    hashWithSalt = hashUsing fromEnum
+pattern TrieForked :: Naming
+pattern TrieForked = Naming B00
+
+pattern CryptoForked :: Naming
+pattern CryptoForked = Naming B01
+
+pattern RecordForked :: Naming
+pattern RecordForked = Naming B10
+
+pattern ApplicationSpecific :: Naming
+pattern ApplicationSpecific = Naming B11
+
+{-# COMPLETE TrieForked, CryptoForked, RecordForked, ApplicationSpecific #-}
+
+instance Show Naming where
+  show = \case
+    TrieForked          -> "TF"
+    CryptoForked        -> "CF"
+    RecordForked        -> "RF"
+    ApplicationSpecific -> "AS"
 
 -- | Replica identifier.
 -- Implementation: naming (62-61) and origin (60-0 bits) fields from UUID
 newtype ReplicaId = ReplicaId Word64
-  deriving (Eq, Show, Generic, Hashable, Ord)
+  deriving newtype (Eq, Hashable, Ord)
+
+instance Show ReplicaId where
+  show (ReplicaId w64) =
+    show (Naming $ leastSignificant2 $ w64 `shiftR` 60)
+    ++ "." ++ BSC.unpack (encode60short $ ls60 w64)
 
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.
@@ -305,11 +327,11 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) hns = do
         , nanosecHundreds = ls24 hns
         }
 
--- | Make an 'ApplicationSpecific' replica id from arbitrary number
-applicationSpecific :: Word60 -> ReplicaId
-applicationSpecific =
-  decodeReplicaId $ leastSignificant2 $ fromEnum ApplicationSpecific
+-- | Make an 'applicationSpecific' replica id from arbitrary number
+applicationSpecificReplica :: Word60 -> ReplicaId
+applicationSpecificReplica =
+  decodeReplicaId (coerce ApplicationSpecific :: Word2)
 
--- | Make an 'TrieForked' replica id from arbitrary number
-trieForked :: Word60 -> ReplicaId
-trieForked = decodeReplicaId $ leastSignificant2 $ fromEnum TrieForked
+-- | Make an 'trieForked' replica id from arbitrary number
+trieForkedReplica :: Word60 -> ReplicaId
+trieForkedReplica = decodeReplicaId (coerce TrieForked :: Word2)

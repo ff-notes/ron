@@ -20,7 +20,7 @@ import qualified Data.Sequence as Seq
 
 import           RON.Data.VersionVector (makeVV, (·≼))
 import           RON.Error (Error (..), liftMaybe)
-import           RON.Event (ReplicaClock, ReplicaId, applicationSpecific)
+import           RON.Event (ReplicaClock, ReplicaId, applicationSpecificReplica)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
@@ -42,7 +42,7 @@ runStoreSim db (StoreSim action) =
   runNetworkSimT $ runReplicaSimT thisReplicaId $ runStateT action db
 
 thisReplicaId :: ReplicaId
-thisReplicaId = applicationSpecific 2020
+thisReplicaId = applicationSpecificReplica 2020
 
 instance MonadStore StoreSim where
   listObjects = StoreSim $ gets Map.keys

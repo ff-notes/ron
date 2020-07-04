@@ -24,7 +24,7 @@ import           RON.Data.VersionVector (VV, makeVV, (·≼))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
 import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
-                            applicationSpecific, getEventUuid)
+                            applicationSpecificReplica, getEventUuid)
 import           RON.Store (MonadStore (..))
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
@@ -125,7 +125,7 @@ newHandleWithReplicaId dataDir' replicaId = do
   -- fsWatchManager <- FSNotify.startManager
   -- stopWatching      <- newIORef Nothing
   -- onDocumentChanged <- newBroadcastTChanIO
-  let replica = applicationSpecific replicaId
+  let replica = applicationSpecificReplica replicaId
   pure Handle{..}
 
 getMacAddress :: IO (Maybe Word64)

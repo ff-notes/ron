@@ -108,6 +108,7 @@ type LocalTime = Word60
 
 -- | Simplified version vector
 newtype VV = VV (Map ReplicaId LocalTime)
+  deriving (Show)
 
 instance Semigroup VV where
   VV a <> VV b = VV $ Map.unionWith max a b
