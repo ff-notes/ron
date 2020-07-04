@@ -6,8 +6,12 @@ version: 0
 executable ron
     build-depends:
         -- global
+        aeson,
+        aeson-pretty,
         base,
+        bytestring,
         optparse-applicative,
+        yaml,
         -- project
         ron,
         ron-rdt,

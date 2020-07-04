@@ -1,23 +1,33 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE RecordWildCards #-}
 
-import           Data.Foldable (fold, traverse_)
+import           Control.Applicative ((<|>))
+import           Data.Aeson (Value, object, (.=))
+import qualified Data.Aeson.Encode.Pretty as Json
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy.Char8 as BSLC
+import           Data.Foldable (traverse_)
+import           Data.List (sort)
+import qualified Data.Yaml as Yaml
 import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       ParserPrefs (..), command,
-                                      customExecParser, defaultPrefs, fullDesc,
-                                      help, helper, info, long, metavar,
-                                      progDesc, strOption, subparser, (<**>))
+                                      customExecParser, defaultPrefs, flag',
+                                      fullDesc, help, helper, info, long,
+                                      metavar, progDesc, short, strOption,
+                                      subparser, (<**>))
 
 import           RON.Store (listObjects)
-import           RON.Store.FS (debugDump, newHandle, runStore)
-import           RON.Text (uuidToString)
+import           RON.Store.FS (Handle, debugDump, newHandle, runStore)
+import           RON.Text (uuidToString, uuidToText)
 
 main :: IO ()
 main = do
   Options{..} <- parseOptions
   db <- newHandle dbPath
   case cmd of
-    Dump -> debugDump dbPath
+    Dump DumpRon  -> debugDump dbPath
+    Dump DumpJson -> dump db >>= printJson
+    Dump DumpYaml -> dump db >>= printYaml
     List -> runStore db listObjects >>= traverse_ (putStrLn . uuidToString)
 
 data Options = Options
@@ -26,7 +36,10 @@ data Options = Options
   }
   deriving (Show)
 
-data Command = Dump | List
+data Command = Dump DumpFormat | List
+  deriving (Show)
+
+data DumpFormat = DumpRon | DumpJson | DumpYaml
   deriving (Show)
 
 parseOptions :: IO Options
@@ -41,11 +54,14 @@ parseOptions =
       cmd <- subparser commands
       pure Options{..}
 
-    commands =
-      fold
-        [ command "dump" $ i (pure Dump) "dump objects"
-        , command "list" $ i (pure List) "list objects"
-        ]
+    commands
+      =   command "dump" (i (Dump <$> pDumpFormat) "dump objects")
+      <>  command "list" (i (pure List)            "list objects")
+
+    pDumpFormat
+      =   flag' DumpJson (short 'j' <> long "json")
+      <|> flag' DumpRon  (short 'r' <> long "ron")
+      <|> flag' DumpYaml (short 'y' <> long "yaml")
 
 prefs :: ParserPrefs
 prefs =
@@ -61,3 +77,14 @@ i prsr desc = i_ prsr desc mempty
 
 i_ :: Parser a -> String -> InfoMod a -> ParserInfo a
 i_ prsr desc m = info (prsr <**> helper) $ fullDesc <> progDesc desc <> m
+
+dump :: Handle -> IO Value
+dump db = do
+  objectIds <- runStore db listObjects
+  pure $ object [uuidToText objectId .= () | objectId <- sort objectIds]
+
+printJson :: Value -> IO ()
+printJson = BSLC.putStrLn . Json.encodePretty
+
+printYaml :: Value -> IO ()
+printYaml = BS.putStr . Yaml.encode
