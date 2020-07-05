@@ -1,15 +1,16 @@
 module UI (runUI) where
 
 import           Brick (App (App), BrickEvent (VtyEvent), EventM, Next, Widget,
-                        attrMap, continue, defaultMain, fill, halt,
-                        showFirstCursor, str, txt, vBox, vLimit)
+                        attrMap, continue, defaultMain, fg, fill, hBox, halt,
+                        modifyDefAttr, showFirstCursor, str, txt, vBox, vLimit)
 import qualified Brick
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
+import           Data.Char (ord)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Graphics.Vty (Event (EvKey), Key (KEsc))
+import           Graphics.Vty (Color (ISOColor), Event (EvKey), Key (KEsc))
 import qualified RON.Store.FS as Store (Handle)
 
 import           Database (loadAllMessages)
@@ -57,15 +58,24 @@ appDraw username State{messages, messageInput} =
 
 renderMessage :: Message -> Widget ()
 renderMessage Message{username, postTime, text} =
-  vBox [txt $ username <> ":", str $ show postTime, txt text, str " "]
+  vBox
+    [ vLimit 1 $ hBox [txt' username, fill ' ', str $ show postTime]
+    , txt text
+    , str " "
+    ]
+
+txt' :: Text -> Widget n
+txt' t =
+  modifyDefAttr (const $ fg color) $ txt t
+  where
+    color = colors !! (hashish `mod` length colors)
+    hashish = fromIntegral $ sum $ map ord $ Text.unpack t
+    colors = map ISOColor [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]
 
 appHandleEvent :: State -> BrickEvent () e -> EventM () (Next State)
 appHandleEvent state@State{messageInput} = \case
   VtyEvent ve -> case ve of
-    EvKey KEsc [] -> do
-      -- state' <- liftIO $ sync storage state False
-      -- halt state'
-      halt state
+    EvKey KEsc [] -> halt state
     _ -> do
       messageInput' <- handleEditorEvent ve messageInput
       continue state{messageInput = messageInput'}
