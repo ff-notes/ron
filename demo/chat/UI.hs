@@ -7,10 +7,14 @@ import qualified Brick
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
-import           Data.Char (ord)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Char (isSpace, ord)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Graphics.Vty (Color (ISOColor), Event (EvKey), Key (KEsc))
+import           Data.Time (getCurrentTime)
+import           GHC.Generics (Generic)
+import           Graphics.Vty (Color (ISOColor), Event (EvKey),
+                               Key (KEnter, KEsc))
 import qualified RON.Store.FS as Store (Handle)
 
 import           Database (loadAllMessages)
@@ -26,18 +30,18 @@ runUI db UIOptions{username} = do
   print finalState -- TODO save
 
 data State = State{messages :: [Message], messageInput :: Editor Text ()}
-  deriving (Show)
+  deriving (Generic, Show)
 
 initialState :: State
-initialState = State{messages = [], messageInput = editorText () Nothing ""}
+initialState = State{messages = [], messageInput = emptyEditor}
 
 app :: Text -> App State e ()
 app username =
   App
     { appAttrMap      = const $ attrMap mempty []
     , appChooseCursor = showFirstCursor
-    , appDraw         = appDraw username
-    , appHandleEvent
+    , appDraw         = appDraw        username
+    , appHandleEvent  = appHandleEvent username
     , appStartEvent   = pure
     }
 
@@ -72,10 +76,22 @@ txt' t =
     hashish = fromIntegral $ sum $ map ord $ Text.unpack t
     colors = map ISOColor [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]
 
-appHandleEvent :: State -> BrickEvent () e -> EventM () (Next State)
-appHandleEvent state@State{messageInput} = \case
+appHandleEvent :: Text -> State -> BrickEvent () e -> EventM () (Next State)
+appHandleEvent username state@State{messageInput, messages} = \case
   VtyEvent ve -> case ve of
     EvKey KEsc [] -> halt state
+    EvKey KEnter []
+      | not $ Text.all isSpace text -> do
+          postTime <- liftIO getCurrentTime
+          let message = Message{..}
+          -- TODO put in database
+          continue $
+            state
+              { messageInput = emptyEditor
+              , messages     = messages <> [message]
+              }
+      where
+        text = Text.strip $ Text.intercalate "\n" $ getEditContents messageInput
     _ -> do
       messageInput' <- handleEditorEvent ve messageInput
       continue state{messageInput = messageInput'}
@@ -83,3 +99,6 @@ appHandleEvent state@State{messageInput} = \case
   --   state' <- liftIO $ sync storage state True
   --   continue state'
   _ -> continue state
+
+emptyEditor :: Editor Text ()
+emptyEditor = editorText () Nothing ""
