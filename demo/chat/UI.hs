@@ -1,28 +1,34 @@
 module UI (runUI) where
 
 import           Brick (App (App), BrickEvent (VtyEvent), EventM, Next, Widget,
-                        attrMap, continue, defaultMain, halt, showFirstCursor,
-                        txt, vBox, vLimit)
+                        attrMap, continue, defaultMain, fill, halt,
+                        showFirstCursor, str, txt, vBox, vLimit)
 import qualified Brick
-import           Brick.Widgets.Border (border, hBorder)
+import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
-import           Control.Monad (void)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Graphics.Vty (Event (EvKey), Key (KEsc))
 import qualified RON.Store.FS as Store (Handle)
 
+import           Database (loadAllMessages)
 import           Options (UIOptions (UIOptions))
 import qualified Options
+import           Types (Message (Message))
+import qualified Types
 
 runUI :: Store.Handle -> UIOptions -> IO ()
-runUI _db UIOptions{username} = void $ defaultMain (app username) initialState
+runUI db UIOptions{username} = do
+  messages   <- loadAllMessages db -- TODO load asynchronously
+  finalState <- defaultMain (app username) initialState{messages}
+  print finalState -- TODO save
 
-newtype State = State{messageInput :: Editor Text ()}
+data State = State{messages :: [Message], messageInput :: Editor Text ()}
+  deriving (Show)
 
 initialState :: State
-initialState = State{messageInput = editorText () Nothing ""}
+initialState = State{messages = [], messageInput = editorText () Nothing ""}
 
 app :: Text -> App State e ()
 app username =
@@ -35,14 +41,23 @@ app username =
     }
 
 appDraw :: Text -> State -> [Widget ()]
-appDraw username State{messageInput} =
+appDraw username State{messages, messageInput} =
   [ vBox
-      [ hBorder
-      , txt $ username <> ":"
-      , border $ vLimit (length $ getEditContents messageInput) $ renderEditor (txt . Text.unlines) True messageInput
+      [ fill ' '
+      , vBox $ map renderMessage messages
+      , border $
+        vBox
+          [ txt $ username <> ":"
+          , vLimit (length $ getEditContents messageInput) $
+            renderEditor (txt . Text.unlines) True messageInput
+          ]
       , txt "Esc -> exit, Enter -> send message"
       ]
   ]
+
+renderMessage :: Message -> Widget ()
+renderMessage Message{username, postTime, text} =
+  vBox [txt $ username <> ":", str $ show postTime, txt text, str " "]
 
 appHandleEvent :: State -> BrickEvent () e -> EventM () (Next State)
 appHandleEvent state@State{messageInput} = \case

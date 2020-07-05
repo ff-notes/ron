@@ -77,6 +77,7 @@ executable demo-chat
     hs-source-dirs: chat
     main-is: Main.hs
     other-modules:
+        Database
         Options
         Types
         UI
