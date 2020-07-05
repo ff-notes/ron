@@ -1,38 +1,59 @@
 module UI (runUI) where
 
-import           Brick (App (App), BrickEvent (VtyEvent), EventM, Next, attrMap,
-                        continue, defaultMain, halt, showFirstCursor, str)
+import           Brick (App (App), BrickEvent (VtyEvent), EventM, Next, Widget,
+                        attrMap, continue, defaultMain, halt, showFirstCursor,
+                        txt, vBox, vLimit)
 import qualified Brick
+import           Brick.Widgets.Border (border, hBorder)
+import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
+                                     handleEditorEvent, renderEditor)
+import           Control.Monad (void)
+import           Data.Text (Text)
+import qualified Data.Text as Text
 import           Graphics.Vty (Event (EvKey), Key (KEsc))
 import qualified RON.Store.FS as Store (Handle)
 
-runUI :: Store.Handle -> IO ()
-runUI _db = defaultMain app initialState
+import           Options (UIOptions (UIOptions))
+import qualified Options
 
-initialState :: ()
-initialState = ()
+runUI :: Store.Handle -> UIOptions -> IO ()
+runUI _db UIOptions{username} = void $ defaultMain (app username) initialState
 
-app :: App () e ()
-app =
+newtype State = State{messageInput :: Editor Text ()}
+
+initialState :: State
+initialState = State{messageInput = editorText () Nothing ""}
+
+app :: Text -> App State e ()
+app username =
   App
     { appAttrMap      = const $ attrMap mempty []
     , appChooseCursor = showFirstCursor
-    , appDraw         = \() -> [str "Esc -> exit, Enter -> send message"]
+    , appDraw         = appDraw username
     , appHandleEvent
     , appStartEvent   = pure
     }
 
-appHandleEvent :: () -> BrickEvent () e -> EventM () (Next ())
-appHandleEvent state = \case
+appDraw :: Text -> State -> [Widget ()]
+appDraw username State{messageInput} =
+  [ vBox
+      [ hBorder
+      , txt $ username <> ":"
+      , border $ vLimit (length $ getEditContents messageInput) $ renderEditor (txt . Text.unlines) True messageInput
+      , txt "Esc -> exit, Enter -> send message"
+      ]
+  ]
+
+appHandleEvent :: State -> BrickEvent () e -> EventM () (Next State)
+appHandleEvent state@State{messageInput} = \case
   VtyEvent ve -> case ve of
     EvKey KEsc [] -> do
       -- state' <- liftIO $ sync storage state False
       -- halt state'
       halt state
     _ -> do
-      -- editor' <- handleEditorEvent ve editor
-      -- continue state{editor = editor'}
-      continue state
+      messageInput' <- handleEditorEvent ve messageInput
+      continue state{messageInput = messageInput'}
   -- AppEvent () -> do
   --   state' <- liftIO $ sync storage state True
   --   continue state'

@@ -16,8 +16,7 @@ import           RON.Store.FS (Handle, newHandle, runStore)
 import           RON.Types (Atom (AString), ObjectRef)
 import           Text.Pretty.Simple (pPrint)
 
-import           Options (Command (Post, Show, UI), UIOptions (UIOptions),
-                          parseCommand)
+import           Options (Command (Post, Show, UI), parseCommand)
 import           Types (Message, postTime)
 import           UI (runUI)
 
@@ -47,7 +46,7 @@ main =
       Post username text -> do
         messageRef <- runStore db $ newMessage username text
         putStrLn $ "created message: " <> show messageRef
-      UI UIOptions{} -> runUI db
+      UI uiOptions -> runUI db uiOptions
 
 showMessages :: Handle -> IO ()
 showMessages db = do
