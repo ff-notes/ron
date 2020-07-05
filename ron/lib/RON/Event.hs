@@ -95,7 +95,7 @@ newtype Time = Time Word64
 
 instance Show Time where
   show t =
-    show (timeVariety t) ++ "." ++ BSC.unpack (encode60short $ timeValue t)
+    show (timeVariety t) ++ '/' : BSC.unpack (encode60short $ timeValue t)
 
 timeVariety :: Time -> TimeVariety
 timeVariety (Time w64) = TimeVariety $ leastSignificant2 $ w64 `shiftR` 62
@@ -136,13 +136,13 @@ newtype Replica = Replica Word64
 instance Show Replica where
   show (Replica w64) =
     show (OriginVariety $ leastSignificant2 $ w64 `shiftR` 60)
-    ++ "." ++ BSC.unpack (encode60short $ ls60 w64)
+    ++ '/' : BSC.unpack (encode60short $ ls60 w64)
 
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.
 -- If you want comparable events, use specific 'EpochEvent'.
 data Event = Event
-  { time      :: !Time
+  { time    :: !Time
   , replica :: !Replica
   }
   deriving (Eq, Generic, Show)
