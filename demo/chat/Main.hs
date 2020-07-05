@@ -1,59 +1,24 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-
 import           Prelude hiding (show)
 import           RON.Prelude (show)
 
-import           Control.Lens ((^.))
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Generics.Labels ()
 import           Data.List (sortOn)
 import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Time (UTCTime)
 import           Data.Traversable (for)
+import           RON.Data.ORSet.Experimental (ORSet)
+import qualified RON.Data.ORSet.Experimental as ORSet
+import           RON.Error (MonadE)
+import           RON.Event (ReplicaClock)
+import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
+import           RON.Store.FS (Handle, newHandle, runStore)
+import           RON.Types (Atom (AString), ObjectRef (..))
 import           System.Environment (getArgs, getProgName)
 import           Text.Pretty.Simple (pPrint)
 
-import           RON.Data.Experimental (Rep, ReplicatedObject, view)
-import           RON.Data.ORSet.Experimental (ORMap, ORSet)
-import qualified RON.Data.ORSet.Experimental as ORSet
-import qualified RON.Data.ORSet.Experimental as ORMap
-import qualified RON.Epoch as Epoch
-import           RON.Error (MonadE, errorContext, throwError)
-import           RON.Event (ReplicaClock, TimeVariety (Epoch), decodeEvent,
-                            timeValue, timeVariety)
-import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
-import           RON.Store.FS (Handle, newHandle, runStore)
-import           RON.Types (Atom (AString), ObjectRef (..), Payload)
-
-data Message = Message
-  { postTime :: UTCTime
-  , username :: Text
-  , text     :: Text
-  }
-  deriving (Show)
-
-instance ReplicatedObject Message where
-  type Rep Message = ORMap Text Payload
-
-  view objectId ormap =
-    errorContext "view @Message" $ do
-      postTime <- let
-        time = decodeEvent objectId ^. #time
-        in
-        case timeVariety time of
-          Epoch -> pure $ Epoch.decode $ timeValue time
-          _     -> throwError "objectId in not an epoch event"
-      username <- ORMap.lookupLww' "username" ormap
-      text     <- ORMap.lookupLww' "text"     ormap
-      pure Message{..}
+import           Types (Message (..))
 
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>

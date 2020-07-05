@@ -56,6 +56,15 @@ executable demo-chat
         -- project
         ron,
         ron-rdt,
+    default-extensions:
+        FlexibleContexts
+        OverloadedLabels
+        OverloadedStrings
+        RecordWildCards
+        ScopedTypeVariables
+        TypeApplications
+        TypeFamilies
     ghc-options: -dynamic -rtsopts -with-rtsopts=-N
     hs-source-dirs: chat
     main-is: Main.hs
+    other-modules: Types
