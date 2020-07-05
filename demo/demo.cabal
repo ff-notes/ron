@@ -55,13 +55,17 @@ executable demo-chat
         pretty-simple,
         text,
         time,
+        vty,
         -- project
         ron,
         ron-rdt,
     default-extensions:
         ApplicativeDo
+        DuplicateRecordFields
+        DisambiguateRecordFields
         EmptyCase
         FlexibleContexts
+        LambdaCase
         NamedFieldPuns
         OverloadedLabels
         OverloadedStrings

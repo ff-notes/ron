@@ -20,8 +20,7 @@ import qualified Data.Text as Text
 import           Data.Text.Zipper (TextZipper, cursorPosition, moveCursor,
                                    textZipper)
 import qualified Data.Text.Zipper as TextZipper
-import           Graphics.Vty (Event (EvKey), Key (KEsc), defAttr,
-                               defaultConfig, mkVty)
+import           Graphics.Vty (Event (EvKey), Key (KEsc), defaultConfig, mkVty)
 import           RON.Data (evalObjectState, execObjectState)
 import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
@@ -68,7 +67,7 @@ data MyState
 
 mkApp :: Storage.Handle -> App MyState () ()
 mkApp storage = App
-  { appAttrMap = const $ attrMap defAttr [],
+  { appAttrMap = const $ attrMap mempty [],
     appChooseCursor = showFirstCursor,
     appDraw = draw,
     appHandleEvent = handleEvent storage,
