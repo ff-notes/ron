@@ -14,7 +14,8 @@ import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
                            readObject)
 import           RON.Data.ORSet (ORSet (ORSet), addValue, findAnyAlive',
                                  removeValue, zoomItem)
-import           RON.Event (ReplicaId, applicationSpecific)
+import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
+                            mkReplica)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Schema.TH (mkReplicated)
 import           RON.Text (parseObject, serializeObject)
@@ -34,7 +35,7 @@ example0 = ORSet [ORSet [ORSet ["octaves"]]]
 
 state1expect :: BSL.ByteString
 state1expect = [s|
-    *set    #B/0000000WUW+r3pl1c4           !
+    *set    #7/0000000WUW+r3pl1c4           !
                                     @`}OUW  'octaves'
             #}lUW                   @0      !
                                     @`}KUW  >}WUW
@@ -48,7 +49,7 @@ example4expect = ORSet [ORSet [ORSet ["candies"]], ORSet []]
 
 state4expect :: BSL.ByteString
 state4expect = [s|
-    *set    #B/0000000WUW+r3pl1c4                   !
+    *set    #7/0000000WUW+r3pl1c4                   !
                                     @`{1lUW         'candies'
                                     @{20UW  :`{0OUW 'octaves'
             #}lUW                   @0      :0      !
@@ -101,5 +102,5 @@ prop_orSet =
     prep = filter (not . null) . map BSLC.words . BSLC.lines
 
 -- | "r3pl1c4"
-replica :: ReplicaId
-replica = applicationSpecific 0xd83d30067100000
+replica :: Replica
+replica = mkReplica ApplicationSpecific 0xd83d30067100000

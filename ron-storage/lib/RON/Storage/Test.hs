@@ -14,7 +14,8 @@ import           Data.Map.Strict ((!), (!?))
 import qualified Data.Map.Strict as Map
 
 import           RON.Error (Error)
-import           RON.Event (ReplicaClock, applicationSpecific)
+import           RON.Event (OriginVariety (ApplicationSpecific), ReplicaClock,
+                            mkReplica)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 
@@ -38,7 +39,7 @@ newtype StorageSim a = StorageSim (StateT TestDB (ReplicaSimT (Either Error)) a)
 
 runStorageSim :: TestDB -> StorageSim a -> Either Error (a, TestDB)
 runStorageSim db (StorageSim action) =
-    runNetworkSimT $ runReplicaSimT (applicationSpecific 34) $
+    runNetworkSimT $ runReplicaSimT (mkReplica ApplicationSpecific 34) $
     runStateT action db
 
 instance MonadStorage StorageSim where

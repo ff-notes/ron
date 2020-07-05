@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wwarn=redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}

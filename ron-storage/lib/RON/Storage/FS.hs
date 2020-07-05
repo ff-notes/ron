@@ -57,8 +57,8 @@ import           System.Random.TF.Instances (random)
 
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error, throwErrorString)
-import           RON.Event (EpochTime, ReplicaClock, ReplicaId, advance,
-                            applicationSpecific, getEvents, getPid)
+import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
+                            ReplicaClock, advance, getEvents, getPid, mkReplica)
 import           RON.Storage as X
 import           RON.Storage.Backend (DocId (DocId), MonadStorage, RawDocId,
                                       changeDocId, deleteVersion,
@@ -150,7 +150,7 @@ instance MonadStorage Storage where
 -- | Storage handle (uses the “Handle pattern”).
 data Handle
   = Handle
-      { clock :: IORef EpochTime,
+      { clock :: IORef Word60,
         dataDir :: FilePath,
         fsWatchManager :: FSNotify.WatchManager,
         stopWatching :: IORef (Maybe StopListening),
@@ -159,7 +159,7 @@ data Handle
         -- To activate it, call 'startWatching'.
         -- You should NOT read from it directly,
         -- call 'subscribe' to read from derived channel instead.
-        replica :: ReplicaId
+        replica :: Replica
       }
 
 -- | Create new storage handle.
@@ -181,7 +181,7 @@ newHandleWithReplicaId dataDir' replicaId = do
   fsWatchManager <- FSNotify.startManager
   stopWatching <- newIORef Nothing
   onDocumentChanged <- newBroadcastTChanIO
-  let replica = applicationSpecific replicaId
+  let replica = mkReplica ApplicationSpecific replicaId
   pure Handle
     { clock,
       dataDir,

@@ -15,7 +15,8 @@ import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
 import qualified RON.Data.RGA as RGA
-import           RON.Event (ReplicaId, applicationSpecific)
+import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
+                            mkReplica)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 
@@ -34,12 +35,12 @@ example0 = Struct51
     }
 
 -- | "r3pl1c4"
-replica :: ReplicaId
-replica = applicationSpecific 0xd83d30067100000
+replica :: Replica
+replica = mkReplica ApplicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
 ex1expect = [s|
-    *lww    #B/0000000DrW+r3pl1c4                   !
+    *lww    #7/0000000DrW+r3pl1c4                   !
                                     @`      :int1   275
                                             :nst5
                                             :set4   >}KUW
@@ -57,7 +58,7 @@ ex1expect = [s|
 
 ex4expect :: ByteStringL
 ex4expect = [s|
-    *lww    #B/0000000DrW+r3pl1c4                   !
+    *lww    #7/0000000DrW+r3pl1c4                   !
                                     @`}WUW  :int1   166
                                     @{23dW  :nst5
                                     @`      :set4   >}KUW

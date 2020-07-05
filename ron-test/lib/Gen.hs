@@ -5,13 +5,15 @@
 module Gen (
     atom,
     event,
+    calendarTime,
     closedOp,
-    replicaId,
+    replica,
     shortText,
     stateFrame,
     uuid,
     wireFrame,
     wireFrames,
+    word2,
     word60,
     word64',
 ) where
@@ -19,15 +21,15 @@ module Gen (
 import           RON.Prelude
 
 import           Hedgehog (MonadGen)
-import           Hedgehog.Gen (choice, double, integral, list, text, unicodeAll,
-                               word64, word8)
+import           Hedgehog.Gen (choice, double, element, integral, list, text,
+                               unicodeAll, word64, word8)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 
-import           RON.Event (CalendarTime (CalendarTime), Event (Event),
-                            LocalTime (TCalendar, TEpoch, TLogical, TUnknown),
-                            ReplicaId, days, decodeReplicaId, hours, minutes,
-                            months, nanosecHundreds, seconds)
+import           RON.Event (CalendarTime (CalendarTime), Event (Event), Replica,
+                            Time, TimeVariety (Calendar, Epoch, Logical), days,
+                            decodeReplica, hours, minutes, mkTime, months,
+                            nanosecHundreds, seconds)
 import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
                             ClosedOp (ClosedOp, objectId, op, reducerId),
                             Op (Op, opId, payload, refId), Payload, StateFrame,
@@ -115,13 +117,11 @@ calendarTime = do
     nanosecHundreds <- ls24 <$> integral (Range.constant 0 10000000)
     pure CalendarTime{..}
 
-eventTime :: MonadGen gen => gen LocalTime
-eventTime = choice
-    [ TCalendar <$> calendarTime
-    , TLogical  <$> word60
-    , TEpoch    <$> word60
-    , TUnknown  <$> word60
-    ]
+eventTime :: MonadGen gen => gen Time
+eventTime = mkTime <$> timeVariety <*> word60
+
+timeVariety :: MonadGen gen => gen TimeVariety
+timeVariety = element [Calendar, Logical, Epoch]
 
 genPayload :: MonadGen gen => Int -> gen Payload
 genPayload size = list (Range.exponential 0 size) (atom size)
@@ -135,10 +135,10 @@ atom size = choice
     ]
 
 event :: MonadGen gen => gen Event
-event = Event <$> eventTime <*> replicaId
+event = Event <$> eventTime <*> replica
 
-replicaId :: MonadGen gen => gen ReplicaId
-replicaId = decodeReplicaId <$> word2 <*> word60
+replica :: MonadGen gen => gen Replica
+replica = decodeReplica <$> uuid
 
 shortText :: MonadGen gen => gen Text
 shortText = text (Range.linear 0 10) unicodeAll

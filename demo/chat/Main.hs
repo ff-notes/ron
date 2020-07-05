@@ -9,7 +9,7 @@
 import           Prelude hiding (show)
 import           RON.Prelude (show)
 
-import           Control.Lens (to, (^?))
+import           Control.Lens ((^.))
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Generics.Labels ()
 import           Data.List (sortOn)
@@ -26,8 +26,9 @@ import           RON.Data.ORSet.Experimental (ORMap, ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import qualified RON.Data.ORSet.Experimental as ORMap
 import qualified RON.Epoch as Epoch
-import           RON.Error (MonadE, errorContext, liftMaybe)
-import           RON.Event (ReplicaClock, decodeEvent)
+import           RON.Error (MonadE, errorContext, throwError)
+import           RON.Event (ReplicaClock, TimeVariety (Epoch), decodeEvent,
+                            timeValue, timeVariety)
 import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
 import           RON.Store.FS (Handle, newHandle, runStore)
 import           RON.Types (Atom (AString), ObjectRef (..), Payload)
@@ -44,9 +45,12 @@ instance ReplicatedObject Message where
 
   view objectId ormap =
     errorContext "view @Message" $ do
-      postTime <-
-        liftMaybe "decode objectId" $
-        decodeEvent objectId ^? #localTime . #_TEpoch . to Epoch.decode
+      postTime <- let
+        time = decodeEvent objectId ^. #time
+        in
+        case timeVariety time of
+          Epoch -> pure $ Epoch.decode $ timeValue time
+          _     -> throwError "objectId in not an epoch event"
       username <- ORMap.lookupLww' "username" ormap
       text     <- ORMap.lookupLww' "text"     ormap
       pure Message{..}

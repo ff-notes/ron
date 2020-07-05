@@ -19,6 +19,7 @@ module RON.Event (
   advanceToUuid,
   decodeCalendar,
   decodeEvent,
+  decodeReplica,
   encodeCalendar,
   encodeEvent,
   getEvent,
@@ -27,8 +28,11 @@ module RON.Event (
   mkCalendarDate,
   mkCalendarDateTime,
   mkCalendarDateTimeNano,
+  mkCalendarEvent,
   mkReplica,
   mkTime,
+  timeValue,
+  timeVariety,
 ) where
 
 import           RON.Prelude
@@ -90,9 +94,14 @@ newtype Time = Time Word64
   deriving (Eq, Ord)
 
 instance Show Time where
-  show (Time w64) =
-    show (TimeVariety $ leastSignificant2 $ w64 `shiftR` 62)
-    ++ "." ++ BSC.unpack (encode60short $ ls60 w64)
+  show t =
+    show (timeVariety t) ++ "." ++ BSC.unpack (encode60short $ timeValue t)
+
+timeVariety :: Time -> TimeVariety
+timeVariety (Time w64) = TimeVariety $ leastSignificant2 $ w64 `shiftR` 62
+
+timeValue :: Time -> Word60
+timeValue (Time w64) = ls60 w64
 
 -- | Replica id assignment style
 newtype OriginVariety = OriginVariety Word2
@@ -240,11 +249,10 @@ encodeEvent Event{time, replica} =
     eventVersion = 0x2000000000000000
 
 decodeEvent :: UUID -> Event
-decodeEvent (UUID x y) =
-  Event{replica = decodeReplicaId x y, time = decodeTime x}
+decodeEvent u@(UUID x _) = Event{replica = decodeReplica u, time = decodeTime x}
 
-decodeReplicaId :: Word64 -> Word64 -> Replica
-decodeReplicaId x y =
+decodeReplica :: UUID -> Replica
+decodeReplica (UUID x y) =
   Replica $ (x .&. 0x3000000000000000) .|. (y .&. 0x0FFFFFFFFFFFFFFF)
 
 encodeReplicaId :: Replica -> (Word64, Word64)
@@ -298,3 +306,7 @@ mkReplica (OriginVariety variety) origin =
 mkTime :: TimeVariety -> Word60 -> Time
 mkTime (TimeVariety variety) value =
   Time $ (safeCast variety `shiftL` 62) .|. safeCast value
+
+mkCalendarEvent :: CalendarTime -> Replica -> Event
+mkCalendarEvent time replica =
+  Event{time = mkTime Calendar $ encodeCalendar time, replica}

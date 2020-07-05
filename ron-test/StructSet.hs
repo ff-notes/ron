@@ -19,7 +19,8 @@ import           RON.Data.ORSet (ORSet (ORSet))
 import qualified RON.Data.ORSet as ORSet
 import           RON.Data.RGA (RGA (RGA))
 import qualified RON.Data.RGA as RGA
-import           RON.Event (ReplicaId, applicationSpecific)
+import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
+                            mkReplica)
 import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import           RON.Text (parseObject, serializeObject)
 import           RON.Types (ObjectRef, Op (Op, opId, refId), StateFrame, WireStateChunk (WireStateChunk, stateBody, stateType))
@@ -41,14 +42,14 @@ example0 = StructSet13
     }
 
 -- | "r3pl1c4"
-replica :: ReplicaId
-replica = applicationSpecific 0xd83d30067100000
+replica :: Replica
+replica = mkReplica ApplicationSpecific 0xd83d30067100000
 
 state1expect :: ByteStringL
 state1expect = [s|
-    *set    #B/0000000DrW+r3pl1c4           !
+    *set    #7/0000000DrW+r3pl1c4           !
                                     @`}KUW  >int1   275
-                                    @}OUW   >str2   >B/0000000WUW+r3pl1c4
+                                    @}OUW   >str2   >7/0000000WUW+r3pl1c4
                                     @}acW   >str3   '190'
 
     *rga    #}WUW                   @0      !
@@ -60,17 +61,17 @@ state1expect = [s|
 
 state4expect :: ByteStringL
 state4expect = [s|
-    *set    #B/0000000DrW+r3pl1c4                   !
-                                    @`}OUW          >str2 >B/0000000WUW+r3pl1c4
+    *set    #7/0000000DrW+r3pl1c4                   !
+                                    @`}OUW          >str2 >7/0000000WUW+r3pl1c4
                                     @}odW           >int1 166
                                     @}~2W   :`}KUW  >int1 275
                                     @{1dUW  :0      >str3 '206'
                                     @}lUW   :`{0acW >str3 '190'
-                                    @{20UW  :0      >set4 >B/0000002GUW+r3pl1c4
-                                    @{3k2W          >nst6 >B/0000003nMW+r3pl1c4
+                                    @{20UW  :0      >set4 >7/0000002GUW+r3pl1c4
+                                    @{3k2W          >nst6 >7/0000003nMW+r3pl1c4
                                     @{5GUW          >set5 172
                                     @}WUW   :`}0UW  >set5 170
-                                    @{6GUW  :{60UW  >ref7 >B/0000005lUW+r3pl1c4
+                                    @{6GUW  :{60UW  >ref7 >7/0000005lUW+r3pl1c4
 
     *rga    #}WUW                   @0      :0      !
                                     @`]g6   :`{12MW '2'
@@ -85,7 +86,7 @@ state4expect = [s|
 
             #}WUW                   @0      :0      !
                                     @`}lUW          >int1 135
-                                    @{30UW          >str2 >B/0000003GUW+r3pl1c4
+                                    @{30UW          >str2 >7/0000003GUW+r3pl1c4
                                     @}LcW           >str3 '137'
 
     *rga    #{3GUW                  @0              !
