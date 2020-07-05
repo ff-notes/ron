@@ -5,6 +5,7 @@ steps:
       align: false
   - trailing_whitespace: {}
 language_extensions:
+  - EmptyCase
   - ExplicitNamespaces
   - FlexibleContexts
   - MultiParamTypeClasses

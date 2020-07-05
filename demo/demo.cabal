@@ -50,6 +50,7 @@ executable demo-chat
         -- global
         generic-lens,
         lens,
+        optparse-applicative,
         pretty-simple,
         text,
         time,
@@ -57,7 +58,10 @@ executable demo-chat
         ron,
         ron-rdt,
     default-extensions:
+        ApplicativeDo
+        EmptyCase
         FlexibleContexts
+        NamedFieldPuns
         OverloadedLabels
         OverloadedStrings
         RecordWildCards
