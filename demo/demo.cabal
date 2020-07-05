@@ -71,4 +71,6 @@ executable demo-chat
     ghc-options: -dynamic -rtsopts -with-rtsopts=-N
     hs-source-dirs: chat
     main-is: Main.hs
-    other-modules: Types
+    other-modules:
+        Options
+        Types
