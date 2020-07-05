@@ -3,62 +3,34 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-import Brick
-  ( (<=>),
-    App (App),
-    BrickEvent (AppEvent, VtyEvent),
-    EventM,
-    Next,
-    Widget,
-    attrMap,
-    continue,
-    customMain,
-    halt,
-    showFirstCursor,
-    txt,
-  )
+import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
+                        Next, Widget, attrMap, continue, customMain, halt,
+                        showFirstCursor, txt, (<=>))
 import qualified Brick
-import Brick.BChan (BChan, newBChan, writeBChan)
-import Brick.Widgets.Border (border)
-import Brick.Widgets.Edit
-  ( Editor,
-    applyEdit,
-    editorText,
-    getEditContents,
-    handleEditorEvent,
-    renderEditor,
-  )
-import Control.Concurrent (forkIO, threadDelay)
-import Control.Monad (forever, void)
-import Control.Monad.IO.Class (liftIO)
-import Data.Text (Text)
+import           Brick.BChan (BChan, newBChan, writeBChan)
+import           Brick.Widgets.Border (border)
+import           Brick.Widgets.Edit (Editor, applyEdit, editorText,
+                                     getEditContents, handleEditorEvent,
+                                     renderEditor)
+import           Control.Concurrent (forkIO, threadDelay)
+import           Control.Monad (forever, void)
+import           Control.Monad.IO.Class (liftIO)
+import           Data.Text (Text)
 import qualified Data.Text as Text
-import Data.Text.Zipper
-  ( TextZipper,
-    cursorPosition,
-    moveCursor,
-    textZipper,
-  )
+import           Data.Text.Zipper (TextZipper, cursorPosition, moveCursor,
+                                   textZipper)
 import qualified Data.Text.Zipper as TextZipper
-import Graphics.Vty
-  ( Event (EvKey),
-    Key (KEsc),
-    defAttr,
-    defaultConfig,
-    mkVty,
-  )
-import RON.Data (evalObjectState, execObjectState)
-import RON.Data.RGA (RgaString)
+import           Graphics.Vty (Event (EvKey), Key (KEsc), defAttr,
+                               defaultConfig, mkVty)
+import           RON.Data (evalObjectState, execObjectState)
+import           RON.Data.RGA (RgaString)
 import qualified RON.Data.RGA as RGA
-import RON.Storage.Backend
-  ( DocId (DocId),
-    Document (Document),
-    createVersion,
-    objectFrame,
-  )
-import RON.Storage.FS (loadDocument, runStorage)
+import           RON.Storage.Backend (DocId (DocId), Document (Document),
+                                      createVersion, objectFrame)
+import           RON.Storage.FS (loadDocument, runStorage)
 import qualified RON.Storage.FS as Storage
-import Types ()
+
+import           Types ()
 
 theDoc :: DocId RgaString
 theDoc = DocId "B3QCFGMHK1QJS-2005CRP400492"
