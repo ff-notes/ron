@@ -19,6 +19,7 @@ import           Text.Pretty.Simple (pPrint)
 import           Options (Command (Post, Show, UI), UIOptions (UIOptions),
                           parseCommand)
 import           Types (Message, postTime)
+import           UI (runUI)
 
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
@@ -46,7 +47,7 @@ main =
       Post username text -> do
         messageRef <- runStore db $ newMessage username text
         putStrLn $ "created message: " <> show messageRef
-      UI UIOptions{} -> undefined
+      UI UIOptions{} -> runUI db
 
 showMessages :: Handle -> IO ()
 showMessages db = do

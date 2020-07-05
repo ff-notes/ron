@@ -48,6 +48,7 @@ executable demo-chat
     import: language
     build-depends:
         -- global
+        brick,
         generic-lens,
         lens,
         optparse-applicative,
@@ -74,3 +75,4 @@ executable demo-chat
     other-modules:
         Options
         Types
+        UI
