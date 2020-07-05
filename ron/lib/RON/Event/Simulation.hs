@@ -1,5 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Lamport clock network simulation.
 -- 'ReplicaSim' provides 'Replica' and 'Clock' instances,
@@ -16,20 +17,21 @@ import           RON.Prelude
 import           Control.Monad.State.Strict (state)
 import qualified Data.HashMap.Strict as HM
 
-import           RON.Event (EpochEvent (EpochEvent), ReplicaClock,
-                            ReplicaId (ReplicaId), advance, getEvents, getPid)
+import           RON.Event (Event (..), Replica (Replica), ReplicaClock,
+                            TimeVariety (Logical), advance, getEvents, getPid,
+                            mkTime)
 import           RON.Util.Word (Word60, ls60)
 
--- | Lamport clock simulation. Key is 'ReplicaId'.
+-- | Lamport clock simulation. Key is 'Replica'.
 -- Non-present value is equivalent to (0, initial).
-newtype NetworkSimT m a = NetworkSim (StateT (HashMap ReplicaId Word60) m a)
+newtype NetworkSimT m a = NetworkSim (StateT (HashMap Replica Word60) m a)
     deriving (Applicative, Functor, Monad, MonadError e)
 
 instance MonadTrans NetworkSimT where
     lift = NetworkSim . lift
 
 -- | ReplicaSim inside Lamport clock simulation.
-newtype ReplicaSimT m a = ReplicaSim (ReaderT ReplicaId (NetworkSimT m) a)
+newtype ReplicaSimT m a = ReplicaSim (ReaderT Replica (NetworkSimT m) a)
     deriving (Applicative, Functor, Monad, MonadError e)
 
 instance MonadTrans ReplicaSimT where
@@ -39,17 +41,17 @@ instance Monad m => ReplicaClock (ReplicaSimT m) where
     getPid = ReplicaSim ask
 
     getEvents n' = ReplicaSim $ do
-        rid <- ask
+        replica <- ask
         (t0, t1) <-
             lift $ NetworkSim $ state $ \replicaStates -> let
-                t0orig = HM.lookupDefault (ls60 0) rid replicaStates
-                ReplicaId r = rid
+                t0orig = HM.lookupDefault (ls60 0) replica replicaStates
+                Replica r = replica
                 randomLeap =
                     ls60 . fromIntegral $ hash (t0orig, n, r) `mod` 0x10000
                 t0 = t0orig + randomLeap
                 t1 = t0 + n
-                in ((t0, t1), HM.insert rid t1 replicaStates)
-        pure [EpochEvent t rid | t <- [succ t0 .. t1]]
+                in ((t0, t1), HM.insert replica t1 replicaStates)
+        pure [Event{time = mkTime Logical t, replica} | t <- [succ t0 .. t1]]
       where
         n = max n' (ls60 1)
 
@@ -82,5 +84,5 @@ instance MonadFail m => MonadFail (ReplicaSimT m) where
 runNetworkSimT :: Monad m => NetworkSimT m a -> m a
 runNetworkSimT (NetworkSim action) = evalStateT action mempty
 
-runReplicaSimT :: ReplicaId -> ReplicaSimT m a -> NetworkSimT m a
+runReplicaSimT :: Replica -> ReplicaSimT m a -> NetworkSimT m a
 runReplicaSimT rid (ReplicaSim action) = runReaderT action rid

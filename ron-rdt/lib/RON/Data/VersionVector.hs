@@ -10,7 +10,8 @@ module RON.Data.VersionVector (
     VersionVector,
     VV (..),
     lookup,
-    makeVV,
+    mkVV,
+    serializeVV,
     (·≼),
 ) where
 
@@ -24,25 +25,26 @@ import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
                                     newObject, objectEncoding, readObject,
                                     reducibleOpType, stateFromChunk,
                                     stateToChunk)
-import           RON.Event (Event (..), ReplicaId, decodeEvent, getEventUuid,
-                            replicaId)
+import           RON.Event (Event (..), Replica, Time, decodeEvent, encodeEvent,
+                            getEventUuid, replica)
 import           RON.Semilattice (Semilattice, (≼))
-import           RON.Types (ObjectRef (ObjectRef), Op (Op, opId), UUID (UUID), WireStateChunk (WireStateChunk, stateBody, stateType))
-import           RON.Util.Word (Word60)
-import           RON.UUID (UuidFields (..))
+import           RON.Text.Serialize (serializePayload)
+import           RON.Types (Atom (AUuid), ObjectRef (ObjectRef), Op (Op, opId),
+                            UUID (UUID),
+                            WireStateChunk (WireStateChunk, stateBody, stateType))
 import qualified RON.UUID as UUID
 
 opTime :: Op -> Word64
 opTime Op{opId = UUID time _} = time
 
-opReplica :: Op -> ReplicaId
-opReplica Op{opId} = replicaId $ decodeEvent opId
+opReplica :: Op -> Replica
+opReplica Op{opId} = replica $ decodeEvent opId
 
 latter :: Op -> Op -> Op
 latter = maxOn opTime
 
 -- | Version Vector type. May be used both in typed and untyped contexts.
-newtype VersionVector = VersionVector (Map ReplicaId Op)
+newtype VersionVector = VersionVector (Map Replica Op)
     deriving (Eq, Show)
 
 instance Hashable VersionVector where
@@ -101,13 +103,11 @@ instance ReplicatedAsObject VersionVector where
 
     readObject = getObjectState
 
-lookup :: ReplicaId -> VersionVector -> Maybe Op
+lookup :: Replica -> VersionVector -> Maybe Op
 lookup replica (VersionVector vv) = Map.lookup replica vv
 
-type LocalTime = Word60
-
 -- | Simplified version vector
-newtype VV = VV (Map ReplicaId LocalTime)
+newtype VV = VV (Map Replica Time)
   deriving (Show)
 
 instance Semigroup VV where
@@ -116,19 +116,23 @@ instance Semigroup VV where
 instance Monoid VV where
   mempty = VV Map.empty
 
-makeVV :: [UUID] -> VV
-makeVV uuids =
+mkVV :: [UUID] -> VV
+mkVV uuids =
   VV $
     Map.fromList
-      [ (replicaId, uuidValue)
-      | uuid <- uuids
-      , let
-        UuidFields{uuidValue} = UUID.split uuid
-        Event{replicaId} = decodeEvent uuid
+      [ (replica, time)
+      | uuid <- uuids, let Event{replica, time} = decodeEvent uuid
       ]
+
+unVV :: VV -> [UUID]
+unVV (VV vv) =
+  [encodeEvent Event{replica, time} | (replica, time) <- Map.assocs vv]
 
 (·≼) :: UUID -> VV -> Bool
 uuid ·≼ VV vv =
-  maybe False (uuidValue <=) $ Map.lookup (replicaId $ decodeEvent uuid) vv
+  maybe False (time <=) $ Map.lookup replica vv
   where
-    UuidFields{uuidValue} = UUID.split uuid
+    Event{replica, time} = decodeEvent uuid
+
+serializeVV :: VV -> ByteStringL
+serializeVV = serializePayload . map AUuid . unVV

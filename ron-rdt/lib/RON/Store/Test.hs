@@ -18,15 +18,16 @@ import qualified Data.Map.Strict as Map
 import           Data.Sequence (Seq ((:|>)))
 import qualified Data.Sequence as Seq
 
-import           RON.Data.VersionVector (makeVV, (·≼))
+import           RON.Data.VersionVector (mkVV, (·≼))
 import           RON.Error (Error (..), liftMaybe)
-import           RON.Event (ReplicaClock, ReplicaId, applicationSpecificReplica)
+import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
+                            ReplicaClock, mkReplica)
 import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
 import           RON.Types (Op (..), UUID)
 
-newtype Object = Object{logs :: Map ReplicaId (Seq Op)}
+newtype Object = Object{logs :: Map Replica (Seq Op)}
   deriving (Eq, Generic, Show)
 
 type TestDB = Map UUID Object
@@ -41,8 +42,8 @@ runStoreSim :: TestDB -> StoreSim a -> Either Error (a, TestDB)
 runStoreSim db (StoreSim action) =
   runNetworkSimT $ runReplicaSimT thisReplicaId $ runStateT action db
 
-thisReplicaId :: ReplicaId
-thisReplicaId = applicationSpecificReplica 2020
+thisReplicaId :: Replica
+thisReplicaId = mkReplica ApplicationSpecific 2020
 
 instance MonadStore StoreSim where
   listObjects = StoreSim $ gets Map.keys
@@ -67,7 +68,7 @@ instance MonadStore StoreSim where
   getObjectVersion objectId = do
     db <- StoreSim get
     Object{logs} <- liftMaybe "object not found" $ db !? objectId
-    pure $ makeVV [opId | _ :|> Op{opId} <- Map.elems logs]
+    pure $ mkVV [opId | _ :|> Op{opId} <- Map.elems logs]
 
 emptyObject :: Object
 emptyObject = Object{logs = Map.empty}

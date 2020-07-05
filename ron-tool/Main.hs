@@ -12,8 +12,8 @@ import           Data.Foldable (for_)
 import           Data.Function ((&))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import qualified Data.Text.Lazy.Encoding as TextL
 import           Data.Traversable (for)
-import           Data.Word (Word64)
 import qualified Data.Yaml.Pretty as Yaml
 import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       ParserPrefs (..), command,
@@ -23,11 +23,10 @@ import           Options.Applicative (InfoMod, Parser, ParserInfo,
                                       subparser, (<**>))
 import           System.Directory (makeAbsolute)
 
-import           RON.Data.VersionVector (VV (..))
+import           RON.Data.VersionVector (VV (..), serializeVV)
 import           RON.Store (getObjectVersion, listObjects)
 import           RON.Store.FS (debugDump, newHandle, runStore)
 import           RON.Text (uuidToString, uuidToText)
-import           RON.Util.Word (safeCast)
 
 main :: IO ()
 main = do
@@ -103,7 +102,11 @@ dumpDB dbPath = do
       [ "database" .= dbPathAbs
       , "objects" .=
         Json.object
-          [ uuidToText objectId .= Json.object ["version" .= VVJson version]
+          [ uuidToText objectId .=
+            Json.object
+              [ "version"     .= VVJson version
+              , "version.ron" .= TextL.decodeUtf8 (serializeVV version)
+              ]
           | (objectId, version) <- objects
           ]
       ]
@@ -127,6 +130,6 @@ newtype VVJson = VVJson VV
 instance ToJSON VVJson where
   toJSON (VVJson (VV m)) =
     Json.object
-      [ Text.pack (show replicaId) .= (safeCast value :: Word64)
-      | (replicaId, value) <- Map.assocs m
+      [ Text.pack (show replica) .= Text.pack (show time)
+      | (replica, time) <- Map.assocs m
       ]

@@ -8,35 +8,32 @@
 {-# LANGUAGE RecordWildCards #-}
 
 module RON.Event (
-    CalendarTime (..),
-    CalendarEvent (..),
-    EpochEvent (..),
-    EpochTime,
-    Event (..),
-    LocalTime (..),
-    Naming (.., TrieForked, CryptoForked, RecordForked, ApplicationSpecific),
-    ReplicaClock (..),
-    ReplicaId (..),
-    advanceToUuid,
-    applicationSpecificReplica,
-    decodeEvent,
-    decodeReplicaId,
-    encodeEvent,
-    fromCalendarEvent,
-    fromEpochEvent,
-    getEvent,
-    getEventUuid,
-    getEventUuids,
-    mkCalendarDate,
-    mkCalendarDateTime,
-    mkCalendarDateTimeNano,
-    toEpochEvent,
-    trieForkedReplica,
+  CalendarTime (..),
+  Event (..),
+  Time (..),
+  TimeVariety (.., Calendar, Logical, Epoch, Unknown),
+  OriginVariety
+    (.., TrieForked, CryptoForked, RecordForked, ApplicationSpecific),
+  ReplicaClock (..),
+  Replica (..),
+  advanceToUuid,
+  decodeCalendar,
+  decodeEvent,
+  encodeCalendar,
+  encodeEvent,
+  getEvent,
+  getEventUuid,
+  getEventUuids,
+  mkCalendarDate,
+  mkCalendarDateTime,
+  mkCalendarDateTimeNano,
+  mkReplica,
+  mkTime,
 ) where
 
 import           RON.Prelude
 
-import           Data.Bits (shiftL, shiftR, (.|.))
+import           Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import qualified Data.ByteString.Char8 as BSC
 import           Data.Time (fromGregorianValid, makeTimeOfDayValid)
 import qualified Text.Show
@@ -45,11 +42,9 @@ import           RON.Base64 (encode60short)
 import           RON.Util.Word (pattern B00, pattern B01, pattern B10,
                                 pattern B11, Word12, Word2, Word24, Word6,
                                 Word60, leastSignificant12, leastSignificant2,
-                                leastSignificant24, leastSignificant4,
-                                leastSignificant6, leastSignificant60, ls12,
+                                leastSignificant24, leastSignificant6, ls12,
                                 ls24, ls6, ls60, safeCast)
-import           RON.UUID (UUID, UuidFields (UuidFields), uuidOrigin, uuidValue,
-                           uuidVariant, uuidVariety, uuidVersion)
+import           RON.UUID (UUID (..), UuidFields (..))
 import qualified RON.UUID as UUID
 
 -- | Calendar format. See https://github.com/gritzko/ron/issues/19.
@@ -65,96 +60,88 @@ data CalendarTime = CalendarTime
     }
     deriving (Eq, Ord, Show)
 
+newtype TimeVariety = TimeVariety Word2
+
+pattern Calendar :: TimeVariety
+pattern Calendar = TimeVariety B00
+
+pattern Logical :: TimeVariety
+pattern Logical = TimeVariety B01
+
 -- | RFC 4122 epoch, hundreds of nanoseconds since 1582.
 -- Year range is 1582—5235.
-type EpochTime = Word60
+pattern Epoch :: TimeVariety
+pattern Epoch = TimeVariety B10
+
+pattern Unknown :: TimeVariety
+pattern Unknown = TimeVariety B11
+
+{-# COMPLETE Calendar, Logical, Epoch, Unknown #-}
+
+instance Show TimeVariety where
+  show = \case
+    Calendar -> "Calendar"
+    Logical  -> "Logical"
+    Epoch    -> "Epoch"
+    Unknown  -> "Unknown"
 
 -- | Clock type is encoded in 2 higher bits of variety, value in uuidValue
-data LocalTime
-    = TCalendar !CalendarTime
-    | TLogical !Word60
-        -- ^ https://en.wikipedia.org/wiki/Logical_clock
-    | TEpoch !EpochTime
-    | TUnknown !Word60
-    deriving (Eq, Generic, Show)
+newtype Time = Time Word64
+  deriving (Eq, Ord)
+
+instance Show Time where
+  show (Time w64) =
+    show (TimeVariety $ leastSignificant2 $ w64 `shiftR` 62)
+    ++ "." ++ BSC.unpack (encode60short $ ls60 w64)
 
 -- | Replica id assignment style
-newtype Naming = Naming Word2
+newtype OriginVariety = OriginVariety Word2
   deriving newtype (Hashable)
 
-pattern TrieForked :: Naming
-pattern TrieForked = Naming B00
+pattern TrieForked :: OriginVariety
+pattern TrieForked = OriginVariety B00
 
-pattern CryptoForked :: Naming
-pattern CryptoForked = Naming B01
+pattern CryptoForked :: OriginVariety
+pattern CryptoForked = OriginVariety B01
 
-pattern RecordForked :: Naming
-pattern RecordForked = Naming B10
+pattern RecordForked :: OriginVariety
+pattern RecordForked = OriginVariety B10
 
-pattern ApplicationSpecific :: Naming
-pattern ApplicationSpecific = Naming B11
+pattern ApplicationSpecific :: OriginVariety
+pattern ApplicationSpecific = OriginVariety B11
 
 {-# COMPLETE TrieForked, CryptoForked, RecordForked, ApplicationSpecific #-}
 
-instance Show Naming where
+instance Show OriginVariety where
   show = \case
-    TrieForked          -> "TF"
-    CryptoForked        -> "CF"
-    RecordForked        -> "RF"
-    ApplicationSpecific -> "AS"
+    TrieForked          -> "Trie"
+    CryptoForked        -> "Crypto"
+    RecordForked        -> "Record"
+    ApplicationSpecific -> "App"
 
 -- | Replica identifier.
 -- Implementation: naming (62-61) and origin (60-0 bits) fields from UUID
-newtype ReplicaId = ReplicaId Word64
+newtype Replica = Replica Word64
   deriving newtype (Eq, Hashable, Ord)
 
-instance Show ReplicaId where
-  show (ReplicaId w64) =
-    show (Naming $ leastSignificant2 $ w64 `shiftR` 60)
+instance Show Replica where
+  show (Replica w64) =
+    show (OriginVariety $ leastSignificant2 $ w64 `shiftR` 60)
     ++ "." ++ BSC.unpack (encode60short $ ls60 w64)
 
 -- | Generic Lamport time event.
 -- Cannot be 'Ord' because we can't compare different types of clocks.
 -- If you want comparable events, use specific 'EpochEvent'.
 data Event = Event
-  { localTime :: !LocalTime
-  , replicaId :: !ReplicaId
+  { time      :: !Time
+  , replica :: !Replica
   }
   deriving (Eq, Generic, Show)
-
--- | Calendar-based Lamport time event, specific case of 'Event'.
-data CalendarEvent = CalendarEvent !CalendarTime !ReplicaId
-    deriving (Eq, Show)
-
-instance Ord CalendarEvent where
-    compare (CalendarEvent t1 (ReplicaId r1))
-            (CalendarEvent t2 (ReplicaId r2))
-        = compare (t1, r1) (t2, r2)
-
-fromCalendarEvent :: CalendarEvent -> Event
-fromCalendarEvent (CalendarEvent t r) = Event (TCalendar t) r
-
--- | Epoch-based Lamport time event, specific case of 'Event'.
-data EpochEvent = EpochEvent !EpochTime !ReplicaId
-    deriving (Eq, Show)
-
-instance Ord EpochEvent where
-    compare (EpochEvent t1 (ReplicaId r1))
-            (EpochEvent t2 (ReplicaId r2))
-        = compare (t1, r1) (t2, r2)
-
-fromEpochEvent :: EpochEvent -> Event
-fromEpochEvent (EpochEvent t r) = Event (TEpoch t) r
-
-toEpochEvent :: Event -> Maybe EpochEvent
-toEpochEvent (Event t r) = case t of
-    TEpoch t' -> Just $ EpochEvent t' r
-    _         -> Nothing
 
 class Monad m => ReplicaClock m where
 
     -- | Get current replica id
-    getPid :: m ReplicaId
+    getPid :: m Replica
 
     -- | Get sequential timestamps.
     --
@@ -173,11 +160,11 @@ class Monad m => ReplicaClock m where
     --
     -- 3. @getEvents 0 == getEvents 1@
     getEvents
-        :: EpochTime -- ^ number of needed timestamps
-        -> m [EpochEvent]
+        :: Word60 -- ^ number of needed timestamps
+        -> m [Event]
 
     -- | Make local time not less than this
-    advance :: EpochTime -> m ()
+    advance :: Word60 -> m ()
 
 instance ReplicaClock m => ReplicaClock (ExceptT e m) where
     getPid    = lift   getPid
@@ -207,18 +194,18 @@ advanceToUuid uuid =
     UuidFields{uuidValue, uuidVariant, uuidVersion} = UUID.split uuid
 
 -- | Get a single event
-getEvent :: (HasCallStack, ReplicaClock m) => m EpochEvent
+getEvent :: (HasCallStack, ReplicaClock m) => m Event
 getEvent = getEvents (ls60 1) >>= \case
     e:_ -> pure e
     []  -> error "getEvents returned no events"
 
 -- | Get a single event as UUID
 getEventUuid :: ReplicaClock m => m UUID
-getEventUuid = encodeEvent . fromEpochEvent <$> getEvent
+getEventUuid = encodeEvent <$> getEvent
 
 -- | Get event sequence as UUIDs
 getEventUuids :: ReplicaClock m => Word60 -> m [UUID]
-getEventUuids = fmap (map $ encodeEvent . fromEpochEvent) . getEvents
+getEventUuids = fmap (map encodeEvent) . getEvents
 
 encodeCalendar :: CalendarTime -> Word60
 encodeCalendar CalendarTime{..} = ls60 $
@@ -241,54 +228,30 @@ decodeCalendar w = CalendarTime
   where
     v = safeCast w :: Word64
 
-encodeLocalTime :: LocalTime -> (Word2, Word60)
-encodeLocalTime = \case
-    TCalendar t -> (B00, encodeCalendar t)
-    TLogical  t -> (B01, t)
-    TEpoch    t -> (B10, t)
-    TUnknown  t -> (B11, t)
-
-decodeLocalTime :: Word2 -> Word60 -> LocalTime
-decodeLocalTime = \case
-    B00 -> TCalendar . decodeCalendar
-    B01 -> TLogical
-    B10 -> TEpoch
-    B11 -> TUnknown
+decodeTime :: Word64 -> Time
+decodeTime value = Time $ value .&. 0xCFFFFFFFFFFFFFFF
 
 encodeEvent :: Event -> UUID
-encodeEvent (Event time replicaId) = UUID.build UuidFields
-    { uuidVariety
-    , uuidValue
-    , uuidVariant = B00
-    , uuidVersion = B10
-    , uuidOrigin
-    }
+encodeEvent Event{time, replica} =
+  UUID (varietyAndValue .|. originVariety) (eventVersion .|. origin)
   where
-    (varietyMS2, uuidValue) = encodeLocalTime time
-    (varietyLS2, uuidOrigin) = encodeReplicaId replicaId
-    uuidVariety = leastSignificant4 $
-        ((safeCast varietyMS2 :: Word8) `shiftL` 2) .|.
-        ( safeCast varietyLS2 :: Word8)
+    Time varietyAndValue = time
+    (originVariety, origin) = encodeReplicaId replica
+    eventVersion = 0x2000000000000000
 
 decodeEvent :: UUID -> Event
-decodeEvent uuid = Event
-    (decodeLocalTime
-        (leastSignificant2 (safeCast uuidVariety `shiftR` 2 :: Word8))
-        uuidValue)
-    (decodeReplicaId
-        (leastSignificant2 (safeCast uuidVariety :: Word8)) uuidOrigin)
-  where
-    UuidFields{uuidVariety, uuidValue, uuidOrigin} = UUID.split uuid
+decodeEvent (UUID x y) =
+  Event{replica = decodeReplicaId x y, time = decodeTime x}
 
-decodeReplicaId :: Word2 -> Word60 -> ReplicaId
-decodeReplicaId naming origin =
-  ReplicaId $ (safeCast naming `shiftL` 60) .|. safeCast origin
+decodeReplicaId :: Word64 -> Word64 -> Replica
+decodeReplicaId x y =
+  Replica $ (x .&. 0x3000000000000000) .|. (y .&. 0x0FFFFFFFFFFFFFFF)
 
-encodeReplicaId :: ReplicaId -> (Word2, Word60)
-encodeReplicaId (ReplicaId r) =
-    ( leastSignificant2 $ r `shiftR` 60
-    , leastSignificant60 r
-    )
+encodeReplicaId :: Replica -> (Word64, Word64)
+encodeReplicaId (Replica r) =
+  ( r .&. 0x3000000000000000
+  , r .&. 0x0FFFFFFFFFFFFFFF
+  )
 
 -- | Make a calendar timestamp from a date
 mkCalendarDate
@@ -327,11 +290,11 @@ mkCalendarDateTimeNano (y, m, d) (hh, mm, ss) hns = do
         , nanosecHundreds = ls24 hns
         }
 
--- | Make an 'applicationSpecific' replica id from arbitrary number
-applicationSpecificReplica :: Word60 -> ReplicaId
-applicationSpecificReplica =
-  decodeReplicaId (coerce ApplicationSpecific :: Word2)
+-- | Make a replica id from 'OriginVariety' and arbitrary number
+mkReplica :: OriginVariety -> Word60 -> Replica
+mkReplica (OriginVariety variety) origin =
+  Replica $ (safeCast variety `shiftL` 60) .|. safeCast origin
 
--- | Make an 'trieForked' replica id from arbitrary number
-trieForkedReplica :: Word60 -> ReplicaId
-trieForkedReplica = decodeReplicaId (coerce TrieForked :: Word2)
+mkTime :: TimeVariety -> Word60 -> Time
+mkTime (TimeVariety variety) value =
+  Time $ (safeCast variety `shiftL` 62) .|. safeCast value

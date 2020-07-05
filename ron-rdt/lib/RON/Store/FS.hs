@@ -20,11 +20,11 @@ import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
 
-import           RON.Data.VersionVector (VV, makeVV, (·≼))
+import           RON.Data.VersionVector (VV, mkVV, (·≼))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
-import           RON.Event (EpochTime, ReplicaClock, ReplicaId,
-                            applicationSpecificReplica, getEventUuid)
+import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
+                            ReplicaClock, getEventUuid, mkReplica)
 import           RON.Store (MonadStore (..))
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
@@ -34,7 +34,7 @@ import qualified RON.UUID as UUID
 
 -- | Store handle (uses the “Handle pattern”).
 data Handle = Handle
-  { clock   :: IORef EpochTime
+  { clock   :: IORef Word60
   , dataDir :: FilePath
   -- fsWatchManager    :: FSNotify.WatchManager,
   -- stopWatching      :: IORef (Maybe StopListening),
@@ -43,7 +43,7 @@ data Handle = Handle
   -- To activate it, call 'startWatching'.
   -- You should NOT read from it directly,
   -- call 'subscribe' to read from derived channel instead.
-  , replica :: ReplicaId
+  , replica :: Replica
   }
 
 newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
@@ -65,7 +65,7 @@ instance MonadStore Store where
 
   getObjectVersion objectId = do
     patchNames <- getObjectPatches objectId
-    makeVV <$> for patchNames uuidFromFileName
+    mkVV <$> for patchNames uuidFromFileName
 
 askObjectLogsDir :: MonadReader Handle m => UUID -> m FilePath
 askObjectLogsDir objectId =
@@ -125,7 +125,7 @@ newHandleWithReplicaId dataDir' replicaId = do
   -- fsWatchManager <- FSNotify.startManager
   -- stopWatching      <- newIORef Nothing
   -- onDocumentChanged <- newBroadcastTChanIO
-  let replica = applicationSpecificReplica replicaId
+  let replica = mkReplica ApplicationSpecific replicaId
   pure Handle{..}
 
 getMacAddress :: IO (Maybe Word64)

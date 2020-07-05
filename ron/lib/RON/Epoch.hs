@@ -4,8 +4,8 @@ module RON.Epoch (
     EpochClock,
     decode,
     encode,
+    epochTimeFromUnix,
     getCurrentEpochTime,
-    localEpochTimeFromUnix,
     runEpochClock,
     runEpochClockFromCurrentTime,
 ) where
@@ -15,21 +15,21 @@ import           RON.Prelude
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
                                         posixSecondsToUTCTime)
 
-import           RON.Event (EpochEvent (EpochEvent), EpochTime,
-                            LocalTime (TEpoch), ReplicaClock, ReplicaId,
-                            advance, getEvents, getPid)
-import           RON.Util.Word (leastSignificant60, safeCast)
+import           RON.Event (Event (..), Replica, ReplicaClock,
+                            TimeVariety (Epoch), advance, getEvents, getPid,
+                            mkTime)
+import           RON.Util.Word (Word60, leastSignificant60, safeCast)
 
 -- | Real epoch clock.
 -- Uses kind of global variable to ensure strict monotonicity.
-newtype EpochClock a = EpochClock (ReaderT (ReplicaId, IORef EpochTime) IO a)
+newtype EpochClock a = EpochClock (ReaderT (Replica, IORef Word60) IO a)
     deriving (Applicative, Functor, Monad, MonadIO)
 
 instance ReplicaClock EpochClock where
     getPid = EpochClock $ reader fst
 
-    advance time = EpochClock $ ReaderT $ \(_pid, timeVar) ->
-        atomicModifyIORef' timeVar $ \t0 -> (max time t0, ())
+    advance theirTime = EpochClock $ ReaderT $ \(_pid, timeVar) ->
+        atomicModifyIORef' timeVar $ \ourTime -> (max theirTime ourTime, ())
 
     getEvents n0 = EpochClock $ ReaderT $ \(pid, timeVar) -> do
         let n = max n0 1
@@ -38,27 +38,27 @@ instance ReplicaClock EpochClock where
             begin = max realTime $ succ timeCur
             end   = begin + pred n
             in (end, (begin, end))
-        pure [EpochEvent t pid | t <- [begin .. end]]
+        pure [Event{time = mkTime Epoch t, replica = pid} | t <- [begin .. end]]
 
 -- | Run 'EpochClock' action with explicit time variable.
-runEpochClock :: ReplicaId -> IORef EpochTime -> EpochClock a -> IO a
+runEpochClock :: Replica -> IORef Word60 -> EpochClock a -> IO a
 runEpochClock replicaId timeVar (EpochClock action) =
     runReaderT action (replicaId, timeVar)
 
 -- | Like 'runEpochClock', but initialize time variable with current wall time.
-runEpochClockFromCurrentTime :: ReplicaId -> EpochClock a -> IO a
+runEpochClockFromCurrentTime :: Replica -> EpochClock a -> IO a
 runEpochClockFromCurrentTime replicaId clock = do
-    time <- getCurrentEpochTime
-    timeVar <- newIORef time
+    wallTime <- getCurrentEpochTime
+    timeVar <- newIORef wallTime
     runEpochClock replicaId timeVar clock
 
--- | Get current time in 'EpochTime' format (with 100 ns resolution).
+-- | Get current time in 'Time' format (with 100 ns resolution).
 -- Monotonicity is not guaranteed.
-getCurrentEpochTime :: IO EpochTime
+getCurrentEpochTime :: IO Word60
 getCurrentEpochTime = encode <$> getPOSIXTime
 
 -- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
-epochTimeFromUnix :: Word64 -> EpochTime
+epochTimeFromUnix :: Word64 -> Word60
 epochTimeFromUnix = leastSignificant60 . (+ epochDiff)
 
 -- The difference between Unix epoch and UUID epoch;
@@ -66,12 +66,8 @@ epochTimeFromUnix = leastSignificant60 . (+ epochDiff)
 epochDiff :: Word64
 epochDiff = 0x01B21DD213814000
 
--- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
-localEpochTimeFromUnix :: Word64 -> LocalTime
-localEpochTimeFromUnix = TEpoch . epochTimeFromUnix
-
 -- | Decode date and time from UUID epoch timestamp
-decode :: EpochTime -> UTCTime
+decode :: Word60 -> UTCTime
 decode
     = posixSecondsToUTCTime
     . realToFrac
@@ -79,5 +75,5 @@ decode
     . subtract epochDiff
     . safeCast
 
-encode :: POSIXTime -> EpochTime
+encode :: POSIXTime -> Word60
 encode = epochTimeFromUnix . round . (* 10000000)
