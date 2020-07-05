@@ -8,13 +8,13 @@ import           Data.List (sortOn)
 import           Data.Maybe (catMaybes)
 import           Data.Text (Text)
 import           Data.Traversable (for)
-import           Options.Applicative (InfoMod, Parser, ParserInfo, ParserPrefs,
-                                      auto, customExecParser, defaultPrefs,
-                                      fullDesc, helper, info, long, metavar,
-                                      option, prefDisambiguate,
+import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
+                                      command, customExecParser, defaultPrefs,
+                                      fullDesc, help, helper, info, long,
+                                      metavar, option, prefDisambiguate,
                                       prefHelpLongEquals, prefMultiSuffix,
                                       prefShowHelpOnError, progDesc,
-                                      strArgument)
+                                      strArgument, subparser)
 import           RON.Data.ORSet.Experimental (ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
@@ -45,31 +45,47 @@ openMessages = openNamedObject "messages"
 main :: IO ()
 main =
   do
-    Options{cmd} <- customExecParser prefs parserInfo
+    cmd <- parseCommand
     db <- newHandle "./data"
     case cmd of
       Show -> showMessages db
-      Add username text -> do
+      Post username text -> do
         messageRef <- runStore db $ newMessage username text
         putStrLn $ "created message: " <> show messageRef
       UI _username -> undefined
+
+parseCommand :: IO Command
+parseCommand = customExecParser prefs parserInfo
   where
-    parserInfo = i parser "RON demo chat application" mempty
-    parser = do
-      peers     <- many     $ option auto $ long "peer" <> metavar "PORT"
-      port      <- optional $ option auto $ long "port" <> metavar "PORT"
-      mUsername <- optional $ strArgument $ metavar "NAME"
-      mText     <- optional $ strArgument $ metavar "TEXT"
-      pure
-        Options
-          { cmd =
-              case (mUsername, mText) of
-                (Nothing,       Nothing)   -> Show
-                (Just username, Just text) -> Add username text
-                (Just username, Nothing)   -> UI  username
-                (Nothing,       Just _)    -> error "internal"
-          , ..
-          }
+    parserInfo = i parser "RON demo chat application"
+
+parser :: Parser Command
+parser =
+  subparser
+    $   command "show" (i pShow "Show chat messages and exit (offline)")
+    <>  command "post" (i pPost "Post messages to chat (offline)")
+    <>  command "ui"   (i pUI   "Start UI with network")
+  where
+    pShow = pure Show
+
+    pPost =
+      Post <$> strArgument (metavar "NAME") <*> strArgument (metavar "TEXT")
+
+    pUI = do
+      username <- strArgument $ metavar "NAME"
+      peers    <-
+        many $
+        option auto
+          $   long    "peer"
+          <>  metavar "PORT"
+          <>  help    "Connect to localhost peers using specifed ports"
+      listen <-
+        optional $
+        option auto
+          $   long    "listen"
+          <>  metavar "PORT"
+          <>  help    "Run server on specified port and accept connections"
+      pure $ UI UIOptions{..}
 
 showMessages :: Handle -> IO ()
 showMessages db = do
@@ -86,13 +102,13 @@ showMessages db = do
           for messageRefs readObject
   pPrint $ sortOn postTime $ catMaybes mMessages
 
-data Options = Options
-  { cmd   :: Command
-  , peers :: [Int]
-  , port  :: Maybe Int
-  }
+data Command = Show | UI UIOptions | Post Text Text
 
-data Command = Show | UI Text | Add Text Text
+data UIOptions = UIOptions
+  { username :: Text
+  , peers    :: [Int]
+  , listen   :: Maybe Int
+  }
 
 prefs :: ParserPrefs
 prefs =
@@ -103,5 +119,5 @@ prefs =
     , prefShowHelpOnError = True
     }
 
-i :: Parser a -> String -> InfoMod a -> ParserInfo a
-i prsr desc m = info (prsr <**> helper) $ fullDesc <> progDesc desc <> m
+i :: Parser a -> String -> ParserInfo a
+i prsr desc = info (prsr <**> helper) $ fullDesc <> progDesc desc

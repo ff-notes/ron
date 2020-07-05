@@ -15,10 +15,9 @@ import qualified Data.Text as Text
 import qualified Data.Text.Lazy.Encoding as TextL
 import           Data.Traversable (for)
 import qualified Data.Yaml.Pretty as Yaml
-import           Options.Applicative (InfoMod, Parser, ParserInfo,
-                                      ParserPrefs (..), command,
-                                      customExecParser, defaultPrefs, flag',
-                                      fullDesc, help, helper, info, long,
+import           Options.Applicative (Parser, ParserInfo, ParserPrefs (..),
+                                      command, customExecParser, defaultPrefs,
+                                      flag', fullDesc, help, helper, info, long,
                                       metavar, progDesc, short, strOption,
                                       subparser, (<**>))
 import           System.Directory (makeAbsolute)
@@ -83,10 +82,7 @@ prefs =
     }
 
 i :: Parser a -> String -> ParserInfo a
-i prsr desc = i_ prsr desc mempty
-
-i_ :: Parser a -> String -> InfoMod a -> ParserInfo a
-i_ prsr desc m = info (prsr <**> helper) $ fullDesc <> progDesc desc <> m
+i prsr desc = info (prsr <**> helper) $ fullDesc <> progDesc desc
 
 dumpDB :: FilePath -> IO Value
 dumpDB dbPath = do
