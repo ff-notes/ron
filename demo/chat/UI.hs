@@ -5,11 +5,13 @@ import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
                         hBox, halt, modifyDefAttr, showFirstCursor, str, txt,
                         vBox, vLimit)
 import qualified Brick
-import           Brick.BChan (newBChan)
+import           Brick.BChan (BChan, newBChan, writeBChan)
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
-import           Control.Concurrent.STM (atomically, writeTChan)
+import           Control.Concurrent (forkIO)
+import           Control.Concurrent.STM (atomically, readTChan, writeTChan)
+import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Char (isSpace, ord)
 import           Data.Text (Text)
@@ -29,13 +31,14 @@ runUI :: Store.Handle -> Env -> IO ()
 runUI db env =
   do
     messages   <- loadAllMessages db -- TODO load asynchronously
-    eventChan  <- newBChan 10
+    onEvent    <- newBChan 10
+    _          <- forkIO $ eventWorker env onEvent
     initialVty <- buildVty
     finalState <-
       customMain
         initialVty
         buildVty
-        (Just eventChan)
+        (Just onEvent)
         (app env)
         initialState{messages}
     print finalState -- TODO save
@@ -117,3 +120,9 @@ appHandleEvent Env{username, onMessagePosted} state =
 
 emptyEditor :: Editor Text ()
 emptyEditor = editorText () Nothing ""
+
+eventWorker :: Env -> BChan AppEvent -> IO ()
+eventWorker Env{onMessageListUpdated} onEvent =
+  forever $ do
+    messages <- atomically $ readTChan onMessageListUpdated
+    writeBChan onEvent $ MessageListUpdated messages

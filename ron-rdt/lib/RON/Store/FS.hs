@@ -5,12 +5,19 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module RON.Store.FS (Handle, Store, debugDump, newHandle, runStore) where
+module RON.Store.FS
+  ( Handle
+  , Store
+  , debugDump
+  , newHandle
+  , runStore
+  , subscribe
+  ) where
 
 import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, newBroadcastTChanIO,
-                                         writeTChan)
+                                         writeTChan, dupTChan)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -36,13 +43,13 @@ import qualified RON.UUID as UUID
 
 -- | Store handle (uses the “Handle pattern”).
 data Handle = Handle
-  { clock             :: IORef Word60
-  , dataDir           :: FilePath
+  { clock           :: IORef Word60
+  , dataDir         :: FilePath
   , onObjectChanged :: TChan UUID
-  -- ^ A channel of changes in the database.
-  -- This is a broadcast channel, so you MUST NOT read from it directly,
-  -- call 'subscribe' to read from derived channel instead.
-  , replica           :: Replica
+    -- ^ A channel of changes in the database.
+    -- This is a broadcast channel, so you MUST NOT read from it directly,
+    -- call 'subscribe' to read from derived channel instead.
+  , replica         :: Replica
   }
 
 newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
@@ -161,3 +168,6 @@ debugDump dataDir = do
       let logPath = logsDir </> logName
       BSL.putStr =<< BSL.readFile logPath
     BSLC.putStrLn ""
+
+subscribe :: Handle -> IO (TChan UUID)
+subscribe Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged

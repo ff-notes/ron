@@ -1,7 +1,13 @@
-module Database (loadAllMessages, newMessage, messagePostWorker) where
+module Database
+  ( databaseUpdateWorker
+  , loadAllMessages
+  , messagePostWorker
+  , newMessage
+  ) where
 
-import           Control.Concurrent.STM (TChan, atomically, readTChan)
-import           Control.Monad (forever)
+import           Control.Concurrent.STM (TChan, atomically, readTChan,
+                                         writeTChan)
+import           Control.Monad (forever, when)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.List (sortOn)
 import           Data.Maybe (catMaybes)
@@ -13,7 +19,7 @@ import           RON.Event (ReplicaClock)
 import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
 import           RON.Store.FS (runStore)
 import qualified RON.Store.FS as Store
-import           RON.Types (Atom (AString), ObjectRef)
+import           RON.Types (Atom (AString), ObjectRef (ObjectRef))
 
 import           Types (MessageContent (MessageContent), MessageView, postTime)
 import qualified Types
@@ -52,3 +58,14 @@ messagePostWorker onMessagePosted db =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
     runStore db $ newMessage message
+
+databaseUpdateWorker :: Store.Handle -> TChan [MessageView] -> IO ()
+databaseUpdateWorker db onMessageListUpdated = do
+  ObjectRef messageSetId <- runStore db openMessages
+  onObjectChanged        <- Store.subscribe db
+  forever $ do
+    objectId <- atomically $ readTChan onObjectChanged
+    when (objectId == messageSetId) $ do
+      messages <- loadAllMessages db
+      atomically $ writeTChan onMessageListUpdated messages
+    -- ignore other changes

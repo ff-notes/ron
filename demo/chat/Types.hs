@@ -44,5 +44,5 @@ instance ReplicatedObject MessageView where
 data Env = Env
   { username             :: Text
   , onMessagePosted      :: TChan MessageContent
-  -- , onMessageListUpdated :: TChan [MessageView]
+  , onMessageListUpdated :: TChan [MessageView]
   }
