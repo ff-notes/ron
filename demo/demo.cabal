@@ -53,6 +53,7 @@ executable demo-chat
         lens,
         optparse-applicative,
         pretty-simple,
+        stm,
         text,
         time,
         vty,

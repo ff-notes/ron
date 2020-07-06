@@ -13,9 +13,10 @@ import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
 import           RON.Store.FS (Handle, runStore)
 import           RON.Types (Atom (AString), ObjectRef)
 
-import           Types (Message, postTime)
+import           Types (MessageContent (MessageContent), MessageView, postTime)
+import qualified Types
 
-loadAllMessages :: Handle -> IO [Message]
+loadAllMessages :: Handle -> IO [MessageView]
 loadAllMessages db =
   runStore db $ do
     gMessages   <- openMessages
@@ -30,15 +31,15 @@ loadAllMessages db =
 
 openMessages ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
-  m (ObjectRef (ORSet (ObjectRef Message)))
+  m (ObjectRef (ORSet (ObjectRef MessageView)))
 openMessages = openNamedObject "messages"
 
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
-  Text -> Text -> m (ObjectRef Message)
-newMessage username text = do
+  MessageContent -> m (ObjectRef MessageView)
+newMessage MessageContent{username, text} = do
   gMessages <- openMessages
-  msgRef <- newObject @Message
+  msgRef <- newObject @MessageView
   ORSet.add_ msgRef ("username", [AString username])
   ORSet.add_ msgRef ("text",     [AString text    ])
   ORSet.add_ gMessages msgRef

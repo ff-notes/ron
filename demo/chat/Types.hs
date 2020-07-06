@@ -1,5 +1,6 @@
-module Types where
+module Types (Env (..), MessageContent (..), MessageView (..)) where
 
+import           Control.Concurrent.STM (TChan)
 import           Control.Lens ((^.))
 import           Data.Generics.Labels ()
 import           Data.Text (Text)
@@ -13,18 +14,23 @@ import           RON.Event (TimeVariety (Epoch), decodeEvent, timeValue,
                             timeVariety)
 import           RON.Types (Payload)
 
-data Message = Message
+data MessageView = MessageView
   { postTime :: UTCTime
-  , username :: Text
+  , content  :: MessageContent
+  }
+  deriving (Show)
+
+data MessageContent = MessageContent
+  { username :: Text
   , text     :: Text
   }
   deriving (Show)
 
-instance ReplicatedObject Message where
-  type Rep Message = ORMap Text Payload
+instance ReplicatedObject MessageView where
+  type Rep MessageView = ORMap Text Payload
 
   view objectId ormap =
-    errorContext "view @Message" $ do
+    errorContext "view @MessageView" $ do
       postTime <- let
         time = decodeEvent objectId ^. #time
         in
@@ -33,4 +39,6 @@ instance ReplicatedObject Message where
           _     -> throwError "objectId in not an epoch event"
       username <- ORMap.lookupLww' "username" ormap
       text     <- ORMap.lookupLww' "text"     ormap
-      pure Message{..}
+      pure MessageView{postTime, content = MessageContent{username, text}}
+
+data Env = Env {username :: Text, newMessageChan :: TChan MessageContent}
