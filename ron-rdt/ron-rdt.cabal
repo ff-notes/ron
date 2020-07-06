@@ -41,6 +41,7 @@ library
         lens,
         mtl,
         network-info,
+        stm,
         text,
         tf-random,
         time,

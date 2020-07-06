@@ -9,6 +9,8 @@ module RON.Store.FS (Handle, Store, debugDump, newHandle, runStore) where
 
 import           RON.Prelude
 
+import           Control.Concurrent.STM (TChan, atomically, newBroadcastTChanIO,
+                                         writeTChan)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -34,16 +36,13 @@ import qualified RON.UUID as UUID
 
 -- | Store handle (uses the “Handle pattern”).
 data Handle = Handle
-  { clock   :: IORef Word60
-  , dataDir :: FilePath
-  -- fsWatchManager    :: FSNotify.WatchManager,
-  -- stopWatching      :: IORef (Maybe StopListening),
-  -- onDocumentChanged :: TChan RawDocId,
+  { clock             :: IORef Word60
+  , dataDir           :: FilePath
+  , onObjectChanged :: TChan UUID
   -- ^ A channel of changes in the database.
-  -- To activate it, call 'startWatching'.
-  -- You should NOT read from it directly,
+  -- This is a broadcast channel, so you MUST NOT read from it directly,
   -- call 'subscribe' to read from derived channel instead.
-  , replica :: Replica
+  , replica           :: Replica
   }
 
 newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
@@ -93,12 +92,13 @@ loadObjectLogFS objectId version = do
 
 appendPatchFS :: UUID -> [Op] -> Store ()
 appendPatchFS objectId patch = do
-  Handle{dataDir} <- Store ask
+  Handle{dataDir, onObjectChanged} <- Store ask
   let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
   tryIO $ createDirectoryIfMissing True objectLogsDir
   patchVersion <- getEventUuid
   let patchFile = objectLogsDir </> uuidToFileName patchVersion
   tryIO $ BSL.writeFile patchFile $ serializeOpenFrame patch
+  tryIO $ atomically $ writeTChan onObjectChanged objectId
 
 -- | Run a 'Store' action
 runStore :: Handle -> Store a -> IO a
@@ -119,12 +119,10 @@ newHandle hDataDir = do
 
 newHandleWithReplicaId :: FilePath -> Word60 -> IO Handle
 newHandleWithReplicaId dataDir' replicaId = do
-  dataDir <- makeAbsolute dataDir'
-  time    <- getCurrentEpochTime
-  clock   <- newIORef time
-  -- fsWatchManager <- FSNotify.startManager
-  -- stopWatching      <- newIORef Nothing
-  -- onDocumentChanged <- newBroadcastTChanIO
+  dataDir         <- makeAbsolute dataDir'
+  time            <- getCurrentEpochTime
+  clock           <- newIORef time
+  onObjectChanged <- newBroadcastTChanIO
   let replica = mkReplica ApplicationSpecific replicaId
   pure Handle{..}
 
