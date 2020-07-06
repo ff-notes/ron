@@ -1,10 +1,11 @@
 module UI (runUI) where
 
 import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
-                        Next, Widget, attrMap, continue, defaultMain, fg, fill,
+                        Next, Widget, attrMap, continue, customMain, fg, fill,
                         hBox, halt, modifyDefAttr, showFirstCursor, str, txt,
                         vBox, vLimit)
 import qualified Brick
+import           Brick.BChan (newBChan)
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
@@ -15,7 +16,8 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 import           GHC.Generics (Generic)
 import           Graphics.Vty (Color (ISOColor), Event (EvKey),
-                               Key (KEnter, KEsc))
+                               Key (KEnter, KEsc), mkVty)
+import qualified Graphics.Vty as Vty
 import qualified RON.Store.FS as Store (Handle)
 
 import           Database (loadAllMessages)
@@ -24,10 +26,21 @@ import           Types (Env (Env), MessageContent (MessageContent),
 import qualified Types
 
 runUI :: Store.Handle -> Env -> IO ()
-runUI db env = do
-  messages   <- loadAllMessages db -- TODO load asynchronously
-  finalState <- defaultMain (app env) initialState{messages}
-  print finalState -- TODO save
+runUI db env =
+  do
+    messages   <- loadAllMessages db -- TODO load asynchronously
+    eventChan  <- newBChan 10
+    initialVty <- buildVty
+    finalState <-
+      customMain
+        initialVty
+        buildVty
+        (Just eventChan)
+        (app env)
+        initialState{messages}
+    print finalState -- TODO save
+  where
+    buildVty = mkVty Vty.defaultConfig
 
 data State = State{messages :: [MessageView], messageInput :: Editor Text ()}
   deriving (Generic, Show)
