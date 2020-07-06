@@ -10,14 +10,15 @@ module RON.Store.FS
   , Store
   , debugDump
   , newHandle
+  , newHandleWithReplica
   , runStore
   , subscribe
   ) where
 
 import           RON.Prelude
 
-import           Control.Concurrent.STM (TChan, atomically, newBroadcastTChanIO,
-                                         writeTChan, dupTChan)
+import           Control.Concurrent.STM (TChan, atomically, dupTChan,
+                                         newBroadcastTChanIO, writeTChan)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
@@ -25,6 +26,7 @@ import           Data.Foldable (find)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
                                    listDirectory, makeAbsolute)
+import           System.FileLock (SharedExclusive (Exclusive), tryLockFile)
 import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
@@ -115,23 +117,28 @@ runStore h@Handle{replica, clock} (Store action) = do
 
 -- | Create new storage handle.
 -- Uses MAC address for replica id or generates a random one.
-newHandle :: FilePath -> IO Handle
-newHandle hDataDir = do
+newHandle :: FilePath -> IO (Maybe Handle)
+newHandle dataDir = do
   macAddress <- getMacAddress
   replicaId  <-
     case macAddress of
       Just macAddress' -> pure macAddress'
       Nothing          -> fst . random <$> newTFGen
-  newHandleWithReplicaId hDataDir $ leastSignificant60 replicaId
+  newHandleWithReplica dataDir $ leastSignificant60 replicaId
 
-newHandleWithReplicaId :: FilePath -> Word60 -> IO Handle
-newHandleWithReplicaId dataDir' replicaId = do
-  dataDir         <- makeAbsolute dataDir'
-  time            <- getCurrentEpochTime
-  clock           <- newIORef time
-  onObjectChanged <- newBroadcastTChanIO
-  let replica = mkReplica ApplicationSpecific replicaId
-  pure Handle{..}
+newHandleWithReplica :: FilePath -> Word60 -> IO (Maybe Handle)
+newHandleWithReplica dataDir' replicaId = do
+  dataDir <- makeAbsolute dataDir'
+  let dbLockFile = dataDir </> "lock"
+  mLock <- tryLockFile dbLockFile Exclusive
+  case mLock of
+    Nothing -> pure Nothing
+    Just _ -> do
+      time            <- getCurrentEpochTime
+      clock           <- newIORef time
+      onObjectChanged <- newBroadcastTChanIO
+      let replica = mkReplica ApplicationSpecific replicaId
+      pure $ Just Handle{..}
 
 getMacAddress :: IO (Maybe Word64)
 getMacAddress =

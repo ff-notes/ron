@@ -35,7 +35,7 @@ main = do
     Dump DumpJson -> dumpDB dbPath >>= printJson
     Dump DumpYaml -> dumpDB dbPath >>= printYaml
     List -> do
-      db <- newHandle dbPath
+      Just db <- newHandle dbPath
       objects <- runStore db listObjects
       for_ objects $ putStrLn . uuidToString
 
@@ -87,7 +87,7 @@ i prsr desc = info (prsr <**> helper) $ fullDesc <> progDesc desc
 dumpDB :: FilePath -> IO Value
 dumpDB dbPath = do
   dbPathAbs <- makeAbsolute dbPath
-  db        <- newHandle dbPath
+  Just db   <- newHandle dbPath
   objects   <- runStore db $ do
     objectIds <- listObjects
     for objectIds $ \objectId -> do

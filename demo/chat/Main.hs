@@ -15,7 +15,11 @@ import           UI (runUI)
 main :: IO ()
 main = do
   cmd <- parseCommand
-  db <- newHandle "./data"
+  mDb <- newHandle "./data"
+  db <-
+    case mDb of
+      Nothing -> fail "Application is already running"
+      Just db -> pure db
   case cmd of
     Show -> loadAllMessages db >>= pPrint
     Post username text -> do
