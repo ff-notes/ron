@@ -7,7 +7,7 @@ import qualified Brick
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
-import           Control.Concurrent.STM (atomically, newTChanIO, writeTChan)
+import           Control.Concurrent.STM (atomically, writeTChan)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Char (isSpace, ord)
 import           Data.Text (Text)
@@ -18,17 +18,13 @@ import           Graphics.Vty (Color (ISOColor), Event (EvKey),
 import qualified RON.Store.FS as Store (Handle)
 
 import           Database (loadAllMessages)
-import           Options (UIOptions (UIOptions))
-import qualified Options
 import           Types (Env (Env), MessageContent (MessageContent),
                         MessageView (MessageView))
 import qualified Types
 
-runUI :: Store.Handle -> UIOptions -> IO ()
-runUI db UIOptions{username} = do
-  messages       <- loadAllMessages db -- TODO load asynchronously
-  newMessageChan <- newTChanIO
-  let env = Env{username, newMessageChan}
+runUI :: Store.Handle -> Env -> IO ()
+runUI db env = do
+  messages   <- loadAllMessages db -- TODO load asynchronously
   finalState <- defaultMain (app env) initialState{messages}
   print finalState -- TODO save
 

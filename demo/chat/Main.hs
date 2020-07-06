@@ -1,9 +1,14 @@
+import           Control.Concurrent (forkIO)
+import           Control.Concurrent.STM (newTChanIO)
 import           RON.Store.FS (newHandle, runStore)
 import           Text.Pretty.Simple (pPrint)
 
 import           Database (loadAllMessages, newMessage)
-import           Options (Command (Post, Show, UI), parseCommand)
-import           Types (MessageContent (MessageContent))
+import qualified Database
+import           Options (Command (Post, Show, UI), UIOptions (UIOptions),
+                          parseCommand)
+import qualified Options
+import           Types (Env (Env), MessageContent (MessageContent))
 import qualified Types
 import           UI (runUI)
 
@@ -16,4 +21,8 @@ main = do
     Post username text -> do
       messageRef <- runStore db $ newMessage MessageContent{username, text}
       putStrLn $ "created message: " <> show messageRef
-    UI uiOptions -> runUI db uiOptions
+    UI UIOptions{username} -> do
+      newMessageChan <- newTChanIO
+      let env = Env{username, newMessageChan}
+      _ <- forkIO $ Database.worker db newMessageChan
+      runUI db env
