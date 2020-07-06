@@ -22,7 +22,7 @@ main = do
       messageRef <- runStore db $ newMessage MessageContent{username, text}
       putStrLn $ "created message: " <> show messageRef
     UI UIOptions{username} -> do
-      newMessageChan <- newTChanIO
-      let env = Env{username, newMessageChan}
-      _ <- forkIO $ Database.worker db newMessageChan
+      onMessagePosted <- newTChanIO
+      let env = Env{username, onMessagePosted}
+      _ <- forkIO $ Database.messagePostWorker onMessagePosted db
       runUI db env

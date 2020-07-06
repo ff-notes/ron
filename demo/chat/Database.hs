@@ -1,4 +1,4 @@
-module Database (loadAllMessages, newMessage, worker) where
+module Database (loadAllMessages, newMessage, messagePostWorker) where
 
 import           Control.Concurrent.STM (TChan, atomically, readTChan)
 import           Control.Monad (forever)
@@ -47,8 +47,8 @@ newMessage MessageContent{username, text} = do
   ORSet.add_ gMessages msgRef
   pure msgRef
 
-worker :: Store.Handle -> TChan MessageContent -> IO ()
-worker db newMessageChan =
+messagePostWorker :: TChan MessageContent -> Store.Handle -> IO ()
+messagePostWorker onMessagePosted db =
   forever $ do
-    message <- atomically $ readTChan newMessageChan
+    message <- atomically $ readTChan onMessagePosted
     runStore db $ newMessage message

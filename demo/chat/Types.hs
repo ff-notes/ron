@@ -41,4 +41,8 @@ instance ReplicatedObject MessageView where
       text     <- ORMap.lookupLww' "text"     ormap
       pure MessageView{postTime, content = MessageContent{username, text}}
 
-data Env = Env {username :: Text, newMessageChan :: TChan MessageContent}
+data Env = Env
+  { username             :: Text
+  , onMessagePosted      :: TChan MessageContent
+  -- , onMessageListUpdated :: TChan [MessageView]
+  }

@@ -1,8 +1,9 @@
 module UI (runUI) where
 
-import           Brick (App (App), BrickEvent (VtyEvent), EventM, Next, Widget,
-                        attrMap, continue, defaultMain, fg, fill, hBox, halt,
-                        modifyDefAttr, showFirstCursor, str, txt, vBox, vLimit)
+import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
+                        Next, Widget, attrMap, continue, defaultMain, fg, fill,
+                        hBox, halt, modifyDefAttr, showFirstCursor, str, txt,
+                        vBox, vLimit)
 import qualified Brick
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
@@ -31,10 +32,12 @@ runUI db env = do
 data State = State{messages :: [MessageView], messageInput :: Editor Text ()}
   deriving (Generic, Show)
 
+newtype AppEvent = MessageListUpdated [MessageView]
+
 initialState :: State
 initialState = State{messages = [], messageInput = emptyEditor}
 
-app :: Env -> App State e ()
+app :: Env -> App State AppEvent ()
 app env@Env{username} =
   App
     { appAttrMap      = const $ attrMap mempty []
@@ -76,8 +79,9 @@ txtWithContentBasedFg t =
     hashish = fromIntegral $ sum $ map ord $ Text.unpack t
     colors = map ISOColor [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]
 
-appHandleEvent :: Env -> State -> BrickEvent () e -> EventM () (Next State)
-appHandleEvent Env{username, newMessageChan} state =
+appHandleEvent ::
+  Env -> State -> BrickEvent () AppEvent -> EventM () (Next State)
+appHandleEvent Env{username, onMessagePosted} state =
   \case
     VtyEvent ve -> case ve of
       EvKey KEsc [] -> halt state
@@ -85,7 +89,7 @@ appHandleEvent Env{username, newMessageChan} state =
         | not $ Text.all isSpace text -> do
             let message = MessageContent{username, text}
             -- put in database asynchronously
-            liftIO $ atomically $ writeTChan newMessageChan message
+            liftIO $ atomically $ writeTChan onMessagePosted message
             continue state{messageInput = emptyEditor}
         where
           text =
@@ -93,9 +97,7 @@ appHandleEvent Env{username, newMessageChan} state =
       _ -> do
         messageInput' <- handleEditorEvent ve messageInput
         continue state{messageInput = messageInput'}
-    -- AppEvent () -> do
-    --   state' <- liftIO $ sync storage state True
-    --   continue state'
+    AppEvent (MessageListUpdated messages) -> continue state{messages}
     _ -> continue state
   where
     State{messageInput} = state
