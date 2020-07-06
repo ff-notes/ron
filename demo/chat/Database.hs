@@ -1,22 +1,24 @@
-module Database (loadAllMessages, newMessage) where
+module Database (loadAllMessages, newMessage, worker) where
 
+import           Control.Concurrent.STM (TChan, atomically, readTChan)
+import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.List (sortOn)
 import           Data.Maybe (catMaybes)
-import           Data.Text (Text)
 import           Data.Traversable (for)
 import           RON.Data.ORSet.Experimental (ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock)
 import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
-import           RON.Store.FS (Handle, runStore)
+import           RON.Store.FS (runStore)
+import qualified RON.Store.FS as Store
 import           RON.Types (Atom (AString), ObjectRef)
 
 import           Types (MessageContent (MessageContent), MessageView, postTime)
 import qualified Types
 
-loadAllMessages :: Handle -> IO [MessageView]
+loadAllMessages :: Store.Handle -> IO [MessageView]
 loadAllMessages db =
   runStore db $ do
     gMessages   <- openMessages
@@ -44,3 +46,9 @@ newMessage MessageContent{username, text} = do
   ORSet.add_ msgRef ("text",     [AString text    ])
   ORSet.add_ gMessages msgRef
   pure msgRef
+
+worker :: Store.Handle -> TChan MessageContent -> IO ()
+worker db newMessageChan =
+  forever $ do
+    message <- atomically $ readTChan newMessageChan
+    runStore db $ newMessage message
