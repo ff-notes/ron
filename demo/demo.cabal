@@ -49,6 +49,7 @@ executable demo-chat
     build-depends:
         -- global
         brick,
+        extra,
         generic-lens,
         lens,
         optparse-applicative,
@@ -57,6 +58,7 @@ executable demo-chat
         text,
         time,
         vty,
+        websockets,
         -- project
         ron,
         ron-rdt,
