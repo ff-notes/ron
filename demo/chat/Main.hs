@@ -1,5 +1,7 @@
 import           Control.Concurrent (forkIO)
 import           Control.Concurrent.STM (newTChanIO)
+import           Control.Monad (when)
+import           Data.Maybe (isNothing)
 import           RON.Store.FS (runStore)
 import qualified RON.Store.FS as Store
 import           Text.Pretty.Simple (pPrint)
@@ -28,6 +30,10 @@ main = do
         runStore db $ Database.newMessage MessageContent{username, text}
       putStrLn $ "created message: " <> show messageRef
     UI UIOptions{username, listen, peers} -> do
+      when (isNothing listen && null peers) $
+        fail
+          "The peer must connect to other peers or listen for connections. \
+          \Specify `--listen` or `--peer`."
       onMessagePosted      <- newTChanIO
       onMessageListUpdated <- newTChanIO
       let env = Env{username, onMessagePosted, onMessageListUpdated}
