@@ -1,6 +1,8 @@
 module NetNode (worker) where
 
-import           Control.Monad.Extra (whenJust)
+import           Control.Concurrent (forkIO)
+import           Control.Monad.Extra (void, whenJust)
+import           Data.Foldable (for_)
 import qualified Network.WebSockets as WS
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Types (OpenFrame)
@@ -11,9 +13,10 @@ worker ::
   -- | Other peer ports to connect (only localhost)
   [Int] ->
   IO ()
-worker listen _peers =
-  whenJust listen $ \port ->
-    WS.runServer "::" port serverApp
+worker listen peers = do
+  whenJust listen $ \myPort ->
+    void $ forkIO $ WS.runServer "::" myPort serverApp
+  for_ peers $ \theirPort -> WS.runClient "::" theirPort "/" clientApp
 
 serverApp :: WS.ServerApp
 serverApp pendingConnection = do
@@ -27,3 +30,6 @@ serverApp pendingConnection = do
 
 handleIncomingFrame :: OpenFrame -> IO ()
 handleIncomingFrame = undefined
+
+clientApp :: WS.ClientApp ()
+clientApp = undefined
