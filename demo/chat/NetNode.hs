@@ -1,4 +1,4 @@
-module HttpNode (worker) where
+module NetNode (worker) where
 
 worker ::
   -- | Server port to listen

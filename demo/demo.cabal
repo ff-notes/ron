@@ -80,7 +80,7 @@ executable demo-chat
     main-is: Main.hs
     other-modules:
         Database
-        HttpNode
+        NetNode
         Options
         Types
         UI

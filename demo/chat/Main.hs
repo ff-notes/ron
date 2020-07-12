@@ -5,7 +5,7 @@ import qualified RON.Store.FS as Store
 import           Text.Pretty.Simple (pPrint)
 
 import qualified Database
-import qualified HttpNode
+import qualified NetNode
 import           Options (Command (Post, Show, UI), UIOptions (UIOptions),
                           parseCommand)
 import qualified Options
@@ -33,5 +33,5 @@ main = do
       let env = Env{username, onMessagePosted, onMessageListUpdated}
       _ <- forkIO $ Database.databaseUpdateWorker db onMessageListUpdated
       _ <- forkIO $ Database.messagePostWorker onMessagePosted db
-      _ <- forkIO $ HttpNode.worker listen peers
+      _ <- forkIO $ NetNode.worker listen peers
       runUI db env
