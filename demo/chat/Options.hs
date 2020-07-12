@@ -1,4 +1,4 @@
-module Options (Command (..), UIOptions (..), parseCommand) where
+module Options (Command (..), Options (..), UIOptions (..), parseOptions) where
 
 import           Control.Applicative (many, optional, (<**>))
 import           Data.Text (Text)
@@ -8,7 +8,12 @@ import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
                                       metavar, option, prefDisambiguate,
                                       prefHelpLongEquals, prefMultiSuffix,
                                       prefShowHelpOnError, progDesc,
-                                      strArgument, subparser)
+                                      strArgument, strOption, subparser, value)
+
+data Options = Options
+  { dataDir :: FilePath
+  , cmd     :: Command
+  }
 
 data Command = Show | UI UIOptions | Post Text Text
 
@@ -30,18 +35,27 @@ prefs =
 i :: Parser a -> String -> ParserInfo a
 i prsr desc = info (prsr <**> helper) $ fullDesc <> progDesc desc
 
-parseCommand :: IO Command
-parseCommand =
+parseOptions :: IO Options
+parseOptions =
   customExecParser prefs parserInfo
   where
     parserInfo = i parser "RON demo chat application"
 
-parser :: Parser Command
+parser :: Parser Options
 parser =
-  subparser
-    $   command "show" (i pShow "Show chat messages and exit (offline)")
-    <>  command "post" (i pPost "Post messages to chat (offline)")
-    <>  command "ui"   (i pUI   "Start UI with network")
+  do
+    dataDir <-
+      strOption
+        $   long    "data"
+        <>  metavar "PATH"
+        <>  help    "database directory"
+        <>  value   "./data"
+    cmd <-
+      subparser
+        $   command "show" (i pShow "Show chat messages and exit (offline)")
+        <>  command "post" (i pPost "Post messages to chat (offline)")
+        <>  command "ui"   (i pUI   "Start UI with network")
+    pure Options{..}
   where
     pShow = pure Show
 

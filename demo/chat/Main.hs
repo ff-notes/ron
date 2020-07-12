@@ -8,8 +8,8 @@ import           Text.Pretty.Simple (pPrint)
 
 import qualified Database
 import qualified NetNode
-import           Options (Command (Post, Show, UI), UIOptions (UIOptions),
-                          parseCommand)
+import           Options (Command (Post, Show, UI), Options (Options),
+                          UIOptions (UIOptions), parseOptions)
 import qualified Options
 import           Types (Env (Env), MessageContent (MessageContent))
 import qualified Types
@@ -17,8 +17,8 @@ import           UI (runUI)
 
 main :: IO ()
 main = do
-  cmd <- parseCommand
-  mDb <- Store.newHandle "./data"
+  Options{dataDir, cmd} <- parseOptions
+  mDb <- Store.newHandle dataDir
   db <-
     case mDb of
       Nothing -> fail "Application is already running"

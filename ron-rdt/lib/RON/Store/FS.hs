@@ -17,6 +17,7 @@ module RON.Store.FS
 
 import           RON.Prelude
 
+import           Control.Concurrent (MVar, newMVar, withMVar)
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO, writeTChan)
 import           Data.Bits (shiftL)
@@ -51,6 +52,7 @@ data Handle = Handle
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
     -- call 'subscribe' to read from derived channel instead.
+  , opLock          :: MVar ()
   , replica         :: Replica
   }
 
@@ -111,8 +113,10 @@ appendPatchFS objectId patch = do
 
 -- | Run a 'Store' action
 runStore :: Handle -> Store a -> IO a
-runStore h@Handle{replica, clock} (Store action) = do
-  res <- runEpochClock replica clock $ (`runReaderT` h) $ runExceptT action
+runStore h@Handle{replica, clock, opLock} (Store action) = do
+  res <-
+    withMVar opLock $ \_ ->
+      runEpochClock replica clock $ (`runReaderT` h) $ runExceptT action
   either throwIO pure res
 
 -- | Create new storage handle.
@@ -129,14 +133,15 @@ newHandle dataDir = do
 newHandleWithReplica :: FilePath -> Word60 -> IO (Maybe Handle)
 newHandleWithReplica dataDir' replicaId = do
   dataDir <- makeAbsolute dataDir'
-  let dbLockFile = dataDir </> "lock"
-  mLock <- tryLockFile dbLockFile Exclusive
+  let appLockFile = dataDir </> "applock"
+  mLock <- tryLockFile appLockFile Exclusive
   case mLock of
     Nothing -> pure Nothing
     Just _ -> do
       time            <- getCurrentEpochTime
       clock           <- newIORef time
       onObjectChanged <- newBroadcastTChanIO
+      opLock          <- newMVar ()
       let replica = mkReplica ApplicationSpecific replicaId
       pure $ Just Handle{..}
 
