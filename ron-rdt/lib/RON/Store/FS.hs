@@ -6,16 +6,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module RON.Store.FS
-  ( Handle
-  , Store
-  , debugDump
-  , fetchUpdates
-  , newHandle
-  , newHandleWithReplica
-  , runStore
-  , subcribeToObject
-  ) where
+module RON.Store.FS (
+  Handle,
+  Store,
+  debugDump,
+  fetchUpdates,
+  newHandle,
+  newHandleWithReplica,
+  runStore,
+  -- * Object subscriptions
+  subcribeToObject,
+  readObjectSubscriptions,
+) where
 
 import           RON.Prelude
 
@@ -190,5 +192,9 @@ fetchUpdates :: Handle -> IO (TChan UUID)
 fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
 
 subcribeToObject :: Handle -> UUID -> IO ()
-subcribeToObject Handle{objectSubscriptions} object = do
+subcribeToObject Handle{objectSubscriptions} object =
   atomicModifyIORef' objectSubscriptions $ (,()) . Set.insert object
+
+readObjectSubscriptions :: Handle -> IO (Set UUID)
+readObjectSubscriptions Handle{objectSubscriptions} =
+  readIORef objectSubscriptions

@@ -39,5 +39,5 @@ main = do
       let env = Env{username, onMessagePosted, onMessageListUpdated}
       _ <- forkIO $ Database.databaseToUIUpdater db onMessageListUpdated
       _ <- forkIO $ Database.messagePoster onMessagePosted db
-      NetNode.startWorkers listen peers
+      NetNode.startWorkers db listen peers
       runUI db env
