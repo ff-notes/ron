@@ -55,7 +55,7 @@ parser =
         $   command "show" (i pShow "Show chat messages and exit (offline)")
         <>  command "post" (i pPost "Post messages to chat (offline)")
         <>  command "ui"   (i pUI   "Start UI with network")
-    pure Options{..}
+    pure Options{dataDir, cmd}
   where
     pShow = pure Show
 
@@ -76,4 +76,4 @@ parser =
           $   long    "listen"
           <>  metavar "PORT"
           <>  help    "Run server on specified port and accept connections"
-      pure $ UI UIOptions{..}
+      pure $ UI UIOptions{username, peers, listen}
