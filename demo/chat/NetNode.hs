@@ -1,27 +1,25 @@
-module NetNode (worker) where
+module NetNode (startWorkers) where
 
 import           Control.Concurrent (forkIO)
-import           Control.Monad.Extra (void, whenJust)
+import           Control.Monad ((>=>))
 import           Data.Foldable (for_)
 import qualified Network.WebSockets as WS
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Types (OpenFrame)
 
-worker ::
+startWorkers ::
   -- | Server port to listen
   Maybe Int ->
   -- | Other peer ports to connect (only localhost)
   [Int] ->
   IO ()
-worker listen peers = do
-  whenJust listen $ \myPort ->
-    void $ forkIO $ WS.runServer "::" myPort serverApp
-  for_ peers $ \theirPort -> WS.runClient "::" theirPort "/" clientApp
-
-serverApp :: WS.ServerApp
-serverApp pendingConnection = do
-  conn <- WS.acceptRequest pendingConnection
-  handleDuplexConnection conn
+startWorkers listen peers =
+  do
+    for_ listen $ \myPort    -> forkIO $ WS.runServer "::" myPort        server
+    for_ peers  $ \theirPort -> forkIO $ WS.runClient "::" theirPort "/" client
+  where
+    server = WS.acceptRequest >=> handleDuplexConnection
+    client = handleDuplexConnection
 
 handleDuplexConnection :: WS.Connection -> IO ()
 handleDuplexConnection conn = do
@@ -34,6 +32,3 @@ handleDuplexConnection conn = do
 
 handleIncomingFrame :: OpenFrame -> IO ()
 handleIncomingFrame = undefined
-
-clientApp :: WS.ClientApp ()
-clientApp = handleDuplexConnection
