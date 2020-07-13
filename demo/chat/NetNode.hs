@@ -8,6 +8,8 @@ import           RON.Prelude (ByteStringL)
 import qualified RON.Store.FS as Store
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Types (OpenFrame, UUID)
+import           System.Exit (die)
+import           System.IO.Unsafe (unsafePerformIO)
 
 startWorkers ::
   Store.Handle ->
@@ -38,14 +40,14 @@ dialog db conn = do
   WS.withPingThread conn 30 (pure ()) $ do
     frameData <- WS.receiveData conn
     case parseOpenFrame frameData of
-      Left e      -> error e
+      Left e      -> die $ "NetNode.dialog: parseOpenFrame: " <> e
       Right frame -> handleIncomingFrame frame
     pure ()
 
 handleIncomingFrame :: OpenFrame -> IO ()
-handleIncomingFrame = undefined
+handleIncomingFrame _ = die "undefined NetNode.handleIncomingFrame"
 
 newtype NetMessage = RequestChanges{object :: UUID}
 
 encodeNetMessage :: NetMessage -> ByteStringL
-encodeNetMessage = undefined
+encodeNetMessage _ = unsafePerformIO $ die "undefined NetNode.encodeNetMessage"
