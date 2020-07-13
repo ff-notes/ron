@@ -21,6 +21,10 @@ worker listen peers = do
 serverApp :: WS.ServerApp
 serverApp pendingConnection = do
   conn <- WS.acceptRequest pendingConnection
+  handleDuplexConnection conn
+
+handleDuplexConnection :: WS.Connection -> IO ()
+handleDuplexConnection conn = do
   WS.withPingThread conn 30 (pure ()) $ do
     frameData <- WS.receiveData conn
     case parseOpenFrame frameData of
@@ -32,4 +36,4 @@ handleIncomingFrame :: OpenFrame -> IO ()
 handleIncomingFrame = undefined
 
 clientApp :: WS.ClientApp ()
-clientApp = undefined
+clientApp = handleDuplexConnection
