@@ -32,8 +32,8 @@ executable demo-text-editor-qt
     build-depends:
         -- global
         containers,
-        hoppy-runtime,
-        qtah,
+        -- hoppy-runtime,
+        -- qtah,
         stm,
         text,
         time,
