@@ -37,7 +37,7 @@ main = do
       onMessagePosted      <- newTChanIO
       onMessageListUpdated <- newTChanIO
       let env = Env{username, onMessagePosted, onMessageListUpdated}
-      _ <- forkIO $ Database.databaseUpdateWorker db onMessageListUpdated
-      _ <- forkIO $ Database.messagePostWorker onMessagePosted db
+      _ <- forkIO $ Database.databaseToUIUpdater db onMessageListUpdated
+      _ <- forkIO $ Database.messagePoster onMessagePosted db
       NetNode.startWorkers listen peers
       runUI db env

@@ -1,7 +1,7 @@
 module Database
-  ( databaseUpdateWorker
+  ( databaseToUIUpdater
   , loadAllMessages
-  , messagePostWorker
+  , messagePoster
   , newMessage
   ) where
 
@@ -53,16 +53,17 @@ newMessage MessageContent{username, text} = do
   ORSet.add_ gMessages msgRef
   pure msgRef
 
-messagePostWorker :: TChan MessageContent -> Store.Handle -> IO ()
-messagePostWorker onMessagePosted db =
+messagePoster :: TChan MessageContent -> Store.Handle -> IO ()
+messagePoster onMessagePosted db =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
     runStore db $ newMessage message
 
-databaseUpdateWorker :: Store.Handle -> TChan [MessageView] -> IO ()
-databaseUpdateWorker db onMessageListUpdated = do
+databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
+databaseToUIUpdater db onMessageListUpdated = do
   ObjectRef messageSetId <- runStore db openMessages
-  onObjectChanged        <- Store.subscribe db
+  Store.subcribeToObject db messageSetId
+  onObjectChanged <- Store.fetchUpdates db
   forever $ do
     objectId <- atomically $ readTChan onObjectChanged
     when (objectId == messageSetId) $ do

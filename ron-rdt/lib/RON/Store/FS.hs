@@ -4,15 +4,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module RON.Store.FS
   ( Handle
   , Store
   , debugDump
+  , fetchUpdates
   , newHandle
   , newHandleWithReplica
   , runStore
-  , subscribe
+  , subcribeToObject
   ) where
 
 import           RON.Prelude
@@ -24,6 +26,7 @@ import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (find)
+import qualified Data.Set as Set
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
                                    listDirectory, makeAbsolute)
@@ -51,9 +54,10 @@ data Handle = Handle
   , onObjectChanged :: TChan UUID
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
-    -- call 'subscribe' to read from derived channel instead.
-  , opLock          :: MVar ()
-  , replica         :: Replica
+    -- call 'fetchUpdates' to read from derived channel instead.
+  , opLock              :: MVar ()
+  , replica             :: Replica
+  , objectSubscriptions :: IORef (Set UUID)
   }
 
 newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
@@ -143,6 +147,7 @@ newHandleWithReplica dataDir' replicaId = do
       onObjectChanged <- newBroadcastTChanIO
       opLock          <- newMVar ()
       let replica = mkReplica ApplicationSpecific replicaId
+      objectSubscriptions <- newIORef mempty
       pure $ Just Handle{..}
 
 getMacAddress :: IO (Maybe Word64)
@@ -181,5 +186,9 @@ debugDump dataDir = do
       BSL.putStr =<< BSL.readFile logPath
     BSLC.putStrLn ""
 
-subscribe :: Handle -> IO (TChan UUID)
-subscribe Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
+fetchUpdates :: Handle -> IO (TChan UUID)
+fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
+
+subcribeToObject :: Handle -> UUID -> IO ()
+subcribeToObject Handle{objectSubscriptions} object = do
+  atomicModifyIORef' objectSubscriptions $ (,()) . Set.insert object

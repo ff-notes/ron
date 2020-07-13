@@ -15,8 +15,8 @@ startWorkers ::
   IO ()
 startWorkers listen peers =
   do
-    for_ listen $ \myPort    -> forkIO $ WS.runServer "::" myPort        server
-    for_ peers  $ \theirPort -> forkIO $ WS.runClient "::" theirPort "/" client
+    for_ listen $ \port -> forkIO $ WS.runServer "::" port     server
+    for_ peers  $ \port -> forkIO $ WS.runClient "::" port "/" client
   where
     server = WS.acceptRequest >=> handleDuplexConnection
     client = handleDuplexConnection

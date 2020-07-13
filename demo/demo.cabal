@@ -71,6 +71,7 @@ executable demo-chat
         FlexibleContexts
         LambdaCase
         NamedFieldPuns
+        NumericUnderscores
         OverloadedLabels
         OverloadedStrings
         RecordWildCards
