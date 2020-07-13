@@ -1,27 +1,19 @@
 {-# LANGUAGE LambdaCase #-}
 
-import Control.Monad.Extra (allM)
-import Data.Foldable (sum)
+import           RON.Prelude
+
+import           Control.Monad.Extra (allM)
+import           Data.Foldable (sum)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
-import RON.Prelude
-import RON.Util (ByteStringL)
-import System.Directory
-  ( doesDirectoryExist,
-    listDirectory,
-    withCurrentDirectory
-    )
-import System.Exit (ExitCode (ExitFailure, ExitSuccess))
-import System.FilePath ((</>), takeExtension)
-import System.IO (hPutStrLn, putStrLn, stderr)
-import System.Process.Typed
-  ( byteStringInput,
-    proc,
-    readProcessStdout,
-    readProcessStdout_,
-    runProcess_,
-    setStdin
-    )
+import           System.Directory (doesDirectoryExist, listDirectory,
+                                   withCurrentDirectory)
+import           System.Exit (ExitCode (ExitFailure, ExitSuccess))
+import           System.FilePath (takeExtension, (</>))
+import           System.IO (hPutStrLn, putStrLn, stderr)
+import           System.Process.Typed (byteStringInput, proc, readProcessStdout,
+                                       readProcessStdout_, runProcess_,
+                                       setStdin)
 
 minimumStylishness :: Double
 minimumStylishness = 0.07
