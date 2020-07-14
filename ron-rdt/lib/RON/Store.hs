@@ -13,9 +13,6 @@ module RON.Store (
   readObject,
 ) where
 
-import           System.Exit (die)
-import           System.IO.Unsafe (unsafePerformIO)
-
 import           RON.Prelude
 
 import           RON.Data.Experimental (AsAtoms, Rep, ReplicatedObject,
@@ -85,4 +82,4 @@ openNamedObject name = do
       obj <- newObject
       ORMap.add_ globalsRef (name, obj)
       pure obj
-    _ -> unsafePerformIO $ die "Store.openNamedObject: TODO: merge objects"
+    _ -> error "TODO: merge objects"

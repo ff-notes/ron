@@ -1,6 +1,6 @@
 module NetNode (startWorkers) where
 
-import           Control.Concurrent (forkIO, threadDelay)
+import           Control.Concurrent (threadDelay)
 import           Control.Monad ((>=>))
 import           Data.Foldable (for_)
 import qualified Network.WebSockets as WS
@@ -8,8 +8,11 @@ import           RON.Prelude (ByteStringL)
 import qualified RON.Store.FS as Store
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Types (OpenFrame, UUID)
-import           System.Exit (die)
-import           System.IO.Unsafe (unsafePerformIO)
+import           System.Exit (ExitCode (ExitFailure))
+import           System.IO (hPutStrLn, stderr)
+import           System.Posix.Process (exitImmediately)
+
+import           Fork (fork)
 
 startWorkers ::
   Store.Handle ->
@@ -20,8 +23,8 @@ startWorkers ::
   IO ()
 startWorkers db listen peers =
   do
-    for_ listen $ \port -> forkIO $ WS.runServer "::" port     server
-    for_ peers  $ \port -> forkIO $ WS.runClient "::" port "/" client
+    for_ listen $ \port -> fork $ WS.runServer "::" port     server
+    for_ peers  $ \port -> fork $ WS.runClient "::" port "/" client
   where
     server = WS.acceptRequest >=> dialog db
     client = dialog db
@@ -29,25 +32,28 @@ startWorkers db listen peers =
 dialog :: Store.Handle -> WS.Connection -> IO ()
 dialog db conn = do
   -- send object update requests
-  _ <-
-    forkIO $ do
-      objectSubscriptions <- Store.readObjectSubscriptions db
-      for_ objectSubscriptions $ \object ->
-        WS.sendBinaryData conn $ encodeNetMessage $ RequestChanges{object}
-      threadDelay 1_000_000
+  -- fork $
+  do
+    objectSubscriptions <- Store.readObjectSubscriptions db
+    for_ objectSubscriptions $ \object ->
+      WS.sendBinaryData conn =<< encodeNetMessage RequestChanges{object}
+    threadDelay 1_000_000
 
   -- receive
   WS.withPingThread conn 30 (pure ()) $ do
     frameData <- WS.receiveData conn
     case parseOpenFrame frameData of
-      Left e      -> die $ "NetNode.dialog: parseOpenFrame: " <> e
+      Left e      -> error $ "NetNode.dialog: parseOpenFrame: " <> e
       Right frame -> handleIncomingFrame frame
     pure ()
 
 handleIncomingFrame :: OpenFrame -> IO ()
-handleIncomingFrame _ = die "undefined NetNode.handleIncomingFrame"
+handleIncomingFrame _ = error "undefined handleIncomingFrame"
 
 newtype NetMessage = RequestChanges{object :: UUID}
 
-encodeNetMessage :: NetMessage -> ByteStringL
-encodeNetMessage _ = unsafePerformIO $ die "undefined NetNode.encodeNetMessage"
+encodeNetMessage :: NetMessage -> IO ByteStringL
+encodeNetMessage _ = do
+  hPutStrLn stderr "undefined encodeNetMessage"
+  exitImmediately $ ExitFailure 56
+  pure undefined

@@ -9,7 +9,6 @@ import           Brick.BChan (BChan, newBChan, writeBChan)
 import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
-import           Control.Concurrent (forkIO)
 import           Control.Concurrent.STM (atomically, readTChan, writeTChan)
 import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
@@ -23,6 +22,7 @@ import qualified Graphics.Vty as Vty
 import qualified RON.Store.FS as Store (Handle)
 
 import           Database (loadAllMessages)
+import           Fork (fork)
 import           Types (Env (Env), MessageContent (MessageContent),
                         MessageView (MessageView))
 import qualified Types
@@ -30,9 +30,9 @@ import qualified Types
 runUI :: Store.Handle -> Env -> IO ()
 runUI db env =
   do
-    messages   <- loadAllMessages db -- TODO load asynchronously
-    onEvent    <- newBChan 10
-    _          <- forkIO $ eventWorker env onEvent
+    messages <- loadAllMessages db -- TODO load asynchronously
+    onEvent  <- newBChan 10
+    fork $ eventWorker env onEvent
     initialVty <- buildVty
     finalState <-
       customMain

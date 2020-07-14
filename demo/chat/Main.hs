@@ -1,4 +1,3 @@
-import           Control.Concurrent (forkIO)
 import           Control.Concurrent.STM (newTChanIO)
 import           Control.Monad (when)
 import           Data.Maybe (isNothing)
@@ -7,6 +6,7 @@ import qualified RON.Store.FS as Store
 import           Text.Pretty.Simple (pPrint)
 
 import qualified Database
+import           Fork (fork)
 import qualified NetNode
 import           Options (Command (Post, Show, UI), Options (Options),
                           UIOptions (UIOptions), parseOptions)
@@ -37,7 +37,7 @@ main = do
       onMessagePosted      <- newTChanIO
       onMessageListUpdated <- newTChanIO
       let env = Env{username, onMessagePosted, onMessageListUpdated}
-      _ <- forkIO $ Database.databaseToUIUpdater db onMessageListUpdated
-      _ <- forkIO $ Database.messagePoster onMessagePosted db
+      fork $ Database.databaseToUIUpdater db onMessageListUpdated
+      fork $ Database.messagePoster onMessagePosted db
       NetNode.startWorkers db listen peers
       runUI db env
