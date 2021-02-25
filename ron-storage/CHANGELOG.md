@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Fixed
 - `createVersion` doc: reflect deletion of older versions.
+- `MonadUnliftIO Storage` instance
 
 ## [0.11] - 2019-10-08
 ### Added

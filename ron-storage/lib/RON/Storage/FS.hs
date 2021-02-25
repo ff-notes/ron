@@ -38,6 +38,8 @@ import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO, writeTChan)
+import           Control.Exception (try)
+import           Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
@@ -78,6 +80,14 @@ runStorage h@Handle {replica, clock} (Storage action) = do
       $ (`runReaderT` h)
       $ runExceptT action
   either throwIO pure res
+
+instance MonadUnliftIO Storage where
+  withRunInIO inner =
+    Storage $
+      ExceptT $
+        ReaderT $ \handle ->
+          liftIO $ try $ inner (runStorage handle)
+  {-# INLINE withRunInIO #-}
 
 instance ReplicaClock Storage where
 

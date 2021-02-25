@@ -1,7 +1,7 @@
 cabal-version:  2.2
 
 name:           ron-storage
-version:        0.11
+version:        0.12
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
@@ -42,6 +42,7 @@ library
         text,
         transformers,
         tf-random,
+        unliftio-core,
         -- project
         ron     >= 0.9,
         ron-rdt >= 0.9.1,
