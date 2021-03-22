@@ -46,6 +46,7 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
 import           Data.Maybe (isJust)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
+import           System.AtomicWrite.Writer.LazyByteString (atomicWriteFile)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                                    doesDirectoryExist, doesPathExist,
                                    listDirectory, makeAbsolute, removeFile,
@@ -116,7 +117,7 @@ instance MonadStorage Storage where
     let docdir = dataDir </> docDir docid
     liftIO $ do
       createDirectoryIfMissing True docdir
-      BSL.writeFile (docdir </> version) content
+      atomicWriteFile (docdir </> version) content
 
   loadVersionContent docid version = Storage $ do
     Handle {dataDir} <- ask
