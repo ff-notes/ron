@@ -41,6 +41,7 @@ import           Control.Concurrent.STM (TChan, atomically, dupTChan,
 import           Control.Exception (try)
 import           Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import           Data.Bits (shiftL)
+import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
 import           Data.Maybe (isJust)
@@ -52,7 +53,7 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing,
 import           System.FilePath (makeRelative, splitDirectories, (</>))
 import           System.FSNotify (StopListening)
 import qualified System.FSNotify as FSNotify
-import           System.IO (hPutStrLn, stderr)
+import           System.IO (hPutStrLn, stderr, withFile, IOMode(ReadMode))
 import           System.IO.Error (isDoesNotExistError)
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
@@ -119,7 +120,8 @@ instance MonadStorage Storage where
 
   loadVersionContent docid version = Storage $ do
     Handle {dataDir} <- ask
-    liftIO $ BSL.readFile $ dataDir </> docDir docid </> version
+    liftIO $ withFile (dataDir </> docDir docid </> version) ReadMode $
+      fmap (BSL.fromChunks . (:[])) .  BS.hGetContents
 
   deleteVersion docid version = Storage $ do
     Handle {dataDir} <- ask
