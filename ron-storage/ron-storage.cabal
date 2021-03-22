@@ -43,7 +43,6 @@ library
         transformers,
         tf-random,
         unliftio-core,
-        atomic-write,
         -- project
         ron     >= 0.9,
         ron-rdt >= 0.9.1,
