@@ -9,7 +9,7 @@ packages:
   - ron-tool
   - swarm
   - examples
-  - demo
+  # - demo
 
 extra-deps:
   # packages:

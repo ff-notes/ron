@@ -15,7 +15,8 @@ import           Data.Bits (Bits, FiniteBits, finiteBitSize, shiftL, shiftR,
 {-# SPECIALIZE INLINE zzEncode :: Int32 -> Word32 #-}
 {-# SPECIALIZE INLINE zzEncode :: Int64 -> Word64 #-}
 zzEncode :: (Num b, Integral a, FiniteBits a) => a -> b
-zzEncode w = fromIntegral ((w `shiftL` 1) `xor` (w `shiftR` (finiteBitSize w -1)))
+zzEncode w =
+    fromIntegral ((w `shiftL` 1) `xor` (w `shiftR` (finiteBitSize w - 1)))
 
 {-# INLINE zzDecode #-}
 zzDecode :: (Num a, Integral a1, Bits a1) => a1 -> a
