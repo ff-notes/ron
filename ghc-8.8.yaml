@@ -1,4 +1,4 @@
-resolver: lts-16.0
+resolver: lts-16.31
 
 packages:
   - ron
@@ -14,7 +14,7 @@ packages:
 extra-deps:
   # packages:
     # ron-schema:
-      - hedn-0.3.0.1
+      - hedn-0.3.0.2
     # demo:
       # - hoppy-generator-0.7.1
       # - hoppy-runtime-0.7.0
