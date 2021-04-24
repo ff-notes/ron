@@ -1,0 +1,29 @@
+resolver: lts-17.0
+
+packages:
+  - ron
+  - ron-rdt
+  - ron-schema
+  - ron-storage
+  - ron-test
+  - ron-tool
+  - swarm
+  - examples
+  # - demo
+
+extra-deps:
+  # packages:
+    # ron-schema:
+      # - hedn-0.3.0.2
+    # demo:
+      # - hoppy-generator-0.7.1
+      # - hoppy-runtime-0.7.0
+      # - hoppy-std-0.7.1
+      # - qtah-cpp-qt5-0.7.0
+      # - qtah-generator-0.7.1
+      # - qtah-qt5-0.7.0
+    # ron-test:
+      # - ormolu-0.0.2.0
+
+extra-lib-dirs:
+  - swarm/_artifacts/lib
