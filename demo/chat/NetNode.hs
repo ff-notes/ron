@@ -53,7 +53,4 @@ handleIncomingFrame _ = error "undefined handleIncomingFrame"
 newtype NetMessage = RequestChanges{object :: UUID}
 
 encodeNetMessage :: NetMessage -> IO ByteStringL
-encodeNetMessage _ = do
-  hPutStrLn stderr "undefined encodeNetMessage"
-  exitImmediately $ ExitFailure 56
-  pure undefined
+encodeNetMessage _ = _

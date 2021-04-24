@@ -1,0 +1,38 @@
+@startuml RonTypes
+
+    package legacy {
+    }
+
+    enum DialogFrameType {
+        Write!
+        Query?
+        Fact;
+    }
+
+    class Op {
+        id :: UUID
+        ref :: UUID
+        payload :: [Atom]
+    }
+
+    class Frame {
+        [Op]
+    }
+
+    class UUID {
+        Word128
+    }
+
+    Atom <|-- UUID
+    Atom <|-- Float
+    Atom <|-- Integer
+    Atom <|-- String
+    DialogFrame *-- Frame
+    DialogFrame "1" o- DialogFrameType
+    Op "0..inf payload" o-- Atom
+    Op "2" o- UUID
+    Frame "1.." o- Op
+    UUID <|-- Name
+    UUID <|-- Event
+
+@enduml
