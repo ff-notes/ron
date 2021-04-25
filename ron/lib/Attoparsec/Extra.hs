@@ -20,11 +20,12 @@ import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit_w8,
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
-import           Data.ByteString.Lazy (fromStrict, toStrict)
+import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.Scientific as Sci
 import           GHC.Real (toInteger)
 
 -- | TODO(2020-06-17, cblp) make parser lazy/incremental
+-- TODO(2021-04-25, cblp) remove in favor of attoparsec-0.14 lazy version
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
 parseOnlyL p = eitherResult . parse p
 
