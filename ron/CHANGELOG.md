@@ -6,6 +6,11 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Support for GHC 8.10.
+
+### Fixed
+- Internal parser helper (<+>)
 
 ## [0.11] - 2020-06-14
 ### Added
