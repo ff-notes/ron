@@ -16,9 +16,10 @@ module Attoparsec.Extra (
 
 import           RON.Prelude
 
-import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit_w8, signed)
+import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit_w8,
+                                                   signed)
+import           Data.Attoparsec.ByteString.Lazy as Attoparsec
 import qualified Data.Attoparsec.Internal.Types as Internal
-import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
 import           Data.ByteString.Lazy (fromStrict)
 import qualified Data.Scientific as Sci
@@ -73,8 +74,8 @@ takeAtMost limit = do
         pos <- getPos
         guard (pos >= maxPos) <|> endOfInput
 
-(??) :: Maybe a -> Parser a -> Parser a
-(??) a alt = maybe alt pure a
+(??) :: Applicative f => Maybe a -> f a -> f a
+a ?? alt = maybe alt pure a
 
 -- | Apply parser and check it is applied successfully.
 -- Kinda opposite to 'guard'.
@@ -124,7 +125,7 @@ buildDouble integerPart fractionalPart fractionalPartLength exponentPart =
 (<+>) p1 p2 = Internal.Parser $ \t pos more lose suc -> let
     lose1 t' _pos more1 ctx1 msg1 = Internal.runParser p2 t' pos more1 lose2 suc
       where
-        lose2 _t _pos _more ctx2 msg2 = lose t pos more [] $ unwords
+        lose2 t2 pos2 more2 ctx2 msg2 = lose t2 pos2 more2 [] $ unwords
             [ "Many fails:\n"
             , intercalate " > " ctx1, ":", msg1, "|\n"
             , intercalate " > " ctx2, ":", msg2
