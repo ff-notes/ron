@@ -35,7 +35,6 @@ library
         containers,
         directory,
         filepath,
-        fsnotify,
         mtl,
         network-info,
         stm,

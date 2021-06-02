@@ -28,16 +28,11 @@ module RON.Storage.FS
     -- * Storage
     Storage,
     runStorage,
-    -- ** Listening to changes
-    StopListening,
-    subscribe,
   )
 where
 
 import           RON.Prelude
 
-import           Control.Concurrent.STM (TChan, atomically, dupTChan,
-                                         newBroadcastTChanIO, writeTChan)
 import           Control.Exception (try)
 import           Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import           Data.Bits (shiftL)
@@ -52,8 +47,6 @@ import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                                    listDirectory, makeAbsolute, removeFile,
                                    renameDirectory)
 import           System.FilePath (makeRelative, splitDirectories, (</>))
-import           System.FSNotify (StopListening)
-import qualified System.FSNotify as FSNotify
 import           System.IO (hPutStrLn, stderr, withFile, IOMode(ReadMode))
 import           System.IO.Error (isDoesNotExistError)
 import           System.Random.TF (newTFGen)
@@ -165,13 +158,6 @@ data Handle
   = Handle
       { clock :: IORef Word60,
         dataDir :: FilePath,
-        fsWatchManager :: FSNotify.WatchManager,
-        stopWatching :: IORef (Maybe StopListening),
-        onDocumentChanged :: TChan (CollectionName, RawDocId),
-        -- ^ A channel of changes in the database.
-        -- To activate it, call 'startWatching'.
-        -- You should NOT read from it directly,
-        -- call 'subscribe' to read from derived channel instead.
         replica :: Replica
       }
 
@@ -191,16 +177,10 @@ newHandleWithReplicaId dataDir' replicaId = do
   dataDir <- makeAbsolute dataDir'
   time <- getCurrentEpochTime
   clock <- newIORef time
-  fsWatchManager <- FSNotify.startManager
-  stopWatching <- newIORef Nothing
-  onDocumentChanged <- newBroadcastTChanIO
   let replica = mkReplica ApplicationSpecific replicaId
   pure Handle
     { clock,
       dataDir,
-      fsWatchManager,
-      stopWatching,
-      onDocumentChanged,
       replica
     }
 
@@ -228,31 +208,3 @@ getMacAddress = do
         + (fromIntegral b2 `shiftL` 16)
         + (fromIntegral b1 `shiftL` 8)
         + fromIntegral b0
-
-subscribe :: Handle -> IO (TChan (CollectionName, RawDocId))
-subscribe handle@Handle {onDocumentChanged} = do
-  startWatching handle
-  atomically $ dupTChan onDocumentChanged
-
-startWatching :: Handle -> IO ()
-startWatching handle = do
-  isWatching <- isJust <$> readIORef stopWatching
-  unless isWatching $ do
-    stopListening <-
-      FSNotify.watchTree fsWatchManager dataDir isStorageEvent mapFSEventToDB
-    writeIORef stopWatching $ Just stopListening
-  where
-    Handle {dataDir, fsWatchManager, stopWatching, onDocumentChanged} = handle
-    isStorageEvent = \case
-      FSNotify.Added _ _ False -> True
-      FSNotify.Modified _ _ False -> True
-      _ -> False
-    mapFSEventToDB event =
-      case splitDirectories $ makeRelative dataDir file of
-        [collection, docid, _version] ->
-          atomically $ writeTChan onDocumentChanged (collection, docid)
-        path ->
-          hPutStrLn stderr
-            $ "mapFSEventToDB: bad path " <> file <> " " <> show path
-      where
-        file = FSNotify.eventPath event
