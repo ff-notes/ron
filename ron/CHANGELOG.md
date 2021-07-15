@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.12] - 2021-07-15
 ### Added
 - Support for GHC 8.10.
 
@@ -156,7 +158,9 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-0.10...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-0.12...HEAD
+[0.12]: https://github.com/ff-notes/ron/compare/ron-0.11...ron-0.12
+[0.11]: https://github.com/ff-notes/ron/compare/ron-0.10...ron-0.11
 [0.10]: https://github.com/ff-notes/ron/compare/ron-0.9...ron-0.10
 [0.9]: https://github.com/ff-notes/ron/compare/ron-0.8...ron-0.9
 [0.8]: https://github.com/ff-notes/ron/compare/ron-0.7...ron-0.8

@@ -1,11 +1,11 @@
 cabal-version:  2.2
 
 name:           ron
-version:        0.11
+version:        0.12
 
 bug-reports:    https://github.com/ff-notes/ron/issues
 category:       Distributed Systems, Protocol, Database
-copyright:      2018-2019 Yuriy Syrovetskiy
+copyright:      2018-2021 Yuriy Syrovetskiy
 homepage:       https://github.com/ff-notes/ron
 license:        BSD-3-Clause
 license-file:   LICENSE
