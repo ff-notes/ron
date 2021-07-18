@@ -1,16 +1,16 @@
 module NetNode (startWorkers) where
 
+import           RON.Prelude
+
 import           Control.Concurrent (threadDelay)
-import           Control.Monad ((>=>))
-import           Data.Foldable (for_)
+import           Data.Aeson (ToJSON, (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Text.Lazy.Encoding as TextL
 import qualified Network.WebSockets as WS
-import           RON.Prelude (ByteStringL)
 import qualified RON.Store.FS as Store
 import           RON.Text.Parse (parseOpenFrame)
+import           RON.Text.Serialize (serializeUuid)
 import           RON.Types (OpenFrame, UUID)
-import           System.Exit (ExitCode (ExitFailure))
-import           System.IO (hPutStrLn, stderr)
-import           System.Posix.Process (exitImmediately)
 
 import           Fork (fork)
 
@@ -36,7 +36,7 @@ dialog db conn = do
   do
     objectSubscriptions <- Store.readObjectSubscriptions db
     for_ objectSubscriptions $ \object ->
-      WS.sendBinaryData conn =<< encodeNetMessage RequestChanges{object}
+      WS.sendBinaryData conn $ Aeson.encode RequestChanges{object}
     threadDelay 1_000_000
 
   -- receive
@@ -52,5 +52,9 @@ handleIncomingFrame _ = error "undefined handleIncomingFrame"
 
 newtype NetMessage = RequestChanges{object :: UUID}
 
-encodeNetMessage :: NetMessage -> IO ByteStringL
-encodeNetMessage _ = _
+instance ToJSON NetMessage where
+  toJSON RequestChanges{object} =
+    Aeson.object
+      [ "Type" .= ("RequestChanges" :: Text)
+      , "object" .= TextL.decodeUtf8 (serializeUuid object)
+      ]
