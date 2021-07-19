@@ -1,4 +1,4 @@
-module UI (runUI) where
+module UI (initUI, runUI) where
 
 import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
                         Next, Widget, attrMap, continue, customMain, fg, fill,
@@ -10,11 +10,15 @@ import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
 import           Control.Concurrent.STM (atomically, readTChan, writeTChan)
+import           Control.Lens ((<>~))
 import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Char (isSpace, ord)
+import           Data.Function ((&))
+import           Data.List (sortOn)
 import           Data.Text (Text)
 import qualified Data.Text as Text
+import           Data.Time (getCurrentTime)
 import           GHC.Generics (Generic)
 import           Graphics.Vty (Color (ISOColor), Event (EvKey),
                                Key (KEnter, KEsc), mkVty)
@@ -23,15 +27,26 @@ import qualified RON.Store.FS as Store (Handle)
 
 import           Database (loadAllMessages)
 import           Fork (fork)
-import           Types (Env (Env), MessageContent (MessageContent),
-                        MessageView (MessageView))
+import           Types (Env (Env, putLog), MessageContent (MessageContent),
+                        MessageView (MessageView), postTime)
 import qualified Types
 
-runUI :: Store.Handle -> Env -> IO ()
-runUI db env =
+data Handle = Handle
+  { db      :: Store.Handle
+  , env     :: Env
+  , onEvent :: BChan AppEvent
+  }
+
+initUI :: Store.Handle -> Env -> IO (Handle, Env)
+initUI db env = do
+  onEvent <- newBChan 10
+  let putLog = writeBChan onEvent . LogAdded
+  pure (Handle{db, env, onEvent}, env{putLog})
+
+runUI :: Handle -> IO ()
+runUI Handle{db, env, onEvent} =
   do
-    messages <- loadAllMessages db -- TODO load asynchronously
-    onEvent  <- newBChan 10
+    userMessages <- loadAllMessages db -- TODO load asynchronously
     fork $ eventWorker env onEvent
     initialVty <- buildVty
     finalState <-
@@ -40,18 +55,25 @@ runUI db env =
         buildVty
         (Just onEvent)
         (app env)
-        initialState{messages}
+        initialState{userMessages}
     print finalState -- TODO save
   where
     buildVty = mkVty Vty.defaultConfig
 
-data State = State{messages :: [MessageView], messageInput :: Editor Text ()}
+data State = State
+  { userMessages   :: [MessageView]
+  , logMessages :: [MessageView]
+  , messageInput   :: Editor Text ()
+  }
   deriving (Generic, Show)
 
-newtype AppEvent = MessageListUpdated [MessageView]
+data AppEvent
+  = MessageListUpdated [MessageView]
+  | LogAdded Text
 
 initialState :: State
-initialState = State{messages = [], messageInput = emptyEditor}
+initialState =
+  State{userMessages = [], logMessages = [], messageInput = emptyEditor}
 
 app :: Env -> App State AppEvent ()
 app env@Env{username} =
@@ -64,10 +86,11 @@ app env@Env{username} =
     }
 
 appDraw :: Text -> State -> [Widget ()]
-appDraw username State{messages, messageInput} =
+appDraw username State{userMessages, logMessages, messageInput} =
   [ vBox
       [ fill ' '
-      , vBox $ map renderMessage messages
+      , vBox $
+        map renderMessage $ sortOn postTime $ userMessages <> logMessages
       , border $
         vBox
           [ txt $ username <> ":"
@@ -113,7 +136,14 @@ appHandleEvent Env{username, onMessagePosted} state =
       _ -> do
         messageInput' <- handleEditorEvent ve messageInput
         continue state{messageInput = messageInput'}
-    AppEvent (MessageListUpdated messages) -> continue state{messages}
+    AppEvent appEvent ->
+      case appEvent of
+        MessageListUpdated userMessages -> continue state{userMessages}
+        LogAdded text -> do
+          postTime <- liftIO getCurrentTime
+          let content = MessageContent{username = "log", text}
+          let message = MessageView{postTime, content}
+          continue $ state & #logMessages <>~ [message]
     _ -> continue state
   where
     State{messageInput} = state

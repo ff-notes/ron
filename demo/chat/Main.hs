@@ -13,7 +13,7 @@ import           Options (Command (Post, Show, UI), Options (Options),
 import qualified Options
 import           Types (Env (Env), MessageContent (MessageContent))
 import qualified Types
-import           UI (runUI)
+import           UI (initUI, runUI)
 
 main :: IO ()
 main = do
@@ -36,8 +36,15 @@ main = do
           \Specify `--listen` or `--peer`."
       onMessagePosted      <- newTChanIO
       onMessageListUpdated <- newTChanIO
-      let env = Env{username, onMessagePosted, onMessageListUpdated}
+      let env0 =
+            Env
+              { username
+              , onMessagePosted
+              , onMessageListUpdated
+              , putLog = undefined
+              }
       fork $ Database.databaseToUIUpdater db onMessageListUpdated
       fork $ Database.messagePoster onMessagePosted db
-      NetNode.startWorkers db listen peers
-      runUI db env
+      (uiHandle, env) <- initUI db env0
+      NetNode.startWorkers db listen peers env
+      runUI uiHandle
