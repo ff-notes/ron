@@ -186,7 +186,7 @@ openOp prev =
     opId    <- openKey "event" '@' <|> pure (UUID.succValue prev)
     refId   <- openKey "ref"   ':' <|> pure                 prev
     payload <- pPayload opId
-    t <- term
+    t       <- term
     guard $ t == TReduced || t == TClosed
     pure Op{opId, refId, payload}
 

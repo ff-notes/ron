@@ -5,13 +5,16 @@ module NetNode (startWorkers) where
 import           RON.Prelude
 
 import           Control.Concurrent (threadDelay)
-import           Data.Aeson (FromJSON, ToJSON, (.:), (.=))
+import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text.Lazy.Encoding as TextL
 import qualified Network.WebSockets as WS
+import           RON.Store (globalsId)
 import qualified RON.Store.FS as Store
 import           RON.Text.Parse (parseOpenFrame, parseUuid)
-import           RON.Text.Serialize (serializeOp, serializeUuid)
+import           RON.Text.Serialize (serializeUuid)
+import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (OpenFrame, UUID)
 
 import           Fork (fork)
@@ -43,8 +46,16 @@ startWorkers db listen peers env@Env{putLog} = do
 
 dialog :: Store.Handle -> Env -> WS.Connection -> IO ()
 dialog db Env{putLog} conn = do
-  -- send object update requests
-  -- fork $
+  -- advertise own globals state and interesting object update requests
+  -- TODO fork $
+  do
+    ops <- fmap fold $ Store.runStore db $ Store.loadObjectLog globalsId mempty
+    let netMessage = ObjectOps globalsId ops
+    if null ops then do
+      putLog "No ops for globals"
+    else do
+      putLog $ "Log for globals " <> show netMessage
+      WS.sendBinaryData conn $ Aeson.encode netMessage
   do
     objectSubscriptions <- Store.readObjectSubscriptions db
     for_ objectSubscriptions $ \object -> do
@@ -91,7 +102,7 @@ instance ToJSON NetMessage where
       Aeson.object
         [ "Type"   .= ("ObjectOps" :: Text)
         , "object" .= TextL.decodeUtf8 (serializeUuid object)
-        , "ops"    .= map (TextL.decodeUtf8 . serializeOp) ops
+        , "ops"    .= TextL.decodeUtf8 (serializeOpenFrame ops)
         ]
     RequestObjectChanges object ->
       Aeson.object
@@ -104,14 +115,16 @@ instance FromJSON NetMessage where
     Aeson.withObject "NetMessage" \o -> do
       type_ <- o .: "Type"
       case type_ of
-        "Ops" -> do
+        "ObjectOps" -> do
           objectText <- TextL.encodeUtf8 <$> o .: "object"
-          object     <- either fail pure $ parseUuid objectText
-          opsText    <- TextL.encodeUtf8 <$> o .: "object"
-          ops        <- either fail pure $ parseOpenFrame opsText
+          object <-
+            either fail pure (parseUuid objectText) <?> Aeson.Key "object"
+          opsText <- TextL.encodeUtf8 <$> o .: "ops"
+          ops <- either fail pure (parseOpenFrame opsText) <?> Aeson.Key "ops"
           pure $ ObjectOps object ops
         "RequestObjectChanges" -> do
           objectText <- TextL.encodeUtf8 <$> o .: "object"
-          object     <- either fail pure $ parseUuid objectText
+          object <-
+            either fail pure (parseUuid objectText) <?> Aeson.Key "object"
           pure $ RequestObjectChanges object
         _ -> fail $ "unknown Type " <> type_

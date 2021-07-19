@@ -10,6 +10,7 @@
 module RON.Store (
   MonadStore (..),
   appendPatches,
+  globalsId,
   newObject,
   openNamedObject,
   readGlobalSet,
