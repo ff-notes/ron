@@ -10,7 +10,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text.Lazy.Encoding as TextL
 import qualified Network.WebSockets as WS
-import           RON.Store (globalsId)
+import qualified RON.Store as Store
 import qualified RON.Store.FS as Store
 import           RON.Text.Parse (parseOpenFrame, parseUuid)
 import           RON.Text.Serialize (serializeUuid)
@@ -49,8 +49,9 @@ dialog db Env{putLog} conn = do
   -- advertise own globals state and interesting object update requests
   -- TODO fork $
   do
-    ops <- fmap fold $ Store.runStore db $ Store.loadObjectLog globalsId mempty
-    let netMessage = ObjectOps globalsId ops
+    ops <-
+      fmap fold $ Store.runStore db $ Store.loadObjectLog Store.globalsId mempty
+    let netMessage = ObjectOps Store.globalsId ops
     if null ops then do
       putLog "No ops for globals"
     else do
@@ -75,9 +76,8 @@ dialog db Env{putLog} conn = do
       Right netMessage -> do
         putLog $ "Received " <> show netMessage
         case netMessage of
-          ObjectOps{} -> do
-            -- TODO incorporate ops
-            undefined
+          ObjectOps object ops ->
+            Store.runStore db $ Store.appendPatches object ops
           RequestObjectChanges object -> do
             ops <-
               fmap fold $ Store.runStore db $ Store.loadObjectLog object mempty
