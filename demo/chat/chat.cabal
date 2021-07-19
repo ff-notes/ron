@@ -28,6 +28,7 @@ executable chat
         ron-rdt,
     default-extensions:
         ApplicativeDo
+        BlockArguments
         DeriveAnyClass
         DeriveGeneric
         DerivingStrategies

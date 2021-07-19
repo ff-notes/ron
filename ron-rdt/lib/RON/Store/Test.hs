@@ -48,7 +48,7 @@ thisReplicaId = mkReplica ApplicationSpecific 2020
 instance MonadStore StoreSim where
   listObjects = StoreSim $ gets Map.keys
 
-  appendPatch objectId patch =
+  appendPatchFromOneOrigin objectId patch =
     StoreSim $ atObject . #logs . atReplica <>= Seq.fromList patch
     where
       atObject    = at objectId . non emptyObject

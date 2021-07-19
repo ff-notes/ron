@@ -11,10 +11,10 @@ class Monad m => MonadStore m where
   listObjects :: m [UUID]
 
   {- |
-    Append a sequence of operations to an existing object.
-    Must have the same origin.
+    Append a sequence of operations to an object.
+    Precondition: all operations must have the same origin.
     -}
-  appendPatch :: UUID -> [Op] -> m ()
+  appendPatchFromOneOrigin :: UUID -> [Op] -> m ()
 
   -- | Get all object logs split by replicas. Replicas order is not guaranteed.
   loadObjectLog ::

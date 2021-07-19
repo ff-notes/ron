@@ -7,6 +7,7 @@
 {-# LANGUAGE TupleSections #-}
 
 module RON.Store.FS (
+  module RON.Store,
   Handle,
   Store,
   debugDump,
@@ -75,7 +76,7 @@ instance MonadStore Store where
         if exists then listDirectory dataDir else pure []
     traverse uuidFromFileName objectDirs
 
-  appendPatch = appendPatchFS
+  appendPatchFromOneOrigin = appendPatchFS
 
   loadObjectLog = loadObjectLogFS
 

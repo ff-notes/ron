@@ -1,12 +1,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module RON.Store (
   MonadStore (..),
+  appendPatches,
   newObject,
   openNamedObject,
   readGlobalSet,
@@ -14,6 +17,8 @@ module RON.Store (
 ) where
 
 import           RON.Prelude
+
+import qualified Data.Map.Strict as Map
 
 import           RON.Data.Experimental (AsAtoms, Rep, ReplicatedObject,
                                         replicatedTypeId, stateFromFrame, view)
@@ -24,6 +29,7 @@ import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Store.Class (MonadStore (..))
 import           RON.Types (Atom, ObjectRef (..), Op (..), UUID)
+import           RON.UUID (UuidFields (..))
 import qualified RON.UUID as UUID
 
 newObject ::
@@ -33,7 +39,7 @@ newObject = do
   objectId <- getEventUuid
   let typeId = replicatedTypeId @(Rep a)
   let initOp = Op{opId = objectId, refId = typeId, payload = []}
-  appendPatch objectId [initOp]
+  appendPatchFromOneOrigin objectId [initOp]
   pure $ ObjectRef objectId
 
 -- | Nothing if object doesn't exist in the replica.
@@ -61,7 +67,7 @@ readGlobalSet name =
     ORMap.lookupSet name globals
   where
     createGlobals =
-      appendPatch
+      appendPatchFromOneOrigin
         globalsId
         [Op{opId = globalsId, refId = setType, payload = []}]
 
@@ -83,3 +89,15 @@ openNamedObject name = do
       ORMap.add_ globalsRef (name, obj)
       pure obj
     _ -> error "TODO: merge objects"
+
+-- | Append an arbitrary sequence of operations to an object. No preconditions.
+appendPatches :: MonadStore m => UUID -> [Op] -> m ()
+appendPatches object ops =
+  for_ patches $ appendPatchFromOneOrigin object
+  where
+    patches =
+      Map.fromListWith
+        (++)
+        [ (uuidOrigin, [op])
+        | op@Op{opId = UUID.split -> UuidFields{uuidOrigin}} <- ops
+        ]

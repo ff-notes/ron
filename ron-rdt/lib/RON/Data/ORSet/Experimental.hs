@@ -31,7 +31,7 @@ import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Store.Class (MonadStore, appendPatch)
+import           RON.Store.Class (MonadStore, appendPatchFromOneOrigin)
 import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (ObjectRef (..), Op (..), Payload, UUID)
 
@@ -69,7 +69,9 @@ add ::
 add (ObjectRef object) value = do
   advanceToUuid object
   opId <- getEventUuid
-  appendPatch object [Op{opId, refId = object, payload = toAtoms value}]
+  appendPatchFromOneOrigin
+    object
+    [Op{opId, refId = object, payload = toAtoms value}]
   pure opId
 
 {- |
