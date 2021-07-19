@@ -1,0 +1,27 @@
+cabal-version: 2.2
+
+name: editor-brick
+version: 0
+
+build-type: Simple
+
+common language
+    build-depends: base
+    default-language: Haskell2010
+    ghc-options: -threaded
+
+executable demo-text-editor-brick
+    import: language
+    build-depends:
+        -- global
+        brick,
+        text,
+        text-zipper,
+        vty,
+        -- project
+        ron,
+        ron-rdt,
+        ron-storage,
+    hs-source-dirs: text-editor-brick
+    main-is: Main.hs
+    other-modules: Types

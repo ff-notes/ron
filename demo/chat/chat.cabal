@@ -1,54 +1,15 @@
 cabal-version: 2.2
 
-name: demo
+name: chat
 version: 0
 
 build-type: Simple
 
-common language
-    build-depends: base
-    default-language: Haskell2010
-    ghc-options: -threaded
-
-executable demo-text-editor-brick
-    import: language
-    build-depends:
-        -- global
-        brick,
-        text,
-        text-zipper,
-        vty,
-        -- project
-        ron,
-        ron-rdt,
-        ron-storage,
-    hs-source-dirs: text-editor-brick
-    main-is: Main.hs
-    other-modules: Types
-
-executable demo-text-editor-qt
-    import: language
-    buildable: False
-    build-depends:
-        -- global
-        containers,
-        -- hoppy-runtime,
-        -- qtah,
-        stm,
-        text,
-        time,
-        -- project
-        ron-rdt,
-        ron-storage,
-    ghc-options: -dynamic -rtsopts -with-rtsopts=-N
-    hs-source-dirs: text-editor-qt
-    main-is: Main.hs
-
-executable demo-chat
-    import: language
+executable chat
     build-depends:
         -- global
         aeson,
+        base,
         brick,
         extra,
         generic-lens,
@@ -83,8 +44,8 @@ executable demo-chat
         ScopedTypeVariables
         TypeApplications
         TypeFamilies
-    ghc-options: -dynamic -rtsopts -with-rtsopts=-N
-    hs-source-dirs: chat
+    default-language: Haskell2010
+    ghc-options: -threaded -dynamic -rtsopts -with-rtsopts=-N
     main-is: Main.hs
     other-modules:
         Database
