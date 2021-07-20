@@ -43,6 +43,7 @@ executable chat
         OverloadedStrings
         RecordWildCards
         ScopedTypeVariables
+        TemplateHaskell
         TypeApplications
         TypeFamilies
     default-language: Haskell2010

@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -18,6 +19,7 @@ import           RON.Prelude
 import           RON.Error (MonadE, throwErrorText)
 import           RON.Types (Atom (AString, AUuid), ObjectRef (..), OpenFrame,
                             UUID)
+import           RON.Types.Experimental (Ref (..))
 
 class Replicated a where
 
@@ -91,3 +93,11 @@ instance (AsAtom head, AsAtoms tail) => AsAtoms (head, tail) where
   fromAtoms = \case
     [] -> throwErrorText "Expected some atoms, got none"
     head : tail -> (,) <$> fromAtom head <*> fromAtoms tail
+
+instance AsAtoms (Ref a) where
+  toAtoms Ref{object, path} = AUuid object : path
+
+  fromAtoms = \case
+    []                  -> throwErrorText "Expected some atoms, got none"
+    AUuid object : path -> pure Ref{object, path}
+    a            : _    -> throwErrorText $ "Expected UUID, got " <> show a

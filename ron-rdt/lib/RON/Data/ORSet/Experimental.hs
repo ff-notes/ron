@@ -33,7 +33,8 @@ import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import           RON.Store.Class (MonadStore, appendPatchFromOneOrigin)
 import           RON.Text.Serialize (serializeAtom)
-import           RON.Types (ObjectRef (..), Op (..), Payload, UUID)
+import           RON.Types (Op (..), Payload, UUID)
+import           RON.Types.Experimental (Ref (..))
 
 -- | Observed-Remove Set.
 -- Implementation: a map from the itemId to the original op.
@@ -65,25 +66,25 @@ instance ReplicatedObject (ORSet a) where
 -- | Add value to the set. Return the reference to the set item.
 add ::
   (Rep container ~ ORSet item, AsAtoms item, MonadStore m, ReplicaClock m) =>
-  ObjectRef container -> item -> m UUID
-add (ObjectRef object) value = do
+  Ref container -> item -> m UUID
+add (Ref object path) value = do
   advanceToUuid object
   opId <- getEventUuid
   appendPatchFromOneOrigin
     object
-    [Op{opId, refId = object, payload = toAtoms value}]
+    [Op{opId, refId = object, payload = path ++ toAtoms value}]
   pure opId
 
 {- |
   Add value to the set or map.
 
-  @add_ :: ObjectRef (ORSet a)   -> a      -> m ()@
-  @add_ :: ObjectRef (ORMap k v) -> (k, v) -> m ()@
+  @add_ :: Ref (ORSet a)   -> a      -> m ()@
+  @add_ :: Ref (ORMap k v) -> (k, v) -> m ()@
   -}
 add_ ::
   (Rep container ~ ORSet item, AsAtoms item, MonadStore m, ReplicaClock m) =>
-  ObjectRef container -> item -> m ()
-add_ objectRef payload = void $ add objectRef payload
+  Ref container -> item -> m ()
+add_ ref payload = void $ add ref payload
 
 toList :: (AsAtoms a, MonadE m) => ORSet a -> m [a]
 toList (ORSet rep) =

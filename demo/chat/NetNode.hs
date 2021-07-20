@@ -17,6 +17,7 @@ import           RON.Text.Serialize (serializeUuid)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (OpenFrame, UUID)
 
+import           Database (chatroomUuid)
 import           Fork (fork)
 import           Types (Env (Env, putLog))
 
@@ -46,16 +47,16 @@ startWorkers db listen peers env@Env{putLog} = do
 
 dialog :: Store.Handle -> Env -> WS.Connection -> IO ()
 dialog db Env{putLog} conn = do
-  -- advertise own globals state and interesting object update requests
+  -- advertise own chatroom state and interesting object update requests
   -- TODO fork $
   do
     ops <-
-      fmap fold $ Store.runStore db $ Store.loadObjectLog Store.globalsId mempty
-    let netMessage = ObjectOps Store.globalsId ops
+      fmap fold $ Store.runStore db $ Store.loadObjectLog chatroomUuid mempty
+    let netMessage = ObjectOps chatroomUuid ops
     if null ops then do
-      putLog "No ops for globals"
+      putLog "No ops for chatroom"
     else do
-      putLog $ "Log for globals " <> show netMessage
+      putLog $ "Log for chatroom " <> show netMessage
       WS.sendBinaryData conn $ Aeson.encode netMessage
   do
     objectSubscriptions <- Store.readObjectSubscriptions db

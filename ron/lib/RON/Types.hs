@@ -48,9 +48,9 @@ import           Data.Typeable (typeRep)
 import           Text.Show (showParen, showString, showsPrec)
 import qualified Text.Show
 
-import           RON.Util.Word (pattern B00, pattern B10, pattern B11, Word2)
 import           RON.UUID (UUID (UUID), uuidVersion)
 import qualified RON.UUID as UUID
+import           RON.Util.Word (Word2, pattern B00, pattern B10, pattern B11)
 
 -- | Atom — a payload element
 data Atom = AFloat Double | AInteger Int64 | AString Text | AUuid UUID
@@ -135,6 +135,7 @@ type StateFrame = Map UUID WireStateChunk
 
 -- | Reference to an object
 -- TODO hide data constructor in Internal module
+-- TODO deprecate in favor of 'Ref'?
 newtype ObjectRef a = ObjectRef UUID
   deriving newtype (Eq, Hashable)
   deriving stock (Generic)

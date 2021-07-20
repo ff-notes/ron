@@ -63,6 +63,7 @@ library
         RON.Text.Serialize.Experimental
         RON.Text.Serialize.UUID
         RON.Types
+        RON.Types.Experimental
         RON.Util
         RON.Util.Word
         RON.UUID

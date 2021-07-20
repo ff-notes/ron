@@ -1,5 +1,6 @@
 module Database
-  ( databaseToUIUpdater
+  ( chatroomUuid
+  , databaseToUIUpdater
   , loadAllMessages
   , messagePoster
   , newMessage
@@ -16,10 +17,12 @@ import           RON.Data.ORSet.Experimental (ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock)
-import           RON.Store (MonadStore, newObject, openNamedObject, readObject)
+import           RON.Store (MonadStore, newObject, readObject)
 import           RON.Store.FS (runStore)
 import qualified RON.Store.FS as Store
-import           RON.Types (Atom (AString), ObjectRef (ObjectRef))
+import           RON.Types (Atom (AString, AUuid), UUID)
+import           RON.Types.Experimental (Ref (Ref))
+import qualified RON.UUID as UUID
 
 import           Types (MessageContent (MessageContent), MessageView, postTime)
 import qualified Types
@@ -27,8 +30,7 @@ import qualified Types
 loadAllMessages :: Store.Handle -> IO [MessageView]
 loadAllMessages db =
   runStore db $ do
-    gMessages   <- openMessages
-    mMessageSet <- readObject gMessages
+    mMessageSet <- readObject gMessageSetRef
     case mMessageSet of
       Nothing -> do
         liftIO $ putStrLn "!!! messages collection doesn't exist !!!"
@@ -37,20 +39,14 @@ loadAllMessages db =
         messageRefs <- ORSet.toList messageSet
         sortOn postTime . catMaybes <$> for messageRefs readObject
 
-openMessages ::
-  (MonadE m, MonadStore m, ReplicaClock m) =>
-  m (ObjectRef (ORSet (ObjectRef MessageView)))
-openMessages = openNamedObject "messages"
-
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
-  MessageContent -> m (ObjectRef MessageView)
+  MessageContent -> m (Ref MessageView)
 newMessage MessageContent{username, text} = do
-  gMessages <- openMessages
   msgRef <- newObject @MessageView
   ORSet.add_ msgRef ("username", [AString username])
   ORSet.add_ msgRef ("text",     [AString text    ])
-  ORSet.add_ gMessages msgRef
+  ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 
 messagePoster :: TChan MessageContent -> Store.Handle -> IO ()
@@ -61,12 +57,17 @@ messagePoster onMessagePosted db =
 
 databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
 databaseToUIUpdater db onMessageListUpdated = do
-  ObjectRef messageSetId <- runStore db openMessages
-  Store.subcribeToObject db messageSetId
+  Store.subcribeToObject db chatroomUuid
   onObjectChanged <- Store.fetchUpdates db
   forever $ do
     objectId <- atomically $ readTChan onObjectChanged
-    when (objectId == messageSetId) $ do
+    when (objectId == chatroomUuid) $ do
       messages <- loadAllMessages db
       atomically $ writeTChan onMessageListUpdated messages
     -- ignore other changes
+
+chatroomUuid :: UUID
+chatroomUuid = $(UUID.liftName "chatroom")
+
+gMessageSetRef :: Ref (ORSet (Ref MessageView))
+gMessageSetRef = Ref chatroomUuid [AUuid $(UUID.liftName "message")]
