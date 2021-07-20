@@ -44,7 +44,9 @@ newtype ORSet a = ORSet (Map UUID (UUID, Payload))
   deriving (Eq, Show)
 
 instance Replicated (ORSet a) where
+
   replicatedTypeId = setType
+
   stateFromFrame objectId = ORSet . \case
     [] -> Map.empty
     ops ->

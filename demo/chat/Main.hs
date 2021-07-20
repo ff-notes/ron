@@ -43,8 +43,8 @@ main = do
               , onMessageListUpdated
               , putLog = undefined
               }
-      fork $ Database.databaseToUIUpdater db onMessageListUpdated
-      fork $ Database.messagePoster onMessagePosted db
       (uiHandle, env) <- initUI db env0
+      fork $ Database.databaseToUIUpdater db onMessageListUpdated
+      fork $ Database.messagePoster onMessagePosted db env
       NetNode.startWorkers db listen peers env
       runUI uiHandle

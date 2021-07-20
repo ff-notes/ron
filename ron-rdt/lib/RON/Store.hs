@@ -16,6 +16,7 @@ import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
+import           Data.List (stripPrefix)
 import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
                                         stateFromFrame, view)
 import           RON.Error (MonadE, errorContext)
@@ -48,7 +49,12 @@ readObject object@(Ref objectId path) =
         fmap Just $
         view objectId $
         stateFromFrame objectId $
-        sortOn opId $ filter ((path `isPrefixOf`) . payload) ops
+        sortOn
+          opId
+          [ op{payload = payload'}
+          | op@Op{payload} <- ops
+          , Just payload' <- [stripPrefix path payload]
+          ]
 
 -- | Append an arbitrary sequence of operations to an object. No preconditions.
 appendPatches :: MonadStore m => UUID -> [Op] -> m ()

@@ -41,7 +41,8 @@ import           System.Random.TF.Instances (random)
 
 import           RON.Data.VersionVector (VV, mkVV, (·≼))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
-import           RON.Error (Error (..), MonadE, liftEitherString, tryIO)
+import           RON.Error (Error (..), MonadE, errorContext, liftEitherString,
+                            throwErrorText, tryIO)
 import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
                             ReplicaClock, getEventUuid, mkReplica)
 import           RON.Store (MonadStore (..))
@@ -69,21 +70,23 @@ newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
     (Applicative, Functor, Monad, MonadError Error, MonadIO, ReplicaClock)
 
 instance MonadStore Store where
-  listObjects = do
-    Handle{dataDir} <- Store ask
-    objectDirs <-
-      tryIO $ do
-        exists <- doesDirectoryExist dataDir
-        if exists then listDirectory dataDir else pure []
-    traverse uuidFromFileName objectDirs
+  listObjects =
+    errorContext "Store.listObjects" $ do
+      Handle{dataDir} <- Store ask
+      objectDirs <-
+        tryIO $ do
+          exists <- doesDirectoryExist dataDir
+          if exists then listDirectoryDirs dataDir else pure []
+      traverse uuidFromFileName objectDirs
 
   appendPatchFromOneOrigin = appendPatchFS
 
   loadObjectLog = loadObjectLogFS
 
-  getObjectVersion objectId = do
-    patchNames <- getObjectPatches objectId
-    mkVV <$> for patchNames uuidFromFileName
+  getObjectVersion objectId =
+    errorContext "Store.getObjectVersion" $ do
+      patchNames <- getObjectPatches objectId
+      mkVV <$> for patchNames uuidFromFileName
 
 askObjectLogsDir :: MonadReader Handle m => UUID -> m FilePath
 askObjectLogsDir objectId =
@@ -170,9 +173,13 @@ getMacAddress =
       +  fromIntegral b0
 
 uuidFromFileName :: MonadE m => FilePath -> m UUID
-uuidFromFileName =
-  maybe (throwError "UUID.decodeBase32: filename is not a valid UUID") pure
-  . UUID.decodeBase32
+uuidFromFileName name =
+  maybe
+    ( throwErrorText $
+      "UUID.decodeBase32: file name " <> show name <> " is not a valid UUID"
+    )
+    pure
+    (UUID.decodeBase32 name)
 
 uuidToFileName :: UUID -> FilePath
 uuidToFileName = UUID.encodeBase32
@@ -202,3 +209,7 @@ subcribeToObject Handle{objectSubscriptions} object =
 readObjectSubscriptions :: Handle -> IO (Set UUID)
 readObjectSubscriptions Handle{objectSubscriptions} =
   readIORef objectSubscriptions
+
+listDirectoryDirs :: FilePath -> IO [FilePath]
+listDirectoryDirs dir =
+  listDirectory dir >>= filterM \name -> doesDirectoryExist (dir </> name)

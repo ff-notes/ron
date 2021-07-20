@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Database
   ( chatroomUuid
   , databaseToUIUpdater
@@ -6,13 +8,11 @@ module Database
   , newMessage
   ) where
 
+import           RON.Prelude
+
 import           Control.Concurrent.STM (TChan, atomically, readTChan,
                                          writeTChan)
-import           Control.Monad (forever, when)
-import           Control.Monad.IO.Class (liftIO)
-import           Data.List (sortOn)
-import           Data.Maybe (catMaybes)
-import           Data.Traversable (for)
+import           Control.Monad (forever)
 import           RON.Data.ORSet.Experimental (ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
@@ -21,11 +21,11 @@ import           RON.Store (MonadStore, newObject, readObject)
 import           RON.Store.FS (runStore)
 import qualified RON.Store.FS as Store
 import           RON.Types (Atom (AString, AUuid), UUID)
-import           RON.Types.Experimental (Ref (Ref))
+import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
+import           System.IO (putStrLn)
 
-import           Types (MessageContent (MessageContent), MessageView, postTime)
-import qualified Types
+import           Types (Env (..), MessageContent (..), MessageView, postTime)
 
 loadAllMessages :: Store.Handle -> IO [MessageView]
 loadAllMessages db =
@@ -49,10 +49,11 @@ newMessage MessageContent{username, text} = do
   ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 
-messagePoster :: TChan MessageContent -> Store.Handle -> IO ()
-messagePoster onMessagePosted db =
+messagePoster :: TChan MessageContent -> Store.Handle -> Env -> IO ()
+messagePoster onMessagePosted db Env{putLog} =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
+    putLog $ "Saving message " <> show message
     runStore db $ newMessage message
 
 databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
