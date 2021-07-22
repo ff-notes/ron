@@ -1,0 +1,25 @@
+cabal-version: 2.2
+
+name: ron-store-sqlite
+version: 0
+
+build-type: Simple
+
+library
+  build-depends:
+    -- global
+    base,
+    bytestring,
+    directory,
+    monad-logger,
+    persistent,
+    persistent-sqlite,
+    resourcet,
+    stm,
+    text,
+    tf-random,
+    -- project
+    ron,
+    ron-rdt,
+  default-language: Haskell2010
+  exposed-modules: RON.Store.Sqlite

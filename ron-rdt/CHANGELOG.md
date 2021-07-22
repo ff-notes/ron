@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `VersionVector`: operator (·≻)
 
 ## [0.10] - 2019-10-08
 ### Added

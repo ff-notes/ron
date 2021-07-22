@@ -26,6 +26,7 @@ executable chat
         -- project
         ron,
         ron-rdt,
+        ron-store-sqlite,
     default-extensions:
         ApplicativeDo
         BlockArguments

@@ -1,8 +1,8 @@
 import           Control.Concurrent.STM (newTChanIO)
 import           Control.Monad (when)
 import           Data.Maybe (isNothing)
-import           RON.Store.FS (runStore)
-import qualified RON.Store.FS as Store
+import           RON.Store.Sqlite (runStore)
+import qualified RON.Store.Sqlite as Store
 import           Text.Pretty.Simple (pPrint)
 
 import qualified Database

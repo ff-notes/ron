@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `RON.Text.Parse.parsePayload`
 
 ## [0.12] - 2021-07-15
 ### Added

@@ -12,6 +12,7 @@ module RON.Data.VersionVector (
     lookup,
     mkVV,
     serializeVV,
+    (·≻),
     (·≼),
 ) where
 
@@ -127,6 +128,12 @@ mkVV uuids =
 unVV :: VV -> [UUID]
 unVV (VV vv) =
   [encodeEvent Event{replica, time} | (replica, time) <- Map.assocs vv]
+
+(·≻) :: UUID -> VV -> Bool
+uuid ·≻ VV vv =
+  maybe True (time >) $ Map.lookup replica vv
+  where
+    Event{replica, time} = decodeEvent uuid
 
 (·≼) :: UUID -> VV -> Bool
 uuid ·≼ VV vv =

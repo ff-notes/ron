@@ -23,7 +23,7 @@ import           GHC.Generics (Generic)
 import           Graphics.Vty (Color (ISOColor), Event (EvKey),
                                Key (KEnter, KEsc), mkVty)
 import qualified Graphics.Vty as Vty
-import qualified RON.Store.FS as Store (Handle)
+import qualified RON.Store.Sqlite as Store (Handle)
 
 import           Database (loadAllMessages)
 import           Fork (fork)

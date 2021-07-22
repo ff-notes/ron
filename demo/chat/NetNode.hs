@@ -4,14 +4,13 @@ module NetNode (startWorkers) where
 
 import           RON.Prelude
 
-import           Control.Concurrent (threadDelay)
 import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text.Lazy.Encoding as TextL
 import qualified Network.WebSockets as WS
 import qualified RON.Store as Store
-import qualified RON.Store.FS as Store
+import qualified RON.Store.Sqlite as Store
 import           RON.Text.Parse (parseOpenFrame, parseUuid)
 import           RON.Text.Serialize (serializeUuid)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
@@ -47,7 +46,7 @@ startWorkers db listen peers env@Env{putLog} = do
 
 dialog :: Store.Handle -> Env -> WS.Connection -> IO ()
 dialog db Env{putLog} conn = do
-  -- advertise own chatroom state and interesting object update requests
+  -- advertise own database state
   -- TODO fork $
   do
     ops <-
@@ -58,13 +57,6 @@ dialog db Env{putLog} conn = do
     else do
       putLog $ "Log for chatroom " <> show netMessage
       WS.sendBinaryData conn $ Aeson.encode netMessage
-  do
-    objectSubscriptions <- Store.readObjectSubscriptions db
-    for_ objectSubscriptions $ \object -> do
-      let request = RequestObjectChanges object
-      putLog $ "For object substription, sending " <> show request
-      WS.sendBinaryData conn $ Aeson.encode request
-    threadDelay 1_000_000
 
   -- receive
   WS.withPingThread conn 30 (pure ()) $ do

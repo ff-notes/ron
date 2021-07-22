@@ -1,4 +1,5 @@
 _artifacts/
 _build/
 .stack-work/
+*.sqlite
 dist-newstyle/

@@ -12,6 +12,7 @@ module RON.Text.Parse (
     parseOp,
     parseOpenFrame,
     parseOpenOp,
+    parsePayload,
     parseStateChunk,
     parseStateFrame,
     parseString,
@@ -364,6 +365,9 @@ pPayload = label "payload" . go
                 newUuid = case a of
                     AUuid u -> u
                     _       -> prevUuid
+
+parsePayload :: ByteStringL -> Either String Payload
+parsePayload = parseOnlyL $ pPayload UUID.zero <* endOfInputEx
 
 atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'

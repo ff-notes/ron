@@ -5,7 +5,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 
 module RON.Store.FS (
   module RON.Store,
@@ -16,9 +15,6 @@ module RON.Store.FS (
   newHandle,
   newHandleWithReplica,
   runStore,
-  -- * Object subscriptions
-  subcribeToObject,
-  readObjectSubscriptions,
 ) where
 
 import           RON.Prelude
@@ -30,7 +26,6 @@ import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (find)
-import qualified Data.Set as Set
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
                                    listDirectory, makeAbsolute)
@@ -60,9 +55,8 @@ data Handle = Handle
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
     -- call 'fetchUpdates' to read from derived channel instead.
-  , opLock              :: MVar ()
-  , replica             :: Replica
-  , objectSubscriptions :: IORef (Set UUID)
+  , opLock          :: MVar ()
+  , replica         :: Replica
   }
 
 newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
@@ -154,7 +148,6 @@ newHandleWithReplica dataDir' replicaId = do
       onObjectChanged <- newBroadcastTChanIO
       opLock          <- newMVar ()
       let replica = mkReplica ApplicationSpecific replicaId
-      objectSubscriptions <- newIORef mempty
       pure $ Just Handle{..}
 
 getMacAddress :: IO (Maybe Word64)
@@ -201,14 +194,6 @@ debugDump dataDir = do
 
 fetchUpdates :: Handle -> IO (TChan UUID)
 fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
-
-subcribeToObject :: Handle -> UUID -> IO ()
-subcribeToObject Handle{objectSubscriptions} object =
-  atomicModifyIORef' objectSubscriptions $ (,()) . Set.insert object
-
-readObjectSubscriptions :: Handle -> IO (Set UUID)
-readObjectSubscriptions Handle{objectSubscriptions} =
-  readIORef objectSubscriptions
 
 listDirectoryDirs :: FilePath -> IO [FilePath]
 listDirectoryDirs dir =

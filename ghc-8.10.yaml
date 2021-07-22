@@ -5,6 +5,7 @@ packages:
   - ron-rdt
   - ron-schema
   - ron-storage
+  - ron-store-sqlite
   - ron-test
   - ron-tool
   - swarm

@@ -18,8 +18,8 @@ import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock)
 import           RON.Store (MonadStore, newObject, readObject)
-import           RON.Store.FS (runStore)
-import qualified RON.Store.FS as Store
+import           RON.Store.Sqlite (runStore)
+import qualified RON.Store.Sqlite as Store
 import           RON.Types (Atom (AString, AUuid), UUID)
 import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
@@ -58,14 +58,11 @@ messagePoster onMessagePosted db Env{putLog} =
 
 databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
 databaseToUIUpdater db onMessageListUpdated = do
-  Store.subcribeToObject db chatroomUuid
-  onObjectChanged <- Store.fetchUpdates db
+  onChange <- Store.fetchUpdates db
   forever $ do
-    objectId <- atomically $ readTChan onObjectChanged
-    when (objectId == chatroomUuid) $ do
-      messages <- loadAllMessages db
-      atomically $ writeTChan onMessageListUpdated messages
-    -- ignore other changes
+    _ <- atomically $ readTChan onChange
+    messages <- loadAllMessages db
+    atomically $ writeTChan onMessageListUpdated messages
 
 chatroomUuid :: UUID
 chatroomUuid = $(UUID.liftName "chatroom")
