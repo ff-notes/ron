@@ -26,7 +26,7 @@ import qualified Graphics.Vty as Vty
 import qualified RON.Store.Sqlite as Store (Handle)
 
 import           Database (loadAllMessages)
-import           Fork (fork)
+import           Fork (forkLinked)
 import           Types (Env (Env, putLog), MessageContent (MessageContent),
                         MessageView (MessageView), postTime)
 import qualified Types
@@ -47,7 +47,7 @@ runUI :: Handle -> IO ()
 runUI Handle{db, env, onEvent} =
   do
     userMessages <- loadAllMessages db -- TODO load asynchronously
-    fork $ eventWorker env onEvent
+    forkLinked $ eventWorker env onEvent
     initialVty <- buildVty
     finalState <-
       customMain

@@ -9,6 +9,7 @@ executable chat
     build-depends:
         -- global
         aeson,
+        async,
         base,
         brick,
         extra,
@@ -16,7 +17,6 @@ executable chat
         lens,
         optparse-applicative,
         pretty-simple,
-        safe-exceptions,
         stm,
         text,
         time,

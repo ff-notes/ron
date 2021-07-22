@@ -6,7 +6,7 @@ import qualified RON.Store.Sqlite as Store
 import           Text.Pretty.Simple (pPrint)
 
 import qualified Database
-import           Fork (fork)
+import           Fork (forkLinked)
 import qualified NetNode
 import           Options (Command (Post, Show, UI), Options (Options),
                           UIOptions (UIOptions), parseOptions)
@@ -44,7 +44,7 @@ main = do
               , putLog = undefined
               }
       (uiHandle, env) <- initUI db env0
-      fork $ Database.databaseToUIUpdater db onMessageListUpdated
-      fork $ Database.messagePoster onMessagePosted db env
+      forkLinked $ Database.databaseToUIUpdater db onMessageListUpdated
+      forkLinked $ Database.messagePoster onMessagePosted db env
       NetNode.startWorkers db listen peers env
       runUI uiHandle

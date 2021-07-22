@@ -1,23 +1,8 @@
-module Fork (fork) where
+module Fork (forkLinked) where
 
-import           Control.Concurrent (ThreadId, forkFinally, myThreadId)
-import           Control.Exception.Safe (SomeException, throwTo, Exception)
+import           RON.Prelude
 
-fork :: IO () -> IO ()
-fork thread =
-  do
-    parent <- myThreadId
-    _ <- forkFinally thread $ either (rethrow parent) pure
-    pure ()
-  where
-    rethrow parent exception = do
-      child <- myThreadId
-      throwTo parent Rethrowing{parent, child, exception}
+import           Control.Concurrent.Async (async, link)
 
-data Rethrowing = Rethrowing
-  { parent    :: ThreadId
-  , child     :: ThreadId
-  , exception :: SomeException
-  }
-  deriving anyclass (Exception)
-  deriving stock (Show)
+forkLinked :: IO () -> IO ()
+forkLinked = async >=> link

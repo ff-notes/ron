@@ -17,7 +17,7 @@ import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (OpenFrame, UUID)
 
 import           Database (chatroomUuid)
-import           Fork (fork)
+import           Fork (forkLinked)
 import           Types (Env (Env, putLog))
 
 startWorkers ::
@@ -31,10 +31,10 @@ startWorkers ::
 startWorkers db listen peers env@Env{putLog} = do
   for_ listen $ \port -> do
     putLog $ "Listening at [::]:" <> show port
-    fork $ WS.runServer "::" port server
+    forkLinked $ WS.runServer "::" port server
   for_ peers  $ \port -> do
     putLog $ "Connecting to at [::]:" <> show port
-    fork $ WS.runClient "::" port "/" client
+    forkLinked $ WS.runClient "::" port "/" client
   where
 
     server pending = do
@@ -47,7 +47,7 @@ startWorkers db listen peers env@Env{putLog} = do
 dialog :: Store.Handle -> Env -> WS.Connection -> IO ()
 dialog db Env{putLog} conn = do
   -- advertise own database state
-  -- TODO fork $
+  -- TODO forkLinked $
   do
     ops <-
       fmap fold $ Store.runStore db $ Store.loadObjectLog chatroomUuid mempty
