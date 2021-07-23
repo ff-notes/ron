@@ -24,9 +24,10 @@ import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO)
-import           Control.Monad.Logger (NoLoggingT)
-import           Control.Monad.Trans.Resource (ResourceT)
+import           Control.Monad.Logger (NoLoggingT, runNoLoggingT)
+import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
+import           Data.Pool (Pool)
 import qualified Data.Text as Text
 import           Database.Persist (Entity (..),
                                    PersistValue (PersistByteString),
@@ -34,9 +35,9 @@ import           Database.Persist (Entity (..),
                                    (==.))
 import           Database.Persist.Sql (PersistField, PersistFieldSql,
                                        SqlBackend, rawSql, runMigration,
-                                       sqlType, unSingle)
+                                       runSqlPool, sqlType, unSingle)
 import qualified Database.Persist.Sql
-import           Database.Persist.Sqlite (runSqlite)
+import           Database.Persist.Sqlite (createSqlitePool)
 import           Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase,
                                       share, sqlSettings)
 import           System.Directory (makeAbsolute)
@@ -45,7 +46,7 @@ import           System.Random.TF.Instances (random)
 
 import           RON.Data.VersionVector (VV, (·≻))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
-import           RON.Error (Error, MonadE, tryIO)
+import           RON.Error (Error, MonadE, errorContext, tryIO)
 import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
                             ReplicaClock, mkReplica)
 import           RON.Store.Class (MonadStore)
@@ -82,11 +83,13 @@ share
       ref     UUID -- parent op id
       object  UUID -- enclosing object (itself for root op)
       payload Payload
+
+      UniqueEvent event
   |]
 
 data Handle = Handle
   { clock  :: IORef Word60
-  , dbfile :: FilePath
+  , dbPool :: Pool SqlBackend
   , onOp   :: TChan RON.Op
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
@@ -99,9 +102,10 @@ newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
 
 instance MonadStore Store where
 
-  listObjects = runDB selectDistinctObject
+  listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
   appendPatchFromOneOrigin opObject ops =
+    errorContext "listObjects @Store" $
     runDB $
     insertMany_
       [ Op{opEvent = opId, opRef = refId, opObject, opPayload = payload}
@@ -113,22 +117,28 @@ instance MonadStore Store where
   getObjectVersion = undefined
 
 loadObjectLog' :: UUID -> VV -> Store [[RON.Op]]
-loadObjectLog' object version = do
-  ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
-  pure
-    [ [ RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
-      | Entity _ Op{opEvent, opRef, opPayload} <- ops
-      , opEvent ·≻ version
+loadObjectLog' object version =
+  errorContext "loadObjectLog @Store" do
+    ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
+    pure
+      [ [ RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
+        | Entity _ Op{opEvent, opRef, opPayload} <- ops
+        , opEvent ·≻ version
+        ]
       ]
-    ]
 
 runDB :: ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -> Store a
 runDB action =
   Store do
-    Handle{dbfile} <- ask
-    tryIO $ runSqlite (Text.pack dbfile) $ do
-      runMigration migrateAll
-      action
+    Handle{dbPool} <- ask
+    tryIO $
+      runResourceT $
+      runNoLoggingT $
+      runSqlPool
+        (do
+          runMigration migrateAll
+          action)
+        dbPool
 
 runStore :: Handle -> Store a -> IO a
 runStore h@Handle{replica, clock} (Store action) = do
@@ -151,6 +161,7 @@ newHandle dbfile' = do
                                  -- in database
   clock   <- newIORef time
   dbfile  <- makeAbsolute dbfile'
+  dbPool  <- runNoLoggingT $ createSqlitePool (Text.pack dbfile) 1
   onOp    <- newBroadcastTChanIO
   replica <- newReplica -- TODO load replica id from database
   pure $ Just Handle{..}

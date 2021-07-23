@@ -23,7 +23,6 @@ import qualified RON.Store.Sqlite as Store
 import           RON.Types (Atom (AString, AUuid), UUID)
 import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
-import           System.IO (putStrLn)
 
 import           Types (Env (..), MessageContent (..), MessageView, postTime)
 
@@ -32,8 +31,7 @@ loadAllMessages db =
   runStore db $ do
     mMessageSet <- readObject gMessageSetRef
     case mMessageSet of
-      Nothing -> do
-        liftIO $ putStrLn "!!! messages collection doesn't exist !!!"
+      Nothing ->
         pure []
       Just messageSet -> do
         messageRefs <- ORSet.toList messageSet

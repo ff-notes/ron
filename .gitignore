@@ -2,4 +2,6 @@ _artifacts/
 _build/
 .stack-work/
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
 dist-newstyle/
