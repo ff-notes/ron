@@ -24,14 +24,14 @@ import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO)
-import           Control.Monad.Logger (NoLoggingT, runNoLoggingT)
+import           Control.Monad.Logger (LoggingT, runStderrLoggingT)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Pool (Pool)
 import qualified Data.Text as Text
 import           Database.Persist (Entity (..),
                                    PersistValue (PersistByteString),
-                                   SelectOpt (Asc), insertMany_, selectList,
+                                   SelectOpt (Asc), insertUnique, selectList,
                                    (==.))
 import           Database.Persist.Sql (PersistField, PersistFieldSql,
                                        SqlBackend, rawSql, runMigration,
@@ -105,12 +105,11 @@ instance MonadStore Store where
   listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
   appendPatchFromOneOrigin opObject ops =
-    errorContext "listObjects @Store" $
+    errorContext "appendPatchFromOneOrigin @Store" $
     runDB $
-    insertMany_
-      [ Op{opEvent = opId, opRef = refId, opObject, opPayload = payload}
-      | RON.Op{opId, refId, payload} <- ops
-      ]
+    for_ ops \RON.Op{opId, refId, payload} ->
+      insertUnique
+        Op{opEvent = opId, opRef = refId, opObject, opPayload = payload}
 
   loadObjectLog = loadObjectLog'
 
@@ -127,13 +126,13 @@ loadObjectLog' object version =
         ]
       ]
 
-runDB :: ReaderT SqlBackend (NoLoggingT (ResourceT IO)) a -> Store a
+runDB :: ReaderT SqlBackend (LoggingT (ResourceT IO)) a -> Store a
 runDB action =
   Store do
     Handle{dbPool} <- ask
     tryIO $
       runResourceT $
-      runNoLoggingT $
+      runStderrLoggingT $
       runSqlPool
         (do
           runMigration migrateAll
@@ -157,11 +156,11 @@ selectDistinctObject =
 -- or generates a random one.
 newHandle :: FilePath -> IO (Maybe Handle)
 newHandle dbfile' = do
-  time    <- getCurrentEpochTime -- TODO advance to the last timestamp
-                                 -- in database
+  time    <- getCurrentEpochTime  -- TODO advance to the last timestamp
+                                  -- in database
   clock   <- newIORef time
   dbfile  <- makeAbsolute dbfile'
-  dbPool  <- runNoLoggingT $ createSqlitePool (Text.pack dbfile) 1
+  dbPool  <- runStderrLoggingT $ createSqlitePool (Text.pack dbfile) 1
   onOp    <- newBroadcastTChanIO
   replica <- newReplica -- TODO load replica id from database
   pure $ Just Handle{..}
