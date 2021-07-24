@@ -27,7 +27,8 @@ import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO, writeTChan)
-import           Control.Monad.Logger (LoggingT, runStderrLoggingT)
+import           Control.Monad.Logger (LoggingT, filterLogger,
+                                       runStderrLoggingT)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.List.NonEmpty (groupWith)
@@ -150,7 +151,7 @@ runDB action =
     Handle{dbPool} <- ask
     tryIO $
       runResourceT $
-      runStderrLoggingT $
+      runLogger $
       runSqlPool
         (do
           runMigration migrateAll
@@ -178,7 +179,7 @@ newHandle dbfile' = do
                                           -- in database
   clock           <- newIORef time
   dbfile          <- makeAbsolute dbfile'
-  dbPool          <- runStderrLoggingT $ createSqlitePool (Text.pack dbfile) 1
+  dbPool          <- runLogger $ createSqlitePool (Text.pack dbfile) 1
   onObjectChanged <- newBroadcastTChanIO
   replica         <- newReplica -- TODO load replica id from database
   pure $ Just Handle{..}
@@ -187,3 +188,6 @@ newReplica :: IO Replica
 newReplica = do
   replicaId <- fst . random <$> newTFGen
   pure $ mkReplica ApplicationSpecific $ ls60 replicaId
+
+runLogger :: MonadIO m => LoggingT m a -> m a
+runLogger = runStderrLoggingT . filterLogger \_ _ -> False
