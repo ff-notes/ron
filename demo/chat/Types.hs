@@ -45,5 +45,4 @@ data Env = Env
   { username             :: Text
   , onMessagePosted      :: TChan MessageContent
   , onMessageListUpdated :: TChan [MessageView]
-  , putLog               :: Text -> IO ()
   }

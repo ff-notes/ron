@@ -31,10 +31,10 @@ import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Store.Class (MonadStore, appendPatchFromOneOrigin)
+import           RON.Store.Class (MonadStore, appendPatch)
 import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (Op (..), Payload, UUID)
-import           RON.Types.Experimental (Ref (..))
+import           RON.Types.Experimental (Patch (..), Ref (..))
 
 -- | Observed-Remove Set.
 -- Implementation: a map from the itemId to the original op.
@@ -72,9 +72,8 @@ add ::
 add (Ref object path) value = do
   advanceToUuid object
   opId <- getEventUuid
-  appendPatchFromOneOrigin
-    object
-    [Op{opId, refId = object, payload = path ++ toAtoms value}]
+  appendPatch $
+    Patch object [Op{opId, refId = object, payload = path ++ toAtoms value}]
   pure opId
 
 {- |

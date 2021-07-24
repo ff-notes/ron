@@ -1,15 +1,16 @@
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module RON.Types.Experimental (Ref (..)) where
+module RON.Types.Experimental (Patch (..), Ref (..)) where
 
 import           RON.Prelude
 
 import           Data.Typeable (typeRep)
 import           Text.Show (showParen, showString, showsPrec)
 
-import           RON.Types (Atom, UUID)
+import           RON.Types (Atom, Op, UUID)
 
 -- | References to a RON object or a subobject
 -- TODO hide data constructor in Internal module
@@ -24,3 +25,9 @@ instance Typeable a => Show (Ref a) where
       . showsPrec 11 object
       . showString " "
       . showsPrec 11 path
+
+data Patch = Patch
+  { object :: UUID
+  , log    :: [Op]
+  }
+  deriving Show

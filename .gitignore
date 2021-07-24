@@ -1,6 +1,7 @@
 _artifacts/
 _build/
 .stack-work/
+*.log
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

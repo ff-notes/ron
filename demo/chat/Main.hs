@@ -36,15 +36,9 @@ main = do
           \Specify `--listen` or `--peer`."
       onMessagePosted      <- newTChanIO
       onMessageListUpdated <- newTChanIO
-      let env0 =
-            Env
-              { username
-              , onMessagePosted
-              , onMessageListUpdated
-              , putLog = undefined
-              }
-      (uiHandle, env) <- initUI db env0
+      let env = Env{username, onMessagePosted, onMessageListUpdated}
+      uiHandle <- initUI db env
       forkLinked $ Database.databaseToUIUpdater db onMessageListUpdated
-      forkLinked $ Database.messagePoster onMessagePosted db env
-      NetNode.startWorkers db listen peers env
+      forkLinked $ Database.messagePoster onMessagePosted db
+      NetNode.startWorkers db listen peers
       runUI uiHandle

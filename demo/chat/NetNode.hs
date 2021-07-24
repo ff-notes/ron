@@ -2,6 +2,7 @@
 
 module NetNode (startWorkers) where
 
+import           Debug.Trace
 import           RON.Prelude
 
 import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
@@ -14,11 +15,9 @@ import qualified RON.Store.Sqlite as Store
 import           RON.Text.Parse (parseOpenFrame, parseUuid)
 import           RON.Text.Serialize (serializeUuid)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
-import           RON.Types (OpenFrame, UUID)
+import           RON.Types.Experimental (Patch (..))
 
-import           Database (chatroomUuid)
 import           Fork (forkLinked)
-import           Types (Env (Env, putLog))
 
 startWorkers ::
   Store.Handle ->
@@ -26,37 +25,34 @@ startWorkers ::
   Maybe Int ->
   -- | Other peer ports to connect (only localhost)
   [Int] ->
-  Env ->
   IO ()
-startWorkers db listen peers env@Env{putLog} = do
+startWorkers db listen peers = do
   for_ listen $ \port -> do
-    putLog $ "Listening at [::]:" <> show port
+    traceM $ "Listening at [::]:" <> show port
     forkLinked $ WS.runServer "::" port server
   for_ peers  $ \port -> do
-    putLog $ "Connecting to at [::]:" <> show port
+    traceM $ "Connecting to at [::]:" <> show port
     forkLinked $ WS.runClient "::" port "/" client
   where
 
     server pending = do
       conn <- WS.acceptRequest pending
-      putLog $ "Accepted connection from " <> show (WS.pendingRequest pending)
-      dialog db env conn
+      traceM $ "Accepted connection from " <> show (WS.pendingRequest pending)
+      dialog db conn
 
-    client = dialog db env
+    client = dialog db
 
-dialog :: Store.Handle -> Env -> WS.Connection -> IO ()
-dialog db Env{putLog} conn = do
+dialog :: Store.Handle -> WS.Connection -> IO ()
+dialog db conn = do
   -- advertise own database state
   -- TODO forkLinked $
   do
-    ops <-
-      fmap fold $ Store.runStore db $ Store.loadObjectLog chatroomUuid mempty
-    let netMessage = ObjectOps chatroomUuid ops
-    if null ops then do
-      putLog "No ops for chatroom"
+    patches <- Store.runStore db Store.loadLog
+    if null patches then do
+      traceM "No log for the chatroom"
     else do
-      putLog $ "Log for chatroom " <> show netMessage
-      WS.sendBinaryData conn $ Aeson.encode netMessage
+      traceM $ "Log for the chatroom " <> show patches
+      for_ patches $ WS.sendBinaryData conn . Aeson.encode . NetPatch
 
   -- receive
   WS.withPingThread conn 30 (pure ()) $ do
@@ -67,40 +63,21 @@ dialog db Env{putLog} conn = do
           "NetNode.dialog: Aeson.eitherDecode: " <> e
           <> ", messageData = " <> show messageData
       Right netMessage -> do
-        putLog $ "Received " <> show netMessage
+        traceM $ "Received " <> show netMessage
         case netMessage of
-          ObjectOps object ops ->
-            Store.runStore db $ Store.appendPatches object ops
-          RequestObjectChanges object -> do
-            ops <-
-              fmap fold $ Store.runStore db $ Store.loadObjectLog object mempty
-            let response = ObjectOps object ops
-            if null ops then do
-              putLog $
-                "In response to changes request, there's no ops " <> show object
-            else do
-              putLog $
-                "In response to changes request, sending " <> show response
-              WS.sendBinaryData conn $ Aeson.encode response
+          NetPatch patch -> Store.runStore db $ Store.appendPatch patch
     pure ()
 
-data NetMessage
-  = ObjectOps UUID OpenFrame
-  | RequestObjectChanges UUID
+newtype NetMessage = NetPatch Patch
   deriving Show
 
 instance ToJSON NetMessage where
   toJSON = \case
-    ObjectOps object ops ->
+    NetPatch Patch{object, log} ->
       Aeson.object
-        [ "Type"   .= ("ObjectOps" :: Text)
+        [ "Type"   .= ("NetPatch" :: Text)
         , "object" .= TextL.decodeUtf8 (serializeUuid object)
-        , "ops"    .= TextL.decodeUtf8 (serializeOpenFrame ops)
-        ]
-    RequestObjectChanges object ->
-      Aeson.object
-        [ "Type"   .= ("RequestObjectChanges" :: Text)
-        , "object" .= TextL.decodeUtf8 (serializeUuid object)
+        , "log"    .= TextL.decodeUtf8 (serializeOpenFrame log)
         ]
 
 instance FromJSON NetMessage where
@@ -108,16 +85,11 @@ instance FromJSON NetMessage where
     Aeson.withObject "NetMessage" \o -> do
       type_ <- o .: "Type"
       case type_ of
-        "ObjectOps" -> do
+        "NetPatch" -> do
           objectText <- TextL.encodeUtf8 <$> o .: "object"
           object <-
             either fail pure (parseUuid objectText) <?> Aeson.Key "object"
-          opsText <- TextL.encodeUtf8 <$> o .: "ops"
-          ops <- either fail pure (parseOpenFrame opsText) <?> Aeson.Key "ops"
-          pure $ ObjectOps object ops
-        "RequestObjectChanges" -> do
-          objectText <- TextL.encodeUtf8 <$> o .: "object"
-          object <-
-            either fail pure (parseUuid objectText) <?> Aeson.Key "object"
-          pure $ RequestObjectChanges object
+          logText <- TextL.encodeUtf8 <$> o .: "log"
+          log <- either fail pure (parseOpenFrame logText) <?> Aeson.Key "log"
+          pure $ NetPatch Patch{object, log}
         _ -> fail $ "unknown Type " <> type_

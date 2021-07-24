@@ -10,15 +10,12 @@ import           Brick.Widgets.Border (border)
 import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
 import           Control.Concurrent.STM (atomically, readTChan, writeTChan)
-import           Control.Lens ((<>~))
 import           Control.Monad (forever)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Char (isSpace, ord)
-import           Data.Function ((&))
 import           Data.List (sortOn)
 import           Data.Text (Text)
 import qualified Data.Text as Text
-import           Data.Time (getCurrentTime)
 import           GHC.Generics (Generic)
 import           Graphics.Vty (Color (ISOColor), Event (EvKey),
                                Key (KEnter, KEsc), mkVty)
@@ -27,7 +24,7 @@ import qualified RON.Store.Sqlite as Store (Handle)
 
 import           Database (loadAllMessages)
 import           Fork (forkLinked)
-import           Types (Env (Env, putLog), MessageContent (MessageContent),
+import           Types (Env (Env), MessageContent (MessageContent),
                         MessageView (MessageView), postTime)
 import qualified Types
 
@@ -37,11 +34,10 @@ data Handle = Handle
   , onEvent :: BChan AppEvent
   }
 
-initUI :: Store.Handle -> Env -> IO (Handle, Env)
+initUI :: Store.Handle -> Env -> IO Handle
 initUI db env = do
   onEvent <- newBChan 10
-  let putLog = writeBChan onEvent . LogAdded
-  pure (Handle{db, env, onEvent}, env{putLog})
+  pure Handle{db, env, onEvent}
 
 runUI :: Handle -> IO ()
 runUI Handle{db, env, onEvent} =
@@ -67,9 +63,7 @@ data State = State
   }
   deriving (Generic, Show)
 
-data AppEvent
-  = MessageListUpdated [MessageView]
-  | LogAdded Text
+newtype AppEvent = MessageListUpdated [MessageView]
 
 initialState :: State
 initialState =
@@ -139,11 +133,6 @@ appHandleEvent Env{username, onMessagePosted} state =
     AppEvent appEvent ->
       case appEvent of
         MessageListUpdated userMessages -> continue state{userMessages}
-        LogAdded text -> do
-          postTime <- liftIO getCurrentTime
-          let content = MessageContent{username = "log", text}
-          let message = MessageView{postTime, content}
-          continue $ state & #logMessages <>~ [message]
     _ -> continue state
   where
     State{messageInput} = state

@@ -3,18 +3,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module RON.Store (
   MonadStore (..),
-  appendPatches,
   newObject,
   readObject,
 ) where
 
 import           RON.Prelude
-
-import qualified Data.Map.Strict as Map
 
 import           Data.List (stripPrefix)
 import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
@@ -22,10 +18,8 @@ import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Store.Class (MonadStore (..))
-import           RON.Types (Op (..), UUID)
-import           RON.Types.Experimental (Ref (..))
-import           RON.UUID (UuidFields (..))
-import qualified RON.UUID as UUID
+import           RON.Types (Op (..))
+import           RON.Types.Experimental (Patch (..), Ref (..))
 
 newObject ::
   forall a m. (MonadStore m, ReplicatedObject a, ReplicaClock m) => m (Ref a)
@@ -33,7 +27,7 @@ newObject = do
   objectId <- getEventUuid
   let typeId = replicatedTypeId @(Rep a)
   let initOp = Op{opId = objectId, refId = typeId, payload = []}
-  appendPatchFromOneOrigin objectId [initOp]
+  appendPatch $ Patch objectId [initOp]
   pure $ Ref objectId []
 
 -- | Nothing if object doesn't exist in the replica.
@@ -55,15 +49,3 @@ readObject object@(Ref objectId path) =
           | op@Op{payload} <- ops
           , Just payload' <- [stripPrefix path payload]
           ]
-
--- | Append an arbitrary sequence of operations to an object. No preconditions.
-appendPatches :: MonadStore m => UUID -> [Op] -> m ()
-appendPatches object ops =
-  for_ patches $ appendPatchFromOneOrigin object
-  where
-    patches =
-      Map.fromListWith
-        (++)
-        [ (uuidOrigin, [op])
-        | op@Op{opId = UUID.split -> UuidFields{uuidOrigin}} <- ops
-        ]

@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -18,7 +19,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module RON.Store.Sqlite (Handle, fetchUpdates, newHandle, runStore) where
+module RON.Store.Sqlite (
+  Handle, fetchUpdates, loadLog, newHandle, runStore,
+) where
 
 import           RON.Prelude
 
@@ -27,6 +30,7 @@ import           Control.Concurrent.STM (TChan, atomically, dupTChan,
 import           Control.Monad.Logger (LoggingT, runStderrLoggingT)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
+import           Data.List.NonEmpty (groupWith)
 import           Data.Pool (Pool)
 import qualified Data.Text as Text
 import           Database.Persist (Entity (..),
@@ -55,6 +59,7 @@ import           RON.Text.Parse (parsePayload, parseUuid)
 import           RON.Text.Serialize (serializePayload, serializeUuid)
 import           RON.Types (Payload, UUID)
 import qualified RON.Types as RON
+import           RON.Types.Experimental (Patch (..))
 import           RON.Util.Word (Word60, ls60)
 
 instance PersistField UUID where
@@ -87,6 +92,14 @@ share
       UniqueEvent event
   |]
 
+opToDatabase :: UUID -> RON.Op -> Op
+opToDatabase opObject RON.Op{opId, refId, payload} =
+  Op{opEvent = opId, opRef = refId, opObject, opPayload = payload}
+
+opFromDatabase :: Op -> RON.Op
+opFromDatabase Op{opEvent, opRef, opPayload} =
+  RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
+
 data Handle = Handle
   { clock  :: IORef Word60
   , dbPool :: Pool SqlBackend
@@ -104,12 +117,9 @@ instance MonadStore Store where
 
   listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
-  appendPatchFromOneOrigin opObject ops =
-    errorContext "appendPatchFromOneOrigin @Store" $
-    runDB $
-    for_ ops \RON.Op{opId, refId, payload} ->
-      insertUnique
-        Op{opEvent = opId, opRef = refId, opObject, opPayload = payload}
+  appendPatch Patch{object, log} =
+    errorContext "appendPatch @Store" $
+    runDB $ for_ log $ insertUnique . opToDatabase object
 
   loadObjectLog = loadObjectLog'
 
@@ -120,10 +130,15 @@ loadObjectLog' object version =
   errorContext "loadObjectLog @Store" do
     ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
     pure
-      [ [ RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
-        | Entity _ Op{opEvent, opRef, opPayload} <- ops
-        , opEvent ·≻ version
-        ]
+      [[opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]]
+
+loadLog :: Store [Patch]
+loadLog =
+  errorContext "loadLog" do
+    oplog <- runDB $ map entityVal <$> selectList [] [Asc OpEvent]
+    pure
+      [ Patch opObject $ opFromDatabase <$> toList ops
+      | ops@(Op{opObject} :| _) <- groupWith opObject oplog
       ]
 
 runDB :: ReaderT SqlBackend (LoggingT (ResourceT IO)) a -> Store a

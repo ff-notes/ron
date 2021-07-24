@@ -4,17 +4,15 @@ import           RON.Prelude
 
 import           RON.Data.VersionVector (VV)
 import           RON.Types (Op, UUID)
+import           RON.Types.Experimental (Patch)
 
 class Monad m => MonadStore m where
 
   -- | Get list of all object ids in the database.
   listObjects :: m [UUID]
 
-  {- |
-    Append a sequence of operations to an object.
-    Precondition: all operations must have the same origin.
-    -}
-  appendPatchFromOneOrigin :: UUID -> [Op] -> m ()
+  -- | Append a sequence of operations to an object.
+  appendPatch :: Patch -> m ()
 
   -- | Get all object logs split by replicas. Replicas order is not guaranteed.
   loadObjectLog ::

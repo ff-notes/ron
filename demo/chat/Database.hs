@@ -8,6 +8,7 @@ module Database
   , newMessage
   ) where
 
+import           Debug.Trace
 import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, readTChan,
@@ -24,7 +25,7 @@ import           RON.Types (Atom (AString, AUuid), UUID)
 import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
 
-import           Types (Env (..), MessageContent (..), MessageView, postTime)
+import           Types (MessageContent (..), MessageView, postTime)
 
 loadAllMessages :: Store.Handle -> IO [MessageView]
 loadAllMessages db =
@@ -47,11 +48,11 @@ newMessage MessageContent{username, text} = do
   ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 
-messagePoster :: TChan MessageContent -> Store.Handle -> Env -> IO ()
-messagePoster onMessagePosted db Env{putLog} =
+messagePoster :: TChan MessageContent -> Store.Handle -> IO ()
+messagePoster onMessagePosted db =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
-    putLog $ "Saving message " <> show message
+    traceM $ "Saving message " <> show message
     runStore db $ newMessage message
 
 databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()

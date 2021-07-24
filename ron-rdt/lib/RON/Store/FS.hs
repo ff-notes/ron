@@ -44,6 +44,7 @@ import           RON.Store (MonadStore (..))
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (Op (..), UUID)
+import           RON.Types.Experimental (Patch (..))
 import qualified RON.UUID as UUID
 import           RON.Util.Word (Word60, leastSignificant60)
 
@@ -73,7 +74,7 @@ instance MonadStore Store where
           if exists then listDirectoryDirs dataDir else pure []
       traverse uuidFromFileName objectDirs
 
-  appendPatchFromOneOrigin = appendPatchFS
+  appendPatch = appendPatchFS
 
   loadObjectLog = loadObjectLogFS
 
@@ -106,15 +107,15 @@ loadObjectLogFS objectId version = do
       patch <- liftEitherString $ parseOpenFrame patchContent
       pure $ Just patch
 
-appendPatchFS :: UUID -> [Op] -> Store ()
-appendPatchFS objectId patch = do
+appendPatchFS :: Patch -> Store ()
+appendPatchFS Patch{object, log} = do
   Handle{dataDir, onObjectChanged} <- Store ask
-  let objectLogsDir = dataDir </> uuidToFileName objectId </> "log"
+  let objectLogsDir = dataDir </> uuidToFileName object </> "log"
   tryIO $ createDirectoryIfMissing True objectLogsDir
   patchVersion <- getEventUuid
   let patchFile = objectLogsDir </> uuidToFileName patchVersion
-  tryIO $ BSL.writeFile patchFile $ serializeOpenFrame patch
-  tryIO $ atomically $ writeTChan onObjectChanged objectId
+  tryIO $ BSL.writeFile patchFile $ serializeOpenFrame log
+  tryIO $ atomically $ writeTChan onObjectChanged object
 
 -- | Run a 'Store' action
 runStore :: Handle -> Store a -> IO a

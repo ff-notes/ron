@@ -26,6 +26,7 @@ import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
                                        runReplicaSimT)
 import           RON.Store (MonadStore (..))
 import           RON.Types (Op (..), UUID)
+import           RON.Types.Experimental (Patch (..))
 
 newtype Object = Object{logs :: Map Replica (Seq Op)}
   deriving (Eq, Generic, Show)
@@ -48,10 +49,10 @@ thisReplicaId = mkReplica ApplicationSpecific 2020
 instance MonadStore StoreSim where
   listObjects = StoreSim $ gets Map.keys
 
-  appendPatchFromOneOrigin objectId patch =
-    StoreSim $ atObject . #logs . atReplica <>= Seq.fromList patch
+  appendPatch Patch{object, log} =
+    StoreSim $ atObject . #logs . atReplica <>= Seq.fromList log
     where
-      atObject    = at objectId . non emptyObject
+      atObject    = at object . non emptyObject
       atReplica   = at thisReplicaId . non Seq.empty
 
   loadObjectLog objectId version =
