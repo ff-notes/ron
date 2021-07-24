@@ -26,7 +26,7 @@ module RON.Store.Sqlite (
 import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
-                                         newBroadcastTChanIO)
+                                         newBroadcastTChanIO, writeTChan)
 import           Control.Monad.Logger (LoggingT, runStderrLoggingT)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
@@ -101,9 +101,9 @@ opFromDatabase Op{opEvent, opRef, opPayload} =
   RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
 
 data Handle = Handle
-  { clock  :: IORef Word60
-  , dbPool :: Pool SqlBackend
-  , onOp   :: TChan RON.Op
+  { clock           :: IORef Word60
+  , dbPool          :: Pool SqlBackend
+  , onObjectChanged :: TChan UUID
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
     -- call 'fetchUpdates' to read from derived channel instead.
@@ -118,8 +118,11 @@ instance MonadStore Store where
   listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
   appendPatch Patch{object, log} =
-    errorContext "appendPatch @Store" $
-    runDB $ for_ log $ insertUnique . opToDatabase object
+    errorContext "appendPatch @Store" do
+      runDB $ for_ log $ insertUnique . opToDatabase object
+      Store do
+        Handle{onObjectChanged} <- ask
+        tryIO $ atomically $ writeTChan onObjectChanged object
 
   loadObjectLog = loadObjectLog'
 
@@ -159,8 +162,8 @@ runStore h@Handle{replica, clock} (Store action) = do
   res <- runEpochClock replica clock $ (`runReaderT` h) $ runExceptT action
   either throwIO pure res
 
-fetchUpdates :: Handle -> IO (TChan RON.Op)
-fetchUpdates Handle{onOp} = atomically $ dupTChan onOp
+fetchUpdates :: Handle -> IO (TChan UUID)
+fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
 
 selectDistinctObject :: MonadIO m => ReaderT SqlBackend m [UUID]
 selectDistinctObject =
@@ -171,13 +174,13 @@ selectDistinctObject =
 -- or generates a random one.
 newHandle :: FilePath -> IO (Maybe Handle)
 newHandle dbfile' = do
-  time    <- getCurrentEpochTime  -- TODO advance to the last timestamp
-                                  -- in database
-  clock   <- newIORef time
-  dbfile  <- makeAbsolute dbfile'
-  dbPool  <- runStderrLoggingT $ createSqlitePool (Text.pack dbfile) 1
-  onOp    <- newBroadcastTChanIO
-  replica <- newReplica -- TODO load replica id from database
+  time            <- getCurrentEpochTime  -- TODO advance to the last timestamp
+                                          -- in database
+  clock           <- newIORef time
+  dbfile          <- makeAbsolute dbfile'
+  dbPool          <- runStderrLoggingT $ createSqlitePool (Text.pack dbfile) 1
+  onObjectChanged <- newBroadcastTChanIO
+  replica         <- newReplica -- TODO load replica id from database
   pure $ Just Handle{..}
 
 newReplica :: IO Replica

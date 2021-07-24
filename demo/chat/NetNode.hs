@@ -5,6 +5,7 @@ module NetNode (startWorkers) where
 import           Debug.Trace
 import           RON.Prelude
 
+import           Control.Monad (forever)
 import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
@@ -51,22 +52,24 @@ dialog db conn = do
     if null patches then do
       traceM "No log for the chatroom"
     else do
-      traceM $ "Log for the chatroom " <> show patches
-      for_ patches $ WS.sendBinaryData conn . Aeson.encode . NetPatch
+      traceM $ "Log for the chatroom: " <> show (length patches)
+      for_ patches \patch -> do
+        traceM $ "Sending " <> show patch
+        WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
   -- receive
-  WS.withPingThread conn 30 (pure ()) $ do
-    messageData <- WS.receiveData conn
-    case Aeson.eitherDecode messageData of
-      Left e ->
-        error $
-          "NetNode.dialog: Aeson.eitherDecode: " <> e
-          <> ", messageData = " <> show messageData
-      Right netMessage -> do
-        traceM $ "Received " <> show netMessage
-        case netMessage of
-          NetPatch patch -> Store.runStore db $ Store.appendPatch patch
-    pure ()
+  WS.withPingThread conn 30 (pure ()) $
+    forever do
+      messageData <- WS.receiveData conn
+      case Aeson.eitherDecode messageData of
+        Left e ->
+          error $
+            "NetNode.dialog: Aeson.eitherDecode: " <> e
+            <> ", messageData = " <> show messageData
+        Right netMessage -> do
+          traceM $ "Received " <> show netMessage
+          case netMessage of
+            NetPatch patch -> Store.runStore db $ Store.appendPatch patch
 
 newtype NetMessage = NetPatch Patch
   deriving Show
