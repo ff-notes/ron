@@ -28,6 +28,6 @@ instance Typeable a => Show (Ref a) where
 
 data Patch = Patch
   { object :: UUID
-  , log    :: [Op]
+  , log    :: NonEmpty Op
   }
   deriving Show

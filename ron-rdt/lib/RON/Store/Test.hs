@@ -50,7 +50,7 @@ instance MonadStore StoreSim where
   listObjects = StoreSim $ gets Map.keys
 
   appendPatch Patch{object, log} =
-    StoreSim $ atObject . #logs . atReplica <>= Seq.fromList log
+    StoreSim $ atObject . #logs . atReplica <>= Seq.fromList (toList log)
     where
       atObject    = at object . non emptyObject
       atReplica   = at thisReplicaId . non Seq.empty

@@ -80,7 +80,7 @@ instance ToJSON NetMessage where
       Aeson.object
         [ "Type"   .= ("NetPatch" :: Text)
         , "object" .= TextL.decodeUtf8 (serializeUuid object)
-        , "log"    .= TextL.decodeUtf8 (serializeOpenFrame log)
+        , "log"    .= TextL.decodeUtf8 (serializeOpenFrame $ toList log)
         ]
 
 instance FromJSON NetMessage where
@@ -93,6 +93,8 @@ instance FromJSON NetMessage where
           object <-
             either fail pure (parseUuid objectText) <?> Aeson.Key "object"
           logText <- TextL.encodeUtf8 <$> o .: "log"
-          log <- either fail pure (parseOpenFrame logText) <?> Aeson.Key "log"
+          logList <-
+            either fail pure (parseOpenFrame logText) <?> Aeson.Key "log"
+          log <- maybe (fail "empty log") pure $ nonEmpty logList
           pure $ NetPatch Patch{object, log}
         _ -> fail $ "unknown Type " <> type_

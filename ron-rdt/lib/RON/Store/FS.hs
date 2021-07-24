@@ -114,7 +114,7 @@ appendPatchFS Patch{object, log} = do
   tryIO $ createDirectoryIfMissing True objectLogsDir
   patchVersion <- getEventUuid
   let patchFile = objectLogsDir </> uuidToFileName patchVersion
-  tryIO $ BSL.writeFile patchFile $ serializeOpenFrame log
+  tryIO $ BSL.writeFile patchFile $ serializeOpenFrame $ toList log
   tryIO $ atomically $ writeTChan onObjectChanged object
 
 -- | Run a 'Store' action

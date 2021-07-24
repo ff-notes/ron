@@ -104,7 +104,7 @@ opFromDatabase Op{opEvent, opRef, opPayload} =
 data Handle = Handle
   { clock           :: IORef Word60
   , dbPool          :: Pool SqlBackend
-  , onObjectChanged :: TChan UUID
+  , onNewPatch :: TChan UUID
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
     -- call 'fetchUpdates' to read from derived channel instead.
@@ -122,8 +122,8 @@ instance MonadStore Store where
     errorContext "appendPatch @Store" do
       runDB $ for_ log $ insertUnique . opToDatabase object
       Store do
-        Handle{onObjectChanged} <- ask
-        tryIO $ atomically $ writeTChan onObjectChanged object
+        Handle{onNewPatch} <- ask
+        tryIO $ atomically $ writeTChan onNewPatch object
 
   loadObjectLog = loadObjectLog'
 
@@ -141,7 +141,7 @@ loadLog =
   errorContext "loadLog" do
     oplog <- runDB $ map entityVal <$> selectList [] [Asc OpEvent]
     pure
-      [ Patch opObject $ opFromDatabase <$> toList ops
+      [ Patch opObject $ opFromDatabase <$> ops
       | ops@(Op{opObject} :| _) <- groupWith opObject oplog
       ]
 
@@ -164,7 +164,7 @@ runStore h@Handle{replica, clock} (Store action) = do
   either throwIO pure res
 
 fetchUpdates :: Handle -> IO (TChan UUID)
-fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
+fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch
 
 selectDistinctObject :: MonadIO m => ReaderT SqlBackend m [UUID]
 selectDistinctObject =
@@ -180,7 +180,7 @@ newHandle dbfile' = do
   clock           <- newIORef time
   dbfile          <- makeAbsolute dbfile'
   dbPool          <- runLogger $ createSqlitePool (Text.pack dbfile) 1
-  onObjectChanged <- newBroadcastTChanIO
+  onNewPatch <- newBroadcastTChanIO
   replica         <- newReplica -- TODO load replica id from database
   pure $ Just Handle{..}
 

@@ -1,5 +1,6 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -72,8 +73,11 @@ add ::
 add (Ref object path) value = do
   advanceToUuid object
   opId <- getEventUuid
-  appendPatch $
-    Patch object [Op{opId, refId = object, payload = path ++ toAtoms value}]
+  appendPatch
+    Patch
+      { object
+      , log = Op{opId, refId = object, payload = path ++ toAtoms value} :| []
+      }
   pure opId
 
 {- |

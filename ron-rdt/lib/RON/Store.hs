@@ -27,7 +27,7 @@ newObject = do
   objectId <- getEventUuid
   let typeId = replicatedTypeId @(Rep a)
   let initOp = Op{opId = objectId, refId = typeId, payload = []}
-  appendPatch $ Patch objectId [initOp]
+  appendPatch $ Patch objectId $ initOp :| []
   pure $ Ref objectId []
 
 -- | Nothing if object doesn't exist in the replica.
