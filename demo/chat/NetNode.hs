@@ -1,10 +1,11 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module NetNode (startWorkers) where
+module NetNode (workers) where
 
 import           Debug.Trace
 import           RON.Prelude
 
+import           Control.Concurrent.Async (concurrently_, forConcurrently_)
 import           Control.Concurrent.STM (atomically, readTChan)
 import           Control.Monad (forever)
 import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
@@ -21,20 +22,21 @@ import           RON.Types.Experimental (Patch (..))
 
 import           Fork (forkLinked)
 
-startWorkers ::
+workers ::
   Store.Handle ->
   -- | Server port to listen
   Maybe Int ->
   -- | Other peer ports to connect (only localhost)
   [Int] ->
   IO ()
-startWorkers db listen peers = do
-  for_ listen $ \port -> do
-    traceM $ "Listening at [::]:" <> show port
-    forkLinked $ WS.runServer "::" port server
-  for_ peers  $ \port -> do
-    traceM $ "Connecting to at [::]:" <> show port
-    forkLinked $ WS.runClient "::" port "/" client
+workers db listen peers =
+  concurrently_
+    (forConcurrently_ listen \port -> do
+      traceM $ "Listening at [::]:" <> show port
+      WS.runServer "::" port server)
+    (forConcurrently_ peers \port -> do
+      traceM $ "Connecting to at [::]:" <> show port
+      WS.runClient "::" port "/" client)
   where
 
     server pending = do

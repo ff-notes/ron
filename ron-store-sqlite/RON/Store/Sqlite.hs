@@ -177,9 +177,8 @@ selectDistinctObject =
   map unSingle <$> rawSql "SELECT DISTINCT object FROM Op" []
 
 -- | Create new Store handle.
--- If no replica id found in the DB, uses MAC address for replica id
--- or generates a random one.
-newHandle :: FilePath -> IO (Maybe Handle)
+-- If no replica id found in the DB, generates a random one.
+newHandle :: FilePath -> IO Handle
 newHandle dbfile' = do
   time        <- getCurrentEpochTime  -- TODO advance to the last timestamp
                                       -- in database
@@ -188,7 +187,7 @@ newHandle dbfile' = do
   dbPool      <- runLogger $ createSqlitePool (Text.pack dbfile) 1
   onNewPatch  <- newBroadcastTChanIO
   replica     <- newReplica -- TODO load replica id from database
-  pure $ Just Handle{..}
+  pure Handle{..}
 
 newReplica :: IO Replica
 newReplica = do

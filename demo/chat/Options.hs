@@ -1,4 +1,6 @@
-module Options (Command (..), Options (..), UIOptions (..), parseOptions) where
+module Options (
+  Command (..), NodeOptions (..), Options (..), UIOptions (..), parseOptions,
+) where
 
 import           Control.Applicative (many, optional, (<**>))
 import           Data.Text (Text)
@@ -15,12 +17,19 @@ data Options = Options
   , cmd     :: Command
   }
 
-data Command = Show | UI UIOptions | Post Text Text
+data Command
+  = Show
+  | Post Text Text
+  | RunNode NodeOptions
+  | RunUI UIOptions NodeOptions
 
-data UIOptions = UIOptions
+newtype UIOptions = UIOptions
   { username :: Text
-  , peers    :: [Int]
-  , listen   :: Maybe Int
+  }
+
+data NodeOptions = NodeOptions
+  { peers   :: [Int]
+  , listen  :: Maybe Int
   }
 
 prefs :: ParserPrefs
@@ -46,15 +55,18 @@ parser =
   do
     dataDir <-
       strOption
-        $   long    "data"
-        <>  metavar "PATH"
-        <>  help    "database directory"
-        <>  value   "./data"
+        (   long    "data"
+        <>  metavar "FILE"
+        <>  help    "database (default: ./ron-demo-chat.sqlite)"
+        <>  value   "./ron-demo-chat.sqlite"
+        )
     cmd <-
       subparser
-        $   command "show" (i pShow "Show chat messages and exit (offline)")
-        <>  command "post" (i pPost "Post messages to chat (offline)")
-        <>  command "ui"   (i pUI   "Start UI with network")
+        (   command "show"  (i pShow  "Offline: Show chat messages and exit")
+        <>  command "post"  (i pPost  "Offline: Post messages to chat")
+        <>  command "node"  (i pNode  "Start node without UI")
+        <>  command "ui"    (i pUI    "Start UI with network node")
+        )
     pure Options{dataDir, cmd}
   where
     pShow = pure Show
@@ -62,18 +74,27 @@ parser =
     pPost =
       Post <$> strArgument (metavar "NAME") <*> strArgument (metavar "TEXT")
 
-    pUI = do
-      username <- strArgument $ metavar "NAME"
-      peers    <-
-        many $
-        option auto
-          $   long    "peer"
-          <>  metavar "PORT"
-          <>  help    "Connect to localhost peers using specifed ports"
-      listen <-
-        optional $
-        option auto
-          $   long    "listen"
-          <>  metavar "PORT"
-          <>  help    "Run server on specified port and accept connections"
-      pure $ UI UIOptions{username, peers, listen}
+    pNode = RunNode <$> nodeOptions
+
+    pUI =
+      RunUI
+      <$> do
+            username <- strArgument $ metavar "NAME"
+            pure UIOptions{username}
+      <*> nodeOptions
+
+nodeOptions :: Parser NodeOptions
+nodeOptions = do
+  peers <-
+    many $
+    option auto
+      $   long    "peer"
+      <>  metavar "PORT"
+      <>  help    "Connect to localhost peers using specifed ports"
+  listen <-
+    optional $
+    option auto
+      $   long    "listen"
+      <>  metavar "PORT"
+      <>  help    "Run server on specified port and accept connections"
+  pure NodeOptions{peers, listen}

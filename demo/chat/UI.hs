@@ -25,9 +25,8 @@ import qualified RON.Store.Sqlite as Store (Handle)
 
 import           Database (loadAllMessages)
 import           Fork (forkLinked)
-import           Types (Env (Env), MessageContent (MessageContent),
-                        MessageView (MessageView), postTime)
-import qualified Types
+import           Types (Env (..), MessageContent (..), MessageView (..),
+                        postTime)
 
 data Handle = Handle
   { db      :: Store.Handle
