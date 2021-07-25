@@ -3,7 +3,7 @@ module UI (initUI, runUI) where
 import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
                         Next, Widget, attrMap, continue, customMain, fg, fill,
                         hBox, halt, modifyDefAttr, showFirstCursor, str, txt,
-                        vBox, vLimit)
+                        vBox, vLimit, vScrollToEnd, viewport, viewportScroll)
 import qualified Brick
 import           Brick.BChan (BChan, newBChan, writeBChan)
 import           Brick.Widgets.Border (border)
@@ -57,34 +57,42 @@ runUI Handle{db, env, onEvent} =
     buildVty = mkVty Vty.defaultConfig
 
 data State = State
-  { userMessages   :: [MessageView]
-  , logMessages :: [MessageView]
-  , messageInput   :: Editor Text ()
+  { userMessages  :: [MessageView]
+  , messageInput  :: Editor Text VP
   }
   deriving (Generic, Show)
 
 newtype AppEvent = MessageListUpdated [MessageView]
 
 initialState :: State
-initialState =
-  State{userMessages = [], logMessages = [], messageInput = emptyEditor}
+initialState = State{userMessages = [], messageInput = emptyEditor}
 
-app :: Env -> App State AppEvent ()
+app :: Env -> App State AppEvent VP
 app env@Env{username} =
   App
     { appAttrMap      = const $ attrMap mempty []
     , appChooseCursor = showFirstCursor
-    , appDraw         = appDraw        username
+    , appDraw         = appDraw username
     , appHandleEvent  = appHandleEvent env
-    , appStartEvent   = pure
+    , appStartEvent   = appStartEvent
     }
 
-appDraw :: Text -> State -> [Widget ()]
-appDraw username State{userMessages, logMessages, messageInput} =
+-- | Viewport identifier
+data VP = VPMessages | VPNewMessageEditor
+  deriving (Eq, Ord, Show)
+
+appStartEvent :: State -> EventM VP State
+appStartEvent state = do
+  vScrollToEnd $ viewportScroll VPMessages
+  pure state
+
+appDraw :: Text -> State -> [Widget VP]
+appDraw username State{userMessages, messageInput} =
   [ vBox
-      [ fill ' '
-      , vBox $
-        map renderMessage $ sortOn postTime $ userMessages <> logMessages
+      [ viewport VPMessages Brick.Vertical $
+        -- fill ' '
+        vBox $
+        map renderMessage $ sortOn postTime userMessages
       , border $
         vBox
           [ txt $ username <> ":"
@@ -95,7 +103,7 @@ appDraw username State{userMessages, logMessages, messageInput} =
       ]
   ]
 
-renderMessage :: MessageView -> Widget ()
+renderMessage :: MessageView -> Widget n
 renderMessage MessageView{postTime, content = MessageContent{username, text}} =
   vBox
     [ vLimit 1 {- workaround for not taking 5 extra lines -} $
@@ -113,32 +121,35 @@ txtWithContentBasedFg t =
     colors = map ISOColor [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]
 
 appHandleEvent ::
-  Env -> State -> BrickEvent () AppEvent -> EventM () (Next State)
-appHandleEvent Env{username, onMessagePosted} state =
-  \case
-    VtyEvent ve -> case ve of
-      EvKey KEsc [] -> halt state
-      EvKey KEnter []
-        | not $ Text.all isSpace text -> do
-            let message = MessageContent{username, text}
-            -- put in database asynchronously
-            liftIO $ atomically $ writeTChan onMessagePosted message
-            continue state{messageInput = emptyEditor}
-        where
-          text =
-            Text.strip $ Text.intercalate "\n" $ getEditContents messageInput
-      _ -> do
-        messageInput' <- handleEditorEvent ve messageInput
-        continue state{messageInput = messageInput'}
-    AppEvent appEvent ->
-      case appEvent of
-        MessageListUpdated userMessages -> continue state{userMessages}
-    _ -> continue state
+  Env -> State -> BrickEvent n AppEvent -> EventM VP (Next State)
+appHandleEvent Env{username, onMessagePosted} state = \case
+  VtyEvent ve -> case ve of
+    EvKey KEsc [] -> halt state
+    EvKey KEnter []
+      | not $ Text.all isSpace text -> do
+          let message = MessageContent{username, text}
+          -- put in database asynchronously
+          liftIO $ atomically $ writeTChan onMessagePosted message
+          continue state{messageInput = emptyEditor}
+      where
+        text =
+          Text.strip $ Text.intercalate "\n" $ getEditContents messageInput
+    _ -> do
+      vScrollToEnd $ viewportScroll VPMessages
+      messageInput' <- handleEditorEvent ve messageInput
+      continue state{messageInput = messageInput'}
+  AppEvent appEvent ->
+    case appEvent of
+      MessageListUpdated userMessages -> do
+        vScrollToEnd $ viewportScroll VPMessages
+        continue state{userMessages}
+  _ -> continue state
+
   where
     State{messageInput} = state
 
-emptyEditor :: Editor Text ()
-emptyEditor = editorText () Nothing ""
+emptyEditor :: Editor Text VP
+emptyEditor = editorText VPNewMessageEditor Nothing ""
 
 eventWorker :: Env -> BChan AppEvent -> IO ()
 eventWorker Env{onMessageListUpdated} onEvent =
