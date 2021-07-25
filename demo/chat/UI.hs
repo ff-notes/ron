@@ -3,7 +3,8 @@ module UI (initUI, runUI) where
 import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
                         Next, Widget, attrMap, continue, customMain, fg, fill,
                         hBox, halt, modifyDefAttr, showFirstCursor, str, txt,
-                        vBox, vLimit, vScrollToEnd, viewport, viewportScroll)
+                        txtWrap, vBox, vLimit, vScrollToEnd, viewport,
+                        viewportScroll)
 import qualified Brick
 import           Brick.BChan (BChan, newBChan, writeBChan)
 import           Brick.Widgets.Border (border)
@@ -90,9 +91,7 @@ appDraw :: Text -> State -> [Widget VP]
 appDraw username State{userMessages, messageInput} =
   [ vBox
       [ viewport VPMessages Brick.Vertical $
-        -- fill ' '
-        vBox $
-        map renderMessage $ sortOn postTime userMessages
+        vBox $ map renderMessage $ sortOn postTime userMessages
       , border $
         vBox
           [ txt $ username <> ":"
@@ -108,7 +107,7 @@ renderMessage MessageView{postTime, content = MessageContent{username, text}} =
   vBox
     [ vLimit 1 {- workaround for not taking 5 extra lines -} $
       hBox [txtWithContentBasedFg username, fill ' ', str $ show postTime]
-    , txt text
+    , txtWrap text
     , str " "
     ]
 
