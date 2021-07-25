@@ -102,9 +102,9 @@ opFromDatabase Op{opEvent, opRef, opPayload} =
   RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
 
 data Handle = Handle
-  { clock           :: IORef Word60
-  , dbPool          :: Pool SqlBackend
-  , onNewPatch :: TChan UUID
+  { clock      :: IORef Word60
+  , dbPool     :: Pool SqlBackend
+  , onNewPatch :: TChan Patch
     -- ^ A channel of changes in the database.
     -- This is a broadcast channel, so you MUST NOT read from it directly,
     -- call 'fetchUpdates' to read from derived channel instead.
@@ -115,19 +115,27 @@ newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
   deriving (Applicative, Functor, Monad, MonadE, MonadIO, ReplicaClock)
 
 instance MonadStore Store where
-
   listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
-
-  appendPatch Patch{object, log} =
-    errorContext "appendPatch @Store" do
-      runDB $ for_ log $ insertUnique . opToDatabase object
-      Store do
-        Handle{onNewPatch} <- ask
-        tryIO $ atomically $ writeTChan onNewPatch object
-
+  appendPatch = appendPatch'
   loadObjectLog = loadObjectLog'
-
   getObjectVersion = undefined
+
+appendPatch' :: Patch -> Store ()
+appendPatch' Patch{object, log} =
+  errorContext "appendPatch @Store" do
+    opsInserted <-
+      runDB $
+      catMaybes . toList <$>
+      for log \op ->
+        (op <$) <$> insertUnique (opToDatabase object op)
+        -- if successful, return op
+    case opsInserted of
+      [] -> pure ()
+      op : ops ->
+        Store do
+          Handle{onNewPatch} <- ask
+          tryIO $
+            atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadObjectLog' :: UUID -> VV -> Store [[RON.Op]]
 loadObjectLog' object version =
@@ -152,18 +160,16 @@ runDB action =
     tryIO $
       runResourceT $
       runLogger $
-      runSqlPool
-        (do
-          runMigration migrateAll
-          action)
-        dbPool
+      (`runSqlPool` dbPool) do
+        runMigration migrateAll
+        action
 
 runStore :: Handle -> Store a -> IO a
 runStore h@Handle{replica, clock} (Store action) = do
   res <- runEpochClock replica clock $ (`runReaderT` h) $ runExceptT action
   either throwIO pure res
 
-fetchUpdates :: Handle -> IO (TChan UUID)
+fetchUpdates :: Handle -> IO (TChan Patch)
 fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch
 
 selectDistinctObject :: MonadIO m => ReaderT SqlBackend m [UUID]
@@ -175,13 +181,13 @@ selectDistinctObject =
 -- or generates a random one.
 newHandle :: FilePath -> IO (Maybe Handle)
 newHandle dbfile' = do
-  time            <- getCurrentEpochTime  -- TODO advance to the last timestamp
-                                          -- in database
-  clock           <- newIORef time
-  dbfile          <- makeAbsolute dbfile'
-  dbPool          <- runLogger $ createSqlitePool (Text.pack dbfile) 1
-  onNewPatch <- newBroadcastTChanIO
-  replica         <- newReplica -- TODO load replica id from database
+  time        <- getCurrentEpochTime  -- TODO advance to the last timestamp
+                                      -- in database
+  clock       <- newIORef time
+  dbfile      <- makeAbsolute dbfile'
+  dbPool      <- runLogger $ createSqlitePool (Text.pack dbfile) 1
+  onNewPatch  <- newBroadcastTChanIO
+  replica     <- newReplica -- TODO load replica id from database
   pure $ Just Handle{..}
 
 newReplica :: IO Replica
