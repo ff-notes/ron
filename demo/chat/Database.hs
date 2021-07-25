@@ -57,9 +57,9 @@ messagePoster onMessagePosted db =
 
 databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
 databaseToUIUpdater db onMessageListUpdated = do
-  onChange <- Store.fetchUpdates db
+  onUpdate <- Store.fetchUpdates db
   forever $ do
-    _ <- atomically $ readTChan onChange
+    _ <- atomically $ readTChan onUpdate
     messages <- loadAllMessages db
     atomically $ writeTChan onMessageListUpdated messages
 

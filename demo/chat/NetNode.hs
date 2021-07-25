@@ -5,6 +5,7 @@ module NetNode (startWorkers) where
 import           Debug.Trace
 import           RON.Prelude
 
+import           Control.Concurrent.STM (atomically, readTChan)
 import           Control.Monad (forever)
 import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
@@ -45,17 +46,25 @@ startWorkers db listen peers = do
 
 dialog :: Store.Handle -> WS.Connection -> IO ()
 dialog db conn = do
-  -- advertise own database state
-  -- TODO forkLinked $
+  -- first, advertise own database state
   do
     patches <- Store.runStore db Store.loadLog
-    if null patches then do
-      traceM "No log for the chatroom"
-    else do
-      traceM $ "Log for the chatroom: " <> show (length patches)
-      for_ patches \patch -> do
-        traceM $ "Sending " <> show patch
-        WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
+    case patches of
+      [] ->
+        traceM "No log for the chatroom"
+      _ : _ -> do
+        traceM $ "Log for the chatroom: " <> show (length patches)
+        for_ patches \patch -> do
+          traceM $ "Send initial patch " <> show patch
+          WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
+
+  -- send
+  forkLinked do
+    onUpdate <- Store.fetchUpdates db
+    forever $ do
+      patch <- atomically $ readTChan onUpdate
+      traceM $ "Send new patch " <> show patch
+      WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
   -- receive
   WS.withPingThread conn 30 (pure ()) $
