@@ -1,6 +1,5 @@
 import           Control.Concurrent.STM (newTChanIO)
 import           Control.Monad (when)
-import           Data.Maybe (isNothing)
 import           Data.Text (Text)
 import           RON.Store.Sqlite (runStore)
 import qualified RON.Store.Sqlite as Store
@@ -41,9 +40,9 @@ runUI' username db = do
   runUI uiHandle
 
 runNode :: Store.Handle -> NodeOptions -> IO ()
-runNode db NodeOptions{listen, peers} = do
-  when (isNothing listen && null peers) $
+runNode db options@NodeOptions{listenPorts, peers} = do
+  when (null listenPorts && null peers) $
     fail
       "The peer must connect to other peers or listen for connections. \
       \Specify `--listen` or `--peer`."
-  NetNode.workers db listen peers
+  NetNode.workers db options

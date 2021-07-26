@@ -21,21 +21,16 @@ import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types.Experimental (Patch (..))
 
 import           Fork (forkLinked)
+import           Options (NodeOptions (..))
 
-workers ::
-  Store.Handle ->
-  -- | Server port to listen (localhost only)
-  Maybe Int ->
-  -- | Other peer ports to connect (localhost only)
-  [Int] ->
-  IO ()
-workers db listen peers =
+workers :: Store.Handle -> NodeOptions -> IO ()
+workers db NodeOptions{listenHost, listenPorts, peers} =
   concurrently_
-    (forConcurrently_ listen \port -> do
-      pTraceM $ "Listening at [::1]:" <> show port
-      WS.runServer "::1" port server)
+    (forConcurrently_ listenPorts \port -> do
+      pTraceM $ "Listening at [" <> show listenHost <> "]:" <> show port
+      WS.runServer (show listenHost) port server)
     (forConcurrently_ peers \port -> do
-      pTraceM $ "Connecting to at [::1]:" <> show port
+      pTraceM $ "Connecting to [::1]:" <> show port
       WS.runClient "::1" port "/" client)
   where
 

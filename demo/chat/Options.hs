@@ -2,11 +2,11 @@ module Options (
   Command (..), NodeOptions (..), Options (..), UIOptions (..), parseOptions,
 ) where
 
-import           Control.Applicative (many, optional, (<**>))
+import           Control.Applicative (many, (<**>))
 import           Data.Text (Text)
 import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
                                       command, customExecParser, defaultPrefs,
-                                      fullDesc, help, helper, info, long,
+                                      flag, fullDesc, help, helper, info, long,
                                       metavar, option, prefDisambiguate,
                                       prefHelpLongEquals, prefMultiSuffix,
                                       prefShowHelpOnError, progDesc,
@@ -27,9 +27,17 @@ newtype UIOptions = UIOptions
   { username :: Text
   }
 
+data ListenHost = AnyAddress | Localhost
+
+instance Show ListenHost where
+  show = \case
+    AnyAddress -> "::"
+    Localhost  -> "::1"
+
 data NodeOptions = NodeOptions
-  { peers   :: [Int]
-  , listen  :: Maybe Int
+  { peers       :: [Int]
+  , listenHost  :: ListenHost
+  , listenPorts :: [Int]
   }
 
 prefs :: ParserPrefs
@@ -87,14 +95,25 @@ nodeOptions :: Parser NodeOptions
 nodeOptions = do
   peers <-
     many $
-    option auto
-      $   long    "peer"
+    option
+      auto
+      (   long    "peer"
       <>  metavar "PORT"
       <>  help    "Connect to localhost peers using specifed ports"
-  listen <-
-    optional $
-    option auto
-      $   long    "listen"
+      )
+  listenPorts <-
+    many $
+    option
+      auto
+      (   long    "listen"
       <>  metavar "PORT"
       <>  help    "Run server on specified port and accept connections"
-  pure NodeOptions{peers, listen}
+      )
+  listenHost <-
+    flag
+      Localhost
+      AnyAddress
+      (   long "listen-any"
+      <>  help "Run server on any IP interface (::), default is localhost"
+      )
+  pure NodeOptions{peers, listenPorts, listenHost}
