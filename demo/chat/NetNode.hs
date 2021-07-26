@@ -32,11 +32,11 @@ workers ::
 workers db listen peers =
   concurrently_
     (forConcurrently_ listen \port -> do
-      pTraceM $ "Listening at [::]:" <> show port
-      WS.runServer "::" port server)
+      pTraceM $ "Listening at [::1]:" <> show port
+      WS.runServer "::1" port server)
     (forConcurrently_ peers \port -> do
-      pTraceM $ "Connecting to at [::]:" <> show port
-      WS.runClient "::" port "/" client)
+      pTraceM $ "Connecting to at [::1]:" <> show port
+      WS.runClient "::1" port "/" client)
   where
 
     server pending = do
