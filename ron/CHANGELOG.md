@@ -9,6 +9,9 @@ and this project adheres to
 ### Added
 - `RON.Text.Parse.parsePayload`
 
+### Fixed
+- RONt: parsing of `-0.1`
+
 ## [0.12] - 2021-07-15
 ### Added
 - Support for GHC 8.10.
