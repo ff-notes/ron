@@ -2,7 +2,21 @@
 
 ## PoC. One god room
 
-# Room
+### Architecture
+
+#### Components
+
+    UI (event loop)
+            ^
+            | objects
+            v
+    Database driver ron-store-sqlite
+        ^             ^
+        | ops/patches |
+        v             v
+    SQLite        other peers
+
+### Room
 
 There must be a god object with id `chatroom` of type ORSet (`:set`).
 
@@ -13,7 +27,7 @@ followed by the message object id:
 
     message {object_id : UUID}
 
-# Messages
+### Messages
 
 Each message is an object of type ORSet (`:set`).
 
@@ -22,12 +36,12 @@ Each message is an object of type ORSet (`:set`).
     # read me
     stack run -- chat --help
 
-# Server
+### Server
 
     # listening localhost:29737
     stack run -- chat node --listen=29737
 
-# Client
+### Client
 
     # default database, connect to localhost
     stack run -- chat ui Ronald --peer='ws://:29737' 2>log
