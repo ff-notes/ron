@@ -15,6 +15,7 @@ executable chat
         extra,
         generic-lens,
         lens,
+        network-uri,
         optparse-applicative,
         pretty-simple,
         stm,

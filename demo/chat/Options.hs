@@ -1,16 +1,36 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Options (
-  Command (..), NodeOptions (..), Options (..), UIOptions (..), parseOptions,
+  Command (..), NodeOptions (..), Options (..), Peer (..), UIOptions (..),
+  parseOptions,
 ) where
 
-import           Control.Applicative (many, (<**>))
-import           Data.Text (Text)
-import           Options.Applicative (Parser, ParserInfo, ParserPrefs, auto,
-                                      command, customExecParser, defaultPrefs,
-                                      flag, fullDesc, help, helper, info, long,
+import           RON.Prelude
+
+import           Control.Applicative ((<**>))
+import           Network.URI (URI (..), URIAuth (..), nullURI, nullURIAuth,
+                              parseAbsoluteURI)
+import           Options.Applicative (Parser, ParserInfo, ParserPrefs, ReadM,
+                                      auto, command, customExecParser,
+                                      defaultPrefs, eitherReader, flag,
+                                      fullDesc, help, helper, info, long,
                                       metavar, option, prefDisambiguate,
                                       prefHelpLongEquals, prefMultiSuffix,
                                       prefShowHelpOnError, progDesc,
                                       strArgument, strOption, subparser, value)
+import           Text.Read (readEither)
+import qualified Text.Show
+
+data Peer = Peer{host :: String, port :: Int}
+
+instance Show Peer where
+  show Peer{host, port} =
+    show
+      nullURI
+        { uriScheme = "ws"
+        , uriAuthority =
+            Just nullURIAuth{uriRegName = host, uriPort = show port}
+        }
 
 data Options = Options
   { dataDir :: FilePath
@@ -35,7 +55,7 @@ instance Show ListenHost where
     Localhost  -> "::1"
 
 data NodeOptions = NodeOptions
-  { peers       :: [Int]
+  { peers       :: [Peer]
   , listenHost  :: ListenHost
   , listenPorts :: [Int]
   }
@@ -96,7 +116,7 @@ nodeOptions = do
   peers <-
     many $
     option
-      auto
+      readPeer
       (   long    "peer"
       <>  metavar "PORT"
       <>  help    "Connect to localhost peers using specifed ports"
@@ -117,3 +137,24 @@ nodeOptions = do
       <>  help "Run server on any IP interface (::), default is localhost"
       )
   pure NodeOptions{peers, listenPorts, listenHost}
+
+readPeer :: ReadM Peer
+readPeer =
+  eitherReader \str -> do
+    uri <-
+      maybe
+        (Left
+          "Peer must be set as 'ws://HOST:PORT' or 'ws://:PORT' for localhost")
+        Right
+        (parseAbsoluteURI str)
+    let URI{uriScheme, uriAuthority, uriPath, uriQuery, uriFragment} = uri
+    unless (uriScheme   == "ws:") $ Left "URI scheme must be 'ws'"
+    unless (uriPath     == ""   ) $ Left "Path must be empty"
+    unless (uriQuery    == ""   ) $ Left "Query must be empty"
+    unless (uriFragment == ""   ) $ Left "Fragment must be empty"
+    auth <- maybe (Left "Host or port must present") Right uriAuthority
+    let URIAuth{uriUserInfo, uriRegName, uriPort} = auth
+    unless  (uriUserInfo == "") $ Left "User info must be empty"
+    when    (uriPort     == "") $ Left "Port must be non-empty"
+    port <- readEither $ drop 1 {- port string starts with ':' -} uriPort
+    pure Peer{host = uriRegName, port}

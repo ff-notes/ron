@@ -21,7 +21,7 @@ import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types.Experimental (Patch (..))
 
 import           Fork (forkLinked)
-import           Options (NodeOptions (..))
+import           Options (NodeOptions (..), Peer (..))
 
 workers :: Store.Handle -> NodeOptions -> IO ()
 workers db NodeOptions{listenHost, listenPorts, peers} =
@@ -34,9 +34,9 @@ workers db NodeOptions{listenHost, listenPorts, peers} =
         WS.runServer (show listenHost) port server
 
     runClients =
-      forConcurrently_ peers \port -> do
-        pTraceM $ "Connecting to [::1]:" <> show port
-        WS.runClient "::1" port "/" client
+      forConcurrently_ peers \peer@Peer{host, port} -> do
+        pTraceM $ "Connecting to " <> show peer
+        WS.runClient host port "/" client
 
     server pending = do
       conn <- WS.acceptRequest pending
