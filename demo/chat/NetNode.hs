@@ -2,7 +2,6 @@
 
 module NetNode (workers) where
 
-import           Debug.Trace
 import           RON.Prelude
 
 import           Control.Concurrent.Async (concurrently_, forConcurrently_)
@@ -12,6 +11,7 @@ import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text.Lazy.Encoding as TextL
+import           Debug.Pretty.Simple (pTraceM)
 import qualified Network.WebSockets as WS
 import qualified RON.Store as Store
 import qualified RON.Store.Sqlite as Store
@@ -32,16 +32,16 @@ workers ::
 workers db listen peers =
   concurrently_
     (forConcurrently_ listen \port -> do
-      traceM $ "Listening at [::]:" <> show port
+      pTraceM $ "Listening at [::]:" <> show port
       WS.runServer "::" port server)
     (forConcurrently_ peers \port -> do
-      traceM $ "Connecting to at [::]:" <> show port
+      pTraceM $ "Connecting to at [::]:" <> show port
       WS.runClient "::" port "/" client)
   where
 
     server pending = do
       conn <- WS.acceptRequest pending
-      traceM $ "Accepted connection from " <> show (WS.pendingRequest pending)
+      pTraceM $ "Accepted connection from " <> show (WS.pendingRequest pending)
       dialog db conn
 
     client = dialog db
@@ -53,11 +53,11 @@ dialog db conn = do
     patches <- Store.runStore db Store.loadLog
     case patches of
       [] ->
-        traceM "No log for the chatroom"
+        pTraceM "No log for the chatroom"
       _ : _ -> do
-        traceM $ "Log for the chatroom: " <> show (length patches)
+        pTraceM $ "Log for the chatroom: " <> show (length patches)
         for_ patches \patch -> do
-          traceM $ "Send initial patch " <> show patch
+          pTraceM $ "Send initial patch " <> show patch
           WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
   -- send
@@ -65,7 +65,7 @@ dialog db conn = do
     onUpdate <- Store.fetchUpdates db
     forever $ do
       patch <- atomically $ readTChan onUpdate
-      traceM $ "Send new patch " <> show patch
+      pTraceM $ "Send new patch " <> show patch
       WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
   -- receive
@@ -78,7 +78,7 @@ dialog db conn = do
             "NetNode.dialog: Aeson.eitherDecode: " <> e
             <> ", messageData = " <> show messageData
         Right netMessage -> do
-          traceM $ "Received " <> show netMessage
+          pTraceM $ "Received " <> show netMessage
           case netMessage of
             NetPatch patch -> Store.runStore db $ Store.appendPatch patch
 

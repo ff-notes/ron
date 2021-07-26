@@ -8,12 +8,12 @@ module Database
   , newMessage
   ) where
 
-import           Debug.Trace
 import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, readTChan,
                                          writeTChan)
 import           Control.Monad (forever)
+import           Debug.Pretty.Simple (pTraceM)
 import           RON.Data.ORSet.Experimental (ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
@@ -52,7 +52,7 @@ messagePoster :: TChan MessageContent -> Store.Handle -> IO ()
 messagePoster onMessagePosted db =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
-    traceM $ "Saving message " <> show message
+    pTraceM $ "Saving message " <> show message
     runStore db $ newMessage message
 
 databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
