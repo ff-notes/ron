@@ -1,7 +1,7 @@
-import           Control.Concurrent.Async (async)
 import           Control.Concurrent.STM (newTChanIO)
 import           Control.Monad (when)
 import           Data.Maybe (isNothing)
+import           Data.Text (Text)
 import           RON.Store.Sqlite (runStore)
 import qualified RON.Store.Sqlite as Store
 import           Text.Pretty.Simple (pPrint)
@@ -27,14 +27,18 @@ main = do
       putStrLn $ "created message: " <> show messageRef
     RunNode nodeOptions -> runNode db nodeOptions
     RunUI UIOptions{username} nodeOptions -> do
-      async $ runNode db nodeOptions
-      onMessagePosted      <- newTChanIO
-      onMessageListUpdated <- newTChanIO
-      let env = Env{username, onMessagePosted, onMessageListUpdated}
-      uiHandle <- initUI db env
-      forkLinked $ Database.databaseToUIUpdater db onMessageListUpdated
-      forkLinked $ Database.messagePoster onMessagePosted db
-      runUI uiHandle
+      forkLinked $ runNode db nodeOptions
+      runUI' username db
+
+runUI' :: Text -> Store.Handle -> IO ()
+runUI' username db = do
+  onMessagePosted      <- newTChanIO
+  onMessageListUpdated <- newTChanIO
+  let env = Env{username, onMessagePosted, onMessageListUpdated}
+  uiHandle <- initUI db env
+  forkLinked $ Database.databaseToUIUpdater db onMessageListUpdated
+  forkLinked $ Database.messagePoster onMessagePosted db
+  runUI uiHandle
 
 runNode :: Store.Handle -> NodeOptions -> IO ()
 runNode db NodeOptions{listen, peers} = do

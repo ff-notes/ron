@@ -24,9 +24,9 @@ import           Fork (forkLinked)
 
 workers ::
   Store.Handle ->
-  -- | Server port to listen
+  -- | Server port to listen (localhost only)
   Maybe Int ->
-  -- | Other peer ports to connect (only localhost)
+  -- | Other peer ports to connect (localhost only)
   [Int] ->
   IO ()
 workers db listen peers =
