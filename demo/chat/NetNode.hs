@@ -25,14 +25,18 @@ import           Options (NodeOptions (..))
 
 workers :: Store.Handle -> NodeOptions -> IO ()
 workers db NodeOptions{listenHost, listenPorts, peers} =
-  concurrently_
-    (forConcurrently_ listenPorts \port -> do
-      pTraceM $ "Listening at [" <> show listenHost <> "]:" <> show port
-      WS.runServer (show listenHost) port server)
-    (forConcurrently_ peers \port -> do
-      pTraceM $ "Connecting to [::1]:" <> show port
-      WS.runClient "::1" port "/" client)
+  concurrently_ runServers runClients
   where
+
+    runServers =
+      forConcurrently_ listenPorts \port -> do
+        pTraceM $ "Listening at [" <> show listenHost <> "]:" <> show port
+        WS.runServer (show listenHost) port server
+
+    runClients =
+      forConcurrently_ peers \port -> do
+        pTraceM $ "Connecting to [::1]:" <> show port
+        WS.runClient "::1" port "/" client
 
     server pending = do
       conn <- WS.acceptRequest pending
