@@ -2,7 +2,7 @@ module Fork (forkLinked) where
 
 import           RON.Prelude
 
-import           Control.Concurrent.Async (async, link)
+import           UnliftIO (MonadUnliftIO, async, link)
 
-forkLinked :: IO () -> IO ()
+forkLinked :: MonadUnliftIO m => m () -> m ()
 forkLinked = async >=> link

@@ -1,7 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 module RON.Epoch (
     EpochClock,
+    EpochClockT,
     decode,
     encode,
     epochTimeFromUnix,
@@ -12,6 +14,7 @@ module RON.Epoch (
 
 import           RON.Prelude
 
+import           Data.IORef (atomicModifyIORef', newIORef)
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
                                         posixSecondsToUTCTime)
 
@@ -22,26 +25,41 @@ import           RON.Util.Word (Word60, leastSignificant60, safeCast)
 
 -- | Real epoch clock.
 -- Uses kind of global variable to ensure strict monotonicity.
-newtype EpochClock a = EpochClock (ReaderT (Replica, IORef Word60) IO a)
+newtype EpochClockT m a = EpochClock (ReaderT (Replica, IORef Word60) m a)
     deriving (Applicative, Functor, Monad, MonadIO)
 
-instance ReplicaClock EpochClock where
+type EpochClock = EpochClockT IO
+
+instance MonadIO m => ReplicaClock (EpochClockT m) where
     getPid = EpochClock $ reader fst
 
-    advance theirTime = EpochClock $ ReaderT $ \(_pid, timeVar) ->
-        atomicModifyIORef' timeVar $ \ourTime -> (max theirTime ourTime, ())
+    advance theirTime =
+        EpochClock $
+        ReaderT $ \(_pid, timeVar) ->
+            liftIO $
+            atomicModifyIORef' timeVar $ \ourTime -> (max theirTime ourTime, ())
 
-    getEvents n0 = EpochClock $ ReaderT $ \(pid, timeVar) -> do
-        let n = max n0 1
-        realTime <- getCurrentEpochTime
-        (begin, end) <- atomicModifyIORef' timeVar $ \timeCur -> let
-            begin = max realTime $ succ timeCur
-            end   = begin + pred n
-            in (end, (begin, end))
-        pure [Event{time = mkTime Epoch t, replica = pid} | t <- [begin .. end]]
+    getEvents n0 =
+        EpochClock $
+        ReaderT $ \(pid, timeVar) -> do
+            let n = max n0 1
+            realTime <- liftIO getCurrentEpochTime
+            (begin, end) <-
+                liftIO $
+                atomicModifyIORef' timeVar $ \timeCur -> let
+                    begin = max realTime $ succ timeCur
+                    end   = begin + pred n
+                    in (end, (begin, end))
+            pure
+                [ Event{time = mkTime Epoch t, replica = pid}
+                | t <- [begin .. end]
+                ]
 
--- | Run 'EpochClock' action with explicit time variable.
-runEpochClock :: Replica -> IORef Word60 -> EpochClock a -> IO a
+instance MonadTrans EpochClockT where
+    lift = EpochClock . lift @(ReaderT _)
+
+-- | Run 'EpochClock'/'EpochClockT' action with explicit time variable.
+runEpochClock :: Replica -> IORef Word60 -> EpochClockT m a -> m a
 runEpochClock replicaId timeVar (EpochClock action) =
     runReaderT action (replicaId, timeVar)
 
@@ -54,8 +72,8 @@ runEpochClockFromCurrentTime replicaId clock = do
 
 -- | Get current time in 'Time' format (with 100 ns resolution).
 -- Monotonicity is not guaranteed.
-getCurrentEpochTime :: IO Word60
-getCurrentEpochTime = encode <$> getPOSIXTime
+getCurrentEpochTime :: MonadIO m => m Word60
+getCurrentEpochTime = liftIO $ encode <$> getPOSIXTime
 
 -- | Convert unix time in hundreds of milliseconds to RFC 4122 time.
 epochTimeFromUnix :: Word64 -> Word60

@@ -26,6 +26,7 @@ import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Foldable (find)
+import           Data.IORef (newIORef)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (createDirectoryIfMissing, doesDirectoryExist,
                                    listDirectory, makeAbsolute)

@@ -12,7 +12,7 @@ import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
                                      handleEditorEvent, renderEditor)
 import           Control.Concurrent.STM (atomically, readTChan, writeTChan)
 import           Control.Monad (forever)
-import           Control.Monad.IO.Class (liftIO)
+import           Control.Monad.Logger (MonadLogger, logDebug)
 import           Data.Char (isSpace, ord)
 import           Data.List (sortOn)
 import           Data.Text (Text)
@@ -22,6 +22,7 @@ import           Graphics.Vty (Color (ISOColor), Event (EvKey),
                                Key (KEnter, KEsc), mkVty)
 import qualified Graphics.Vty as Vty
 import qualified RON.Store.Sqlite as Store (Handle)
+import           UnliftIO (MonadIO, MonadUnliftIO, liftIO)
 
 import           Database (loadAllMessages)
 import           Fork (forkLinked)
@@ -34,25 +35,26 @@ data Handle = Handle
   , onEvent :: BChan AppEvent
   }
 
-initUI :: Store.Handle -> Env -> IO Handle
+initUI :: MonadIO m => Store.Handle -> Env -> m Handle
 initUI db env = do
-  onEvent <- newBChan 10
+  onEvent <- liftIO $ newBChan 10
   pure Handle{db, env, onEvent}
 
-runUI :: Handle -> IO ()
-runUI Handle{db, env, onEvent} =
-  do
-    userMessages <- loadAllMessages db -- TODO load asynchronously
-    forkLinked $ eventWorker env onEvent
-    initialVty <- buildVty
-    finalState <-
+runUI :: (MonadLogger m, MonadUnliftIO m) => Handle -> m ()
+runUI Handle{db, env, onEvent} = do
+  userMessages <- loadAllMessages db -- TODO load asynchronously
+  liftIO $ forkLinked $ eventWorker env onEvent
+  initialVty <- liftIO buildVty
+  finalState <-
+    liftIO $
       customMain
         initialVty
         buildVty
         (Just onEvent)
         (app env)
         initialState{userMessages}
-    print finalState -- TODO save
+  $logDebug $ Text.pack $ "Final state = " <> show finalState -- TODO save
+
   where
     buildVty = mkVty Vty.defaultConfig
 

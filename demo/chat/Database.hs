@@ -10,24 +10,25 @@ module Database
 
 import           RON.Prelude
 
-import           Control.Concurrent.STM (TChan, atomically, readTChan,
-                                         writeTChan)
+import           Control.Concurrent.STM (TChan, readTChan, writeTChan)
 import           Control.Monad (forever)
-import           Debug.Pretty.Simple (pTraceM)
+import           Control.Monad.Logger (MonadLogger, logDebug)
 import           RON.Data.ORSet.Experimental (ORSet)
 import qualified RON.Data.ORSet.Experimental as ORSet
 import           RON.Error (MonadE)
 import           RON.Event (ReplicaClock)
 import           RON.Store (MonadStore, newObject, readObject)
-import           RON.Store.Sqlite (runStore)
+import           RON.Store.Sqlite (fetchUpdates, runStore)
 import qualified RON.Store.Sqlite as Store
 import           RON.Types (Atom (AString, AUuid), UUID)
 import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
+import           UnliftIO (MonadUnliftIO, atomically)
 
 import           Types (MessageContent (..), MessageView, postTime)
 
-loadAllMessages :: Store.Handle -> IO [MessageView]
+loadAllMessages ::
+  (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
 loadAllMessages db =
   runStore db $ do
     mMessageSet <- readObject gMessageSetRef
@@ -48,16 +49,20 @@ newMessage MessageContent{username, text} = do
   ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 
-messagePoster :: TChan MessageContent -> Store.Handle -> IO ()
+messagePoster ::
+  (MonadLogger m, MonadUnliftIO m) =>
+  TChan MessageContent -> Store.Handle -> m ()
 messagePoster onMessagePosted db =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
-    pTraceM $ "Saving message " <> show message
+    $logDebug $ "Saving message " <> show message
     runStore db $ newMessage message
 
-databaseToUIUpdater :: Store.Handle -> TChan [MessageView] -> IO ()
+databaseToUIUpdater ::
+  (MonadLogger m, MonadUnliftIO m) =>
+  Store.Handle -> TChan [MessageView] -> m ()
 databaseToUIUpdater db onMessageListUpdated = do
-  onUpdate <- Store.fetchUpdates db
+  onUpdate <- fetchUpdates db
   forever $ do
     _ <- atomically $ readTChan onUpdate
     messages <- loadAllMessages db

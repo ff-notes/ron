@@ -4,82 +4,93 @@ module NetNode (workers) where
 
 import           RON.Prelude
 
-import           Control.Concurrent.Async (concurrently_, forConcurrently_)
-import           Control.Concurrent.STM (atomically, readTChan)
+import           Control.Concurrent.STM (readTChan)
 import           Control.Monad (forever)
+import           Control.Monad.Logger (MonadLogger, logInfo)
 import           Data.Aeson (FromJSON, ToJSON, (.:), (.=), (<?>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text.Lazy.Encoding as TextL
-import           Debug.Pretty.Simple (pTraceM)
 import qualified Network.WebSockets as WS
-import qualified RON.Store as Store
-import qualified RON.Store.Sqlite as Store
+import           RON.Store (appendPatch)
+import           RON.Store.Sqlite (fetchUpdates, loadOpLog, runStore)
+import qualified RON.Store.Sqlite as Store (Handle)
 import           RON.Text.Parse (parseOpenFrame, parseUuid)
 import           RON.Text.Serialize (serializeUuid)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types.Experimental (Patch (..))
+import           UnliftIO (MonadUnliftIO, atomically, concurrently_,
+                           forConcurrently_, withRunInIO)
 
 import           Fork (forkLinked)
 import           Options (NodeOptions (..), Peer (..))
 
-workers :: Store.Handle -> NodeOptions -> IO ()
-workers db NodeOptions{listenHost, listenPorts, peers} =
+workers ::
+  forall m.
+  (MonadLogger m, MonadUnliftIO m) => Store.Handle -> NodeOptions -> m ()
+workers db NodeOptions{listenHost, listenPorts, peers} = do
   concurrently_ runServers runClients
   where
 
+    runServers :: m ()
     runServers =
       forConcurrently_ listenPorts \port -> do
-        pTraceM $ "Listening at [" <> show listenHost <> "]:" <> show port
-        WS.runServer (show listenHost) port server
+        $logInfo $ "Listening at [" <> show listenHost <> "]:" <> show port
+        withRunInIO \unlift ->
+          WS.runServer (show listenHost) port $ unlift . server
 
+    runClients :: m ()
     runClients =
       forConcurrently_ peers \peer@Peer{host, port} -> do
-        pTraceM $ "Connecting to " <> show peer
-        WS.runClient host port "/" client
+        $logInfo $ "Connecting to " <> show peer
+        withRunInIO \unlift -> WS.runClient host port "/" $ unlift . client
 
+    server :: WS.PendingConnection -> m ()
     server pending = do
-      conn <- WS.acceptRequest pending
-      pTraceM $ "Accepted connection from " <> show (WS.pendingRequest pending)
+      conn <- liftIO $ WS.acceptRequest pending
+      $logInfo $ "Accepted connection " <> show (WS.pendingRequest pending)
       dialog db conn
 
+    client :: WS.Connection -> m ()
     client = dialog db
 
-dialog :: Store.Handle -> WS.Connection -> IO ()
+dialog ::
+  (MonadLogger m, MonadUnliftIO m) => Store.Handle -> WS.Connection -> m ()
 dialog db conn = do
   -- first, advertise own database state
   do
-    patches <- Store.runStore db Store.loadLog
+    patches <- runStore db loadOpLog
     case patches of
-      [] ->
-        pTraceM "No log for the chatroom"
+      []    -> $logInfo "No log for the chatroom"
       _ : _ -> do
-        pTraceM $ "Log for the chatroom: " <> show (length patches)
+        $logInfo $ "Log for the chatroom: " <> show (length patches)
         for_ patches \patch -> do
-          pTraceM $ "Send initial patch " <> show patch
-          WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
+          $logInfo $ "Send initial patch " <> show patch
+          liftIO $ WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
   -- send
   forkLinked do
-    onUpdate <- Store.fetchUpdates db
+    onUpdate <- fetchUpdates db
     forever $ do
       patch <- atomically $ readTChan onUpdate
-      pTraceM $ "Send new patch " <> show patch
-      WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
+      $logInfo $ "Send new patch " <> show patch
+      liftIO $ WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
   -- receive
-  WS.withPingThread conn 30 (pure ()) $
+  withRunInIO \unlift ->
+    WS.withPingThread conn 30 (pure ()) $
+    unlift $
     forever do
-      messageData <- WS.receiveData conn
+      messageData <- liftIO $ WS.receiveData conn
       case Aeson.eitherDecode messageData of
         Left e ->
           error $
             "NetNode.dialog: Aeson.eitherDecode: " <> e
             <> ", messageData = " <> show messageData
         Right netMessage -> do
-          pTraceM $ "Received " <> show netMessage
+          $logInfo $ "Received " <> show netMessage
           case netMessage of
-            NetPatch patch -> Store.runStore db $ Store.appendPatch patch
+            NetPatch patch -> runStore db $ appendPatch patch
 
 newtype NetMessage = NetPatch Patch
   deriving Show

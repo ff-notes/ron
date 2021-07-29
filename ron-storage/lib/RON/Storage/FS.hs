@@ -41,15 +41,16 @@ import           Control.Concurrent.STM (TChan, atomically, dupTChan,
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)
+import           Data.IORef (newIORef, readIORef, writeIORef)
 import           Data.Maybe (isJust)
 import           Network.Info (MAC (MAC), getNetworkInterfaces, mac)
 import           System.Directory (canonicalizePath, createDirectoryIfMissing,
                                    doesDirectoryExist, doesPathExist,
                                    listDirectory, makeAbsolute, removeFile,
                                    renameDirectory)
-import           System.FilePath (makeRelative, splitDirectories, (</>))
 import           System.FSNotify (StopListening)
 import qualified System.FSNotify as FSNotify
+import           System.FilePath (makeRelative, splitDirectories, (</>))
 import           System.IO (hPutStrLn, stderr)
 import           System.IO.Error (isDoesNotExistError)
 import           System.Random.TF (newTFGen)

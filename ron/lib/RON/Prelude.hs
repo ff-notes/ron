@@ -61,11 +61,10 @@ import           Data.Foldable as X (Foldable, all, and, any, asum, elem, fold,
 import           Data.Function as X (const, flip, id, on, ($), (&), (.))
 import           Data.Functor as X (Functor, fmap, ($>), (<$), (<$>), (<&>))
 import           Data.Functor.Identity as X (Identity)
-import           Data.Hashable as X (Hashable, hash)
 import           Data.HashMap.Strict as X (HashMap)
+import           Data.Hashable as X (Hashable, hash)
+import           Data.IORef as X (IORef)
 import           Data.Int as X (Int, Int16, Int32, Int64, Int8)
-import           Data.IORef as X (IORef, atomicModifyIORef', newIORef,
-                                  readIORef, writeIORef)
 import           Data.List as X (drop, filter, genericLength, intercalate,
                                  isPrefixOf, isSuffixOf, lookup, map, partition,
                                  repeat, replicate, sort, sortBy, sortOn, span,

@@ -15,6 +15,7 @@ executable chat
         extra,
         generic-lens,
         lens,
+        monad-logger,
         network-uri,
         optparse-applicative,
         pretty-simple,
@@ -22,6 +23,7 @@ executable chat
         text,
         time,
         unix,
+        unliftio,
         vty,
         websockets,
         -- project

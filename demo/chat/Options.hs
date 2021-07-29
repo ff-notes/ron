@@ -27,13 +27,14 @@ instance Show Peer where
   show Peer{host, port} =
     show
       nullURI
-        { uriScheme = "ws"
+        { uriScheme = "ws:"
         , uriAuthority =
-            Just nullURIAuth{uriRegName = host, uriPort = show port}
+            Just nullURIAuth{uriRegName = host, uriPort = ':' : show port}
         }
 
 data Options = Options
   { dataDir :: FilePath
+  , logFile :: FilePath
   , cmd     :: Command
   }
 
@@ -88,6 +89,13 @@ parser =
         <>  help    "database (default: ./ron-demo-chat.sqlite)"
         <>  value   "./ron-demo-chat.sqlite"
         )
+    logFile <-
+      strOption
+        (   long "log"
+        <>  metavar "FILE"
+        <>  help "logfile (default: ./log.txt)"
+        <>  value "./log.txt"
+        )
     cmd <-
       subparser
         (   command "show"  (i pShow  "Offline: Show chat messages and exit")
@@ -95,7 +103,7 @@ parser =
         <>  command "node"  (i pNode  "Start node without UI")
         <>  command "ui"    (i pUI    "Start UI with network node")
         )
-    pure Options{dataDir, cmd}
+    pure Options{dataDir, logFile, cmd}
   where
     pShow = pure Show
 

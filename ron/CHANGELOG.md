@@ -9,8 +9,20 @@ and this project adheres to
 ### Added
 - `RON.Text.Parse.parsePayload`
 
+### Changed
+- RON.Epoch:
+  - Extend `EpochClock` to transformer `EpochClockT`
+
 ### Fixed
 - RONt: parsing of `-0.1`
+
+### Removed
+- RON.Prelude:
+  - atomicModifyIORef'
+  - newIORef
+  - readIORef
+  - writeIORef
+  because sometimes we need UnliftIO counterparts
 
 ## [0.12] - 2021-07-15
 ### Added

@@ -9,6 +9,9 @@ and this project adheres to
 ### Added
 - `VersionVector`: operator (·≻)
 
+### Fixed
+- Adapt to changes in RON.Prelude
+
 ## [0.10] - 2019-10-08
 ### Added
 - `RGA.toList`

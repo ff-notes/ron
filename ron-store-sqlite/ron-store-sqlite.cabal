@@ -10,7 +10,6 @@ library
     -- global
     base,
     bytestring,
-    directory,
     monad-logger,
     persistent-sqlite,
     persistent,
@@ -19,6 +18,7 @@ library
     stm,
     text,
     tf-random,
+    unliftio,
     -- project
     ron,
     ron-rdt,

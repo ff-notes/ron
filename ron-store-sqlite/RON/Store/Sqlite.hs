@@ -20,15 +20,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module RON.Store.Sqlite (
-  Handle, fetchUpdates, loadLog, newHandle, runStore,
+  Handle, Store, StoreT, fetchUpdates, loadOpLog, newHandle, runStore,
 ) where
 
 import           RON.Prelude
 
-import           Control.Concurrent.STM (TChan, atomically, dupTChan,
-                                         newBroadcastTChanIO, writeTChan)
-import           Control.Monad.Logger (LoggingT, filterLogger,
-                                       runStderrLoggingT)
+import           Control.Concurrent.STM (TChan, dupTChan, writeTChan)
+import           Control.Monad.Logger (LoggingT, MonadLogger, monadLoggerLog,
+                                       runLoggingT)
 import           Control.Monad.Trans.Resource (ResourceT, runResourceT)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.List.NonEmpty (groupWith)
@@ -45,12 +44,14 @@ import qualified Database.Persist.Sql
 import           Database.Persist.Sqlite (createSqlitePool)
 import           Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase,
                                       share, sqlSettings)
-import           System.Directory (makeAbsolute)
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
+import           UnliftIO (MonadUnliftIO, atomically, newBroadcastTChanIO,
+                           newIORef, withRunInIO)
+import           UnliftIO.Directory (makeAbsolute)
 
 import           RON.Data.VersionVector (VV, (·≻))
-import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
+import           RON.Epoch (EpochClockT, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error, MonadE, errorContext, tryIO)
 import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
                             ReplicaClock, mkReplica)
@@ -111,16 +112,18 @@ data Handle = Handle
   , replica :: Replica
   }
 
-newtype Store a = Store (ExceptT Error (ReaderT Handle EpochClock) a)
+newtype StoreT m a = Store (ExceptT Error (ReaderT Handle (EpochClockT m)) a)
   deriving (Applicative, Functor, Monad, MonadE, MonadIO, ReplicaClock)
 
-instance MonadStore Store where
+type Store = StoreT (LoggingT IO)
+
+instance (MonadLogger m, MonadUnliftIO m) => MonadStore (StoreT m) where
   listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
   appendPatch = appendPatch'
   loadObjectLog = loadObjectLog'
   getObjectVersion = undefined
 
-appendPatch' :: Patch -> Store ()
+appendPatch' :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
 appendPatch' Patch{object, log} =
   errorContext "appendPatch @Store" do
     opsInserted <-
@@ -137,39 +140,49 @@ appendPatch' Patch{object, log} =
           tryIO $
             atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
-loadObjectLog' :: UUID -> VV -> Store [[RON.Op]]
+loadObjectLog' ::
+  (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [[RON.Op]]
 loadObjectLog' object version =
   errorContext "loadObjectLog @Store" do
     ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
     pure
       [[opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]]
 
-loadLog :: Store [Patch]
-loadLog =
-  errorContext "loadLog" do
+loadOpLog :: (MonadLogger m, MonadUnliftIO m) => StoreT m [Patch]
+loadOpLog =
+  errorContext "loadOpLog" do
     oplog <- runDB $ map entityVal <$> selectList [] [Asc OpEvent]
     pure
       [ Patch opObject $ opFromDatabase <$> ops
       | ops@(Op{opObject} :| _) <- groupWith opObject oplog
       ]
 
-runDB :: ReaderT SqlBackend (LoggingT (ResourceT IO)) a -> Store a
+runDB ::
+  (MonadUnliftIO m, MonadLogger m) =>
+  ReaderT SqlBackend (LoggingT (ResourceT IO)) a -> StoreT m a
 runDB action =
   Store do
     Handle{dbPool} <- ask
-    tryIO $
-      runResourceT $
-      runLogger $
-      (`runSqlPool` dbPool) do
-        runMigration migrateAll
-        action
+    let action' =
+          (`runSqlPool` dbPool) do
+            runMigration migrateAll
+            action
+    lift @(ExceptT _) $
+      lift @(ReaderT _) $
+      lift @EpochClockT do
+        -- logger <- askLoggerIO
+        withRunInIO \unlift ->
+          let
+            monadLoggerLog' loc src lvl msg =
+              unlift $ monadLoggerLog loc src lvl msg
+          in runResourceT $ runLoggingT action' monadLoggerLog'
 
-runStore :: Handle -> Store a -> IO a
+runStore :: MonadIO m => Handle -> StoreT m a -> m a
 runStore h@Handle{replica, clock} (Store action) = do
   res <- runEpochClock replica clock $ (`runReaderT` h) $ runExceptT action
-  either throwIO pure res
+  either (liftIO . throwIO) pure res
 
-fetchUpdates :: Handle -> IO (TChan Patch)
+fetchUpdates :: MonadIO m => Handle -> m (TChan Patch)
 fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch
 
 selectDistinctObject :: MonadIO m => ReaderT SqlBackend m [UUID]
@@ -178,21 +191,23 @@ selectDistinctObject =
 
 -- | Create new Store handle.
 -- If no replica id found in the DB, generates a random one.
-newHandle :: FilePath -> IO Handle
+newHandle :: (MonadLogger m, MonadUnliftIO m) => FilePath -> m Handle
 newHandle dbfile' = do
   time        <- getCurrentEpochTime  -- TODO advance to the last timestamp
-                                      -- in database
+                                      -- in the database
   clock       <- newIORef time
   dbfile      <- makeAbsolute dbfile'
-  dbPool      <- runLogger $ createSqlitePool (Text.pack dbfile) 1
+  dbPool      <- runLoggerIO $ createSqlitePool (Text.pack dbfile) 1
   onNewPatch  <- newBroadcastTChanIO
-  replica     <- newReplica -- TODO load replica id from database
-  pure Handle{..}
+  replica     <- newReplica -- TODO load replica id from the database
+  pure Handle{clock, dbPool, onNewPatch, replica}
 
-newReplica :: IO Replica
+newReplica :: MonadIO m => m Replica
 newReplica = do
-  replicaId <- fst . random <$> newTFGen
+  replicaId <- fst . random <$> liftIO newTFGen
   pure $ mkReplica ApplicationSpecific $ ls60 replicaId
 
-runLogger :: MonadIO m => LoggingT m a -> m a
-runLogger = runStderrLoggingT . filterLogger \_ _ -> False
+runLoggerIO :: (MonadLogger m, MonadUnliftIO m) => LoggingT IO a -> m a
+runLoggerIO action =
+  withRunInIO \run ->
+    runLoggingT action \loc src lvl msg -> run $ monadLoggerLog loc src lvl msg
