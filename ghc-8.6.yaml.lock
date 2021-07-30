@@ -3,10 +3,17 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
 snapshots:
-- completed:
-    size: 524154
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/20.yaml
+- original: lts-14.20
+  completed:
     sha256: 2f5099f69ddb6abfe64400fe1e6a604e8e628f55e6837211cd70a81eb0a8fa4d
-  original: lts-14.20
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/20.yaml
+    size: 524154
+packages:
+- original:
+    hackage: unliftio-core-0.2.0.1
+  completed:
+    pantry-tree:
+      sha256: e81c5a1e82ec2cd68cbbbec9cd60567363abe02257fa1370a906f6754b6818b8
+      size: 328
+    hackage: unliftio-core-0.2.0.1@sha256:9b3e44ea9aacacbfc35b3b54015af450091916ac3618a41868ebf6546977659a,1082
