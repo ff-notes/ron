@@ -3,52 +3,59 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: generic-lens-1.1.0.0@sha256:caaab13ae4f2a68e43671d25fb56746ba14bc9d5d787d594a66c7f56eba3fa66,6412
-    pantry-tree:
-      size: 4174
-      sha256: 33e1509b7d786d816a0974f08cfb6208a7d02c7d45937bec2c91586523b14440
-  original:
-    hackage: generic-lens-1.1.0.0
-- completed:
-    hackage: hedn-0.2.0.1@sha256:5fc70a561392a7b740a1e062d358bcbe6affc9501b901b8327e104b9c0fe23f3,2345
-    pantry-tree:
-      size: 1344
-      sha256: ed2236a0c3b7a3efa6df59b9d5afe95b4dc024135deec31d1be23593e90ca595
-  original:
-    hackage: hedn-0.2.0.1
-- completed:
-    hackage: tasty-hedgehog-1.0.0.1@sha256:cdcf60a29195bd0d819d3018c11db2e0deb7c6e559ad940c49409a5a7a982f83,1766
-    pantry-tree:
-      size: 330
-      sha256: 7c26d9584f8ad1a86d9f5cbd6f5a8b81219eaee992e5a098ddab29a6c0b4b2bf
-  original:
-    hackage: tasty-hedgehog-1.0.0.1
-- completed:
-    hackage: hedgehog-1.0@sha256:440dafedac48a34eac3871f8622b215462cfc0708536cb0458b7a8cf38247c69,4463
-    pantry-tree:
-      size: 2409
-      sha256: 985f5ddc16bc1fd4b0c33d4b4e6f54d205fc63aa97b5912b0fcb370dc2a672e3
-  original:
-    hackage: hedgehog-1.0
-- completed:
-    hackage: inline-c-cpp-0.3.0.2@sha256:e269a28e1e48b96bdf0b263af9165c775f1abd95fd6435e76cb4fae337b1374e,1750
-    pantry-tree:
-      size: 313
-      sha256: 39b91210e9420eb865e5302d3717c258ddb86e44d722d479424b84e499ac3f77
-  original:
-    hackage: inline-c-cpp-0.3.0.2
-- completed:
-    hackage: megaparsec-7.0.5@sha256:45e1f1348fab2783646fdb4d9e6097568981a740951c7356d36d794e2baba305,3902
-    pantry-tree:
-      size: 1428
-      sha256: 1f8baf6e07326f8c8a2dd31de6b2860427f158b0892c52ba5fe9ffeb6cd3bf7f
-  original:
-    hackage: megaparsec-7.0.5
 snapshots:
-- completed:
-    size: 509471
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/12/26.yaml
+- original: lts-12.26
+  completed:
     sha256: 95f014df58d0679b1c4a2b7bf2b652b61da8d30de5f571abb0d59015ef678646
-  original: lts-12.26
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/12/26.yaml
+    size: 509471
+packages:
+- original:
+    hackage: unliftio-core-0.2.0.1
+  completed:
+    pantry-tree:
+      sha256: e81c5a1e82ec2cd68cbbbec9cd60567363abe02257fa1370a906f6754b6818b8
+      size: 328
+    hackage: unliftio-core-0.2.0.1@sha256:9b3e44ea9aacacbfc35b3b54015af450091916ac3618a41868ebf6546977659a,1082
+- original:
+    hackage: generic-lens-1.1.0.0
+  completed:
+    pantry-tree:
+      sha256: 33e1509b7d786d816a0974f08cfb6208a7d02c7d45937bec2c91586523b14440
+      size: 4174
+    hackage: generic-lens-1.1.0.0@sha256:caaab13ae4f2a68e43671d25fb56746ba14bc9d5d787d594a66c7f56eba3fa66,6412
+- original:
+    hackage: hedn-0.2.0.1
+  completed:
+    pantry-tree:
+      sha256: ed2236a0c3b7a3efa6df59b9d5afe95b4dc024135deec31d1be23593e90ca595
+      size: 1344
+    hackage: hedn-0.2.0.1@sha256:5fc70a561392a7b740a1e062d358bcbe6affc9501b901b8327e104b9c0fe23f3,2345
+- original:
+    hackage: tasty-hedgehog-1.0.0.1
+  completed:
+    pantry-tree:
+      sha256: 7c26d9584f8ad1a86d9f5cbd6f5a8b81219eaee992e5a098ddab29a6c0b4b2bf
+      size: 330
+    hackage: tasty-hedgehog-1.0.0.1@sha256:cdcf60a29195bd0d819d3018c11db2e0deb7c6e559ad940c49409a5a7a982f83,1766
+- original:
+    hackage: hedgehog-1.0
+  completed:
+    pantry-tree:
+      sha256: 985f5ddc16bc1fd4b0c33d4b4e6f54d205fc63aa97b5912b0fcb370dc2a672e3
+      size: 2409
+    hackage: hedgehog-1.0@sha256:440dafedac48a34eac3871f8622b215462cfc0708536cb0458b7a8cf38247c69,4463
+- original:
+    hackage: inline-c-cpp-0.3.0.2
+  completed:
+    pantry-tree:
+      sha256: 39b91210e9420eb865e5302d3717c258ddb86e44d722d479424b84e499ac3f77
+      size: 313
+    hackage: inline-c-cpp-0.3.0.2@sha256:e269a28e1e48b96bdf0b263af9165c775f1abd95fd6435e76cb4fae337b1374e,1750
+- original:
+    hackage: megaparsec-7.0.5
+  completed:
+    pantry-tree:
+      sha256: 1f8baf6e07326f8c8a2dd31de6b2860427f158b0892c52ba5fe9ffeb6cd3bf7f
+      size: 1428
+    hackage: megaparsec-7.0.5@sha256:45e1f1348fab2783646fdb4d9e6097568981a740951c7356d36d794e2baba305,3902

@@ -10,6 +10,9 @@ packages:
   - examples
 
 extra-deps:
+  # ron:
+  - unliftio-core-0.2.0.1
+
   # ron-rdt:
   - generic-lens-1.1.0.0
 
