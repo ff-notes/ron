@@ -1,4 +1,3 @@
-{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -185,7 +184,7 @@ debugDump dataDir = do
   objectDirs <- do
     exists <- doesDirectoryExist dataDir
     if exists then listDirectory dataDir else pure []
-  for_ (sort objectDirs) \objectDir -> do
+  for_ (sort objectDirs) $ \objectDir -> do
     isDir <- doesDirectoryExist $ dataDir </> objectDir
     when isDir $ do
       let logsDir = dataDir </> objectDir </> "log"
@@ -200,4 +199,4 @@ fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
 
 listDirectoryDirs :: FilePath -> IO [FilePath]
 listDirectoryDirs dir =
-  listDirectory dir >>= filterM \name -> doesDirectoryExist (dir </> name)
+  listDirectory dir >>= filterM (\name -> doesDirectoryExist (dir </> name))

@@ -11,6 +11,7 @@ packages:
 
 extra-deps:
   # ron:
+  - resourcet-1.2.4.2
   - unliftio-core-0.2.0.1
 
   # ron-rdt:

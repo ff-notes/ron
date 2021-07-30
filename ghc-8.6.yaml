@@ -13,8 +13,8 @@ packages:
 extra-deps:
   # packages:
     # ron:
-      - unliftio-core-0.2.0.1
       - resourcet-1.2.4.2
+      - unliftio-core-0.2.0.1
     # ron-test:
       # - ormolu-0.0.2.0
 
