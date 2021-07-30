@@ -30,7 +30,7 @@ import           Types (MessageContent (..), MessageView, postTime)
 loadAllMessages ::
   (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
 loadAllMessages db =
-  runStore db $ do
+  runStore db do
     mMessageSet <- readObject gMessageSetRef
     case mMessageSet of
       Nothing ->

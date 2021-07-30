@@ -22,6 +22,7 @@ import           RON.Prelude
 import           Control.Concurrent (MVar, newMVar, withMVar)
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO, writeTChan)
+import           Control.Exception (throwIO)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC

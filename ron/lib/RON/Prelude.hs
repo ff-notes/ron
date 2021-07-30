@@ -31,7 +31,7 @@ import           Control.Monad.Writer.Strict as X (WriterT, runWriterT, tell)
 import           Control.Applicative as X (Alternative, Applicative, liftA2,
                                            many, optional, pure, some, (*>),
                                            (<*), (<*>), (<|>))
-import           Control.Exception as X (Exception, catch, evaluate, throwIO)
+import           Control.Exception as X (Exception)
 import           Control.Monad as X (Monad, filterM, guard, unless, void, when,
                                      (<=<), (=<<), (>=>), (>>), (>>=))
 import           Control.Monad.Except as X (ExceptT (ExceptT), MonadError,

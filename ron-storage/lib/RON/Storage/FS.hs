@@ -38,6 +38,7 @@ import           RON.Prelude
 
 import           Control.Concurrent.STM (TChan, atomically, dupTChan,
                                          newBroadcastTChanIO, writeTChan)
+import           Control.Exception (catch, throwIO)
 import           Data.Bits (shiftL)
 import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (find)

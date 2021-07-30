@@ -8,21 +8,27 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - `RON.Text.Parse.parsePayload`
+- `instance MonadTrans EpochClockT`
+- `instance MonadUnliftIO EpochClockT`
 
 ### Changed
 - RON.Epoch:
   - Extend `EpochClock` to transformer `EpochClockT`
+- Added dependency on `unliftio`
 
 ### Fixed
 - RONt: parsing of `-0.1`
 
 ### Removed
-- RON.Prelude:
-  - atomicModifyIORef'
-  - newIORef
-  - readIORef
-  - writeIORef
-  because sometimes we need UnliftIO counterparts
+- `RON.Prelude`:
+  - `atomicModifyIORef'`
+  - `catch`
+  - `evaluate`
+  - `newIORef`
+  - `readIORef`
+  - `throwIO`
+  - `writeIORef`
+  because sometimes we need `UnliftIO` counterparts
 
 ## [0.12] - 2021-07-15
 ### Added

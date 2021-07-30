@@ -46,13 +46,13 @@ import           Database.Persist.TH (mkMigrate, mkPersist, persistLowerCase,
                                       share, sqlSettings)
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
-import           UnliftIO (MonadUnliftIO, atomically, newBroadcastTChanIO,
-                           newIORef, withRunInIO)
+import           UnliftIO (MonadUnliftIO, atomically, catch,
+                           newBroadcastTChanIO, newIORef, throwIO, withRunInIO)
 import           UnliftIO.Directory (makeAbsolute)
 
 import           RON.Data.VersionVector (VV, (·≻))
 import           RON.Epoch (EpochClockT, getCurrentEpochTime, runEpochClock)
-import           RON.Error (Error, MonadE, errorContext, tryIO)
+import           RON.Error (Error, errorContext)
 import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
                             ReplicaClock, mkReplica)
 import           RON.Store.Class (MonadStore)
@@ -112,16 +112,26 @@ data Handle = Handle
   , replica :: Replica
   }
 
-newtype StoreT m a = Store (ExceptT Error (ReaderT Handle (EpochClockT m)) a)
-  deriving (Applicative, Functor, Monad, MonadE, MonadIO, ReplicaClock)
+newtype StoreT m a = Store (ReaderT Handle (EpochClockT m) a)
+  deriving (Applicative, Functor, Monad, MonadIO, MonadUnliftIO, ReplicaClock)
 
 type Store = StoreT (LoggingT IO)
 
+instance MonadUnliftIO m => MonadError Error (StoreT m) where
+  throwError = throwIO
+  catchError = catch
+
 instance (MonadLogger m, MonadUnliftIO m) => MonadStore (StoreT m) where
-  listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
-  appendPatch = appendPatch'
-  loadObjectLog = loadObjectLog'
-  getObjectVersion = undefined
+  listObjects       = listObjects'
+  appendPatch       = appendPatch'
+  loadObjectLog     = loadObjectLog'
+  getObjectVersion  = undefined
+
+instance MonadTrans StoreT where
+  lift = Store . lift @(ReaderT _) . lift @EpochClockT
+
+listObjects' :: (MonadLogger m, MonadUnliftIO m) => StoreT m [UUID]
+listObjects' = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
 appendPatch' :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
 appendPatch' Patch{object, log} =
@@ -134,11 +144,9 @@ appendPatch' Patch{object, log} =
         -- if successful, return op
     case opsInserted of
       [] -> pure ()
-      op : ops ->
-        Store do
-          Handle{onNewPatch} <- ask
-          tryIO $
-            atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
+      op : ops -> do
+        Handle{onNewPatch} <- Store ask
+        atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadObjectLog' ::
   (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [[RON.Op]]
@@ -160,27 +168,21 @@ loadOpLog =
 runDB ::
   (MonadUnliftIO m, MonadLogger m) =>
   ReaderT SqlBackend (LoggingT (ResourceT IO)) a -> StoreT m a
-runDB action =
-  Store do
-    Handle{dbPool} <- ask
-    let action' =
-          (`runSqlPool` dbPool) do
-            runMigration migrateAll
-            action
-    lift @(ExceptT _) $
-      lift @(ReaderT _) $
-      lift @EpochClockT do
-        -- logger <- askLoggerIO
-        withRunInIO \unlift ->
-          let
-            monadLoggerLog' loc src lvl msg =
-              unlift $ monadLoggerLog loc src lvl msg
-          in runResourceT $ runLoggingT action' monadLoggerLog'
+runDB action = do
+  Handle{dbPool} <- Store ask
+  let action' =
+        (`runSqlPool` dbPool) do
+          runMigration migrateAll
+          action
+  lift $
+    withRunInIO \unlift -> let
+      monadLoggerLog' loc src lvl msg =
+        unlift $ monadLoggerLog loc src lvl msg
+      in runResourceT $ runLoggingT action' monadLoggerLog'
 
-runStore :: MonadIO m => Handle -> StoreT m a -> m a
-runStore h@Handle{replica, clock} (Store action) = do
-  res <- runEpochClock replica clock $ (`runReaderT` h) $ runExceptT action
-  either (liftIO . throwIO) pure res
+runStore :: Handle -> StoreT m a -> m a
+runStore h@Handle{replica, clock} (Store action) =
+  runEpochClock replica clock $ runReaderT action h
 
 fetchUpdates :: MonadIO m => Handle -> m (TChan Patch)
 fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch

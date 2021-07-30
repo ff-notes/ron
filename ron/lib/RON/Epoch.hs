@@ -1,5 +1,4 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
 module RON.Epoch (
     EpochClock,
@@ -17,6 +16,7 @@ import           RON.Prelude
 import           Data.IORef (atomicModifyIORef', newIORef)
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime,
                                         posixSecondsToUTCTime)
+import           UnliftIO (MonadUnliftIO)
 
 import           RON.Event (Event (..), Replica, ReplicaClock,
                             TimeVariety (Epoch), advance, getEvents, getPid,
@@ -26,7 +26,7 @@ import           RON.Util.Word (Word60, leastSignificant60, safeCast)
 -- | Real epoch clock.
 -- Uses kind of global variable to ensure strict monotonicity.
 newtype EpochClockT m a = EpochClock (ReaderT (Replica, IORef Word60) m a)
-    deriving (Applicative, Functor, Monad, MonadIO)
+    deriving (Applicative, Functor, Monad, MonadIO, MonadTrans, MonadUnliftIO)
 
 type EpochClock = EpochClockT IO
 
@@ -54,9 +54,6 @@ instance MonadIO m => ReplicaClock (EpochClockT m) where
                 [ Event{time = mkTime Epoch t, replica = pid}
                 | t <- [begin .. end]
                 ]
-
-instance MonadTrans EpochClockT where
-    lift = EpochClock . lift @(ReaderT _)
 
 -- | Run 'EpochClock'/'EpochClockT' action with explicit time variable.
 runEpochClock :: Replica -> IORef Word60 -> EpochClockT m a -> m a
