@@ -3,17 +3,24 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    hackage: hedn-0.3.0.1@sha256:380de06027a727c7337c91b9e9f60f0b17915954ea25fbcd4f302f5f3bae453f,2225
-    pantry-tree:
-      size: 1293
-      sha256: 8d4f2655f0cb964c4e1dc83ece9112f220fadaca33b47d8ebee7d4c07e9f5125
-  original:
-    hackage: hedn-0.3.0.1
 snapshots:
-- completed:
-    size: 531237
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/0.yaml
-    sha256: 210e15b7043e2783115afe16b0d54914b1611cdaa73f3ca3ca7f8e0847ff54e5
-  original: lts-16.0
+- original: lts-16.31
+  completed:
+    sha256: 637fb77049b25560622a224845b7acfe81a09fdb6a96a3c75997a10b651667f6
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/31.yaml
+    size: 534126
+packages:
+- original:
+    hackage: unliftio-core-0.2.0.1
+  completed:
+    pantry-tree:
+      sha256: e81c5a1e82ec2cd68cbbbec9cd60567363abe02257fa1370a906f6754b6818b8
+      size: 328
+    hackage: unliftio-core-0.2.0.1@sha256:9b3e44ea9aacacbfc35b3b54015af450091916ac3618a41868ebf6546977659a,1082
+- original:
+    hackage: hedn-0.3.0.2
+  completed:
+    pantry-tree:
+      sha256: 93ef532249662f707476879ade9753b4e326d5564690fb7aa11f06f221982caf
+      size: 1293
+    hackage: hedn-0.3.0.2@sha256:72143508928d985e4f53a4c4537004dd11fbf2fa0785411bb6ef1a41cf30aa3f,2234
