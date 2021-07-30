@@ -17,3 +17,10 @@ packages:
       sha256: e81c5a1e82ec2cd68cbbbec9cd60567363abe02257fa1370a906f6754b6818b8
       size: 328
     hackage: unliftio-core-0.2.0.1@sha256:9b3e44ea9aacacbfc35b3b54015af450091916ac3618a41868ebf6546977659a,1082
+- original:
+    hackage: resourcet-1.2.4.2
+  completed:
+    pantry-tree:
+      sha256: 153ab98f19697b059250f932414aa34261ea0e15f08441ff39271f3f66525baf
+      size: 647
+    hackage: resourcet-1.2.4.2@sha256:d57516781d1721f70aa0b9ec8ea9200ab02bf76349cb76d73ad57729302289cc,1730
