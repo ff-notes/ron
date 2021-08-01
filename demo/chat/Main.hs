@@ -17,9 +17,9 @@ import           UI (initUI, runUI)
 
 main :: IO ()
 main = do
-  Options{dataDir, cmd, logFile} <- parseOptions
+  Options{database, cmd, logFile} <- parseOptions
   runFileLoggingT logFile do
-    db <- Store.newHandle dataDir
+    db <- Store.newHandle database
     case cmd of
       Show -> Database.loadAllMessages db >>= pPrint
       Post username text -> do

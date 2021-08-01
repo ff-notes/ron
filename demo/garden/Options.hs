@@ -34,7 +34,6 @@ instance Show Peer where
 
 data Options = Options
   { database  :: FilePath
-  , logFile   :: FilePath
   , cmd       :: Command
   }
 
@@ -77,33 +76,26 @@ parseOptions :: IO Options
 parseOptions =
   customExecParser prefs parserInfo
   where
-    parserInfo = i parser "RON demo chat application"
+    parserInfo = i parser "RON demo application -- growing trees"
 
 parser :: Parser Options
-parser =
-  do
-    database <-
-      strOption
-        (   long    "data"
-        <>  metavar "FILE"
-        <>  help    "database (default: ./ron-demo-chat.sqlite)"
-        <>  value   "./ron-demo-chat.sqlite"
-        )
-    logFile <-
-      strOption
-        (   long "log"
-        <>  metavar "FILE"
-        <>  help "logfile (default: ./log.txt)"
-        <>  value "./log.txt"
-        )
-    cmd <-
-      subparser
-        (   command "show"  (i pShow  "Offline: Show chat messages and exit")
-        <>  command "post"  (i pPost  "Offline: Post messages to chat")
-        <>  command "node"  (i pNode  "Start node without UI")
-        <>  command "ui"    (i pUI    "Start UI with network node")
-        )
-    pure Options{database, logFile, cmd}
+parser = do
+  database <-
+    strOption
+      (   long    "data"
+      <>  metavar "FILE"
+      <>  help    "database (default: ./ron-demo-garden.sqlite)"
+      <>  value   "./ron-demo-garden.sqlite"
+      )
+  cmd <-
+    subparser
+      (   command "show"  (i pShow  "Offline: Show trees")
+      <>  command "post"  (i pPost  "Offline: Add a branch")
+      <>  command "node"  (i pNode  "Start node without UI")
+      <>  command "ui"    (i pUI    "Start UI with network node")
+      )
+  pure Options{database, cmd}
+
   where
     pShow = pure Show
 

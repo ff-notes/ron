@@ -1,4 +1,4 @@
-cabal-version: >= 1.10
+cabal-version: 2.2
 
 name: garden
 version: 0
@@ -6,6 +6,27 @@ version: 0
 build-type: Simple
 
 executable garden
-  build-depends: base
+  build-depends:
+    -- global
+    base,
+    containers,
+    monad-logger,
+    network-uri,
+    optparse-applicative,
+    pretty-simple,
+    unliftio,
+    -- project
+    ron-rdt,
+    ron-store-sqlite,
+    ron,
+  default-extensions:
+    ApplicativeDo
+    BlockArguments
+    EmptyCase
+    LambdaCase
+    NamedFieldPuns
+    OverloadedStrings
+    TemplateHaskell
   default-language: Haskell2010
   main-is: Main.hs
+  other-modules: Options
