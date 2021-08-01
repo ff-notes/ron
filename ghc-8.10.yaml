@@ -11,6 +11,7 @@ packages:
   - swarm
   - examples
   - demo/chat
+  - demo/garden
 
 extra-deps:
   # packages:

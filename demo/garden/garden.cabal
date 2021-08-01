@@ -1,0 +1,11 @@
+cabal-version: >= 1.10
+
+name: garden
+version: 0
+
+build-type: Simple
+
+executable garden
+  build-depends: base
+  default-language: Haskell2010
+  main-is: Main.hs

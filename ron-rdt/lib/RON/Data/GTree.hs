@@ -32,8 +32,7 @@ toForest :: UUID -> GTree -> Forest Op
 toForest object (GTree children) = go object where
   go i =
     [ Node op $ go opId
-    | op@Op{opId} <-
-        toList $ HashMap.lookupDefault mempty i children
+    | op@Op{opId} <- toList $ HashMap.lookupDefault mempty i children
     ]
 
 loadForest :: (MonadE m, MonadStore m) => Ref GTree -> m (Forest Op)
