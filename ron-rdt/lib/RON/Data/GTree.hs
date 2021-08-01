@@ -44,5 +44,5 @@ toTree GTree{object, children} = go object where
   go i =
     [ Node op $ go opId
     | op@Op{opId} <-
-        toList $ HashMap.findWithDefault mempty i children
+        toList $ HashMap.lookupDefault mempty i children
     ]
