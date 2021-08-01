@@ -20,13 +20,10 @@ main = do
     db <- Store.newHandle database
     case cmd of
       Show -> loadTheTree db >>= pPrint
-      Post{} -> undefined
-      --   messageRef <-
-      --     runStore db $ Database.newMessage MessageContent{username, text}
-      --   liftIO $ putStrLn $ "created message: " <> show messageRef
+      Add parent -> runStore db $ GTree.insert theTreeRef parent
       RunNode _nodeOptions -> undefined
         -- runNode db nodeOptions
-      RunUI UIOptions{} _nodeOptions -> undefined
+      RunUI _nodeOptions -> undefined
       --   forkLinked $ runNode db nodeOptions
       --   runUI' username db
 

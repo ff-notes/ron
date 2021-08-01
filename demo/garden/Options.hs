@@ -1,23 +1,27 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Options (
-  Command (..), NodeOptions (..), Options (..), Peer (..), UIOptions (..),
+  Command (..), NodeOptions (..), Options (..), Peer (..),
   parseOptions,
 ) where
 
 import           RON.Prelude
 
 import           Control.Applicative ((<**>))
+import qualified Data.Text.Lazy as TextL
+import qualified Data.Text.Lazy.Encoding as TextL
 import           Network.URI (URI (..), URIAuth (..), nullURI, nullURIAuth,
                               parseAbsoluteURI)
 import           Options.Applicative (Parser, ParserInfo, ParserPrefs, ReadM,
-                                      auto, command, customExecParser,
+                                      argument, auto, command, customExecParser,
                                       defaultPrefs, eitherReader, flag,
                                       fullDesc, help, helper, info, long,
                                       metavar, option, prefDisambiguate,
                                       prefHelpLongEquals, prefMultiSuffix,
-                                      prefShowHelpOnError, progDesc,
-                                      strArgument, strOption, subparser, value)
+                                      prefShowHelpOnError, progDesc, strOption,
+                                      subparser, value)
+import           RON.Text.Parse (parseUuid)
+import           RON.Types (UUID)
 import           Text.Read (readEither)
 import qualified Text.Show
 
@@ -39,13 +43,9 @@ data Options = Options
 
 data Command
   = Show
-  | Post Text Text
+  | Add UUID
   | RunNode NodeOptions
-  | RunUI UIOptions NodeOptions
-
-newtype UIOptions = UIOptions
-  { username :: Text
-  }
+  | RunUI NodeOptions
 
 data ListenHost = AnyAddress | Localhost
 
@@ -90,7 +90,7 @@ parser = do
   cmd <-
     subparser
       (   command "show"  (i pShow  "Offline: Show trees")
-      <>  command "post"  (i pPost  "Offline: Add a branch")
+      <>  command "add"   (i pAdd   "Offline: Add a branch")
       <>  command "node"  (i pNode  "Start node without UI")
       <>  command "ui"    (i pUI    "Start UI with network node")
       )
@@ -99,17 +99,11 @@ parser = do
   where
     pShow = pure Show
 
-    pPost =
-      Post <$> strArgument (metavar "NAME") <*> strArgument (metavar "TEXT")
+    pAdd = Add <$> argument readUuid (metavar "UUID")
 
     pNode = RunNode <$> nodeOptions
 
-    pUI =
-      RunUI
-      <$> do
-            username <- strArgument $ metavar "NAME"
-            pure UIOptions{username}
-      <*> nodeOptions
+    pUI = RunUI <$> nodeOptions
 
 nodeOptions :: Parser NodeOptions
 nodeOptions = do
@@ -158,3 +152,6 @@ readPeer =
     when    (uriPort     == "") $ Left "Port must be non-empty"
     port <- readEither $ drop 1 {- port string starts with ':' -} uriPort
     pure Peer{host = uriRegName, port}
+
+readUuid :: ReadM UUID
+readUuid = eitherReader $ parseUuid . TextL.encodeUtf8 . TextL.pack
