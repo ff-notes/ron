@@ -149,12 +149,12 @@ appendPatch' Patch{object, log} =
         atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadObjectLog' ::
-  (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [[RON.Op]]
+  (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
 loadObjectLog' object version =
   errorContext "loadObjectLog @Store" do
     ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
     pure
-      [[opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]]
+      [opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]
 
 loadOpLog :: (MonadLogger m, MonadUnliftIO m) => StoreT m [Patch]
 loadOpLog =

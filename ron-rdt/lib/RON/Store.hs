@@ -6,6 +6,7 @@
 
 module RON.Store (
   MonadStore (..),
+  loadSubObjectLog,
   newObject,
   readObject,
 ) where
@@ -20,6 +21,7 @@ import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Store.Class (MonadStore (..))
 import           RON.Types (Op (..))
 import           RON.Types.Experimental (Patch (..), Ref (..))
+import           RON.Data.VersionVector (VV)
 
 newObject ::
   forall a m. (MonadStore m, ReplicatedObject a, ReplicaClock m) => m (Ref a)
@@ -34,18 +36,21 @@ newObject = do
 readObject ::
   (MonadE m, MonadStore m, ReplicatedObject a, Typeable a) =>
   Ref a -> m (Maybe a)
-readObject object@(Ref objectId path) =
+readObject object@(Ref objectId _) =
   errorContext ("readObject " <> show object) $ do
-    ops <- fold <$> loadObjectLog objectId mempty
+    ops <- loadSubObjectLog object mempty
     case ops of
       [] -> pure Nothing
-      _ ->
-        fmap Just $
-        view objectId $
-        stateFromFrame objectId $
-        sortOn
-          opId
-          [ op{payload = payload'}
-          | op@Op{payload} <- ops
-          , Just payload' <- [stripPrefix path payload]
-          ]
+      _ -> fmap Just $ view objectId $ stateFromFrame objectId $ sortOn opId ops
+
+loadSubObjectLog ::
+  (MonadE m, MonadStore m, Typeable a) => Ref a -> VV -> m [Op]
+loadSubObjectLog object@(Ref objectId path) version =
+  errorContext ("loadSubObjectLog " <> show object) $ do
+    ops <- loadObjectLog objectId version
+    pure
+      [ op{payload = payload'}
+      | op@Op{opId, payload} <- ops
+      , opId /= objectId
+      , Just payload' <- [stripPrefix path payload]
+      ]

@@ -94,11 +94,11 @@ getObjectPatches objectId = do
   objectExists  <- tryIO $ doesDirectoryExist objectLogsDir
   if objectExists then tryIO $ listDirectory objectLogsDir else pure []
 
-loadObjectLogFS :: UUID -> VV -> Store [[Op]]
+loadObjectLogFS :: UUID -> VV -> Store [Op]
 loadObjectLogFS objectId version = do
   objectLogsDir <- Store $ askObjectLogsDir objectId
   patchNames    <- getObjectPatches objectId
-  fmap catMaybes . for patchNames $ \patchName -> do
+  fmap (fold . catMaybes) . for patchNames $ \patchName -> do
     patchTimestamp <- uuidFromFileName patchName
     if patchTimestamp ·≼ version then
       pure Nothing

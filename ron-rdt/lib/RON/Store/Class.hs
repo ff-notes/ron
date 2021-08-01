@@ -20,7 +20,7 @@ class Monad m => MonadStore m where
     UUID ->
     -- | Base version. To get full object logs, pass 'mempty'.
     VV ->
-    m [[Op]]
+    m [Op]
 
   -- | Last version of an object known to the replica.
   getObjectVersion :: UUID -> m VV

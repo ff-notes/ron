@@ -55,14 +55,15 @@ instance MonadStore StoreSim where
       atObject    = at object . non emptyObject
       atReplica   = at thisReplicaId . non Seq.empty
 
-  loadObjectLog objectId version =
-    do
-      db <- StoreSim get
-      Object{logs} <- liftMaybe "object not found" $ db !? objectId
-      pure
+  loadObjectLog objectId version = do
+    db <- StoreSim get
+    Object{logs} <- liftMaybe "object not found" $ db !? objectId
+    pure $
+      fold
         [ filter (not . isKnown) $ toList @Seq replicaLog
         | replicaLog <- Map.elems logs
         ]
+
     where
       isKnown Op{opId} = opId ·≼ version
 
