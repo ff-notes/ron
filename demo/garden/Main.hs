@@ -1,6 +1,7 @@
 import           Control.Monad.Logger (MonadLogger, runStderrLoggingT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Tree (Tree (Node), drawTree)
+import           Data.Tree (Tree (Node))
+import           Data.Tree.View (drawTree)
 import           RON.Data.GTree (GTree)
 import qualified RON.Data.GTree as GTree
 import           RON.Store.Sqlite (runStore)
@@ -21,7 +22,7 @@ main = do
     case cmd of
       Show -> do
         tree <- loadTheTree db
-        liftIO $ putStrLn $ drawTree $ BSLC.unpack . serializeUuid <$> tree
+        liftIO $ drawTree $ BSLC.unpack . serializeUuid <$> tree
       Add parent -> runStore db $ GTree.insert theTreeRef parent
       RunNode _nodeOptions -> undefined
         -- runNode db nodeOptions

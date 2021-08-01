@@ -15,6 +15,7 @@ executable garden
     network-uri,
     optparse-applicative,
     text,
+    tree-view,
     unliftio,
     -- project
     ron-rdt,
