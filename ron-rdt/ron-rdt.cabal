@@ -53,6 +53,7 @@ library
     exposed-modules:
         RON.Data
         RON.Data.Experimental
+        RON.Data.GTree
         RON.Data.LWW
         RON.Data.ORSet
         RON.Data.ORSet.Experimental

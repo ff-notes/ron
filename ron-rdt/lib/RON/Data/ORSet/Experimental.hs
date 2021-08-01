@@ -95,24 +95,6 @@ toList :: (AsAtoms a, MonadE m) => ORSet a -> m [a]
 toList (ORSet rep) =
   traverse fromAtoms [payload | (_item, payload@(_:_)) <- Map.elems rep]
 
--- loadSet :: Ref (ORSet a) -> m (Set a)
--- loadSet ref = do
---   ops <- loadObjectLog ref
-  -- ORSet
-  -- stateFromFrame objectId = ORSet . \case
-    -- [] -> Map.empty
-    -- ops ->
-    --   Map.fromListWith
-    --     (maxOn fst)
-    --     [ (itemId, (opId, payload))
-    --     | Op{opId, refId, payload} <- ops
-    --     , opId /= objectId
-    --     , let
-    --       itemId
-    --         | refId == objectId = opId
-    --         | otherwise         = refId
-    --     ]
-
 type ORMap k v = ORSet (k, v)
 
 lookupLww :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)

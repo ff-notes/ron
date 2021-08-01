@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - `VersionVector`: operator (·≻)
+- Experimental `GTree` -- grow-only tree
 
 ### Fixed
 - Adapt to changes in RON.Prelude
