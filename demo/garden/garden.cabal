@@ -9,11 +9,11 @@ executable garden
   build-depends:
     -- global
     base,
+    bytestring,
     containers,
     monad-logger,
     network-uri,
     optparse-applicative,
-    pretty-simple,
     text,
     unliftio,
     -- project
