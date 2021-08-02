@@ -47,7 +47,7 @@ loadSubObjectLog ::
   (MonadE m, MonadStore m, Typeable a) => Ref a -> VV -> m [Op]
 loadSubObjectLog object@(Ref objectId path) version =
   errorContext ("loadSubObjectLog " <> show object) $ do
-    ops <- loadFullObjectLog objectId version
+    ops <- loadWholeObjectLog objectId version
     pure
       [ op{payload = payload'}
       | op@Op{opId, payload} <- ops

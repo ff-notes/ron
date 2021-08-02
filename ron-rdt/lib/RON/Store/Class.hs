@@ -17,7 +17,7 @@ class Monad m => MonadStore m where
   -- | Get all RON-object logs split by replicas.
   -- Replicas order is not guaranteed.
   -- Implementation SHOULD return object creation op.
-  loadFullObjectLog ::
+  loadWholeObjectLog ::
     -- | Object id
     UUID ->
     -- | Base version. To get object logs from the beginning, pass 'mempty'.

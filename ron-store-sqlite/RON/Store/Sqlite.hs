@@ -122,10 +122,10 @@ instance MonadUnliftIO m => MonadError Error (StoreT m) where
   catchError = catch
 
 instance (MonadLogger m, MonadUnliftIO m) => MonadStore (StoreT m) where
-  listObjects       = listObjects
-  appendPatch       = appendPatch
-  loadFullObjectLog = loadFullObjectLog
-  getObjectVersion  = undefined
+  listObjects         = listObjects
+  appendPatch         = appendPatch
+  loadWholeObjectLog  = loadWholeObjectLog
+  getObjectVersion    = undefined
 
 instance MonadTrans StoreT where
   lift = Store . lift @(ReaderT _) . lift @EpochClockT
@@ -148,10 +148,10 @@ appendPatch Patch{object, log} =
         Handle{onNewPatch} <- Store ask
         atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
-loadFullObjectLog ::
+loadWholeObjectLog ::
   (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
-loadFullObjectLog object version =
-  errorContext "loadFullObjectLog @Store" do
+loadWholeObjectLog object version =
+  errorContext "loadWholeObjectLog @Store" do
     ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
     pure
       [opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]

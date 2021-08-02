@@ -55,7 +55,7 @@ instance MonadStore StoreSim where
       atObject    = at object . non emptyObject
       atReplica   = at thisReplicaId . non Seq.empty
 
-  loadFullObjectLog objectId version = do
+  loadWholeObjectLog objectId version = do
     db <- StoreSim get
     Object{logs} <- liftMaybe "object not found" $ db !? objectId
     pure $
