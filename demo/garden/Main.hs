@@ -1,3 +1,4 @@
+import           Control.Monad (when)
 import           Control.Monad.Logger (MonadLogger, runStderrLoggingT)
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 import           Data.Tree (Tree (Node))
@@ -12,6 +13,7 @@ import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
 import           UnliftIO (MonadUnliftIO, liftIO)
 
+import           NetNode
 import           Options
 
 main :: IO ()
@@ -24,8 +26,7 @@ main = do
         tree <- loadTheTree db
         liftIO $ drawTree $ BSLC.unpack . serializeUuid <$> tree
       Add parent -> runStore db $ GTree.insert theTreeRef parent
-      RunNode _nodeOptions -> undefined
-        -- runNode db nodeOptions
+      RunNode nodeOptions -> runNode db nodeOptions
       RunUI _nodeOptions -> undefined
       --   forkLinked $ runNode db nodeOptions
       --   runUI' username db
@@ -41,3 +42,13 @@ theTreeId = $(UUID.liftName "theTree")
 
 theTreeRef :: Ref GTree
 theTreeRef = Ref theTreeId []
+
+runNode ::
+  (MonadFail m, MonadLogger m, MonadUnliftIO m) =>
+  Store.Handle -> NodeOptions -> m ()
+runNode db options@NodeOptions{listenPorts, peers} = do
+  when (null listenPorts && null peers) $
+    fail
+      "The peer must connect to other peers or listen for connections. \
+      \Specify `--listen` or `--peer`."
+  NetNode.workers db options

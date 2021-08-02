@@ -7,20 +7,22 @@ build-type: Simple
 
 executable garden
   build-depends:
-    -- global
+    aeson,
+    async,
     base,
     bytestring,
     containers,
     monad-logger,
     network-uri,
     optparse-applicative,
-    text,
-    tree-view,
-    unliftio,
-    -- project
     ron-rdt,
     ron-store-sqlite,
     ron,
+    stm,
+    text,
+    tree-view,
+    unliftio,
+    websockets,
   default-extensions:
     ApplicativeDo
     BlockArguments
@@ -28,7 +30,9 @@ executable garden
     LambdaCase
     NamedFieldPuns
     OverloadedStrings
+    RankNTypes
+    ScopedTypeVariables
     TemplateHaskell
   default-language: Haskell2010
   main-is: Main.hs
-  other-modules: Options
+  other-modules: Fork NetNode Options
