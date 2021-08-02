@@ -35,7 +35,7 @@ import           System.FilePath ((</>))
 import           System.Random.TF (newTFGen)
 import           System.Random.TF.Instances (random)
 
-import           RON.Data.VersionVector (VV, mkVV, (·≼))
+import           RON.Data.VersionVector (VV, (·≼))
 import           RON.Epoch (EpochClock, getCurrentEpochTime, runEpochClock)
 import           RON.Error (Error (..), MonadE, errorContext, liftEitherString,
                             throwErrorText, tryIO)
@@ -78,11 +78,6 @@ instance MonadStore Store where
   appendPatch = appendPatchFS
 
   loadWholeObjectLog = loadWholeObjectLogFS
-
-  getObjectVersion objectId =
-    errorContext "Store.getObjectVersion" $ do
-      patchNames <- getObjectPatches objectId
-      mkVV <$> for patchNames uuidFromFileName
 
 askObjectLogsDir :: MonadReader Handle m => UUID -> m FilePath
 askObjectLogsDir objectId =

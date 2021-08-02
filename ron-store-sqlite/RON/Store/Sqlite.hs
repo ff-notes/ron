@@ -125,7 +125,6 @@ instance (MonadLogger m, MonadUnliftIO m) => MonadStore (StoreT m) where
   listObjects         = listObjects
   appendPatch         = appendPatch
   loadWholeObjectLog  = loadWholeObjectLog
-  getObjectVersion    = undefined
 
 instance MonadTrans StoreT where
   lift = Store . lift @(ReaderT _) . lift @EpochClockT

@@ -15,10 +15,9 @@ import           Control.Lens (at, non, (<>=))
 import           Data.Generics.Labels ()
 import           Data.Map.Strict ((!?))
 import qualified Data.Map.Strict as Map
-import           Data.Sequence (Seq ((:|>)))
 import qualified Data.Sequence as Seq
 
-import           RON.Data.VersionVector (mkVV, (·≼))
+import           RON.Data.VersionVector ((·≼))
 import           RON.Error (Error (..), liftMaybe)
 import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
                             ReplicaClock, mkReplica)
@@ -66,11 +65,6 @@ instance MonadStore StoreSim where
 
     where
       isKnown Op{opId} = opId ·≼ version
-
-  getObjectVersion objectId = do
-    db <- StoreSim get
-    Object{logs} <- liftMaybe "object not found" $ db !? objectId
-    pure $ mkVV [opId | _ :|> Op{opId} <- Map.elems logs]
 
 emptyObject :: Object
 emptyObject = Object{logs = Map.empty}
