@@ -77,7 +77,7 @@ instance MonadStore Store where
 
   appendPatch = appendPatchFS
 
-  loadObjectLog = loadObjectLogFS
+  loadFullObjectLog = loadFullObjectLogFS
 
   getObjectVersion objectId =
     errorContext "Store.getObjectVersion" $ do
@@ -94,8 +94,8 @@ getObjectPatches objectId = do
   objectExists  <- tryIO $ doesDirectoryExist objectLogsDir
   if objectExists then tryIO $ listDirectory objectLogsDir else pure []
 
-loadObjectLogFS :: UUID -> VV -> Store [Op]
-loadObjectLogFS objectId version = do
+loadFullObjectLogFS :: UUID -> VV -> Store [Op]
+loadFullObjectLogFS objectId version = do
   objectLogsDir <- Store $ askObjectLogsDir objectId
   patchNames    <- getObjectPatches objectId
   fmap (fold . catMaybes) . for patchNames $ \patchName -> do

@@ -14,11 +14,13 @@ class Monad m => MonadStore m where
   -- | Append a sequence of operations to an object.
   appendPatch :: Patch -> m ()
 
-  -- | Get all object logs split by replicas. Replicas order is not guaranteed.
-  loadObjectLog ::
+  -- | Get all RON-object logs split by replicas.
+  -- Replicas order is not guaranteed.
+  -- Implementation SHOULD return object creation op.
+  loadFullObjectLog ::
     -- | Object id
     UUID ->
-    -- | Base version. To get full object logs, pass 'mempty'.
+    -- | Base version. To get object logs from the beginning, pass 'mempty'.
     VV ->
     m [Op]
 

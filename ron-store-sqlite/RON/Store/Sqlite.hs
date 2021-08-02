@@ -122,19 +122,19 @@ instance MonadUnliftIO m => MonadError Error (StoreT m) where
   catchError = catch
 
 instance (MonadLogger m, MonadUnliftIO m) => MonadStore (StoreT m) where
-  listObjects       = listObjects'
-  appendPatch       = appendPatch'
-  loadObjectLog     = loadObjectLog'
+  listObjects       = listObjects
+  appendPatch       = appendPatch
+  loadFullObjectLog = loadFullObjectLog
   getObjectVersion  = undefined
 
 instance MonadTrans StoreT where
   lift = Store . lift @(ReaderT _) . lift @EpochClockT
 
-listObjects' :: (MonadLogger m, MonadUnliftIO m) => StoreT m [UUID]
-listObjects' = errorContext "listObjects @Store" $ runDB selectDistinctObject
+listObjects :: (MonadLogger m, MonadUnliftIO m) => StoreT m [UUID]
+listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
-appendPatch' :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
-appendPatch' Patch{object, log} =
+appendPatch :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
+appendPatch Patch{object, log} =
   errorContext "appendPatch @Store" do
     opsInserted <-
       runDB $
@@ -148,10 +148,10 @@ appendPatch' Patch{object, log} =
         Handle{onNewPatch} <- Store ask
         atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
-loadObjectLog' ::
+loadFullObjectLog ::
   (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
-loadObjectLog' object version =
-  errorContext "loadObjectLog @Store" do
+loadFullObjectLog object version =
+  errorContext "loadFullObjectLog @Store" do
     ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
     pure
       [opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]
