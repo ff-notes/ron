@@ -13,8 +13,11 @@ import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
 import           UnliftIO (MonadUnliftIO, liftIO)
 
-import           NetNode
-import           Options
+import           Fork (forkLinked)
+import qualified NetNode
+import           Options (Command (Add, RunNode, RunUI, Show), NodeOptions (..),
+                          Options (..), parseOptions)
+import           UI (runUI)
 
 main :: IO ()
 main = do
@@ -27,9 +30,9 @@ main = do
         liftIO $ drawTree $ BSLC.unpack . serializeUuid <$> tree
       Add parent -> runStore db $ GTree.insert theTreeRef parent
       RunNode nodeOptions -> runNode db nodeOptions
-      RunUI _nodeOptions -> undefined
-      --   forkLinked $ runNode db nodeOptions
-      --   runUI' username db
+      RunUI nodeOptions -> do
+        forkLinked $ runNode db nodeOptions
+        runUI db
 
 loadTheTree :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m (Tree UUID)
 loadTheTree db =
