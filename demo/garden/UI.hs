@@ -4,9 +4,11 @@ import           Prelude hiding (id)
 
 import           Control.Monad.Logger (MonadLogger)
 import           Control.Monad.State.Strict (evalState, get, modify)
+import           Data.Function (on)
+import           Data.List (maximumBy)
 import           Data.Tree (Tree (Node))
-import           Graphics.Gloss (Display (InWindow), Picture, line, scale,
-                                 translate, white)
+import           Graphics.Gloss (Display (InWindow), Picture, circle, color,
+                                 line, red, scale, translate, white)
 import           Graphics.Gloss.Interface.IO.Game (Event, playIO)
 import qualified RON.Store.Sqlite as Store (Handle)
 import           RON.Types (UUID)
@@ -16,12 +18,12 @@ import           Database (loadTheTree)
 
 data Bud = Bud{id :: UUID, x :: Float, y :: Float}
 
-type World = Tree Bud
+data World = World{tree :: Tree Bud, target :: Maybe Bud}
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
 runUI db = do
   theTree <- loadTheTree db
-  let world = placeBuds theTree
+  let world = World{tree = placeBuds theTree, target = Nothing}
   liftIO $ playIO display white 30 world (pure . draw) onEvent onTick
 
   where
@@ -32,7 +34,7 @@ windowWidth  = 500
 windowHeight = 500
 
 draw :: World -> Picture
-draw tree = scaled where
+draw World{tree, target} = scaled where
 
   scaled =
     scale
@@ -42,7 +44,7 @@ draw tree = scaled where
 
   centered = translate (-centerX) (-centerY) basePicture
 
-  basePicture = mconcat $ walk tree
+  basePicture = mconcat $ targetPic : walk tree
 
   left    = minimum (x <$> tree)
   right   = maximum (x <$> tree)
@@ -55,15 +57,19 @@ draw tree = scaled where
   centerX = (left + right) / 2
   centerY = (top + bottom) / 2
 
-  padding = 10
-
   -- TODO a kind of zigomorphism?
   walk (Node Bud{x, y} subs) =
     [line [(x, y), (x', y')] | Node Bud{x = x', y = y'} _ <- subs]
     ++ concatMap walk subs
 
+  targetPic :: Picture
+  targetPic =
+    foldMap
+      (\Bud{x, y} -> translate x y $ color red $ circle targetRadius)
+      target
+
 onEvent :: Event -> World -> IO World
-onEvent _event = pure
+onEvent _event world@World{tree} = pure world{target = Just $ maximumOn y tree}
 
 onTick :: Float -> World -> IO World
 onTick _dt = pure
@@ -73,15 +79,26 @@ placeBuds = (`evalState` 0) . go 0 where
 
   go y (Node id subs) = do
     xLeft  <- get
-    subs'  <- traverse (go $ y + dy) subs
-    xRight <- subtract dx <$> get
-    modify (+ dx)
+    subs'  <- traverse (go $ y + levelHeight) subs
+    xRight <- subtract leafDistanceX <$> get
+    modify (+ leafDistanceX)
     let x =
           case subs of
             [] -> xLeft
             _  -> (xLeft + xRight) / 2
     pure $ Node Bud{id, x, y} subs'
 
-  dx = 10
+leafDistanceX :: Float
+leafDistanceX = 10
 
-  dy = 20
+levelHeight :: Float
+levelHeight = 20
+
+padding :: Float
+padding = 10
+
+targetRadius :: Float
+targetRadius = 9
+
+maximumOn :: (Foldable t, Ord b) => (a -> b) -> t a -> a
+maximumOn f = maximumBy (compare `on` f)
