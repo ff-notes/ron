@@ -8,19 +8,22 @@ import Data.Foldable (toList)
 import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
 import Data.Tree (Tree (Node))
-import Graphics.Gloss (Display (InWindow), Picture, circle, circleSolid, color,
-                       line, red, scale, text, translate, white)
+import Graphics.Gloss (Display (InWindow), Picture, Point, circle, circleSolid,
+                       color, line, red, translate, white)
 import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
 import Graphics.Gloss.Data.Vector (magV)
 import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
                                      invertViewPort, viewPortInit)
 import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
-                                         playIO)
+                                         Key (MouseButton), KeyState (Down),
+                                         MouseButton (LeftButton), playIO)
+import RON.Data.GTree qualified as GTree
+import RON.Store.Sqlite (runStore)
 import RON.Store.Sqlite qualified as Store (Handle)
 import RON.Types (UUID)
-import UnliftIO (MonadUnliftIO, liftIO)
+import UnliftIO (MonadUnliftIO, liftIO, withRunInIO)
 
-import Database (loadTheTree)
+import Database (loadTheTree, theTreeRef)
 
 data Bud = Bud{id :: UUID, x :: Float, y :: Float}
 
@@ -29,12 +32,13 @@ data World = World{tree :: Tree Bud, target :: Maybe Bud, viewPort :: ViewPort}
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
 runUI db = do
   theTree <- loadTheTree db
-  let
-    tree  = placeBuds theTree
-    world = World{tree, target = Nothing, viewPort = zoom tree}
-  liftIO $ playIO display white 30 world (pure . draw) onEvent onTick
-
+  let tree = placeBuds theTree
+  let worldInit = World{tree, target = Nothing, viewPort = zoom tree}
+  withRunInIO \run -> do
+    let onEvent' event world = run $ onEvent db event world
+    liftIO $ playIO display white 30 worldInit (pure . draw) onEvent' onTick
   where
+
     display = InWindow "RON Garden" (windowWidth, windowHeight) (400, 300)
 
 windowWidth, windowHeight :: Num n => n
@@ -80,24 +84,30 @@ zoom tree =
 
     center = ((left + right) / 2, (top + bottom) / 2)
 
-onEvent :: Event -> World -> IO World
-onEvent event world@World{viewPort = vp, tree} =
-  pure
+onEvent ::
+  (MonadLogger m, MonadUnliftIO m) => Store.Handle -> Event -> World -> m World
+onEvent db event world@World{viewPort = vp, tree, target} =
   case event of
-    EventKey{} -> world
-    EventMotion (invertViewPort vp -> m) -> world{target}
-      where
-        target =
-          fmap snd $
-          listToMaybe $
-          sortOn
-            fst
-            [ (d, bud)
-            | bud@Bud{x, y} <- toList tree
-            , let d = magV $ (x, y) Point.- m
-            , d < targetRadius
-            ]
-    EventResize{} -> world{target = Nothing}
+    EventKey (MouseButton LeftButton) Down _ _
+      | Just Bud{id = parent} <- target -> do
+          runStore db $ GTree.insert theTreeRef parent
+          pure world
+    EventKey{} -> pure world
+    EventMotion (invertViewPort vp -> m) ->
+      pure world{target = targetNear tree m}
+    EventResize{} -> pure world{target = Nothing}
+
+targetNear :: Tree Bud -> Point -> Maybe Bud
+targetNear tree m =
+  fmap snd $
+  listToMaybe $
+  sortOn
+    fst
+    [ (d, bud)
+    | bud@Bud{x, y} <- toList tree
+    , let d = magV $ (x, y) Point.- m
+    , d < targetRadius
+    ]
 
 onTick :: Float -> World -> IO World
 onTick _dt = pure
