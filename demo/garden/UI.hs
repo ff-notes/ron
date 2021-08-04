@@ -4,26 +4,31 @@ import           Prelude hiding (id)
 
 import           Control.Monad.Logger (MonadLogger)
 import           Control.Monad.State.Strict (evalState, get, modify)
-import           Data.Function (on)
-import           Data.List (maximumBy)
 import           Data.Tree (Tree (Node))
 import           Graphics.Gloss (Display (InWindow), Picture, circle, color,
-                                 line, red, scale, translate, white)
-import           Graphics.Gloss.Interface.IO.Game (Event, playIO)
+                                 line, red, translate, white)
+import           Graphics.Gloss.Data.ViewPort (ViewPort (..),
+                                               applyViewPortToPicture,
+                                               invertViewPort, viewPortInit)
+import           Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
+                                                   playIO)
 import qualified RON.Store.Sqlite as Store (Handle)
 import           RON.Types (UUID)
+import qualified RON.UUID as UUID
 import           UnliftIO (MonadUnliftIO, liftIO)
 
 import           Database (loadTheTree)
 
 data Bud = Bud{id :: UUID, x :: Float, y :: Float}
 
-data World = World{tree :: Tree Bud, target :: Maybe Bud}
+data World = World{tree :: Tree Bud, target :: Maybe Bud, viewPort :: ViewPort}
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
 runUI db = do
   theTree <- loadTheTree db
-  let world = World{tree = placeBuds theTree, target = Nothing}
+  let
+    tree  = placeBuds theTree
+    world = World{tree, target = Nothing, viewPort = zoom tree}
   liftIO $ playIO display white 30 world (pure . draw) onEvent onTick
 
   where
@@ -34,42 +39,52 @@ windowWidth  = 500
 windowHeight = 500
 
 draw :: World -> Picture
-draw World{tree, target} = scaled where
+draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
 
-  scaled =
-    scale
-      (windowWidth  / (baseWidth  + 2 * padding))
-      (windowHeight / (baseHeight + 2 * padding))
-      centered
-
-  centered = translate (-centerX) (-centerY) basePicture
-
-  basePicture = mconcat $ targetPic : walk tree
-
-  left    = minimum (x <$> tree)
-  right   = maximum (x <$> tree)
-  top     = maximum (y <$> tree)
-  bottom  = minimum (y <$> tree)
-
-  baseWidth  = right - left
-  baseHeight = top - bottom
-
-  centerX = (left + right) / 2
-  centerY = (top + bottom) / 2
+  pic = mconcat $ targetPic : walk tree
 
   -- TODO a kind of zigomorphism?
   walk (Node Bud{x, y} subs) =
     [line [(x, y), (x', y')] | Node Bud{x = x', y = y'} _ <- subs]
     ++ concatMap walk subs
 
-  targetPic :: Picture
   targetPic =
     foldMap
       (\Bud{x, y} -> translate x y $ color red $ circle targetRadius)
       target
 
+zoom :: Tree Bud -> ViewPort
+zoom tree =
+  viewPortInit
+    { viewPortTranslate = (-centerX, -centerY)
+    , viewPortScale     = min scaleX scaleY
+    }
+  where
+
+    scaleX = windowWidth  / (baseWidth  + 2 * padding)
+    scaleY = windowHeight / (baseHeight + 2 * padding)
+
+    left    = minimum $ x <$> tree
+    right   = maximum $ x <$> tree
+    top     = maximum $ y <$> tree
+    bottom  = minimum $ y <$> tree
+
+    baseWidth  = right - left
+    baseHeight = top - bottom
+
+    centerX = (left + right) / 2
+    centerY = (top + bottom) / 2
+
 onEvent :: Event -> World -> IO World
-onEvent _event world@World{tree} = pure world{target = Just $ maximumOn y tree}
+onEvent event world@World{viewPort} =
+  pure
+  case event of
+    EventKey{} -> world
+    EventMotion m ->
+      world{target = Just Bud{id = UUID.zero, x, y}}
+      where
+        (x, y) = invertViewPort viewPort m
+    EventResize{} -> world{target = Nothing}
 
 onTick :: Float -> World -> IO World
 onTick _dt = pure
@@ -84,8 +99,8 @@ placeBuds = (`evalState` 0) . go 0 where
     modify (+ leafDistanceX)
     let x =
           case subs of
-            [] -> xLeft
-            _  -> (xLeft + xRight) / 2
+            []  -> xLeft
+            _   -> (xLeft + xRight) / 2
     pure $ Node Bud{id, x, y} subs'
 
 leafDistanceX :: Float
@@ -99,6 +114,3 @@ padding = 10
 
 targetRadius :: Float
 targetRadius = 9
-
-maximumOn :: (Foldable t, Ord b) => (a -> b) -> t a -> a
-maximumOn f = maximumBy (compare `on` f)
