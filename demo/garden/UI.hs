@@ -7,6 +7,7 @@ import Control.Monad.State.Strict (evalState, get, modify)
 import Data.Foldable (toList)
 import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
+import Data.Traversable (for)
 import Data.Tree (Tree (Node))
 import Graphics.Gloss (Display (InWindow), Picture, Point, circle, circleSolid,
                        color, line, red, translate, white)
@@ -130,18 +131,25 @@ onTick db updates world = do
       pure $ reset theTree
 
 placeBuds :: Tree UUID -> Tree Bud
-placeBuds = (`evalState` 0) . go 0 where
+placeBuds =
+  (`evalState` {- x may be mutated by placement -} 0)
+  . go {- y is increasing recursively -} 0
+  where
 
-  go y (Node id subs) = do
-    xLeft   <- get
-    subs'   <- traverse (go $ y + levelHeight) subs
-    xRight  <- subtract leafDistanceX <$> get
-    modify (+ leafDistanceX)
-    let x =
-          case subs of
-            []  -> xLeft
-            _   -> (xLeft + xRight) / 2
-    pure $ Node Bud{id, x, y} subs'
+    go y (Node id subs) = do
+      xLeft <- get
+      subs' <-
+        case subs of
+          [] -> pure []
+          s:ss ->
+            (:) <$> go y' s
+                <*> for ss \sub -> modify (+ leafDistanceX) *> go y' sub
+      xRight <- get
+      let x = (xLeft + xRight) / 2
+      pure $ Node Bud{id, x, y} subs'
+
+      where
+        y' = y + levelHeight
 
 reset :: Tree UUID -> World
 reset ronTree = World{tree, viewPort = zoom tree, target = Nothing} where
