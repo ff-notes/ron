@@ -41,5 +41,6 @@ executable garden
     TemplateHaskell
     ViewPatterns
   default-language: Haskell2010
+  ghc-options: -O2 -threaded -rtsopts -with-rtsopts=-N
   main-is: Main.hs
   other-modules: Database Fork NetNode Options UI

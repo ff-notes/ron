@@ -27,18 +27,21 @@ import UnliftIO (MonadUnliftIO, TChan, atomically, liftIO, tryReadTChan,
 
 import Database (loadTheTree, theTreeRef)
 
+type Size = (Int, Int)
+
 data Bud = Bud{id :: UUID, x :: Float, y :: Float}
 
 data World = World
-  { tree      :: Tree Bud
-  , target    :: Maybe Bud
-  , viewPort  :: ViewPort
+  { target      :: Maybe Bud
+  , tree        :: Tree Bud
+  , viewPort    :: ViewPort
+  , windowSize  :: Size
   }
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
 runUI db = do
   theTree <- loadTheTree db
-  let worldInit = reset theTree
+  let worldInit = resetFromRon windowSize theTree
   updates <- fetchUpdates db
   withRunInIO \run -> do
     let onEvent' event world = run $ onEvent db event   world
@@ -48,11 +51,8 @@ runUI db = do
   where
 
     draw' = pure . draw
-    display = InWindow "RON Garden" (windowWidth, windowHeight) (400, 300)
-
-windowWidth, windowHeight :: Num n => n
-windowWidth  = 500
-windowHeight = 500
+    display = InWindow "RON Garden" windowSize (400, 300)
+    windowSize = (800, 500)
 
 draw :: World -> Picture
 draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
@@ -72,16 +72,16 @@ draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
       )
       target
 
-zoom :: Tree Bud -> ViewPort
-zoom tree =
+zoom :: Size -> Tree Bud -> ViewPort
+zoom (windowWidth, windowHeight) tree =
   viewPortInit
     { viewPortTranslate = Point.negate center
     , viewPortScale     = min scaleX scaleY
     }
   where
 
-    scaleX = windowWidth  / (baseWidth  + 2 * padding)
-    scaleY = windowHeight / (baseHeight + 2 * padding)
+    scaleX = fromIntegral windowWidth  / (baseWidth  + 2 * padding)
+    scaleY = fromIntegral windowHeight / (baseHeight + 2 * padding)
 
     left    = minimum $ x <$> tree
     right   = maximum $ x <$> tree
@@ -104,7 +104,7 @@ onEvent db event world@World{viewPort = vp, tree, target} =
     EventKey{} -> pure world
     EventMotion (invertViewPort vp -> m) ->
       pure world{target = targetNear tree m}
-    EventResize{} -> pure world{target = Nothing}
+    EventResize windowSize -> pure $ reset windowSize tree
 
 targetNear :: Tree Bud -> Point -> Maybe Bud
 targetNear tree m =
@@ -121,14 +121,14 @@ targetNear tree m =
 onTick ::
   (MonadLogger m, MonadUnliftIO m) =>
   Store.Handle -> TChan a -> World -> m World
-onTick db updates world = do
+onTick db updates world@World{windowSize} = do
   mupdate <- atomically $ tryReadTChan updates
   case mupdate of
     Nothing -> pure world
     Just _patch -> do
       -- TODO apply only patch
       theTree <- loadTheTree db
-      pure $ reset theTree
+      pure $ resetFromRon windowSize theTree
 
 placeBuds :: Tree UUID -> Tree Bud
 placeBuds =
@@ -151,9 +151,12 @@ placeBuds =
       where
         y' = y + levelHeight
 
-reset :: Tree UUID -> World
-reset ronTree = World{tree, viewPort = zoom tree, target = Nothing} where
-  tree = placeBuds ronTree
+resetFromRon :: Size -> Tree UUID -> World
+resetFromRon windowSize ronTree = reset windowSize $ placeBuds ronTree
+
+reset :: Size -> Tree Bud -> World
+reset windowSize tree =
+  World{tree, windowSize, viewPort = zoom windowSize tree, target = Nothing}
 
 leafDistanceX :: Float
 leafDistanceX = 10
