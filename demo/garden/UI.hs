@@ -4,9 +4,14 @@ import           Prelude hiding (id)
 
 import           Control.Monad.Logger (MonadLogger)
 import           Control.Monad.State.Strict (evalState, get, modify)
+import           Data.Foldable (toList)
+import           Data.List (sortOn)
+import           Data.Maybe (listToMaybe)
 import           Data.Tree (Tree (Node))
 import           Graphics.Gloss (Display (InWindow), Picture, circle, color,
                                  line, red, translate, white)
+import qualified Graphics.Gloss.Data.Point.Arithmetic as Point
+import           Graphics.Gloss.Data.Vector (magV)
 import           Graphics.Gloss.Data.ViewPort (ViewPort (..),
                                                applyViewPortToPicture,
                                                invertViewPort, viewPortInit)
@@ -14,7 +19,6 @@ import           Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion,
                                                    playIO)
 import qualified RON.Store.Sqlite as Store (Handle)
 import           RON.Types (UUID)
-import qualified RON.UUID as UUID
 import           UnliftIO (MonadUnliftIO, liftIO)
 
 import           Database (loadTheTree)
@@ -56,7 +60,7 @@ draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
 zoom :: Tree Bud -> ViewPort
 zoom tree =
   viewPortInit
-    { viewPortTranslate = (-centerX, -centerY)
+    { viewPortTranslate = Point.negate center
     , viewPortScale     = min scaleX scaleY
     }
   where
@@ -72,18 +76,25 @@ zoom tree =
     baseWidth  = right - left
     baseHeight = top - bottom
 
-    centerX = (left + right) / 2
-    centerY = (top + bottom) / 2
+    center = ((left + right) / 2, (top + bottom) / 2)
 
 onEvent :: Event -> World -> IO World
-onEvent event world@World{viewPort} =
+onEvent event world@World{viewPort = vp, tree} =
   pure
   case event of
     EventKey{} -> world
-    EventMotion m ->
-      world{target = Just Bud{id = UUID.zero, x, y}}
+    EventMotion (invertViewPort vp -> m) -> world{target}
       where
-        (x, y) = invertViewPort viewPort m
+        target =
+          fmap snd $
+          listToMaybe $
+          sortOn
+            fst
+            [ (d, bud)
+            | bud@Bud{x, y} <- toList tree
+            , let d = magV $ (x, y) Point.- m
+            , d < targetRadius
+            ]
     EventResize{} -> world{target = Nothing}
 
 onTick :: Float -> World -> IO World
@@ -93,9 +104,9 @@ placeBuds :: Tree UUID -> Tree Bud
 placeBuds = (`evalState` 0) . go 0 where
 
   go y (Node id subs) = do
-    xLeft  <- get
-    subs'  <- traverse (go $ y + levelHeight) subs
-    xRight <- subtract leafDistanceX <$> get
+    xLeft   <- get
+    subs'   <- traverse (go $ y + levelHeight) subs
+    xRight  <- subtract leafDistanceX <$> get
     modify (+ leafDistanceX)
     let x =
           case subs of
