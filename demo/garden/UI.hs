@@ -18,27 +18,35 @@ import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResi
                                          Key (MouseButton), KeyState (Down),
                                          MouseButton (LeftButton), playIO)
 import RON.Data.GTree qualified as GTree
-import RON.Store.Sqlite (runStore)
+import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store (Handle)
 import RON.Types (UUID)
-import UnliftIO (MonadUnliftIO, liftIO, withRunInIO)
+import UnliftIO (MonadUnliftIO, TChan, atomically, liftIO, tryReadTChan,
+                 withRunInIO)
 
 import Database (loadTheTree, theTreeRef)
 
 data Bud = Bud{id :: UUID, x :: Float, y :: Float}
 
-data World = World{tree :: Tree Bud, target :: Maybe Bud, viewPort :: ViewPort}
+data World = World
+  { tree      :: Tree Bud
+  , target    :: Maybe Bud
+  , viewPort  :: ViewPort
+  }
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
 runUI db = do
   theTree <- loadTheTree db
-  let tree = placeBuds theTree
-  let worldInit = World{tree, target = Nothing, viewPort = zoom tree}
+  let worldInit = reset theTree
+  updates <- fetchUpdates db
   withRunInIO \run -> do
-    let onEvent' event world = run $ onEvent db event world
-    liftIO $ playIO display white 30 worldInit (pure . draw) onEvent' onTick
+    let onEvent' event world = run $ onEvent db event   world
+    let onTick'  _dt   world = run $ onTick  db updates world
+    liftIO $ playIO display white 30 worldInit draw' onEvent' onTick'
+
   where
 
+    draw' = pure . draw
     display = InWindow "RON Garden" (windowWidth, windowHeight) (400, 300)
 
 windowWidth, windowHeight :: Num n => n
@@ -91,7 +99,7 @@ onEvent db event world@World{viewPort = vp, tree, target} =
     EventKey (MouseButton LeftButton) Down _ _
       | Just Bud{id = parent} <- target -> do
           runStore db $ GTree.insert theTreeRef parent
-          pure world
+          pure world -- TODO optimistic UI: apply immediately
     EventKey{} -> pure world
     EventMotion (invertViewPort vp -> m) ->
       pure world{target = targetNear tree m}
@@ -109,8 +117,17 @@ targetNear tree m =
     , d < targetRadius
     ]
 
-onTick :: Float -> World -> IO World
-onTick _dt = pure
+onTick ::
+  (MonadLogger m, MonadUnliftIO m) =>
+  Store.Handle -> TChan a -> World -> m World
+onTick db updates world = do
+  mupdate <- atomically $ tryReadTChan updates
+  case mupdate of
+    Nothing -> pure world
+    Just _patch -> do
+      -- TODO apply only patch
+      theTree <- loadTheTree db
+      pure $ reset theTree
 
 placeBuds :: Tree UUID -> Tree Bud
 placeBuds = (`evalState` 0) . go 0 where
@@ -125,6 +142,10 @@ placeBuds = (`evalState` 0) . go 0 where
             []  -> xLeft
             _   -> (xLeft + xRight) / 2
     pure $ Node Bud{id, x, y} subs'
+
+reset :: Tree UUID -> World
+reset ronTree = World{tree, viewPort = zoom tree, target = Nothing} where
+  tree = placeBuds ronTree
 
 leafDistanceX :: Float
 leafDistanceX = 10
