@@ -3,9 +3,10 @@ module UI (runUI) where
 import           Prelude hiding (id)
 
 import           Control.Monad.Logger (MonadLogger)
-import           Control.Monad.State.Strict (State, evalState, get, modify)
+import           Control.Monad.State.Strict (evalState, get, modify)
 import           Data.Tree (Tree (Node))
-import           Graphics.Gloss (Display (InWindow), Picture, line, white)
+import           Graphics.Gloss (Display (InWindow), Picture, line, scale,
+                                 translate, white)
 import           Graphics.Gloss.Interface.IO.Game (Event, playIO)
 import qualified RON.Store.Sqlite as Store (Handle)
 import           RON.Types (UUID)
@@ -31,7 +32,31 @@ windowWidth  = 500
 windowHeight = 500
 
 draw :: World -> Picture
-draw = mconcat . walk where
+draw tree = scaled where
+
+  scaled =
+    scale
+      (windowWidth  / (baseWidth  + 2 * padding))
+      (windowHeight / (baseHeight + 2 * padding))
+      centered
+
+  centered = translate (-centerX) (-centerY) basePicture
+
+  basePicture = mconcat $ walk tree
+
+  left    = minimum (x <$> tree)
+  right   = maximum (x <$> tree)
+  top     = maximum (y <$> tree)
+  bottom  = minimum (y <$> tree)
+
+  baseWidth  = right - left
+  baseHeight = top - bottom
+
+  centerX = (left + right) / 2
+  centerY = (top + bottom) / 2
+
+  padding = 10
+
   -- TODO a kind of zigomorphism?
   walk (Node Bud{x, y} subs) =
     [line [(x, y), (x', y')] | Node Bud{x = x', y = y'} _ <- subs]
@@ -46,7 +71,6 @@ onTick _dt = pure
 placeBuds :: Tree UUID -> Tree Bud
 placeBuds = (`evalState` 0) . go 0 where
 
-  go :: Float -> Tree UUID -> State Float (Tree Bud)
   go y (Node id subs) = do
     xLeft  <- get
     subs'  <- traverse (go $ y + dy) subs

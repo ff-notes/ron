@@ -29,6 +29,7 @@ executable garden
     ApplicativeDo
     BlockArguments
     EmptyCase
+    FlexibleContexts
     LambdaCase
     NamedFieldPuns
     OverloadedStrings
