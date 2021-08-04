@@ -54,7 +54,10 @@ draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
 
   targetPic =
     foldMap
-      (\Bud{x, y} -> translate x y $ color red $ circle targetRadius)
+      ( \Bud{x, y} ->
+          translate x y $ color red $ circle targetRadius <> circleSolid 1
+          -- TODO <> text (show id)
+      )
       target
 
 zoom :: Tree Bud -> ViewPort
@@ -124,4 +127,4 @@ padding :: Float
 padding = 10
 
 targetRadius :: Float
-targetRadius = 9
+targetRadius = 8
