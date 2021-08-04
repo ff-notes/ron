@@ -1,27 +1,26 @@
 module UI (runUI) where
 
-import           Prelude hiding (id)
+import Prelude hiding (id)
 
-import           Control.Monad.Logger (MonadLogger)
-import           Control.Monad.State.Strict (evalState, get, modify)
-import           Data.Foldable (toList)
-import           Data.List (sortOn)
-import           Data.Maybe (listToMaybe)
-import           Data.Tree (Tree (Node))
-import           Graphics.Gloss (Display (InWindow), Picture, circle, color,
-                                 line, red, translate, white)
-import qualified Graphics.Gloss.Data.Point.Arithmetic as Point
-import           Graphics.Gloss.Data.Vector (magV)
-import           Graphics.Gloss.Data.ViewPort (ViewPort (..),
-                                               applyViewPortToPicture,
-                                               invertViewPort, viewPortInit)
-import           Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
-                                                   playIO)
-import qualified RON.Store.Sqlite as Store (Handle)
-import           RON.Types (UUID)
-import           UnliftIO (MonadUnliftIO, liftIO)
+import Control.Monad.Logger (MonadLogger)
+import Control.Monad.State.Strict (evalState, get, modify)
+import Data.Foldable (toList)
+import Data.List (sortOn)
+import Data.Maybe (listToMaybe)
+import Data.Tree (Tree (Node))
+import Graphics.Gloss (Display (InWindow), Picture, circle, circleSolid, color,
+                       line, red, scale, text, translate, white)
+import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
+import Graphics.Gloss.Data.Vector (magV)
+import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
+                                     invertViewPort, viewPortInit)
+import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
+                                         playIO)
+import RON.Store.Sqlite qualified as Store (Handle)
+import RON.Types (UUID)
+import UnliftIO (MonadUnliftIO, liftIO)
 
-import           Database (loadTheTree)
+import Database (loadTheTree)
 
 data Bud = Bud{id :: UUID, x :: Float, y :: Float}
 

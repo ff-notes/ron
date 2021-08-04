@@ -30,6 +30,7 @@ executable garden
     BlockArguments
     EmptyCase
     FlexibleContexts
+    ImportQualifiedPost
     LambdaCase
     NamedFieldPuns
     OverloadedStrings
