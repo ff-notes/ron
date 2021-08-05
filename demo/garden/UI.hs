@@ -13,8 +13,7 @@ import Data.Maybe (listToMaybe)
 import Data.Tree (Tree (Node))
 import Data.Word (Word64)
 import Graphics.Gloss (Color, Display (InWindow), Picture, Point, circle,
-                       circleSolid, color, line, makeColor, red, translate,
-                       white)
+                       circleSolid, color, line, makeColor, translate, white)
 import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
 import Graphics.Gloss.Data.Vector (magV)
 import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
@@ -74,10 +73,7 @@ draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
 
   targetPic =
     foldMap
-      ( \Bud{x, y} ->
-          translate x y $ color red $ circle targetRadius <> circleSolid 1
-          -- TODO <> text (show id)
-      )
+      (\Bud{x, y} -> translate x y $ circle targetRadius <> circleSolid 1)
       target
 
 zoom :: Size -> Tree Bud -> ViewPort
