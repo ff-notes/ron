@@ -7,7 +7,6 @@ import Control.Monad.State.Strict (evalState, get, modify)
 import Data.Foldable (toList)
 import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
-import Data.Traversable (for)
 import Data.Tree (Tree (Node))
 import Graphics.Gloss (Display (InWindow), Picture, Point, circle, circleSolid,
                        color, line, red, translate, white)
@@ -83,6 +82,7 @@ zoom (windowWidth, windowHeight) tree =
     scaleX = fromIntegral windowWidth  / (baseWidth  + 2 * padding)
     scaleY = fromIntegral windowHeight / (baseHeight + 2 * padding)
 
+    -- TODO a single run?
     left    = minimum $ x <$> tree
     right   = maximum $ x <$> tree
     top     = maximum $ y <$> tree
@@ -138,18 +138,19 @@ placeBuds =
 
     go y (Node id subs) = do
       xLeft <- get
-      subs' <-
-        case subs of
-          [] -> pure []
-          s:ss ->
-            (:) <$> go y' s
-                <*> for ss \sub -> modify (+ leafDistanceX) *> go y' sub
+      subs' <- intersperseSequence (modify (+ leafDistanceX)) $ map (go y') subs
       xRight <- get
       let x = (xLeft + xRight) / 2
       pure $ Node Bud{id, x, y} subs'
 
       where
         y' = y + levelHeight
+
+-- | Like 'sequence', but original list is interspersed with additional action
+intersperseSequence :: Applicative f => f a -> [f b] -> f [b]
+intersperseSequence inter = \case
+  []    -> pure []
+  a:as  -> (:) <$> a <*> traverse (inter *>) as
 
 resetFromRon :: Size -> Tree UUID -> World
 resetFromRon windowSize ronTree = reset windowSize $ placeBuds ronTree
