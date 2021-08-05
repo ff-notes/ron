@@ -2,14 +2,19 @@ module UI (runUI) where
 
 import Prelude hiding (id)
 
+import Control.Lens ((^.))
 import Control.Monad.Logger (MonadLogger)
 import Control.Monad.State.Strict (evalState, get, modify)
+import Data.Colour.RGBSpace.HSV (hsv)
+import Data.Colour.SRGB (RGB (..))
 import Data.Foldable (toList)
 import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
 import Data.Tree (Tree (Node))
-import Graphics.Gloss (Display (InWindow), Picture, Point, circle, circleSolid,
-                       color, line, red, translate, white)
+import Data.Word (Word64)
+import Graphics.Gloss (Color, Display (InWindow), Picture, Point, circle,
+                       circleSolid, color, line, makeColor, red, translate,
+                       white)
 import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
 import Graphics.Gloss.Data.Vector (magV)
 import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
@@ -21,6 +26,8 @@ import RON.Data.GTree qualified as GTree
 import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store (Handle)
 import RON.Types (UUID)
+import RON.UUID.Experimental (origin)
+import RON.Util.Word (safeCast)
 import UnliftIO (MonadUnliftIO, TChan, atomically, liftIO, tryReadTChan,
                  withRunInIO)
 
@@ -60,7 +67,9 @@ draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
 
   -- TODO a kind of zigomorphism?
   walk (Node Bud{x, y} subs) =
-    [line [(x, y), (x', y')] | Node Bud{x = x', y = y'} _ <- subs]
+    [ color (colorFromOrigin id') $ line [(x, y), (x', y')]
+    | Node Bud{x = x', y = y', id = id'} _ <- subs
+    ]
     ++ concatMap walk subs
 
   targetPic =
@@ -170,3 +179,11 @@ padding = 10
 
 targetRadius :: Float
 targetRadius = 8
+
+colorFromOrigin :: UUID -> Color
+colorFromOrigin u = makeColor r g b 1 where
+  RGB r g b =
+    hsv
+      (fromIntegral (safeCast (u ^. origin) `mod` 360 :: Word64) :: Float)
+      1
+      0.8
