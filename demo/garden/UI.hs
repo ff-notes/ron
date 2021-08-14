@@ -15,7 +15,7 @@ import Data.Word (Word64)
 import Graphics.Gloss (Color, Display (InWindow), Picture, Point, circle,
                        circleSolid, color, line, makeColor, translate, white)
 import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
-import Graphics.Gloss.Data.Vector (magV)
+import Graphics.Gloss.Data.Vector (magV, normalizeV, Vector)
 import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
                                      invertViewPort, viewPortInit)
 import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
@@ -41,6 +41,7 @@ data World = World
   , tree        :: Tree Bud
   , viewPort    :: ViewPort
   , windowSize  :: Size
+  , cursorPos   :: Vector
   }
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
@@ -59,21 +60,46 @@ runUI db = do
     display = InWindow "RON Garden" windowSize (400, 300)
     windowSize = (800, 500)
 
+dstV (x, y) (x', y') = sqrt (((x - x') ** 2) + ((y - y') ** 2))
+sclV (x, y) scl = (x * scl, y * scl)
+addV (x, y) (x', y') = (x + x', y + y')
+
+transformMouseCursor :: World -> Vector -> Vector
+
+transformMouseCursor world@World{cursorPos, windowSize} pos = addV pos $ sclV vec len where
+  dst = dstV cursorPos pos
+  area = 250
+  lensing = 3
+  vecN = normalizeV vec
+  vec = pos Point.- cursorPos
+  len
+    | dst < area = lensing - 1
+    | dst < lensing * area =
+      let
+        lensingP = (1 -) $ (dst - area) / (lensing * area)
+      in
+        (lensingP * lensing) - 1
+    | otherwise = 0
+
+
 draw :: World -> Picture
-draw World{tree, target, viewPort} = applyViewPortToPicture viewPort pic where
+draw w@World{tree, target, viewPort, windowSize=(wx, wy), cursorPos} = applyViewPortToPicture viewPort pic where
 
   pic = mconcat $ targetPic : walk tree
 
+  tp = transformMouseCursor w
+  stranslate x y = let (x', y') = tp (x, y) in translate x' y'
+
   -- TODO a kind of zigomorphism?
   walk (Node Bud{x, y} subs) =
-    [ color (colorFromOrigin id') $ line [(x, y), (x', y')]
+    [ color (colorFromOrigin id') $ line $ map tp  [(x, y), (x', y')]
     | Node Bud{x = x', y = y', id = id'} _ <- subs
     ]
     ++ concatMap walk subs
 
   targetPic =
     foldMap
-      (\Bud{x, y} -> translate x y $ circle targetRadius <> circleSolid 1)
+      (\Bud{x, y} -> stranslate x y $ circle targetRadius <> circleSolid 1)
       target
 
 zoom :: Size -> Tree Bud -> ViewPort
@@ -108,7 +134,7 @@ onEvent db event world@World{viewPort = vp, tree, target} =
           pure world -- TODO optimistic UI: apply immediately
     EventKey{} -> pure world
     EventMotion (invertViewPort vp -> m) ->
-      pure world{target = targetNear tree m}
+      pure world{target = targetNear tree m, cursorPos = m}
     EventResize windowSize -> pure $ reset windowSize tree
 
 targetNear :: Tree Bud -> Point -> Maybe Bud
@@ -133,7 +159,7 @@ onTick db updates world@World{windowSize} = do
     Just _patch -> do
       -- TODO apply only patch
       theTree <- loadTheTree db
-      pure $ resetFromRon windowSize theTree
+      pure $ world{tree = placeBuds theTree}
 
 placeBuds :: Tree UUID -> Tree Bud
 placeBuds =
@@ -162,7 +188,7 @@ resetFromRon windowSize ronTree = reset windowSize $ placeBuds ronTree
 
 reset :: Size -> Tree Bud -> World
 reset windowSize tree =
-  World{tree, windowSize, viewPort = zoom windowSize tree, target = Nothing}
+  World{tree, windowSize, viewPort = zoom windowSize tree, target = Nothing, cursorPos = (-1000,-1000)}
 
 leafDistanceX :: Float
 leafDistanceX = 10
