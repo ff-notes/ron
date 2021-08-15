@@ -72,10 +72,8 @@ transformMouseCursor cursorPos pos = pos Point.+ len Point.* vec where
   len
     | dst < area = lensing - 1
     | dst < lensing * area =
-      let
-        lensingP = (1 -) $ (dst - area) / (lensing * area)
-      in
-        (lensingP * lensing) - 1
+        let lensingP = (1 -) $ (dst - area) / (lensing * area)
+        in (lensingP * lensing) - 1
     | otherwise = 0
 
 draw :: World -> Picture
