@@ -15,7 +15,7 @@ import Data.Word (Word64)
 import Graphics.Gloss (Color, Display (InWindow), Picture, Point, circle,
                        circleSolid, color, line, makeColor, translate, white)
 import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
-import Graphics.Gloss.Data.Vector (magV, normalizeV, Vector)
+import Graphics.Gloss.Data.Vector (magV)
 import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
                                      invertViewPort, viewPortInit)
 import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
@@ -41,7 +41,7 @@ data World = World
   , tree        :: Tree Bud
   , viewPort    :: ViewPort
   , windowSize  :: Size
-  , cursorPos   :: Vector
+  , cursorPos   :: Point
   }
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
@@ -60,17 +60,14 @@ runUI db = do
     display = InWindow "RON Garden" windowSize (400, 300)
     windowSize = (800, 500)
 
-dstV (x, y) (x', y') = sqrt (((x - x') ** 2) + ((y - y') ** 2))
-sclV (x, y) scl = (x * scl, y * scl)
-addV (x, y) (x', y') = (x + x', y + y')
+dist :: Point -> Point -> Float
+dist p q = magV $ p Point.- q
 
-transformMouseCursor :: World -> Vector -> Vector
-
-transformMouseCursor world@World{cursorPos, windowSize} pos = addV pos $ sclV vec len where
-  dst = dstV cursorPos pos
+transformMouseCursor :: Point -> Point -> Point
+transformMouseCursor cursorPos pos = pos Point.+ len Point.* vec where
+  dst = dist cursorPos pos
   area = 250
   lensing = 3
-  vecN = normalizeV vec
   vec = pos Point.- cursorPos
   len
     | dst < area = lensing - 1
@@ -81,26 +78,28 @@ transformMouseCursor world@World{cursorPos, windowSize} pos = addV pos $ sclV ve
         (lensingP * lensing) - 1
     | otherwise = 0
 
-
 draw :: World -> Picture
-draw w@World{tree, target, viewPort, windowSize=(wx, wy), cursorPos} = applyViewPortToPicture viewPort pic where
+draw World{tree, target, viewPort, cursorPos} =
+  applyViewPortToPicture viewPort pic
+  where
 
-  pic = mconcat $ targetPic : walk tree
+    pic = mconcat $ targetPic : walk tree
 
-  tp = transformMouseCursor w
-  stranslate x y = let (x', y') = tp (x, y) in translate x' y'
+    translatePos = transformMouseCursor cursorPos
 
-  -- TODO a kind of zigomorphism?
-  walk (Node Bud{x, y} subs) =
-    [ color (colorFromOrigin id') $ line $ map tp  [(x, y), (x', y')]
-    | Node Bud{x = x', y = y', id = id'} _ <- subs
-    ]
-    ++ concatMap walk subs
+    stranslate x y = let (x', y') = translatePos (x, y) in translate x' y'
 
-  targetPic =
-    foldMap
-      (\Bud{x, y} -> stranslate x y $ circle targetRadius <> circleSolid 1)
-      target
+    -- TODO a kind of zigomorphism?
+    walk (Node Bud{x, y} subs) =
+      [ color (colorFromOrigin id') $ line $ map translatePos [(x, y), (x', y')]
+      | Node Bud{x = x', y = y', id = id'} _ <- subs
+      ]
+      ++ concatMap walk subs
+
+    targetPic =
+      foldMap
+        (\Bud{x, y} -> stranslate x y $ circle targetRadius <> circleSolid 1)
+        target
 
 zoom :: Size -> Tree Bud -> ViewPort
 zoom (windowWidth, windowHeight) tree =
@@ -145,14 +144,14 @@ targetNear tree m =
     fst
     [ (d, bud)
     | bud@Bud{x, y} <- toList tree
-    , let d = magV $ (x, y) Point.- m
+    , let d = dist (x, y) m
     , d < targetRadius
     ]
 
 onTick ::
   (MonadLogger m, MonadUnliftIO m) =>
   Store.Handle -> TChan a -> World -> m World
-onTick db updates world@World{windowSize} = do
+onTick db updates world = do
   mupdate <- atomically $ tryReadTChan updates
   case mupdate of
     Nothing -> pure world
