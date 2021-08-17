@@ -66,15 +66,12 @@ dist p q = magV $ p Point.- q
 transformMouseCursor :: Point -> Point -> Point
 transformMouseCursor cursorPos pos = pos Point.+ len Point.* vec where
   dst = dist cursorPos pos
-  area = 250
+  area = 800
   lensing = 3
   vec = pos Point.- cursorPos
   len
-    | dst < area = lensing - 1
-    | dst < lensing * area =
-        let lensingP = (1 -) $ (dst - area) / (lensing * area)
-        in (lensingP * lensing) - 1
-    | otherwise = 0
+    | dst < area  = let lensingP = 1 - (dst / area) in (lensingP ** 2) * lensing
+    | otherwise   = 0
 
 draw :: World -> Picture
 draw World{tree, target, viewPort, cursorPos} =
