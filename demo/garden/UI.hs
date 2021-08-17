@@ -63,18 +63,15 @@ runUI db = do
 dist :: Point -> Point -> Float
 dist p q = magV $ p Point.- q
 
-transformMouseCursor :: World -> Vector -> Vector
-
-transformMouseCursor world@World{cursorPos, windowSize} pos = addV pos $ sclV vec len where
-  dst = dstV cursorPos pos
+transformMouseCursor :: Point -> Point -> Point
+transformMouseCursor cursorPos pos = pos Point.+ len Point.* vec where
+  dst = dist cursorPos pos
   area = 800
   lensing = 3
   vec = pos Point.- cursorPos
   len
-    | dst < area =
-      let lensingP = 1 - (dst / area)
-      in ((lensingP ** 2) * lensing)
-    | otherwise = 0
+    | dst < area  = let lensingP = 1 - (dst / area) in (lensingP ** 2) * lensing
+    | otherwise   = 0
 
 draw :: World -> Picture
 draw World{tree, target, viewPort, cursorPos} =
