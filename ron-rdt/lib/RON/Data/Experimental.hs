@@ -35,10 +35,10 @@ class (Replicated (Rep a)) => ReplicatedObject a where
 
   view ::
     MonadE m =>
-      -- | Object id
-      UUID ->
-      Rep a ->
-      m a
+    -- | Object id
+    UUID ->
+    Rep a ->
+    m a
 
 class AsAtom a where
   toAtom   :: a -> Atom
@@ -48,12 +48,19 @@ instance AsAtom Atom where
   toAtom = id
   fromAtom = pure
 
+instance AsAtom UUID where
+  toAtom = AUuid
+
+  fromAtom = \case
+    AUuid u -> pure u
+    a       -> throwErrorText $ "Expected UUID atom, got " <> show a
+
 instance AsAtom Text where
   toAtom = AString
 
   fromAtom = \case
-      AString t -> pure t
-      a         -> throwErrorText $ "Expected string atom, got " <> show a
+    AString t -> pure t
+    a         -> throwErrorText $ "Expected string atom, got " <> show a
 
 class AsAtoms a where
   toAtoms   :: a -> [Atom]
