@@ -12,7 +12,6 @@ import qualified RON.Epoch as Epoch
 import           RON.Error (errorContext, throwError)
 import           RON.Event (TimeVariety (Epoch), decodeEvent, timeValue,
                             timeVariety)
-import           RON.Types (Payload)
 
 data MessageView = MessageView
   { postTime :: UTCTime
@@ -27,7 +26,7 @@ data MessageContent = MessageContent
   deriving (Show)
 
 instance ReplicatedObject MessageView where
-  type Rep MessageView = ORMap Text Payload
+  type Rep MessageView = ORMap Text Text
 
   view objectId ormap =
     errorContext "view @MessageView" $ do
@@ -37,8 +36,8 @@ instance ReplicatedObject MessageView where
         case timeVariety time of
           Epoch -> pure $ Epoch.decode $ timeValue time
           _     -> throwError "objectId in not an epoch event"
-      username <- ORMap.lookupLww' "username" ormap
-      text     <- ORMap.lookupLww' "text"     ormap
+      username <- ORMap.lookupDecodeLwwThrow "username" ormap
+      text     <- ORMap.lookupDecodeLwwThrow "text"     ormap
       pure MessageView{postTime, content = MessageContent{username, text}}
 
 data Env = Env

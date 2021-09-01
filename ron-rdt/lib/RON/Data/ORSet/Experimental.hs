@@ -14,7 +14,9 @@ module RON.Data.ORSet.Experimental (
   add_,
   empty,
   lookupLww,
-  lookupLww',
+  lookupLwwThrow,
+  lookupDecodeLww,
+  lookupDecodeLwwThrow,
   lookupSet,
   toList,
 ) where
@@ -97,23 +99,27 @@ toList (ORSet rep) =
 
 type ORMap k v = ORSet (k, v)
 
-lookupLww :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)
-lookupLww key (ORSet s) = do
-  traverse fromAtoms $
-    snd <$>
-    maximumMayOn
-      fst
-      [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
+lookupLww :: AsAtom k => k -> ORMap k v -> Maybe Payload
+lookupLww key (ORSet s) =
+  snd <$>
+  maximumMayOn
+    fst
+    [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
 
--- | Like 'lookupLww' but assert that key exists.
-lookupLww' :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k Payload -> m v
-lookupLww' key obj =
-  do
-    mAtoms <- lookupLww key obj
-    atoms  <- liftMaybe ("key " <> ashow key <> " must present") mAtoms
-    fromAtoms atoms
+-- | Like 'lookupLww' but also decode payload.
+lookupDecodeLww ::
+  (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)
+lookupDecodeLww key = traverse fromAtoms . lookupLww key
+
+lookupLwwThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m Payload
+lookupLwwThrow key obj =
+  liftMaybe ("key " <> showAtom key <> " must present") $ lookupLww key obj
   where
-    ashow = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom
+    showAtom = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom
+
+-- | Like 'lookupDecodeLww' but assert that key exists.
+lookupDecodeLwwThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m v
+lookupDecodeLwwThrow key = lookupLwwThrow key >=> fromAtoms
 
 empty :: ORSet a
 empty = ORSet Map.empty

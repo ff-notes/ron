@@ -20,7 +20,7 @@ import           RON.Event (ReplicaClock)
 import           RON.Store (MonadStore, newObject, readObject)
 import           RON.Store.Sqlite (fetchUpdates, runStore)
 import qualified RON.Store.Sqlite as Store
-import           RON.Types (Atom (AString, AUuid), UUID)
+import           RON.Types (Atom (AUuid), UUID)
 import           RON.Types.Experimental (Ref (..))
 import qualified RON.UUID as UUID
 import           UnliftIO (MonadUnliftIO, atomically)
@@ -44,8 +44,8 @@ newMessage ::
   MessageContent -> m (Ref MessageView)
 newMessage MessageContent{username, text} = do
   msgRef <- newObject @MessageView
-  ORSet.add_ msgRef ("username", [AString username])
-  ORSet.add_ msgRef ("text",     [AString text    ])
+  ORSet.add_ msgRef ("username", username)
+  ORSet.add_ msgRef ("text",     text)
   ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 
