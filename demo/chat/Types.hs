@@ -36,8 +36,8 @@ instance ReplicatedObject MessageView where
         case timeVariety time of
           Epoch -> pure $ Epoch.decode $ timeValue time
           _     -> throwError "objectId in not an epoch event"
-      username <- ORMap.lookupDecodeLwwThrow "username" ormap
-      text     <- ORMap.lookupDecodeLwwThrow "text"     ormap
+      username <- ORMap.lookupLwwDecodeThrow "username" ormap
+      text     <- ORMap.lookupLwwDecodeThrow "text"     ormap
       pure MessageView{postTime, content = MessageContent{username, text}}
 
 data Env = Env

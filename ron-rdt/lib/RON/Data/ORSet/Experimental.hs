@@ -15,8 +15,8 @@ module RON.Data.ORSet.Experimental (
   empty,
   lookupLww,
   lookupLwwThrow,
-  lookupDecodeLww,
-  lookupDecodeLwwThrow,
+  lookupLwwDecode,
+  lookupLwwDecodeThrow,
   lookupSet,
   toList,
 ) where
@@ -107,9 +107,9 @@ lookupLww key (ORSet s) =
     [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
 
 -- | Like 'lookupLww' but also decode payload.
-lookupDecodeLww ::
+lookupLwwDecode ::
   (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)
-lookupDecodeLww key = traverse fromAtoms . lookupLww key
+lookupLwwDecode key = traverse fromAtoms . lookupLww key
 
 lookupLwwThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m Payload
 lookupLwwThrow key obj =
@@ -117,9 +117,9 @@ lookupLwwThrow key obj =
   where
     showAtom = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom
 
--- | Like 'lookupDecodeLww' but assert that key exists.
-lookupDecodeLwwThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m v
-lookupDecodeLwwThrow key = lookupLwwThrow key >=> fromAtoms
+-- | Like 'lookupLwwDecode' but assert that key exists.
+lookupLwwDecodeThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m v
+lookupLwwDecodeThrow key = lookupLwwThrow key >=> fromAtoms
 
 empty :: ORSet a
 empty = ORSet Map.empty
