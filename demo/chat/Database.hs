@@ -14,7 +14,6 @@ import Control.Monad (forever)
 import Control.Monad.Logger (MonadLogger, logDebug)
 import RON.Error (MonadE)
 import RON.Event (ReplicaClock)
-import RON.Experimental.Data (castRepr)
 import RON.Experimental.Data.ORSet (ORSet)
 import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, newObject)
@@ -36,11 +35,8 @@ loadAllMessages db =
 
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) => Message -> m (Ref Message)
-newMessage Message{username, text} = do
-  msgRef <- newObject @Message
-  let msgRepRef = castRepr msgRef
-  ORSet.add_ msgRepRef ("username", username)
-  ORSet.add_ msgRepRef ("text",     text)
+newMessage msg = do
+  msgRef <- newObject msg
   ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 

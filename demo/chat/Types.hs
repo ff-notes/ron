@@ -9,9 +9,10 @@ import Data.Time (UTCTime)
 import RON.Epoch qualified as Epoch
 import RON.Error (MonadE, errorContext, throwError)
 import RON.Event (TimeVariety (Epoch), decodeEvent, timeValue, timeVariety)
-import RON.Experimental.Data (ReplicatedObject, Repr, decodeObject)
+import RON.Experimental.Data (ReplicatedObject, Repr, decodeObject,
+                              encodeObject)
 import RON.Experimental.Data.ORSet (ORMap)
-import RON.Experimental.Data.ORSet qualified as ORMap
+import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, readObject)
 import RON.Types.Experimental (Ref (Ref))
 
@@ -31,11 +32,17 @@ instance ReplicatedObject Message where
 
   type Repr Message = ORMap Text Text
 
+  encodeObject objectId Message{username, text} = do
+    ORSet.add_ repr ("username", username)
+    ORSet.add_ repr ("text",     text)
+    where
+      repr = Ref @(ORMap Text Text) objectId []
+
   decodeObject objectId ops =
     errorContext "view @Message" $ do
-      ormap :: Repr Message <- decodeObject objectId ops
-      username <- ORMap.lookupLwwDecodeThrow "username" ormap
-      text     <- ORMap.lookupLwwDecodeThrow "text"     ormap
+      repr :: ORMap Text Text <- ORSet.decode objectId ops
+      username <- ORSet.lookupLwwDecodeThrow "username" repr
+      text     <- ORSet.lookupLwwDecodeThrow "text"     repr
       pure Message{username, text}
 
 getMessageView ::

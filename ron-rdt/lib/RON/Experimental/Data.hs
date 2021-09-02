@@ -18,7 +18,9 @@ module RON.Experimental.Data (
 import           RON.Prelude
 
 import           RON.Error (MonadE, throwErrorText)
+import           RON.Event (ReplicaClock)
 import           RON.Experimental.Data.ORSet.Type (ORMap)
+import           RON.Store.Class (MonadStore)
 import           RON.Types (Atom (AString, AUuid), ObjectRef (..), OpenFrame,
                             Payload, UUID)
 import           RON.Types.Experimental (Ref (..))
@@ -29,14 +31,19 @@ class Replicated a where
   -- | UUID of the type
   replicatedTypeId :: UUID
 
--- | Any type that may be encoded as a RON object.
+-- | Any type that may be encoded as a RON object in whole.
 class (Replicated (Repr a)) => ReplicatedObject a where
 
   -- | RON representation type
   type Repr a
   type Repr a = ORMap UUID Payload
 
-  -- TODO encodeObject :: a -> m Patch
+  encodeObject ::
+    (MonadStore m, ReplicaClock m) =>
+    -- | Object id
+    UUID ->
+    a ->
+    m ()
 
   decodeObject ::
     MonadE m =>

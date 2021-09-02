@@ -12,6 +12,7 @@ module RON.Experimental.Data.ORSet (
   ORMap,
   add,
   add_,
+  decode,
   empty,
   getDecode,
   lookupLww,
@@ -31,13 +32,11 @@ import           Data.List (stripPrefix)
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Experimental.Data (AsAtom, AsAtoms, Replicated,
-                                        ReplicatedObject, decodeObject,
-                                        fromAtoms, replicatedTypeId, toAtom,
-                                        toAtoms)
+import           RON.Experimental.Data (AsAtom, AsAtoms, Replicated, fromAtoms,
+                                        replicatedTypeId, toAtom, toAtoms)
 import           RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
 import           RON.Text.Serialize (serializeAtom)
-import           RON.Types (Op (..), Payload, UUID)
+import           RON.Types (Op (..), OpenFrame, Payload, UUID)
 import           RON.Types.Experimental (Patch (..), Ref (..))
 
 import           RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
@@ -45,22 +44,21 @@ import           RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
 instance Replicated (ORSet a) where
   replicatedTypeId = setType
 
-instance ReplicatedObject (ORSet a) where
-
-  decodeObject objectId ops =
-    pure $
-    ORSet $
-    Map.fromListWith
-      (maxOn fst)
-      [ (itemId, (opId, payload))
-      | Op{opId, refId, payload} <- ops
-      , opId /= objectId
-      , let
-        itemId =
-          case payload of
-            []  -> refId  -- tombstone
-            _:_ -> opId   -- add
-      ]
+decode :: Applicative f => UUID -> OpenFrame -> f (ORSet a)
+decode objectId ops =
+  pure $
+  ORSet $
+  Map.fromListWith
+    (maxOn fst)
+    [ (itemId, (opId, payload))
+    | Op{opId, refId, payload} <- ops
+    , opId /= objectId
+    , let
+      itemId =
+        case payload of
+          []  -> refId  -- tombstone
+          _:_ -> opId   -- add
+    ]
 
 -- | Add value to the set. Return the reference to the set item.
 add ::
