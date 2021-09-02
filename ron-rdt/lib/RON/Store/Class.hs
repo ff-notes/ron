@@ -23,3 +23,5 @@ class Monad m => MonadStore m where
     -- | Base version. To get object logs from the beginning, pass 'mempty'.
     VV ->
     m [Op]
+
+  -- TODO loadObjectLog filtered in DB

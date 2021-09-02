@@ -6,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module RON.Data.ORSet.Experimental (
   ORSet,
@@ -13,20 +14,21 @@ module RON.Data.ORSet.Experimental (
   add,
   add_,
   empty,
+  getDecode,
   lookupLww,
   lookupLwwThrow,
   lookupLwwDecode,
   lookupLwwDecodeThrow,
   lookupSet,
-  toList,
 ) where
 
-import           RON.Prelude hiding (toList)
+import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.Encoding as TextL
 
+import           Data.List (stripPrefix)
 import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
                                         ReplicatedObject, fromAtoms,
                                         replicatedTypeId, stateFromFrame,
@@ -34,7 +36,7 @@ import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Store.Class (MonadStore, appendPatch)
+import           RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
 import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (Op (..), Payload, UUID)
 import           RON.Types.Experimental (Patch (..), Ref (..))
@@ -43,11 +45,11 @@ import           RON.Types.Experimental (Patch (..), Ref (..))
 -- Implementation: a map from the itemId to the original op.
 -- Each time a value is added, a new item=op is created.
 -- Deletion of a value replaces all its known items with tombstone ops.
+-- Tombstone is an op with empty payload (even without prefix) referencing item.
 newtype ORSet a = ORSet (Map UUID (UUID, Payload))
   deriving (Eq, Show)
 
 instance Replicated (ORSet a) where
-
   replicatedTypeId = setType
 
   stateFromFrame objectId = ORSet . \case
@@ -59,9 +61,10 @@ instance Replicated (ORSet a) where
         | Op{opId, refId, payload} <- ops
         , opId /= objectId
         , let
-          itemId
-            | refId == objectId = opId
-            | otherwise         = refId
+          itemId =
+            case payload of
+              []  -> refId  -- tombstone
+              _:_ -> opId   -- add
         ]
 
 instance ReplicatedObject (ORSet a) where
@@ -91,11 +94,28 @@ add (Ref object path) value = do
 add_ ::
   (Rep container ~ ORSet item, AsAtoms item, MonadStore m, ReplicaClock m) =>
   Ref container -> item -> m ()
-add_ ref payload = void $ add ref payload
+add_ ref = void . add ref
 
-toList :: (AsAtoms a, MonadE m) => ORSet a -> m [a]
-toList (ORSet rep) =
-  traverse fromAtoms [payload | (_item, payload@(_:_)) <- Map.elems rep]
+-- | Get items from database and decode
+getDecode :: (AsAtoms a, MonadStore m, MonadE m) => Ref (ORSet a) -> m [a]
+getDecode (Ref object pre) = do
+  -- TODO loadObjectLog object (PayloadPrefix pre)
+  ops <- loadWholeObjectLog object mempty
+  let alivePayloads =
+        filter (not . null) $
+        map snd $
+        toList $
+        Map.fromListWith
+          (maxOn fst)
+          [ (itemId, (opId, payload'))
+          | Op{opId, refId, payload} <- ops
+          , (itemId, payload') <-
+              case payload of
+                []                            -> pure (refId, payload)
+                (stripPrefix pre -> Just suf) -> pure (opId, suf)
+                _                             -> []
+          ]
+  traverse fromAtoms alivePayloads
 
 type ORMap k v = ORSet (k, v)
 

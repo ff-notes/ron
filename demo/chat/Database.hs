@@ -31,13 +31,8 @@ loadAllMessages ::
   (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
 loadAllMessages db =
   runStore db do
-    mMessageSet <- readObject gMessageSetRef
-    case mMessageSet of
-      Nothing ->
-        pure []
-      Just messageSet -> do
-        messageRefs <- ORSet.toList messageSet
-        sortOn postTime . catMaybes <$> for messageRefs readObject
+    messageRefs <- ORSet.getDecode gMessageSetRef
+    sortOn postTime . catMaybes <$> for messageRefs readObject
 
 newMessage ::
   (MonadE m, MonadStore m, ReplicaClock m) =>
