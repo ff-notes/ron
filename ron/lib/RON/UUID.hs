@@ -145,7 +145,7 @@ mkScopedName scope nam = do
         maybe
             (fail
                 $   field
-                <>  ": expected a Base64-encoded 60-character string, got "
+                <>  ": expected a Base64-encoded 10-character string, got "
                 <>  show input)
             pure
 

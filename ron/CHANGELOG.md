@@ -18,6 +18,7 @@ and this project adheres to
 
 ### Fixed
 - RONt: parsing of `-0.1`
+- A typo in `mkScopedName`
 
 ### Removed
 - `RON.Prelude`:
