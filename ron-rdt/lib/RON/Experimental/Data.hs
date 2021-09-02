@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module RON.Data.Experimental (
+module RON.Experimental.Data (
   AsAtom (..),
   AsAtoms (..),
   Replicated (..),
@@ -17,8 +17,8 @@ module RON.Data.Experimental (
 
 import           RON.Prelude
 
-import           RON.Data.ORSet.Experimental.Type (ORMap)
 import           RON.Error (MonadE, throwErrorText)
+import           RON.Experimental.Data.ORSet.Type (ORMap)
 import           RON.Types (Atom (AString, AUuid), ObjectRef (..), OpenFrame,
                             Payload, UUID)
 import           RON.Types.Experimental (Ref (..))

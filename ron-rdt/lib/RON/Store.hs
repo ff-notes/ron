@@ -14,11 +14,11 @@ module RON.Store (
 import           RON.Prelude
 
 import           Data.List (stripPrefix)
-import           RON.Data.Experimental (Repr, ReplicatedObject, decodeObject,
-                                        replicatedTypeId)
 import           RON.Data.VersionVector (VV)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
+import           RON.Experimental.Data (ReplicatedObject, Repr, decodeObject,
+                                        replicatedTypeId)
 import           RON.Store.Class (MonadStore (..))
 import           RON.Types (Op (..))
 import           RON.Types.Experimental (Patch (..), Ref (..))

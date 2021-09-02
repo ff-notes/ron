@@ -1,4 +1,4 @@
-module RON.Data.ORSet.Experimental.Type where
+module RON.Experimental.Data.ORSet.Type where
 
 import           RON.Prelude
 

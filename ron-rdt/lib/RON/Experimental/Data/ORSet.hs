@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module RON.Data.ORSet.Experimental (
+module RON.Experimental.Data.ORSet (
   ORSet,
   ORMap,
   add,
@@ -28,19 +28,19 @@ import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.Encoding as TextL
 
 import           Data.List (stripPrefix)
-import           RON.Data.Experimental (AsAtom, AsAtoms, Replicated,
-                                        ReplicatedObject, decodeObject,
-                                        fromAtoms, replicatedTypeId, toAtom,
-                                        toAtoms)
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
+import           RON.Experimental.Data (AsAtom, AsAtoms, Replicated,
+                                        ReplicatedObject, decodeObject,
+                                        fromAtoms, replicatedTypeId, toAtom,
+                                        toAtoms)
 import           RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
 import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (Op (..), Payload, UUID)
 import           RON.Types.Experimental (Patch (..), Ref (..))
 
-import           RON.Data.ORSet.Experimental.Type (ORMap, ORSet (..))
+import           RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
 
 instance Replicated (ORSet a) where
   replicatedTypeId = setType

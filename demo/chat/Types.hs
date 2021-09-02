@@ -5,12 +5,12 @@ import Control.Lens ((^.))
 import Data.Generics.Labels ()
 import Data.Text (Text)
 import Data.Time (UTCTime)
-import RON.Data.Experimental (ReplicatedObject, Repr, decodeObject)
-import RON.Data.ORSet.Experimental (ORMap)
-import RON.Data.ORSet.Experimental qualified as ORMap
 import RON.Epoch qualified as Epoch
 import RON.Error (errorContext, throwError)
 import RON.Event (TimeVariety (Epoch), decodeEvent, timeValue, timeVariety)
+import RON.Experimental.Data (ReplicatedObject, Repr, decodeObject)
+import RON.Experimental.Data.ORSet (ORMap)
+import RON.Experimental.Data.ORSet qualified as ORMap
 
 data MessageView = MessageView
   { postTime :: UTCTime

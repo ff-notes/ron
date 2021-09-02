@@ -13,11 +13,11 @@ import RON.Prelude
 import Control.Concurrent.STM (TChan, readTChan, writeTChan)
 import Control.Monad (forever)
 import Control.Monad.Logger (MonadLogger, logDebug)
-import RON.Data.Experimental (castRepr)
-import RON.Data.ORSet.Experimental (ORSet)
-import RON.Data.ORSet.Experimental qualified as ORSet
 import RON.Error (MonadE)
 import RON.Event (ReplicaClock)
+import RON.Experimental.Data (castRepr)
+import RON.Experimental.Data.ORSet (ORSet)
+import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, newObject, readObject)
 import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store
