@@ -9,8 +9,7 @@ import Data.Time (UTCTime)
 import RON.Epoch qualified as Epoch
 import RON.Error (MonadE, errorContext, throwError)
 import RON.Event (TimeVariety (Epoch), decodeEvent, timeValue, timeVariety)
-import RON.Experimental.Data (ReplicatedObject, Repr, decodeObject,
-                              encodeObject)
+import RON.Experimental.Data (ReplicatedObject, decodeObject, encodeObject)
 import RON.Experimental.Data.ORSet (ORMap)
 import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, readObject)
@@ -30,8 +29,6 @@ data Message = Message
 
 instance ReplicatedObject Message where
 
-  type Repr Message = ORMap Text Text
-
   encodeObject objectId Message{username, text} = do
     ORSet.add_ repr ("username", username)
     ORSet.add_ repr ("text",     text)
@@ -48,14 +45,14 @@ instance ReplicatedObject Message where
 getMessageView ::
   (MonadE m, MonadStore m) => Ref Message -> m (Maybe MessageView)
 getMessageView ref@(Ref objectId _) = do
-  postTime <- let
-    time = decodeEvent objectId ^. #time
-    in
-    case timeVariety time of
-      Epoch -> pure $ Epoch.decode $ timeValue time
+  postTime <-
+    case timeVariety objectTime of
+      Epoch -> pure $ Epoch.decode $ timeValue objectTime
       _     -> throwError "objectId in not an epoch event"
   mMsg <- readObject ref
   pure $ mMsg <&> \content -> MessageView{postTime, content}
+  where
+    objectTime = decodeEvent objectId ^. #time
 
 data Env = Env
   { username             :: Text

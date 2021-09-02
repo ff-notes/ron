@@ -29,20 +29,16 @@ import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.Encoding as TextL
 
 import           Data.List (stripPrefix)
-import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import           RON.Experimental.Data (AsAtom, AsAtoms, Replicated, fromAtoms,
-                                        replicatedTypeId, toAtom, toAtoms)
+import           RON.Experimental.Data (AsAtom, AsAtoms, fromAtoms, toAtom,
+                                        toAtoms)
 import           RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
 import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (Op (..), OpenFrame, Payload, UUID)
 import           RON.Types.Experimental (Patch (..), Ref (..))
 
 import           RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
-
-instance Replicated (ORSet a) where
-  replicatedTypeId = setType
 
 decode :: Applicative f => UUID -> OpenFrame -> f (ORSet a)
 decode objectId ops =

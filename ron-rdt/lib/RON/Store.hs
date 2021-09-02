@@ -17,8 +17,8 @@ import           Data.List (stripPrefix)
 import           RON.Data.VersionVector (VV)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
-import           RON.Experimental.Data (ReplicatedObject, Repr, decodeObject,
-                                        encodeObject, replicatedTypeId)
+import           RON.Experimental.Data (ReplicatedObject, baseType, baseTypeId,
+                                        decodeObject, encodeObject)
 import           RON.Store.Class (MonadStore (..))
 import           RON.Types (Op (..))
 import           RON.Types.Experimental (Patch (..), Ref (..))
@@ -28,7 +28,7 @@ newObject ::
   (ReplicatedObject a, MonadStore m, ReplicaClock m) => a -> m (Ref a)
 newObject a = do
   objectId <- getEventUuid
-  let typeId = replicatedTypeId @(Repr a)
+  let typeId = baseTypeId $ baseType @a
   let initOp = Op{opId = objectId, refId = typeId, payload = []}
   appendPatch $ Patch objectId $ initOp :| []
   encodeObject objectId a

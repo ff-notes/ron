@@ -4,38 +4,41 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module RON.Experimental.Data (
   AsAtom (..),
   AsAtoms (..),
-  Replicated (..),
+  BaseType (..),
   ReplicatedObject (..),
+  baseTypeId,
   ) where
 
 import           RON.Prelude
 
 import           RON.Error (MonadE, throwErrorText)
 import           RON.Event (ReplicaClock)
-import           RON.Experimental.Data.ORSet.Type (ORMap)
 import           RON.Store.Class (MonadStore)
 import           RON.Types (Atom (AString, AUuid), ObjectRef (..), OpenFrame,
-                            Payload, UUID)
+                            UUID)
 import           RON.Types.Experimental (Ref (..))
+import qualified RON.UUID as UUID
 
 -- | Basic RON type.
-class Replicated a where
+data BaseType = LWW | Set
 
-  -- | UUID of the type
-  replicatedTypeId :: UUID
+baseTypeId :: BaseType -> UUID
+baseTypeId LWW = $(UUID.liftName "lww")
+baseTypeId Set = $(UUID.liftName "set")
 
 -- | Any type that may be encoded as a RON object in whole.
-class (Replicated (Repr a)) => ReplicatedObject a where
+class ReplicatedObject a where
 
   -- | RON representation type
-  type Repr a
-  type Repr a = ORMap UUID Payload
+  baseType :: BaseType
+  baseType = Set
 
   encodeObject ::
     (MonadStore m, ReplicaClock m) =>
