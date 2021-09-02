@@ -12,7 +12,6 @@ module RON.Experimental.Data (
   AsAtoms (..),
   Replicated (..),
   ReplicatedObject (..),
-  castRepr,
   ) where
 
 import           RON.Prelude
@@ -52,9 +51,6 @@ class (Replicated (Repr a)) => ReplicatedObject a where
     -- | Object ops
     OpenFrame ->
     m a
-
-castRepr :: Ref a -> Ref (Repr a)
-castRepr (Ref oid pre) = Ref oid pre
 
 class AsAtom a where
   toAtom   :: a -> Atom
