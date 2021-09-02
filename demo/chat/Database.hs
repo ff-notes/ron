@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Database
   ( chatroomUuid
   , databaseToUIUpdater
@@ -8,6 +6,7 @@ module Database
   , newMessage
   ) where
 
+import Prelude hiding (show)
 import RON.Prelude
 
 import Control.Concurrent.STM (TChan, readTChan, writeTChan)
