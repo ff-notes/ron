@@ -18,7 +18,7 @@ import RON.Event (ReplicaClock)
 import RON.Experimental.Data (castRepr)
 import RON.Experimental.Data.ORSet (ORSet)
 import RON.Experimental.Data.ORSet qualified as ORSet
-import RON.Store (MonadStore, newObject, readObject)
+import RON.Store (MonadStore, newObject)
 import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store
 import RON.Types (Atom (AUuid), UUID)
@@ -26,20 +26,19 @@ import RON.Types.Experimental (Ref (..))
 import RON.UUID qualified as UUID
 import UnliftIO (MonadUnliftIO, atomically)
 
-import Types (MessageContent (..), MessageView, postTime)
+import Types (Message (..), MessageView, getMessageView, postTime)
 
 loadAllMessages ::
   (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
 loadAllMessages db =
   runStore db do
     messageRefs <- ORSet.getDecode gMessageSetRef
-    sortOn postTime . catMaybes <$> for messageRefs readObject
+    sortOn postTime . catMaybes <$> for messageRefs getMessageView
 
 newMessage ::
-  (MonadE m, MonadStore m, ReplicaClock m) =>
-  MessageContent -> m (Ref MessageView)
-newMessage MessageContent{username, text} = do
-  msgRef <- newObject @MessageView
+  (MonadE m, MonadStore m, ReplicaClock m) => Message -> m (Ref Message)
+newMessage Message{username, text} = do
+  msgRef <- newObject @Message
   let msgRepRef = castRepr msgRef
   ORSet.add_ msgRepRef ("username", username)
   ORSet.add_ msgRepRef ("text",     text)
@@ -47,8 +46,7 @@ newMessage MessageContent{username, text} = do
   pure msgRef
 
 messagePoster ::
-  (MonadLogger m, MonadUnliftIO m) =>
-  TChan MessageContent -> Store.Handle -> m ()
+  (MonadLogger m, MonadUnliftIO m) => TChan Message -> Store.Handle -> m ()
 messagePoster onMessagePosted db =
   forever $ do
     message <- atomically $ readTChan onMessagePosted
@@ -68,5 +66,5 @@ databaseToUIUpdater db onMessageListUpdated = do
 chatroomUuid :: UUID
 chatroomUuid = $(UUID.liftName "chatroom")
 
-gMessageSetRef :: Ref (ORSet (Ref MessageView))
+gMessageSetRef :: Ref (ORSet (Ref Message))
 gMessageSetRef = Ref chatroomUuid [AUuid $(UUID.liftName "message")]

@@ -1,19 +1,18 @@
-import           Control.Monad (when)
-import           Control.Monad.Logger (MonadLogger, runFileLoggingT)
-import           Data.Text (Text)
-import           RON.Store.Sqlite (runStore)
-import qualified RON.Store.Sqlite as Store
-import           Text.Pretty.Simple (pPrint)
-import           UnliftIO (MonadUnliftIO, liftIO, newTChanIO)
+import Control.Monad (when)
+import Control.Monad.Logger (MonadLogger, runFileLoggingT)
+import Data.Text (Text)
+import RON.Store.Sqlite (runStore)
+import RON.Store.Sqlite qualified as Store
+import Text.Pretty.Simple (pPrint)
+import UnliftIO (MonadUnliftIO, liftIO, newTChanIO)
 
-import qualified Database
-import           Fork (forkLinked)
-import qualified NetNode
-import           Options (Command (Post, RunNode, RunUI, Show),
-                          NodeOptions (..), Options (..), UIOptions (..),
-                          parseOptions)
-import           Types (Env (..), MessageContent (..))
-import           UI (initUI, runUI)
+import Database qualified
+import Fork (forkLinked)
+import NetNode qualified
+import Options (Command (Post, RunNode, RunUI, Show), NodeOptions (..),
+                Options (..), UIOptions (..), parseOptions)
+import Types (Env (..), Message (..))
+import UI (initUI, runUI)
 
 main :: IO ()
 main = do
@@ -24,7 +23,7 @@ main = do
       Show -> Database.loadAllMessages db >>= pPrint
       Post username text -> do
         messageRef <-
-          runStore db $ Database.newMessage MessageContent{username, text}
+          runStore db $ Database.newMessage Message{username, text}
         liftIO $ putStrLn $ "created message: " <> show messageRef
       RunNode nodeOptions -> runNode db nodeOptions
       RunUI UIOptions{username} nodeOptions -> do

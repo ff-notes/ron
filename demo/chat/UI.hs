@@ -1,33 +1,30 @@
 module UI (initUI, runUI) where
 
-import           Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM,
-                        Next, Widget, attrMap, continue, customMain, fg, fill,
-                        hBox, halt, modifyDefAttr, showFirstCursor, str, txt,
-                        txtWrap, vBox, vLimit, vScrollToEnd, viewport,
-                        viewportScroll)
-import qualified Brick
-import           Brick.BChan (BChan, newBChan, writeBChan)
-import           Brick.Widgets.Border (border)
-import           Brick.Widgets.Edit (Editor, editorText, getEditContents,
-                                     handleEditorEvent, renderEditor)
-import           Control.Concurrent.STM (atomically, readTChan, writeTChan)
-import           Control.Monad (forever)
-import           Control.Monad.Logger (MonadLogger, logDebug)
-import           Data.Char (isSpace, ord)
-import           Data.List (sortOn)
-import           Data.Text (Text)
-import qualified Data.Text as Text
-import           GHC.Generics (Generic)
-import           Graphics.Vty (Color (ISOColor), Event (EvKey),
-                               Key (KEnter, KEsc), mkVty)
-import qualified Graphics.Vty as Vty
-import qualified RON.Store.Sqlite as Store (Handle)
-import           UnliftIO (MonadIO, MonadUnliftIO, liftIO)
+import Brick (App (App), BrickEvent (AppEvent, VtyEvent), EventM, Next, Widget,
+              attrMap, continue, customMain, fg, fill, hBox, halt,
+              modifyDefAttr, showFirstCursor, str, txt, txtWrap, vBox, vLimit,
+              vScrollToEnd, viewport, viewportScroll)
+import Brick qualified
+import Brick.BChan (BChan, newBChan, writeBChan)
+import Brick.Widgets.Border (border)
+import Brick.Widgets.Edit (Editor, editorText, getEditContents,
+                           handleEditorEvent, renderEditor)
+import Control.Concurrent.STM (atomically, readTChan, writeTChan)
+import Control.Monad (forever)
+import Control.Monad.Logger (MonadLogger, logDebug)
+import Data.Char (isSpace, ord)
+import Data.List (sortOn)
+import Data.Text (Text)
+import Data.Text qualified as Text
+import GHC.Generics (Generic)
+import Graphics.Vty (Color (ISOColor), Event (EvKey), Key (KEnter, KEsc), mkVty)
+import Graphics.Vty qualified as Vty
+import RON.Store.Sqlite qualified as Store (Handle)
+import UnliftIO (MonadIO, MonadUnliftIO, liftIO)
 
-import           Database (loadAllMessages)
-import           Fork (forkLinked)
-import           Types (Env (..), MessageContent (..), MessageView (..),
-                        postTime)
+import Database (loadAllMessages)
+import Fork (forkLinked)
+import Types (Env (..), Message (..), MessageView (..), postTime)
 
 data Handle = Handle
   { db      :: Store.Handle
@@ -104,7 +101,7 @@ appDraw username State{userMessages, messageInput} =
   ]
 
 renderMessage :: MessageView -> Widget n
-renderMessage MessageView{postTime, content = MessageContent{username, text}} =
+renderMessage MessageView{postTime, content = Message{username, text}} =
   vBox
     [ vLimit 1 {- workaround for not taking 5 extra lines -} $
       hBox [txtWithContentBasedFg username, fill ' ', str $ show postTime]
@@ -127,7 +124,7 @@ appHandleEvent Env{username, onMessagePosted} state = \case
     EvKey KEsc [] -> halt state
     EvKey KEnter []
       | not $ Text.all isSpace text -> do
-          let message = MessageContent{username, text}
+          let message = Message{username, text}
           -- put in database asynchronously
           liftIO $ atomically $ writeTChan onMessagePosted message
           continue state{messageInput = emptyEditor}
