@@ -1,8 +1,7 @@
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -29,10 +28,10 @@ import qualified Data.Text.Lazy as TextL
 import qualified Data.Text.Lazy.Encoding as TextL
 
 import           Data.List (stripPrefix)
-import           RON.Data.Experimental (AsAtom, AsAtoms, Rep, Replicated,
-                                        ReplicatedObject, fromAtoms,
-                                        replicatedTypeId, stateFromFrame,
-                                        toAtom, toAtoms, view)
+import           RON.Data.Experimental (AsAtom, AsAtoms, Replicated,
+                                        ReplicatedObject, decodeObject,
+                                        fromAtoms, replicatedTypeId, toAtom,
+                                        toAtoms)
 import           RON.Data.ORSet (setType)
 import           RON.Error (MonadE, liftMaybe)
 import           RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
@@ -41,40 +40,32 @@ import           RON.Text.Serialize (serializeAtom)
 import           RON.Types (Op (..), Payload, UUID)
 import           RON.Types.Experimental (Patch (..), Ref (..))
 
--- | Observed-Remove Set.
--- Implementation: a map from the itemId to the original op.
--- Each time a value is added, a new item=op is created.
--- Deletion of a value replaces all its known items with tombstone ops.
--- Tombstone is an op with empty payload (even without prefix) referencing item.
-newtype ORSet a = ORSet (Map UUID (UUID, Payload))
-  deriving (Eq, Show)
+import           RON.Data.ORSet.Experimental.Type (ORMap, ORSet (..))
 
 instance Replicated (ORSet a) where
   replicatedTypeId = setType
 
-  stateFromFrame objectId = ORSet . \case
-    [] -> Map.empty
-    ops ->
-      Map.fromListWith
-        (maxOn fst)
-        [ (itemId, (opId, payload))
-        | Op{opId, refId, payload} <- ops
-        , opId /= objectId
-        , let
-          itemId =
-            case payload of
-              []  -> refId  -- tombstone
-              _:_ -> opId   -- add
-        ]
-
 instance ReplicatedObject (ORSet a) where
-  type Rep (ORSet a) = ORSet a
-  view _id = pure
+
+  decodeObject objectId ops =
+    pure $
+    ORSet $
+    Map.fromListWith
+      (maxOn fst)
+      [ (itemId, (opId, payload))
+      | Op{opId, refId, payload} <- ops
+      , opId /= objectId
+      , let
+        itemId =
+          case payload of
+            []  -> refId  -- tombstone
+            _:_ -> opId   -- add
+      ]
 
 -- | Add value to the set. Return the reference to the set item.
 add ::
-  (Rep container ~ ORSet item, AsAtoms item, MonadStore m, ReplicaClock m) =>
-  Ref container -> item -> m UUID
+  (AsAtoms item, MonadStore m, ReplicaClock m) =>
+  Ref (ORSet item) -> item -> m UUID
 add (Ref object path) value = do
   advanceToUuid object
   opId <- getEventUuid
@@ -92,8 +83,8 @@ add (Ref object path) value = do
   @add_ :: Ref (ORMap k v) -> (k, v) -> m ()@
   -}
 add_ ::
-  (Rep container ~ ORSet item, AsAtoms item, MonadStore m, ReplicaClock m) =>
-  Ref container -> item -> m ()
+  (AsAtoms item, MonadStore m, ReplicaClock m) =>
+  Ref (ORSet item) -> item -> m ()
 add_ ref = void . add ref
 
 -- | Get items from database and decode
@@ -117,8 +108,6 @@ getDecode (Ref object pre) = do
           ]
   traverse fromAtoms alivePayloads
 
-type ORMap k v = ORSet (k, v)
-
 lookupLww :: AsAtom k => k -> ORMap k v -> Maybe Payload
 lookupLww key (ORSet s) =
   snd <$>
@@ -131,7 +120,7 @@ lookupLwwDecode ::
   (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)
 lookupLwwDecode key = traverse fromAtoms . lookupLww key
 
-lookupLwwThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m Payload
+lookupLwwThrow :: (AsAtom k, MonadE m) => k -> ORMap k v -> m Payload
 lookupLwwThrow key obj =
   liftMaybe ("key " <> showAtom key <> " must present") $ lookupLww key obj
   where

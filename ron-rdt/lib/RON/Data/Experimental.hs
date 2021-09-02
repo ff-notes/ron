@@ -12,33 +12,42 @@ module RON.Data.Experimental (
   AsAtoms (..),
   Replicated (..),
   ReplicatedObject (..),
+  castRepr,
   ) where
 
 import           RON.Prelude
 
+import           RON.Data.ORSet.Experimental.Type (ORMap)
 import           RON.Error (MonadE, throwErrorText)
 import           RON.Types (Atom (AString, AUuid), ObjectRef (..), OpenFrame,
-                            UUID)
+                            Payload, UUID)
 import           RON.Types.Experimental (Ref (..))
 
+-- | Basic RON type.
 class Replicated a where
 
   -- | UUID of the type
   replicatedTypeId :: UUID
 
-  stateFromFrame :: UUID -> OpenFrame -> a
-
-class (Replicated (Rep a)) => ReplicatedObject a where
+-- | Any type that may be encoded as a RON object.
+class (Replicated (Repr a)) => ReplicatedObject a where
 
   -- | RON representation type
-  type Rep a
+  type Repr a
+  type Repr a = ORMap UUID Payload
 
-  view ::
+  -- TODO encodeObject :: a -> m Patch
+
+  decodeObject ::
     MonadE m =>
     -- | Object id
     UUID ->
-    Rep a ->
+    -- | Object ops
+    OpenFrame ->
     m a
+
+castRepr :: Ref a -> Ref (Repr a)
+castRepr (Ref oid pre) = Ref oid pre
 
 class AsAtom a where
   toAtom   :: a -> Atom

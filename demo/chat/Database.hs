@@ -8,24 +8,25 @@ module Database
   , newMessage
   ) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Control.Concurrent.STM (TChan, readTChan, writeTChan)
-import           Control.Monad (forever)
-import           Control.Monad.Logger (MonadLogger, logDebug)
-import           RON.Data.ORSet.Experimental (ORSet)
-import qualified RON.Data.ORSet.Experimental as ORSet
-import           RON.Error (MonadE)
-import           RON.Event (ReplicaClock)
-import           RON.Store (MonadStore, newObject, readObject)
-import           RON.Store.Sqlite (fetchUpdates, runStore)
-import qualified RON.Store.Sqlite as Store
-import           RON.Types (Atom (AUuid), UUID)
-import           RON.Types.Experimental (Ref (..))
-import qualified RON.UUID as UUID
-import           UnliftIO (MonadUnliftIO, atomically)
+import Control.Concurrent.STM (TChan, readTChan, writeTChan)
+import Control.Monad (forever)
+import Control.Monad.Logger (MonadLogger, logDebug)
+import RON.Data.Experimental (castRepr)
+import RON.Data.ORSet.Experimental (ORSet)
+import RON.Data.ORSet.Experimental qualified as ORSet
+import RON.Error (MonadE)
+import RON.Event (ReplicaClock)
+import RON.Store (MonadStore, newObject, readObject)
+import RON.Store.Sqlite (fetchUpdates, runStore)
+import RON.Store.Sqlite qualified as Store
+import RON.Types (Atom (AUuid), UUID)
+import RON.Types.Experimental (Ref (..))
+import RON.UUID qualified as UUID
+import UnliftIO (MonadUnliftIO, atomically)
 
-import           Types (MessageContent (..), MessageView, postTime)
+import Types (MessageContent (..), MessageView, postTime)
 
 loadAllMessages ::
   (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
@@ -39,8 +40,9 @@ newMessage ::
   MessageContent -> m (Ref MessageView)
 newMessage MessageContent{username, text} = do
   msgRef <- newObject @MessageView
-  ORSet.add_ msgRef ("username", username)
-  ORSet.add_ msgRef ("text",     text)
+  let msgRepRef = castRepr msgRef
+  ORSet.add_ msgRepRef ("username", username)
+  ORSet.add_ msgRepRef ("text",     text)
   ORSet.add_ gMessageSetRef msgRef
   pure msgRef
 

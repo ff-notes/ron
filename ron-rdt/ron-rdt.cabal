@@ -57,6 +57,7 @@ library
         RON.Data.LWW
         RON.Data.ORSet
         RON.Data.ORSet.Experimental
+        RON.Data.ORSet.Experimental.Type
         RON.Data.RGA
         RON.Data.Time
         RON.Data.VersionVector

@@ -14,20 +14,20 @@ module RON.Store (
 import           RON.Prelude
 
 import           Data.List (stripPrefix)
-import           RON.Data.Experimental (Rep, ReplicatedObject, replicatedTypeId,
-                                        stateFromFrame, view)
+import           RON.Data.Experimental (Repr, ReplicatedObject, decodeObject,
+                                        replicatedTypeId)
+import           RON.Data.VersionVector (VV)
 import           RON.Error (MonadE, errorContext)
 import           RON.Event (ReplicaClock, getEventUuid)
 import           RON.Store.Class (MonadStore (..))
 import           RON.Types (Op (..))
 import           RON.Types.Experimental (Patch (..), Ref (..))
-import           RON.Data.VersionVector (VV)
 
 newObject ::
   forall a m. (MonadStore m, ReplicatedObject a, ReplicaClock m) => m (Ref a)
 newObject = do
   objectId <- getEventUuid
-  let typeId = replicatedTypeId @(Rep a)
+  let typeId = replicatedTypeId @(Repr a)
   let initOp = Op{opId = objectId, refId = typeId, payload = []}
   appendPatch $ Patch objectId $ initOp :| []
   pure $ Ref objectId []
@@ -40,8 +40,8 @@ readObject object@(Ref objectId _) =
   errorContext ("readObject " <> show object) $ do
     ops <- loadSubObjectLog object mempty
     case ops of
-      [] -> pure Nothing
-      _ -> fmap Just $ view objectId $ stateFromFrame objectId $ sortOn opId ops
+      []  -> pure Nothing
+      _:_ -> fmap Just $ decodeObject objectId $ sortOn opId ops
 
 loadSubObjectLog ::
   (MonadE m, MonadStore m, Typeable a) => Ref a -> VV -> m [Op]

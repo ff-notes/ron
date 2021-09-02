@@ -1,17 +1,16 @@
 module Types (Env (..), MessageContent (..), MessageView (..)) where
 
-import           Control.Concurrent.STM (TChan)
-import           Control.Lens ((^.))
-import           Data.Generics.Labels ()
-import           Data.Text (Text)
-import           Data.Time (UTCTime)
-import           RON.Data.Experimental (Rep, ReplicatedObject, view)
-import           RON.Data.ORSet.Experimental (ORMap)
-import qualified RON.Data.ORSet.Experimental as ORMap
-import qualified RON.Epoch as Epoch
-import           RON.Error (errorContext, throwError)
-import           RON.Event (TimeVariety (Epoch), decodeEvent, timeValue,
-                            timeVariety)
+import Control.Concurrent.STM (TChan)
+import Control.Lens ((^.))
+import Data.Generics.Labels ()
+import Data.Text (Text)
+import Data.Time (UTCTime)
+import RON.Data.Experimental (ReplicatedObject, Repr, decodeObject)
+import RON.Data.ORSet.Experimental (ORMap)
+import RON.Data.ORSet.Experimental qualified as ORMap
+import RON.Epoch qualified as Epoch
+import RON.Error (errorContext, throwError)
+import RON.Event (TimeVariety (Epoch), decodeEvent, timeValue, timeVariety)
 
 data MessageView = MessageView
   { postTime :: UTCTime
@@ -26,10 +25,10 @@ data MessageContent = MessageContent
   deriving (Show)
 
 instance ReplicatedObject MessageView where
-  type Rep MessageView = ORMap Text Text
-
-  view objectId ormap =
+  type Repr MessageView = ORMap Text Text
+  decodeObject objectId ops =
     errorContext "view @MessageView" $ do
+      ormap :: Repr MessageView <- decodeObject objectId ops
       postTime <- let
         time = decodeEvent objectId ^. #time
         in
