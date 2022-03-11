@@ -5,7 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0)
 and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
-## [Unreleased]
+## [0.12] - 2022-03-11
+- Added `Editable` typeclass which generalizes RON.Data.RGA.edit
 
 ## [0.10] - 2019-10-08
 ### Added

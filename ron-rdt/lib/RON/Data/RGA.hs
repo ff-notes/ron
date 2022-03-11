@@ -50,6 +50,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import           RON.Data.Internal (MonadObjectState,
+                                    Editable (..),
                                     ReducedChunk (ReducedChunk, rcBody, rcRef),
                                     Reducible, Rep, Replicated (encoding),
                                     ReplicatedAsObject, ReplicatedAsPayload,
@@ -374,6 +375,9 @@ instance Replicated a => ReplicatedAsObject (RGA a) where
         Zero -> Just <$> fromRon payload
         _ -> pure Nothing
     pure . RGA $ catMaybes mItems
+
+instance (Replicated a, ReplicatedAsPayload a) => Editable (RGA a) where
+  editObject (RGA a) = edit a
 
 -- | Replace content of the RGA throug introducing changes detected by
 -- 'getGroupedDiffBy'.

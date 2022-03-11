@@ -8,6 +8,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | Observed-Remove Set (OR-Set)
 module RON.Data.ORSet (
@@ -37,15 +38,18 @@ module RON.Data.ORSet (
     viewFieldMin,
     viewFieldSet,
     zoomFieldObject,
+    editField,
+    editFieldObject
 ) where
 
 import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Set        as Set
 
 import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
                                     Rep, Replicated (encoding),
-                                    ReplicatedAsObject,
+                                    ReplicatedAsObject, Editable (..),
                                     ReplicatedAsPayload (fromPayload),
                                     eqPayload, eqRef, evalObjectState, fromRon,
                                     getObjectState, getObjectStateChunk,
@@ -141,6 +145,12 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
                 pure $ Just item
             _    -> pure Nothing
         pure . ORSet $ catMaybes mItems
+
+instance (Replicated a, ReplicatedAsPayload a, Ord a) => Editable (ORSet a) where
+  editObject (ORSet (Set.fromList -> new)) = do
+    ORSet (Set.fromList -> old) <- readObject
+    traverse_ removeValue (old `Set.difference` new)
+    traverse_ addValue (new `Set.difference` old)
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
 commonAdd :: (MonadE m, MonadObjectState a m, ReplicaClock m) => Payload -> m ()
@@ -470,6 +480,42 @@ zoomFieldObject field innerModifier =
             []       -> ObjectRef <$> getEventUuid  -- create empty object
             oid:oids -> reduceObjectStates @field $ fmap ObjectRef $ oid :| oids
         lift $ runReaderT innerModifier object
+
+editField ::
+  (Monad m, Eq a) =>
+  m (Maybe a) ->
+  (a -> m ()) ->
+  (a -> m ()) ->
+  m () ->
+  Maybe a ->
+  m ()
+editField readField setField addField clearField b = do
+  a <- readField
+  case (a, b) of
+    (Just a', Just b')
+      | a' /= b' -> setField b'
+    (Nothing, Just b') -> addField b'
+    (_, Nothing) -> clearField
+    _ -> pure ()
+
+editFieldObject ::
+  ( Editable a,
+    ReplicaClock m1,
+    MonadE m1,
+    Monad m
+  ) =>
+  m (Maybe a) ->
+  (ObjectStateT a m1 () -> m ()) ->
+  (a -> m b) ->
+  m () ->
+  Maybe a ->
+  m ()
+editFieldObject readField zoomField addField clearField b = do
+  mx <- readField
+  case mx of
+    Just _ -> maybe clearField (zoomField . editObject) b
+    Nothing -> traverse_ addField b
+
 
 -- | Create an ORSet object from a list of named fields.
 newStruct

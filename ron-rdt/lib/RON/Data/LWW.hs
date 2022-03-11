@@ -19,13 +19,15 @@ module RON.Data.LWW (
     readField,
     viewField,
     zoomField,
+    editField,
+    editFieldObject
 ) where
 
 import           RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
+import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible, Editable (..),
                                     Rep, Replicated, ReplicatedAsObject,
                                     getObjectStateChunk,
                                     modifyObjectStateChunk_, newRon,
@@ -145,3 +147,35 @@ zoomField field innerModifier =
             [AUuid oid] -> pure oid
             _           -> throwError "Expected object UUID"
         lift $ runReaderT innerModifier $ ObjectRef fieldObjectId
+
+editField ::
+  (Monad m, Eq a) =>
+  m (Maybe a) ->
+  (Maybe a -> m ()) ->
+  Maybe a ->
+  m ()
+editField readField setField b = do
+  a <- readField
+  case (a, b) of
+    (Just a', Just b')
+      | a' /= b' -> setField (Just b')
+    (Nothing, Just b') -> setField (Just b')
+    (_, Nothing) -> setField Nothing
+    _ -> pure ()
+
+editFieldObject ::
+  ( Editable a1,
+    ReplicaClock m1,
+    MonadE m1,
+    Monad m2
+  ) =>
+  m2 (Maybe a2) ->
+  (ObjectStateT a1 m1 () -> m2 b) ->
+  (Maybe a1 -> m2 b) ->
+  Maybe a1 ->
+  m2 b
+editFieldObject readField zoomField setField b = do
+  mx <- readField
+  case mx of
+    Just _ -> maybe (setField Nothing) (zoomField . editObject) b
+    Nothing -> setField b

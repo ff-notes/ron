@@ -13,6 +13,7 @@ module RON.Data (
     Replicated (..),
     ReplicatedAsObject (..),
     ReplicatedAsPayload (..),
+    Editable (..),
     fromRon,
     getObjectStateChunk,
     newRon,

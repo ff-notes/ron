@@ -19,6 +19,7 @@ module RON.Data.Internal (
     Replicated (..),
     ReplicatedAsObject (..),
     ReplicatedAsPayload (..),
+    Editable (..),
     Unapplied,
     WireReducer,
     advanceToObject,
@@ -251,6 +252,11 @@ class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
 
     -- | Decode data
     readObject :: (MonadE m, MonadObjectState a m) => m a
+
+
+class ReplicatedAsObject a => Editable a where
+  -- | Modify the current state so it matches the state passed as a parameter
+  editObject :: (ReplicaClock m, MonadError Error m) => a -> ObjectStateT a m ()
 
 objectFromRon :: MonadE m => (ObjectRef a -> m a) -> Payload -> m a
 objectFromRon handler atoms =

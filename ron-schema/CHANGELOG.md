@@ -5,9 +5,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0)
 and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
-## [Unreleased]
+## [0.10]
 ### Added
 - Positions to syntax errors.
+- Generate `Editable` instances for struct_set
 
 ### Changed
 - Struct field syntax made explicit.

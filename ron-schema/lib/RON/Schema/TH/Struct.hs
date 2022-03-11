@@ -26,7 +26,7 @@ import           Language.Haskell.TH.Syntax (liftData)
 import           RON.Data (MonadObjectState, ObjectStateT,
                            Replicated (encoding),
                            ReplicatedAsObject (Rep, newObject, readObject),
-                           getObjectStateChunk, objectEncoding)
+                           getObjectStateChunk, objectEncoding, Editable (..))
 import           RON.Data.LWW (LwwRep)
 import qualified RON.Data.LWW as LWW
 import           RON.Data.ORSet (ORSetRep)
@@ -73,8 +73,9 @@ mkReplicatedStructSet structResolved = do
   dataType <- mkDataTypeSet struct
   [instanceReplicated] <- mkInstanceReplicated type'
   [instanceReplicatedAO] <- mkInstanceReplicatedAOSet struct
+  [instanceEditable] <- mkInstanceEditable struct
   accessors <- fold <$> traverse (mkAccessorsSet name') fields
-  pure $ dataType : instanceReplicated : instanceReplicatedAO : accessors
+  pure $ dataType : instanceReplicated : instanceReplicatedAO : instanceEditable : accessors
   where
     struct@Struct{name, fields} = equipStruct structResolved
     name' = mkNameT name
@@ -185,6 +186,35 @@ mkInstanceReplicatedAOLww Struct{name, fields} = do
     name' = mkNameT name
     type' = conT name'
     errCtx = "readObject @" <> name
+
+mkInstanceEditable :: StructSet Equipped -> TH.DecsQ
+mkInstanceEditable Struct{name, fields} = do
+  vars <- traverse (newNameT . haskellName . ext) fields
+  let consP =
+        recP
+          name'
+          [ fieldPat' haskellName $ varP var
+            | Field{ext = XFieldEquipped{haskellName}} <- toList fields
+            | var <- toList vars
+          ]
+  let editFields =
+        listE
+          [ [|$(varE fun) $(varE var)|]
+            | Field{ronType, ext = XFieldEquipped{haskellName}} <- toList fields,
+              let 
+                  fun = case ronType of
+                         TObject _ -> mkNameT $ haskellName <> "_editFieldObject"
+                         _ ->         mkNameT $ haskellName <> "_editField"
+            | var <- toList vars
+          ]
+  [d|
+    instance Editable $type' where
+
+      editObject $consP = sequence_ $editFields
+    |]
+  where
+    name' = mkNameT name
+    type' = conT name'
 
 mkInstanceReplicatedAOSet :: StructSet Equipped -> TH.DecsQ
 mkInstanceReplicatedAOSet Struct{name, fields} = do
@@ -377,7 +407,27 @@ mkAccessorsSet name' field = do
               |],
           valDP zoom [|ORSet.zoomFieldObject $ronName'|]
           ]
-  sequenceA $ addF ++ setF ++ clearF ++ getF ++ readF ++ removeF ++ zoomF
+  let editFieldF = do
+        guard $ mergeStrategy `elem` [LWW,Max,Min]
+        [ sigD
+            editField
+            [t|
+              (MonadE $m, ReplicaClock $m) =>
+              $fieldType -> ObjectStateT $type' $m ()
+              |],
+          valDP editField [|ORSet.editField $(varE read) $(varE set) $(varE add) $(varE clear)|]
+          ]
+  let editFieldObjectF = do
+        TObject _ <- [ronType]
+        [ sigD
+            editFieldO
+            [t|
+              (MonadE $m, ReplicaClock $m) =>
+              $fieldType -> ObjectStateT $type' $m ()
+              |],
+          valDP editFieldO [|ORSet.editFieldObject $(varE read) $(varE zoom) $(varE add) $(varE clear)|]
+          ]
+  sequenceA $ addF ++ setF ++ clearF ++ getF ++ readF ++ removeF ++ zoomF ++ editFieldObjectF ++ editFieldF
   where
     Field{mergeStrategy, ronType, ext} = field
     XFieldEquipped{haskellName, ronName} = ext
@@ -393,6 +443,8 @@ mkAccessorsSet name' field = do
     removeIf  = mkNameT $ haskellName <> "_removeIf"
     set       = mkNameT $ haskellName <> "_set"
     zoom      = mkNameT $ haskellName <> "_zoom"
+    editField = mkNameT $ haskellName <> "_editField"
+    editFieldO= mkNameT $ haskellName <> "_editFieldObject"
 
 orSetViewField :: MergeStrategy -> TH.ExpQ
 orSetViewField = varE . \case
