@@ -26,7 +26,7 @@ import           GHC.Real (toInteger)
 
 -- | TODO(2020-06-17, cblp) make parser lazy/incremental
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
-parseOnlyL p = parseOnly p . toStrict
+parseOnlyL p = parseOnly p
 
 -- | 'Attoparsec.take' adapter to 'ByteStringL'
 takeL :: Int -> Parser ByteStringL
