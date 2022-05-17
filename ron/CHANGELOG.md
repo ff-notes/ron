@@ -7,6 +7,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+## [0.13] - 2022-05-16
+### Change
+- Fix (<+>): pass correct state 
+
 ## [0.11] - 2020-06-14
 ### Added
 - Support for GHC 8.8.
