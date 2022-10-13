@@ -15,6 +15,7 @@ module RON.Store (
 
 import           RON.Prelude
 
+import           Data.List (stripPrefix)
 import           RON.Data.Experimental (AsAtoms, Rep, ReplicatedObject,
                                         replicatedTypeId, stateFromFrame, view)
 import           RON.Data.ORSet (setType)
@@ -45,7 +46,16 @@ readObject object@(ObjectRef objectId) =
     ops <- fold <$> loadObjectLog objectId mempty
     case ops of
       [] -> pure Nothing
-      _  -> Just <$> view objectId (stateFromFrame objectId $ sortOn opId ops)
+      _ ->
+        fmap Just $
+        view objectId $
+        stateFromFrame objectId $
+        sortOn
+          opId
+          [ op{payload = payload'}
+          | op@Op{payload} <- ops
+          , Just payload' <- [stripPrefix path payload]
+          ]
 
 -- | Read global variable identified by atom and return result as set.
 readGlobalSet ::
