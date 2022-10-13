@@ -20,7 +20,8 @@ import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit_w8,
 import qualified Data.Attoparsec.Internal.Types as Internal
 import           Data.Attoparsec.Lazy as Attoparsec
 import qualified Data.ByteString as BS
-import           Data.ByteString.Lazy (fromStrict, toStrict)
+import           Data.ByteString.Lazy (fromStrict)
+import           Data.Maybe (isJust)
 import qualified Data.Scientific as Sci
 import           GHC.Real (toInteger)
 
@@ -91,33 +92,46 @@ char c = do
 -- | Parses a definite double, i.e. it is not an integer. For this, the double has either a '.', and 'e'/'E' part or both.
 {-# INLINE definiteDouble #-}
 definiteDouble :: Parser Double
-definiteDouble = do
-    let parseIntegerPart = signed decimal
-    let parseDot = char '.'
-    let parseFractionalPartWithLength =
-            BS.foldl' step (0, 0) `fmap` Attoparsec.takeWhile1 isDigit_w8
-                where step (a, l) w = (a * 10 + fromIntegral (w - 48), l + 1)
-    let parseExponent = (char 'e' <|> char 'E') *> signed decimal
+definiteDouble = withDot <|> noDot where
 
-    let withDot = do
-          i <- optional parseIntegerPart
-          _ <- parseDot
-          (f, l) <- parseFractionalPartWithLength
-          e <- optional parseExponent
-          pure $ buildDouble (fromMaybe 0 i) f l (fromMaybe 0 e)
+    dot   = char '.'
+    minus = char '-'
 
-    let withE = do
-          i <- optional parseIntegerPart
-          buildDouble (fromMaybe 0 i) 0 0 <$> parseExponent
+    integerPart = decimal
 
-    withDot <|> withE
+    fractionalPartWithLength =
+        BS.foldl' step (0, 0) `fmap` Attoparsec.takeWhile1 isDigit_w8
+          where
+            step (a, l) w = (a * 10 + fromIntegral (w - 48), l + 1)
 
-buildDouble :: Integer -> Integer -> Int -> Int -> Double
-buildDouble integerPart fractionalPart fractionalPartLength exponentPart =
-    let addOrSubFractionalPart = if integerPart < 0 then -fractionalPart else fractionalPart
-        coeff = integerPart * 10 ^ toInteger fractionalPartLength + toInteger addOrSubFractionalPart
-        exponent = exponentPart - fractionalPartLength
-     in Sci.toRealFloat $ Sci.scientific coeff exponent
+    exponent = (char 'e' <|> char 'E') *> signed decimal
+
+    withDot = do
+        m <- isJust <$> optional minus
+        i <- integerPart
+        _ <- dot
+        (f, l) <- fractionalPartWithLength
+        e <- optional exponent
+        pure $ buildDouble m i f l (fromMaybe 0 e)
+
+    noDot = do
+        m <- isJust <$> optional minus
+        i <- integerPart
+        buildDouble m i 0 0 <$> exponent
+
+buildDouble :: Bool -> Integer -> Integer -> Int -> Int -> Double
+buildDouble
+    isNegative integerPart fractionalPart fractionalPartLength exponentPart =
+        Sci.toRealFloat $ Sci.scientific coeff exponent
+  where
+    addOrSubFractionalPart
+        | integerPart < 0 = -fractionalPart
+        | otherwise       = fractionalPart
+    coeff =
+        (if isNegative then negate else id) $
+            integerPart * 10 ^ toInteger fractionalPartLength
+            + toInteger addOrSubFractionalPart
+    exponent = exponentPart - fractionalPartLength
 
 (<+>) :: Parser a -> Parser a -> Parser a
 (<+>) p1 p2 = Internal.Parser $ \t pos more lose suc -> let

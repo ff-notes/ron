@@ -380,8 +380,8 @@ atom prevUuid = skipSpace *> atom'
 atomUnprefixed :: Parser Atom
 atomUnprefixed =
     (AFloat   <$> definiteDouble) <+>
-    (AInteger <$> integer          ) <+>
-    (AUuid    <$> uuidUnzipped     )
+    (AInteger <$> integer       ) <+>
+    (AUuid    <$> uuidUnzipped  )
   where
     integer = signed decimal
     uuidUnzipped = uuid22 <+> uuid11 <+> uuidZip'
