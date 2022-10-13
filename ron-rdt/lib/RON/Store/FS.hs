@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -46,8 +47,8 @@ import           RON.Store (MonadStore (..))
 import           RON.Text.Parse (parseOpenFrame)
 import           RON.Text.Serialize.Experimental (serializeOpenFrame)
 import           RON.Types (Op (..), UUID)
-import           RON.Util.Word (Word60, leastSignificant60)
 import qualified RON.UUID as UUID
+import           RON.Util.Word (Word60, leastSignificant60)
 
 -- | Store handle (uses the “Handle pattern”).
 data Handle = Handle
@@ -180,13 +181,15 @@ debugDump dataDir = do
   objectDirs <- do
     exists <- doesDirectoryExist dataDir
     if exists then listDirectory dataDir else pure []
-  for_ (sort objectDirs) $ \objectDir -> do
-    let logsDir = dataDir </> objectDir </> "log"
-    logs <- listDirectory logsDir
-    for_ (sort logs) $ \logName -> do
-      let logPath = logsDir </> logName
-      BSL.putStr =<< BSL.readFile logPath
-    BSLC.putStrLn ""
+  for_ (sort objectDirs) \objectDir -> do
+    isDir <- doesDirectoryExist $ dataDir </> objectDir
+    when isDir $ do
+      let logsDir = dataDir </> objectDir </> "log"
+      logs <- listDirectory logsDir
+      for_ (sort logs) $ \logName -> do
+        let logPath = logsDir </> logName
+        BSL.putStr =<< BSL.readFile logPath
+      BSLC.putStrLn ""
 
 fetchUpdates :: Handle -> IO (TChan UUID)
 fetchUpdates Handle{onObjectChanged} = atomically $ dupTChan onObjectChanged
