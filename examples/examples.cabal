@@ -8,20 +8,18 @@ common common
     build-depends:
         -- global
         base,
-        mtl,
         text,
-        pretty-simple,
         -- project
         ron,
-        ron-rdt,
-        ron-schema,
-        ron-storage
+        ron-rdt
     default-language: Haskell2010
 
 executable TypicalUsage
     import: common
+    build-depends: ron-schema, ron-storage
     main-is: TypicalUsage.hs
 
 executable CreateAndModify
     import: common
+    build-depends: mtl, pretty-simple
     main-is: CreateAndModify.hs

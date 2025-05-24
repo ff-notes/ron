@@ -8,7 +8,6 @@ build-type: Simple
 executable garden
   build-depends:
     aeson,
-    async,
     base,
     bytestring,
     colour,

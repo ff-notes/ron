@@ -114,7 +114,7 @@ txtWithContentBasedFg t =
   modifyDefAttr (const $ fg color) $ txt t
   where
     color = colors !! (hashish `mod` length colors)
-    hashish = fromIntegral $ sum $ map ord $ Text.unpack t
+    hashish = sum $ map ord $ Text.unpack t
     colors = map ISOColor [1, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12, 13, 14]
 
 appHandleEvent ::

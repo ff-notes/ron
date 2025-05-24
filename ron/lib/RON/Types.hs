@@ -137,7 +137,7 @@ type StateFrame = Map UUID WireStateChunk
 -- TODO hide data constructor in Internal module
 -- TODO deprecate in favor of 'Ref'?
 newtype ObjectRef a = ObjectRef UUID
-  deriving newtype (Eq, Hashable)
+  deriving newtype (Eq, Hashable, Ord)
   deriving stock (Generic)
 
 instance Typeable a => Show (ObjectRef a) where

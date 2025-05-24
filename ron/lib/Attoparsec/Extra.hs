@@ -132,7 +132,7 @@ buildDouble
     coeff =
         (if isNegative then negate else id) $
             integerPart * 10 ^ toInteger fractionalPartLength
-            + toInteger addOrSubFractionalPart
+            + addOrSubFractionalPart
     exponent = exponentPart - fractionalPartLength
 
 (<+>) :: Parser a -> Parser a -> Parser a
