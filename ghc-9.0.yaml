@@ -1,4 +1,4 @@
-resolver: lts-18.10
+resolver: lts-19.0
 
 packages:
   - ron
@@ -25,7 +25,3 @@ extra-deps:
 
 extra-lib-dirs:
   - swarm/_artifacts/lib
-
-flags:
-  brick:
-    demos: false
