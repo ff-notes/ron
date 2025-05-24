@@ -1,114 +1,129 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module LwwStruct (prop_lwwStruct) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Hedgehog (Property, evalEither, evalExceptT, property, (===))
+import Data.ByteString.Lazy.Char8 qualified as BSLC
+import Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
-import           RON.Data (evalObjectState, execObjectState, newObjectFrame,
-                           readObject)
-import           RON.Data.ORSet (ORSet (ORSet))
-import qualified RON.Data.ORSet as ORSet
-import           RON.Data.RGA (RGA (RGA))
-import qualified RON.Data.RGA as RGA
-import           RON.Event (OriginVariety (ApplicationSpecific), Replica,
-                            mkReplica)
-import           RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
-import           RON.Text (parseObject, serializeObject)
+import RON.Data (evalObjectState, execObjectState, newObjectFrame, readObject)
+import RON.Data.ORSet (ORSet (ORSet))
+import RON.Data.ORSet qualified as ORSet
+import RON.Data.RGA (RGA (RGA))
+import RON.Data.RGA qualified as RGA
+import RON.Event (OriginVariety (ApplicationSpecific), Replica, mkReplica)
+import RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
+import RON.Text (parseObject, serializeObject)
 
-import           LwwStruct.Types (Struct51 (..), int1_set, nst5_read, nst5_set,
-                                  set4_zoom, str2_zoom, str3_read, str3_set)
-import           Orphans ()
-import           String (s)
+import LwwStruct.Types (
+    Struct51 (..),
+    int1_set,
+    nst5_read,
+    nst5_set,
+    set4_zoom,
+    str2_zoom,
+    str3_read,
+    str3_set,
+ )
+import Orphans ()
+import String (s)
 
 example0 :: Struct51
-example0 = Struct51
-    { int1 = Just 275
-    , str2 = Just $ RGA "275"
-    , str3 = Just "190"
-    , set4 = Just $ ORSet []
-    , nst5 = Nothing
-    }
+example0 =
+    Struct51
+        { int1 = Just 275
+        , str2 = Just $ RGA "275"
+        , str3 = Just "190"
+        , set4 = Just $ ORSet []
+        , nst5 = Nothing
+        }
 
 -- | "r3pl1c4"
 replica :: Replica
 replica = mkReplica ApplicationSpecific 0xd83d30067100000
 
 ex1expect :: ByteStringL
-ex1expect = [s|
-    *lww    #7/0000000DrW+r3pl1c4                   !
-                                    @`      :int1   275
-                                            :nst5
-                                            :set4   >}KUW
-                                            :str2   >}OUW
-                                            :str3   '190'
+ex1expect =
+    [s|
+        *lww    #7/0000000DrW+r3pl1c4                   !
+                                        @`      :int1   275
+                                                :nst5
+                                                :set4   >}KUW
+                                                :str2   >}OUW
+                                                :str3   '190'
 
-    *set    #}KUW                   @0      :0      !
+        *set    #}KUW                   @0      :0      !
 
-    *rga    #}OUW                                   !
-                                    @`}Wg6          '2'
-                                    @)7             '7'
-                                    @)8             '5'
-    .
+        *rga    #}OUW                                   !
+                                        @`}Wg6          '2'
+                                        @)7             '7'
+                                        @)8             '5'
+        .
     |]
 
 ex4expect :: ByteStringL
-ex4expect = [s|
-    *lww    #7/0000000DrW+r3pl1c4                   !
-                                    @`}WUW  :int1   166
-                                    @{23dW  :nst5
-                                    @`      :set4   >}KUW
-                                            :str2   >}OUW
-                                    @{1HUW  :str3   '206'
+ex4expect =
+    [s|
+        *lww    #7/0000000DrW+r3pl1c4                   !
+                                        @`}WUW  :int1   166
+                                        @{23dW  :nst5
+                                        @`      :set4   >}KUW
+                                                :str2   >}OUW
+                                        @{1HUW  :str3   '206'
 
-    *set    #}KUW                   @0      :0      !
-                                    @`{1qcW         >{1QUW
+        *set    #}KUW                   @0      :0      !
+                                        @`{1qcW         >{1QUW
 
-    *rga    #}OUW                   @0              !
-                                    @`}Wg6  :`}acW  '2'
-                                    @)7     :}odW   '7'
-                                    @}~2W   :0      '1'
-                                    @{12MW          '4'
-                                    @{0Wg8          '5'
+        *rga    #}OUW                   @0              !
+                                        @`}Wg6  :`}acW  '2'
+                                        @)7     :}odW   '7'
+                                        @}~2W   :0      '1'
+                                        @{12MW          '4'
+                                        @{0Wg8          '5'
 
-    *lww    #{1QUW                  @0              !
-                                    @`      :int1   135
-                                            :nst5
-                                            :set4   >}_UW
-                                            :str2   >}dUW
-                                            :str3   '137'
+        *lww    #{1QUW                  @0              !
+                                        @`      :int1   135
+                                                :nst5
+                                                :set4   >}_UW
+                                                :str2   >}dUW
+                                                :str3   '137'
 
-    *set    #}_UW                   @0      :0      !
+        *set    #}_UW                   @0      :0      !
 
-    *rga    #}dUW                                   !
-                                    @`}lg6          '1'
-                                    @)7             '3'
-                                    @)8             '6'
-    .
+        *rga    #}dUW                                   !
+                                        @`}lg6          '1'
+                                        @)7             '3'
+                                        @)8             '6'
+        .
     |]
 
 example4expect :: Struct51
-example4expect = Struct51
-    { int1 = Just 166
-    , str2 = Just $ RGA "145"
-    , str3 = Just "206"
-    , set4 = Just $ ORSet
-        [Struct51
-            { int1 = Just 135
-            , str2 = Just $ RGA "136"
-            , str3 = Just "137"
-            , set4 = Just $ ORSet []
-            , nst5 = Nothing
-            }]
-    , nst5 = Nothing
-    }
+example4expect =
+    Struct51
+        { int1 = Just 166
+        , str2 = Just $ RGA "145"
+        , str3 = Just "206"
+        , set4 =
+            Just $
+                ORSet
+                    [ Struct51
+                        { int1 = Just 135
+                        , str2 = Just $ RGA "136"
+                        , str3 = Just "137"
+                        , set4 = Just $ ORSet []
+                        , nst5 = Nothing
+                        }
+                    ]
+        , nst5 = Nothing
+        }
 
 prop_lwwStruct :: Property
-prop_lwwStruct = property $ do
+prop_lwwStruct = property do
     -- create an object
     ex1state <-
         runNetworkSimT $ runReplicaSimT replica $ newObjectFrame example0
@@ -126,26 +141,27 @@ prop_lwwStruct = property $ do
     -- apply operations to the object (frame)
     ex4state <-
         evalExceptT $
-        runNetworkSimT $ runReplicaSimT replica $
-        execObjectState ex2state $ do
-            -- plain field
-            int1_set $ Just 166
-            str2_zoom $ RGA.edit "145"
-            str3Value <- str3_read
-            str3Value === Just "190"
-            str3_set $ Just "206"
-            set4_zoom $
-                ORSet.addValue
-                    Struct51
-                        { int1 = Just 135
-                        , str2 = Just $ RGA "136"
-                        , str3 = Just "137"
-                        , set4 = Just $ ORSet []
-                        , nst5 = Nothing
-                        }
-            nst5Value <- nst5_read
-            nst5Value === Nothing
-            nst5_set Nothing
+            runNetworkSimT $
+                runReplicaSimT replica $
+                    execObjectState ex2state do
+                        -- plain field
+                        int1_set $ Just 166
+                        str2_zoom $ RGA.edit "145"
+                        str3Value <- str3_read
+                        str3Value === Just "190"
+                        str3_set $ Just "206"
+                        set4_zoom $
+                            ORSet.addValue
+                                Struct51
+                                    { int1 = Just 135
+                                    , str2 = Just $ RGA "136"
+                                    , str3 = Just "137"
+                                    , set4 = Just $ ORSet []
+                                    , nst5 = Nothing
+                                    }
+                        nst5Value <- nst5_read
+                        nst5Value === Nothing
+                        nst5_set Nothing
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState ex4state readObject
@@ -154,6 +170,5 @@ prop_lwwStruct = property $ do
     -- serialize object after modification
     prep ex4expect === prep (snd $ serializeObject ex4state)
     parseObject oid ex4expect === Right ex4state
-
   where
     prep = filter (not . null) . map BSLC.words . BSLC.lines

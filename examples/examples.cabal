@@ -1,25 +1,33 @@
 cabal-version: 2.2
-
-name: examples
-version: 0
-build-type: Simple
+name:          examples
+version:       0
+build-type:    Simple
 
 common common
-    build-depends:
-        -- global
-        base,
-        text,
-        -- project
-        ron,
-        ron-rdt
-    default-language: Haskell2010
+  -- global
+  build-depends:    base
+
+  -- project
+  build-depends:    ron-rdt
+  default-language: Haskell2010
 
 executable TypicalUsage
-    import: common
-    build-depends: ron-schema, ron-storage
-    main-is: TypicalUsage.hs
+  import:        common
+  build-depends:
+    , ron-schema
+    , ron-storage
+
+  main-is:       TypicalUsage.hs
 
 executable CreateAndModify
-    import: common
-    build-depends: mtl, pretty-simple
-    main-is: CreateAndModify.hs
+  import:        common
+
+  -- global
+  build-depends:
+    , mtl
+    , pretty-simple
+    , text
+
+  -- project
+  build-depends: ron
+  main-is:       CreateAndModify.hs

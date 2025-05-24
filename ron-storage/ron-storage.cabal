@@ -23,7 +23,7 @@ extra-source-files:
     CHANGELOG.md
 
 common language
-    build-depends: base >= 4.10 && < 4.15, integer-gmp
+    build-depends: base >= 4.10
     default-extensions: NoImplicitPrelude StrictData
     default-language: Haskell2010
 
@@ -36,11 +36,9 @@ library
         directory,
         filepath,
         fsnotify,
-        mtl,
         network-info,
         stm,
         text,
-        transformers,
         tf-random,
         -- project
         ron     >= 0.9,
