@@ -33,7 +33,7 @@ library
         -- global
         bytestring,
         containers,
-        Diff < 0.5,
+        Diff,
         directory,
         filelock,
         filepath,
