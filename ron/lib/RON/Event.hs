@@ -105,7 +105,7 @@ timeValue (Time w64) = ls60 w64
 
 -- | Replica id assignment style
 newtype OriginVariety = OriginVariety Word2
-  deriving newtype (Hashable)
+  deriving newtype (Eq, Hashable)
 
 pattern TrieForked :: OriginVariety
 pattern TrieForked = OriginVariety B00

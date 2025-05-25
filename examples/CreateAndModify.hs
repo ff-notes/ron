@@ -1,3 +1,4 @@
+{-# OPTIONS -Wwarn=deprecations #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 import           Control.Monad.Except

@@ -1,11 +1,11 @@
 module Types (Env (..), Message (..), MessageView (..), getMessageView) where
 
 import Control.Concurrent.STM (TChan)
-import Control.Lens ((^.))
 import Data.Functor ((<&>))
 import Data.Generics.Labels ()
 import Data.Text (Text)
 import Data.Time (UTCTime)
+import Lens.Micro ((^.))
 import RON.Epoch qualified as Epoch
 import RON.Error (MonadE, errorContext, throwError)
 import RON.Event (TimeVariety (Epoch), decodeEvent, timeValue, timeVariety)
