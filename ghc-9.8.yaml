@@ -1,0 +1,31 @@
+resolver: lts-23.20
+
+packages:
+  - ron
+  - ron-rdt
+  - ron-schema
+  - ron-storage
+  - ron-store-sqlite
+  - ron-test
+  - ron-tool
+  - swarm
+  - examples
+  - demo/chat
+  - demo/garden
+
+extra-deps:
+  # packages:
+    # demo:
+      # - hoppy-generator-0.7.1
+      # - hoppy-runtime-0.7.0
+      # - hoppy-std-0.7.1
+      # - qtah-cpp-qt5-0.7.0
+      # - qtah-generator-0.7.1
+      # - qtah-qt5-0.7.0
+
+extra-lib-dirs:
+  - swarm/_artifacts/lib
+
+flags:
+  brick:
+    demos: false
