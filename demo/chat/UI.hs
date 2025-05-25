@@ -9,7 +9,7 @@ import Brick (
     EventM,
     Widget,
     attrMap,
-    customMain,
+    customMainWithDefaultVty,
     fg,
     fill,
     hBox,
@@ -46,7 +46,7 @@ import Data.List (sortOn)
 import Data.Text (Text)
 import Data.Text qualified as Text
 import GHC.Generics (Generic)
-import Graphics.Vty (Color (ISOColor), Event (EvKey), Key (KEnter, KEsc), mkVty)
+import Graphics.Vty (Color (ISOColor), Event (EvKey), Key (KEnter, KEsc))
 import Graphics.Vty qualified as Vty
 import Lens.Micro.Mtl (use, (.=))
 import RON.Store.Sqlite qualified as Store (Handle)
@@ -71,18 +71,13 @@ runUI :: (MonadLogger m, MonadUnliftIO m) => Handle -> m ()
 runUI Handle{db, env, onEvent} = do
     userMessages <- loadAllMessages db -- TODO load asynchronously
     liftIO $ forkLinked $ eventWorker env onEvent
-    initialVty <- liftIO buildVty
-    finalState <-
+    (finalState, _vty) <-
         liftIO $
-            customMain
-                initialVty
-                buildVty
+            customMainWithDefaultVty
                 (Just onEvent)
                 (app env)
                 initialState{userMessages}
     $logDebug $ Text.pack $ "Final state = " <> show finalState -- TODO save
-  where
-    buildVty = mkVty Vty.defaultConfig
 
 data State = State
     { userMessages :: [MessageView]
