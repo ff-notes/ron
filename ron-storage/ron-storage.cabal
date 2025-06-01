@@ -1,52 +1,54 @@
-cabal-version:  2.2
-
-name:           ron-storage
-version:        0.11
-
-bug-reports:    https://github.com/ff-notes/ron/issues
-category:       Distributed Systems, Protocol, Database
-copyright:      2018-2019 Yuriy Syrovetskiy
-homepage:       https://github.com/ff-notes/ron
-license:        BSD-3-Clause
-license-file:   LICENSE
-maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       RON Storage
-
+cabal-version:      2.2
+name:               ron-storage
+version:            0.11
+bug-reports:        https://github.com/ff-notes/ron/issues
+category:           Distributed Systems, Protocol, Database
+copyright:          2018-2019 Yuriy Syrovetskiy
+homepage:           https://github.com/ff-notes/ron
+license:            BSD-3-Clause
+license-file:       LICENSE
+maintainer:         Yuriy Syrovetskiy <haskell@cblp.su>
+synopsis:           RON Storage
 description:
-    Replicated Object Notation (RON), data types (RDT), and RON-Schema
-    .
-    Examples: https://github.com/ff-notes/ron/tree/master/examples
+  Replicated Object Notation (RON), data types (RDT), and RON-Schema
+  .
+  Examples: https://github.com/ff-notes/ron/tree/master/examples
 
-build-type:     Simple
-
-extra-source-files:
-    CHANGELOG.md
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 common language
-    build-depends: base >= 4.10
-    default-extensions: NoImplicitPrelude StrictData
-    default-language: Haskell2010
+  build-depends:      base >=4.10
+  default-extensions:
+    NoImplicitPrelude
+    StrictData
+
+  default-language:   GHC2021
 
 library
-    import: language
-    build-depends:
-        -- global
-        bytestring,
-        containers,
-        directory,
-        filepath,
-        fsnotify,
-        network-info,
-        stm,
-        text,
-        tf-random,
-        -- project
-        ron     >= 0.9,
-        ron-rdt >= 0.9.1,
-    exposed-modules:
-        RON.Storage
-        RON.Storage.Backend
-        RON.Storage.FS
-        -- RON.Storage.Rocks
-        RON.Storage.Test
-    hs-source-dirs: lib
+  import:          language
+
+  -- global
+  build-depends:
+    , bytestring
+    , containers
+    , directory
+    , filepath
+    , fsnotify
+    , network-info
+    , stm
+    , text
+    , tf-random
+
+  -- project
+  build-depends:
+    , ron      >=0.9
+    , ron-rdt  >=0.9.1
+
+  exposed-modules:
+    RON.Storage
+    RON.Storage.Backend
+    RON.Storage.FS
+    RON.Storage.Test
+
+  hs-source-dirs:  lib
