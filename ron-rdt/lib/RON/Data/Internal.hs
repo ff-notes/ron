@@ -307,9 +307,9 @@ modifyObjectStateChunk_ f = modifyObjectStateChunk $ \chunk -> do
     pure ((), chunk')
 
 eqRef :: ObjectRef a -> Payload -> Bool
-eqRef (ObjectRef uuid) atoms = case atoms of
+eqRef (ObjectRef uuid) = \case
     [AUuid ref] -> uuid == ref
-    _           -> False
+    _ -> False
 
 eqPayload :: ReplicatedAsPayload a => a -> Payload -> Bool
 eqPayload a atoms = toPayload a == atoms
