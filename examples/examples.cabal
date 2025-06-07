@@ -1,15 +1,16 @@
-cabal-version: 2.2
+cabal-version: 3.0
 name:          examples
 version:       0
 build-type:    Simple
 
 common common
   -- global
-  build-depends:    base
+  build-depends:      base
 
   -- project
-  build-depends:    ron-rdt
-  default-language: Haskell2010
+  build-depends:      ron-rdt
+  default-language:   GHC2021
+  default-extensions: QuasiQuotes
 
 executable TypicalUsage
   import:        common
