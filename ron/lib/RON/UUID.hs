@@ -54,7 +54,9 @@ import RON.Util.Word (
     pattern B11,
  )
 
--- | Universally unique identifier of anything
+{- | Universally unique identifier of anything,
+as documented in https://github.com/gritzko/ron/blob/master/uuid.md
+-}
 data UUID = UUID {-# UNPACK #-} !Word64 {-# UNPACK #-} !Word64
     deriving (Data, Eq, Generic, Hashable, Ord)
 
