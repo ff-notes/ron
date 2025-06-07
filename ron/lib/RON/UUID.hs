@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -18,33 +19,43 @@ module RON.UUID (
     succValue,
     zero,
     pattern Zero,
+
     -- * Name
     getName,
     liftName,
     mkName,
     mkScopedName,
+
     -- * Base32 encoding, suitable for file names
     decodeBase32,
     encodeBase32,
 ) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Data.Bits (shiftL, shiftR, (.|.))
-import qualified Data.ByteString.Char8 as BSC
-import           Language.Haskell.TH.Syntax (Exp, Q, liftData)
-import qualified Text.Show
+import Data.Bits (shiftL, shiftR, (.|.))
+import Data.ByteString.Char8 qualified as BSC
+import Language.Haskell.TH.Syntax (Exp, Q, liftData)
+import Text.Show qualified
 
-import qualified RON.Base64 as Base64
-import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
-                                pattern B10, pattern B11, Word2, Word4, Word60,
-                                leastSignificant2, leastSignificant4,
-                                leastSignificant60, safeCast)
+import RON.Base64 qualified as Base64
+import RON.Util.Word (
+    Word2,
+    Word4,
+    Word60,
+    leastSignificant2,
+    leastSignificant4,
+    leastSignificant60,
+    safeCast,
+    pattern B00,
+    pattern B0000,
+    pattern B01,
+    pattern B10,
+    pattern B11,
+ )
 
 -- | Universally unique identifier of anything
-data UUID = UUID
-    {-# UNPACK #-} !Word64
-    {-# UNPACK #-} !Word64
+data UUID = UUID {-# UNPACK #-} !Word64 {-# UNPACK #-} !Word64
     deriving (Data, Eq, Generic, Hashable, Ord)
 
 -- | RON-Text-encoding
@@ -58,11 +69,11 @@ instance Show UUID where
         UuidFields{..} = split this
         serialized = case uuidVariant of
             B00 -> unzipped
-            _   -> generic
+            _ -> generic
         unzipped = x' <> y'
         variety = case uuidVariety of
             B0000 -> ""
-            _     -> chr (fromIntegral $ Base64.encodeLetter4 uuidVariety) : "/"
+            _ -> chr (fromIntegral $ Base64.encodeLetter4 uuidVariety) : "/"
         x' = variety <> BSC.unpack (Base64.encode60short uuidValue)
         y' = case (uuidVersion, uuidOrigin) of
             (B00, safeCast -> 0 :: Word64) -> ""
@@ -77,28 +88,30 @@ instance Show UUID where
 -- | UUID split in parts
 data UuidFields = UuidFields
     { uuidVariety :: !Word4
-    , uuidValue   :: !Word60
+    , uuidValue :: !Word60
     , uuidVariant :: !Word2
     , uuidVersion :: !Word2
-    , uuidOrigin  :: !Word60
+    , uuidOrigin :: !Word60
     }
     deriving (Eq, Show)
 
 -- | Split UUID into parts
 split :: UUID -> UuidFields
-split (UUID x y) = UuidFields
-    { uuidVariety = leastSignificant4 $ x `shiftR` 60
-    , uuidValue   = leastSignificant60  x
-    , uuidVariant = leastSignificant2 $ y `shiftR` 62
-    , uuidVersion = leastSignificant2 $ y `shiftR` 60
-    , uuidOrigin  = leastSignificant60  y
-    }
+split (UUID x y) =
+    UuidFields
+        { uuidVariety = leastSignificant4 $ x `shiftR` 60
+        , uuidValue = leastSignificant60 x
+        , uuidVariant = leastSignificant2 $ y `shiftR` 62
+        , uuidVersion = leastSignificant2 $ y `shiftR` 60
+        , uuidOrigin = leastSignificant60 y
+        }
 
 -- | Build UUID from parts
 build :: UuidFields -> UUID
-build UuidFields{..} = UUID
-    (buildX uuidVariety uuidValue)
-    (buildY uuidVariant uuidVersion uuidOrigin)
+build UuidFields{..} =
+    UUID
+        (buildX uuidVariety uuidValue)
+        (buildY uuidVariant uuidVersion uuidOrigin)
 
 -- | Build former 64 bits of UUID from parts
 buildX :: Word4 -> Word60 -> Word64
@@ -107,53 +120,60 @@ buildX uuidVariety uuidValue =
 
 -- | Build latter 64 bits of UUID from parts
 buildY :: Word2 -> Word2 -> Word60 -> Word64
-buildY uuidVariant uuidVersion uuidOrigin
-    =   (safeCast uuidVariant `shiftL` 62)
-    .|. (safeCast uuidVersion `shiftL` 60)
-    .|.  safeCast uuidOrigin
+buildY uuidVariant uuidVersion uuidOrigin =
+    (safeCast uuidVariant `shiftL` 62)
+        .|. (safeCast uuidVersion `shiftL` 60)
+        .|. safeCast uuidOrigin
 
 -- | Make an unscoped (unqualified) name
-mkName
-    :: MonadFail m
-    => ByteString  -- ^ name, max 10 Base64 letters
-    -> m UUID
+mkName ::
+    (MonadFail m) =>
+    -- | name, max 10 Base64 letters
+    ByteString ->
+    m UUID
 mkName nam = mkScopedName nam ""
 
 -- | Contruct a UUID name in compile-time
 liftName :: ByteString -> Q Exp
 liftName = mkName >=> liftData
+
 -- TODO(2019-01-11, cblp) typed splice
 
 -- | Make a scoped (qualified) name
-mkScopedName
-    :: MonadFail m
-    => ByteString  -- ^ scope, max 10 Base64 letters
-    -> ByteString  -- ^ local name, max 10 Base64 letters
-    -> m UUID
+mkScopedName ::
+    (MonadFail m) =>
+    -- | scope, max 10 Base64 letters
+    ByteString ->
+    -- | local name, max 10 Base64 letters
+    ByteString ->
+    m UUID
 mkScopedName scope nam = do
     scope' <- expectBase64x60 "UUID scope" scope $ Base64.decode60 scope
-    nam'   <- expectBase64x60 "UUID name"  nam   $ Base64.decode60 nam
-    pure $ build UuidFields
-        { uuidVariety = B0000
-        , uuidValue   = scope'
-        , uuidVariant = B00
-        , uuidVersion = B00
-        , uuidOrigin  = nam'
-        }
+    nam' <- expectBase64x60 "UUID name" nam $ Base64.decode60 nam
+    pure $
+        build
+            UuidFields
+                { uuidVariety = B0000
+                , uuidValue = scope'
+                , uuidVariant = B00
+                , uuidVersion = B00
+                , uuidOrigin = nam'
+                }
   where
     expectBase64x60 field input =
         maybe
-            (fail
-                $   field
-                <>  ": expected a Base64-encoded 10-character string, got "
-                <>  show input)
+            ( fail $
+                field
+                    <> ": expected a Base64-encoded 10-character string, got "
+                    <> show input
+            )
             pure
 
 -- | Convert UUID to a name
-getName
-    :: UUID
-    -> Maybe (ByteString, ByteString)
-        -- ^ @(scope, name)@ for a scoped name; @(name, "")@ for a global name
+getName ::
+    UUID ->
+    -- | @(scope, name)@ for a scoped name; @(name, "")@ for a global name
+    Maybe (ByteString, ByteString)
 getName uuid = case split uuid of
     UuidFields{uuidVariety = B0000, uuidVariant = B00, uuidVersion = B00, ..} ->
         Just (x, y)
@@ -174,15 +194,19 @@ pattern Zero = UUID 0 0
 
 -- | Increment field 'uuidValue' of a UUID
 succValue :: UUID -> UUID
-succValue = build . go . split where
-    go u@UuidFields{uuidValue} = u
-        {uuidValue = if uuidValue < maxBound then succ uuidValue else uuidValue}
+succValue = build . go . split
+  where
+    go u@UuidFields{uuidValue} =
+        u
+            { uuidValue =
+                if uuidValue < maxBound then succ uuidValue else uuidValue
+            }
 
 -- | Encode a UUID to a Base32 string
 encodeBase32 :: UUID -> FilePath
 encodeBase32 (UUID x y) =
     BSC.unpack $
-    Base64.encode64base32short x <> "-" <> Base64.encode64base32short y
+        Base64.encode64base32short x <> "-" <> Base64.encode64base32short y
 
 -- | Decode a UUID from a Base32 string
 decodeBase32 :: FilePath -> Maybe UUID
