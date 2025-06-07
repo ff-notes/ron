@@ -25,7 +25,7 @@ import RON.Data.GTree qualified as GTree
 import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store (Handle)
 import RON.Types (UUID)
-import RON.UUID.Experimental (origin)
+import RON.UUID (origin)
 import RON.Util.Word (safeCast)
 import UnliftIO (MonadUnliftIO, TChan, atomically, liftIO, tryReadTChan,
                  withRunInIO)

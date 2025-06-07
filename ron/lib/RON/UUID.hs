@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -5,6 +6,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -20,6 +22,13 @@ module RON.UUID (
     zero,
     pattern Zero,
 
+    -- * Fields as lenses
+    variety,
+    value,
+    variant,
+    version,
+    origin,
+
     -- * Name
     getName,
     liftName,
@@ -33,7 +42,7 @@ module RON.UUID (
 
 import RON.Prelude
 
-import Data.Bits (shiftL, shiftR, (.|.))
+import Data.Bits (shiftL, shiftR, (.&.), (.|.))
 import Data.ByteString.Char8 qualified as BSC
 import Language.Haskell.TH.Syntax (Exp, Q, liftData)
 import Text.Show qualified
@@ -73,15 +82,15 @@ instance Show UUID where
             B00 -> unzipped
             _ -> generic
         unzipped = x' <> y'
-        variety = case uuidVariety of
+        variety' = case uuidVariety of
             B0000 -> ""
             _ -> chr (fromIntegral $ Base64.encodeLetter4 uuidVariety) : "/"
-        x' = variety <> BSC.unpack (Base64.encode60short uuidValue)
+        x' = variety' <> BSC.unpack (Base64.encode60short uuidValue)
         y' = case (uuidVersion, uuidOrigin) of
             (B00, safeCast -> 0 :: Word64) -> ""
-            _ -> version : BSC.unpack (Base64.encode60short uuidOrigin)
+            _ -> version' : BSC.unpack (Base64.encode60short uuidOrigin)
         generic = BSC.unpack $ Base64.encode64 x <> Base64.encode64 y
-        version = case uuidVersion of
+        version' = case uuidVersion of
             B00 -> '$'
             B01 -> '%'
             B10 -> '+'
@@ -176,15 +185,22 @@ getName ::
     UUID ->
     -- | @(scope, name)@ for a scoped name; @(name, "")@ for a global name
     Maybe (ByteString, ByteString)
-getName uuid = case split uuid of
-    UuidFields{uuidVariety = B0000, uuidVariant = B00, uuidVersion = B00, ..} ->
-        Just (x, y)
-      where
-        x = Base64.encode60short uuidValue
-        y = case safeCast uuidOrigin :: Word64 of
-            0 -> ""
-            _ -> Base64.encode60short uuidOrigin
-    _ -> Nothing
+getName uuid =
+    case split uuid of
+        UuidFields
+            { uuidVariety = B0000
+            , uuidVariant = B00
+            , uuidVersion = B00
+            , uuidValue
+            , uuidOrigin
+            } ->
+                Just (x, y)
+              where
+                x = Base64.encode60short uuidValue
+                y = case safeCast uuidOrigin :: Word64 of
+                    0 -> ""
+                    _ -> Base64.encode60short uuidOrigin
+        _ -> Nothing
 
 -- | UUID with all zero fields
 zero :: UUID
@@ -218,3 +234,47 @@ decodeBase32 fp = do
     UUID
         <$> Base64.decode64base32 (BSC.pack x)
         <*> Base64.decode64base32 (BSC.pack y)
+
+variety :: Lens' UUID Word4
+variety =
+    lens
+        (\(UUID x _) -> leastSignificant4 $ x `shiftR` 60)
+        ( \(UUID x y) v ->
+            UUID (x .&. 0x0FFFFFFFFFFFFFFF .|. (safeCast v `shiftL` 60)) y
+        )
+
+value :: Lens' UUID Word60
+value =
+    lens
+        (\(UUID x _) -> leastSignificant60 x)
+        (\(UUID x y) v -> UUID (x .&. 0xF000000000000000 .|. safeCast v) y)
+
+variant :: Lens' UUID Word2
+variant =
+    lens
+        (\(UUID _ y) -> leastSignificant2 $ y `shiftR` 62)
+        ( \(UUID x y) v ->
+            UUID x (y .&. 0x3FFFFFFFFFFFFFFF .|. (safeCast v `shiftL` 62))
+        )
+
+version :: Lens' UUID Word2
+version =
+    lens
+        (\(UUID _ y) -> leastSignificant2 $ y `shiftR` 60)
+        ( \(UUID x y) v ->
+            UUID x (y .&. 0xCFFFFFFFFFFFFFFF .|. (safeCast v `shiftL` 60))
+        )
+
+origin :: Lens' UUID Word60
+origin =
+    lens
+        (\(UUID _ y) -> leastSignificant60 y)
+        (\(UUID x y) v -> UUID x (y .&. 0xF000000000000000 .|. safeCast v))
+
+type Lens s t a b = forall f. (Functor f) => (a -> f b) -> s -> f t
+
+type Lens' s a = Lens s s a a
+
+lens :: (s -> a) -> (s -> b -> t) -> Lens s t a b
+lens sa sbt afb s = sbt s <$> afb (sa s)
+{-# INLINE lens #-}
