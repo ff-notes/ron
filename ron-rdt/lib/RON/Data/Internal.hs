@@ -65,7 +65,7 @@ import RON.Error (
     errorContext,
     liftMaybe,
  )
-import RON.Event (ReplicaClock, advanceToUuid)
+import RON.Event (ReplicaClock, advance, decodeEvent, time, timeValue)
 import RON.Semilattice (BoundedSemilattice)
 import RON.Types (
     Atom (AInteger, AString, AUuid),
@@ -363,19 +363,19 @@ type MonadObjectState a m =
 
 advanceToObject :: (MonadE m, MonadObjectState a m, ReplicaClock m) => m ()
 advanceToObject = do
-    ObjectRef uuid <- ask
-    StateChunk chunk <- getObjectStateChunk
-    advanceToUuid $
-        maximumDef
-            uuid
-            [ max opId $ maximumDef refId $ mapMaybe atomAsUuid payload
-            | Op{opId, refId, payload} <- chunk
-            ]
+    allObjectTimes <- getAllObjectTimes
+    for_ (maximumMay allObjectTimes) advance
   where
-    -- \| TODO(2019-07-26, cblp) Use lens
-    atomAsUuid = \case
-        AUuid u -> Just u
-        _ -> Nothing
+    getAllObjectTimes =
+        map (timeValue . time) . mapMaybe decodeEvent <$> getAllObjectUuids
+
+    getAllObjectUuids = do
+        ObjectRef objectId <- ask
+        StateChunk chunk <- getObjectStateChunk
+        pure $ objectId : foldMap allOpUuids chunk
+
+    allOpUuids Op{opId, refId, payload} =
+        opId : refId : [u | AUuid u <- payload]
 
 reduceState ::
     forall rep.
