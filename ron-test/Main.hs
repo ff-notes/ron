@@ -265,7 +265,7 @@ evalEitherS = evalExceptT . liftEither
 
 prop_event_roundtrip = property do
     event <- forAll Gen.event
-    tripping event encodeEvent (Just . decodeEvent)
+    tripping event encodeEvent decodeEvent
 
 prop_name_roundtip = property do
     name <- forAll genName

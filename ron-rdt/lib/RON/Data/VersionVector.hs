@@ -16,30 +16,50 @@ module RON.Data.VersionVector (
     (·≼),
 ) where
 
-import           RON.Prelude hiding (lookup)
+import RON.Prelude hiding (lookup)
 
-import           Data.Hashable (hashWithSalt)
-import qualified Data.Map.Strict as Map
+import Data.Hashable (hashWithSalt)
+import Data.Map.Strict qualified as Map
 
-import           RON.Data.Internal (Reducible, Rep, Replicated (encoding),
-                                    ReplicatedAsObject, getObjectState,
-                                    newObject, objectEncoding, readObject,
-                                    reducibleOpType, stateFromChunk,
-                                    stateToChunk)
-import           RON.Event (Event (..), Replica, Time, decodeEvent, encodeEvent,
-                            getEventUuid, replica)
-import           RON.Semilattice (Semilattice, (≼))
-import           RON.Text.Serialize (serializePayload)
-import           RON.Types (Atom (AUuid), ObjectRef (ObjectRef), Op (Op, opId),
-                            UUID (UUID),
-                            WireStateChunk (WireStateChunk, stateBody, stateType))
-import qualified RON.UUID as UUID
+import RON.Data.Internal (
+    Reducible,
+    Rep,
+    Replicated (encoding),
+    ReplicatedAsObject,
+    getObjectState,
+    newObject,
+    objectEncoding,
+    readObject,
+    reducibleOpType,
+    stateFromChunk,
+    stateToChunk,
+ )
+import RON.Event (
+    Event (..),
+    Replica,
+    Time,
+    encodeEvent,
+    getEventUuid,
+    replica,
+    unsafeDecodeEvent,
+ )
+import RON.Semilattice (Semilattice, (≼))
+import RON.Text.Serialize (serializePayload)
+import RON.Types (
+    Atom (AUuid),
+    ObjectRef (ObjectRef),
+    Op (Op, opId),
+    UUID (UUID),
+    WireStateChunk (WireStateChunk, stateBody, stateType),
+ )
+import RON.UUID qualified as UUID
 
 opTime :: Op -> Word64
 opTime Op{opId = UUID time _} = time
 
+-- | Assume opId is event
 opReplica :: Op -> Replica
-opReplica Op{opId} = replica $ decodeEvent opId
+opReplica Op{opId} = replica $ unsafeDecodeEvent opId
 
 latter :: Op -> Op -> Op
 latter = maxOn opTime
@@ -117,12 +137,13 @@ instance Semigroup VV where
 instance Monoid VV where
   mempty = VV Map.empty
 
+-- | Assuming all UUIDs are events.
 mkVV :: [UUID] -> VV
 mkVV uuids =
   VV $
     Map.fromList
       [ (replica, time)
-      | uuid <- uuids, let Event{replica, time} = decodeEvent uuid
+      | uuid <- uuids, let Event{replica, time} = unsafeDecodeEvent uuid
       ]
 
 unVV :: VV -> [UUID]
@@ -133,13 +154,13 @@ unVV (VV vv) =
 uuid ·≻ VV vv =
   maybe True (time >) $ Map.lookup replica vv
   where
-    Event{replica, time} = decodeEvent uuid
+    Event{replica, time} = unsafeDecodeEvent uuid
 
 (·≼) :: UUID -> VV -> Bool
 uuid ·≼ VV vv =
   maybe False (time <=) $ Map.lookup replica vv
   where
-    Event{replica, time} = decodeEvent uuid
+    Event{replica, time} = unsafeDecodeEvent uuid
 
 serializeVV :: VV -> ByteStringL
 serializeVV = serializePayload . map AUuid . unVV

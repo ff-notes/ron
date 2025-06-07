@@ -32,6 +32,7 @@ module RON.Event (
     getEvent,
     getEventUuid,
     getEventUuids,
+    isEventUuid,
     mkCalendarDate,
     mkCalendarDateTime,
     mkCalendarDateTimeNano,
@@ -40,6 +41,7 @@ module RON.Event (
     mkTime,
     timeValue,
     timeVariety,
+    unsafeDecodeEvent,
 ) where
 
 import RON.Prelude
@@ -222,12 +224,17 @@ instance (Monoid s, ReplicaClock m) => ReplicaClock (WriterT s m) where
     getEvents = lift . getEvents
     advance = lift . advance
 
--- | 'advance' variant for any UUID
-advanceToUuid :: (ReplicaClock clock) => UUID -> clock ()
-advanceToUuid uuid =
-    when (uuidVariant == B00 && uuidVersion == B10) $ advance uuidValue
+isEventUuid :: UUID -> Bool
+isEventUuid uuid =
+    uuidVariant == B00 && (uuidVersion == B10 || uuidVersion == B11)
   where
-    UuidFields{uuidValue, uuidVariant, uuidVersion} = UUID.split uuid
+    UuidFields{uuidVariant, uuidVersion} = UUID.split uuid
+
+-- | 'advance' variant for any UUID, but works only for event UUIDs
+advanceToUuid :: (ReplicaClock clock) => UUID -> clock ()
+advanceToUuid uuid = when (isEventUuid uuid) $ advance uuidValue
+  where
+    UuidFields{uuidValue} = UUID.split uuid
 
 -- | Get a single event
 getEvent :: (HasCallStack, ReplicaClock m) => m Event
@@ -278,8 +285,13 @@ encodeEvent Event{time, replica} =
     (originVariety, origin) = encodeReplicaId replica
     eventVersion = 0x_2000_0000_0000_0000
 
-decodeEvent :: UUID -> Event
-decodeEvent u@(UUID x _) = Event{replica = decodeReplica u, time = decodeTime x}
+-- | Assume UUID is event
+decodeEvent :: UUID -> Maybe Event
+decodeEvent u = guard (isEventUuid u) $> unsafeDecodeEvent u
+
+unsafeDecodeEvent :: UUID -> Event
+unsafeDecodeEvent u@(UUID x _) =
+    Event{replica = decodeReplica u, time = decodeTime x}
 
 decodeReplica :: UUID -> Replica
 decodeReplica (UUID x y) =

@@ -8,7 +8,12 @@ import Data.Time (UTCTime)
 import Lens.Micro ((^.))
 import RON.Epoch qualified as Epoch
 import RON.Error (MonadE, errorContext, throwError)
-import RON.Event (TimeVariety (Epoch), decodeEvent, timeValue, timeVariety)
+import RON.Event (
+    TimeVariety (Epoch),
+    timeValue,
+    timeVariety,
+    unsafeDecodeEvent,
+ )
 import RON.Experimental.Data (ReplicatedObject, decodeObject, encodeObject)
 import RON.Experimental.Data.ORSet (ORMap)
 import RON.Experimental.Data.ORSet qualified as ORSet
@@ -52,7 +57,7 @@ getMessageView ref@(Ref objectId _) = do
   mMsg <- readObject ref
   pure $ mMsg <&> \content -> MessageView{postTime, content}
   where
-    objectTime = decodeEvent objectId ^. #time
+    objectTime = unsafeDecodeEvent objectId ^. #time
 
 data Env = Env
   { username             :: Text
