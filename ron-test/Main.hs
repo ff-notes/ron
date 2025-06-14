@@ -704,11 +704,11 @@ prop_ObjectORSet_recursive =
                                 testRecSet_zoom $ ORSet.addRef outerSet
                         state2expect === prepObj state2
 
-prepObj :: ObjectFrame a -> [[ByteStringL]]
+prepObj :: ObjectFrame a -> [ByteStringL]
 prepObj = prep . snd . RT.serializeObject
 
-prep :: ByteStringL -> [[ByteStringL]]
-prep = filter (not . null) . map BSLC.words . BSLC.lines
+prep :: ByteStringL -> [ByteStringL]
+prep = filter (not . BSLC.null) . map (BSLC.unwords . BSLC.words) . BSLC.lines
 
 -- example taken from https://replicated.cc/
 replicatedCcExampleLaptopText =
