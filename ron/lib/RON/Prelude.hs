@@ -9,6 +9,7 @@ module RON.Prelude (
     foldr1,
     headMay,
     lastDef,
+    lastMay,
     maximumDef,
     maximumMay,
     maximumMayOn,
@@ -43,6 +44,7 @@ import Control.Applicative as X (
     (<*>),
     (<|>),
  )
+import Control.Arrow as X ((>>>))
 import Control.Exception as X (Exception)
 import Control.Monad as X (
     Monad,
@@ -111,6 +113,7 @@ import Data.Foldable as X (
     foldr,
     for_,
     length,
+    notElem,
     null,
     or,
     toList,
@@ -135,6 +138,7 @@ import Data.List as X (
     partition,
     repeat,
     replicate,
+    reverse,
     sort,
     sortBy,
     sortOn,
@@ -145,6 +149,7 @@ import Data.List as X (
     unlines,
     unwords,
     zip,
+    zip3,
     zipWith,
     (++),
  )
@@ -237,6 +242,16 @@ headMay :: [a] -> Maybe a
 headMay = \case
     [] -> Nothing
     a : _ -> Just a
+
+lastMay :: [a] -> Maybe a
+lastMay = \case
+    [] -> Nothing
+    x : xs -> Just $ lastMayImpl x xs
+
+lastMayImpl :: a -> [a] -> a
+lastMayImpl x = \case
+    [] -> x
+    y : ys -> lastMayImpl y ys
 
 lastDef :: a -> [a] -> a
 lastDef def = list' def last
