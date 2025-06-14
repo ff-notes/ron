@@ -5,4 +5,5 @@ _build/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+/ghc-*.yaml.lock
 dist-newstyle/
