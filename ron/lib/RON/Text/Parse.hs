@@ -1,7 +1,10 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
@@ -25,35 +28,69 @@ module RON.Text.Parse (
     uuidFromText,
 ) where
 
-import           RON.Prelude hiding (takeWhile)
+import RON.Prelude hiding (takeWhile)
 
-import           Attoparsec.Extra (Parser, char, definiteDouble, endOfInputEx,
-                                   isSuccessful, label, manyTill, parseOnly,
-                                   satisfy, (<+>), (??))
-import qualified Data.Aeson as Json
-import           Data.Attoparsec.ByteString (takeWhile1)
-import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, double,
-                                                   signed, skipSpace, takeWhile)
-import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust, isNothing)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+import Attoparsec.Extra (
+    Parser,
+    char,
+    definiteDouble,
+    endOfInputEx,
+    isSuccessful,
+    label,
+    manyTill,
+    parseOnly,
+    satisfy,
+    (<+>),
+    (??),
+ )
+import Data.Aeson qualified as Json
+import Data.Attoparsec.ByteString (takeWhile1)
+import Data.Attoparsec.ByteString.Char8 (
+    anyChar,
+    decimal,
+    double,
+    signed,
+    skipSpace,
+    takeWhile,
+ )
+import Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
+import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy qualified as BSL
+import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust, isNothing)
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text
 
-import qualified RON.Base64 as Base64
-import           RON.Types (Atom (AFloat, AInteger, AString, AUuid),
-                            ClosedOp (..), ObjectFrame (ObjectFrame), Op (..),
-                            OpTerm (TClosed, THeader, TQuery, TReduced),
-                            Payload, StateFrame, UUID (UUID),
-                            WireChunk (Closed, Query, Value), WireFrame,
-                            WireReducedChunk (..), WireStateChunk (..))
-import           RON.Util.Word (Word2, Word4, Word60, b00, b0000, b01, b10, b11,
-                                ls60, safeCast)
-import           RON.UUID (UuidFields (..))
-import qualified RON.UUID as UUID
+import RON.Base64 qualified as Base64
+import RON.Types (
+    Atom (AFloat, AInteger, AString, AUuid),
+    ClosedOp (..),
+    ObjectFrame (ObjectFrame),
+    Op (..),
+    OpTerm (TClosed, THeader, TQuery, TReduced),
+    Payload,
+    StateFrame,
+    UUID (UUID),
+    WireChunk (Closed, Query, Value),
+    WireFrame,
+    WireReducedChunk (..),
+    WireStateChunk (..),
+ )
+import RON.UUID (UuidFields (..))
+import RON.UUID qualified as UUID
+import RON.Util.Word (
+    Word2,
+    Word4,
+    Word60,
+    b00,
+    b0000,
+    b01,
+    b10,
+    b11,
+    ls60,
+    safeCast,
+ )
 
 -- | Parse a common frame
 parseWireFrame :: ByteStringL -> Either String WireFrame
@@ -65,52 +102,60 @@ chunksTill end = label "[WireChunk]" $ go closedOpZero
     go prev = do
         skipSpace
         atEnd <- isSuccessful end
-        if atEnd then
-            pure []
-        else do
-            (ch, lastOp) <- pChunk prev
-            (ch :) <$> go lastOp
+        if atEnd
+            then
+                pure []
+            else do
+                (ch, lastOp) <- pChunk prev
+                (ch :) <$> go lastOp
 
 -- | Returns a chunk and the last op in it
 pChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
 pChunk prev = label "WireChunk" $ wireReducedChunk prev <+> chunkClosed prev
 
 chunkClosed :: ClosedOp -> Parser (WireChunk, ClosedOp)
-chunkClosed prev = label "WireChunk-closed" $ do
-    skipSpace
-    (_, x) <- closedOp prev
-    skipSpace
-    void $ char ';'
-    pure (Closed x, x)
+chunkClosed prev =
+    label "WireChunk-closed" do
+        skipSpace
+        (_, x) <- closedOp prev
+        skipSpace
+        void $ char ';'
+        pure (Closed x, x)
 
 -- | Returns a chunk and the last op (converted to closed) in it
 wireReducedChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
-wireReducedChunk prev = label "WireChunk-reduced" $ do
-    (wrcHeader, isQuery) <- header prev
-    let reducedOps y = do
-            skipSpace
-            (isNotEmpty, x) <- reducedOp (objectId wrcHeader) y
-            t <- optional term
-            unless (t == Just TReduced || isNothing t) $
-                fail "reduced op may end with `,` only"
-            unless (isNotEmpty || t == Just TReduced) $ fail "Empty reduced op"
-            xs <- reducedOps x <|> stop
-            pure $ x : xs
-    wrcBody <- reducedOps (op wrcHeader) <|> stop
-    let lastOp = lastDef (op wrcHeader) wrcBody
-        wrap op = ClosedOp
-            {reducerId = reducerId wrcHeader, objectId = objectId wrcHeader, op}
-    pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
+wireReducedChunk prev =
+    label "WireChunk-reduced" do
+        (wrcHeader, isQuery) <- header prev
+        let reducedOps y = do
+                skipSpace
+                (isNotEmpty, x) <- reducedOp (objectId wrcHeader) y
+                t <- optional term
+                unless (t == Just TReduced || isNothing t) $
+                    fail "reduced op may end with `,` only"
+                unless (isNotEmpty || t == Just TReduced) $
+                    fail "Empty reduced op"
+                xs <- reducedOps x <|> stop
+                pure $ x : xs
+        wrcBody <- reducedOps (op wrcHeader) <|> stop
+        let lastOp = lastDef (op wrcHeader) wrcBody
+            wrap op =
+                ClosedOp
+                    { reducerId = reducerId wrcHeader
+                    , objectId = objectId wrcHeader
+                    , op
+                    }
+        pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
   where
     stop = pure []
 
 parseStateChunk :: ByteStringL -> Either String WireStateChunk
-parseStateChunk = parseOnly $ do
-  (Value value, _) <- wireReducedChunk closedOpZero
-  let
-    WireReducedChunk{wrcHeader, wrcBody} = value
-    ClosedOp{reducerId} = wrcHeader
-  pure WireStateChunk{stateType = reducerId, stateBody = wrcBody}
+parseStateChunk =
+    parseOnly do
+        (Value value, _) <- wireReducedChunk closedOpZero
+        let WireReducedChunk{wrcHeader, wrcBody} = value
+            ClosedOp{reducerId} = wrcHeader
+        pure WireStateChunk{stateType = reducerId, stateBody = wrcBody}
 
 frame :: Parser WireFrame
 frame = label "WireFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
@@ -124,14 +169,16 @@ frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
 
 -- | Parse a single context-free op
 parseOp :: ByteStringL -> Either String ClosedOp
-parseOp = parseOnly $ do
-    (_, x) <- closedOp closedOpZero <* skipSpace <* endOfInputEx
-    pure x
+parseOp =
+    parseOnly do
+        (_, x) <- closedOp closedOpZero <* skipSpace <* endOfInputEx
+        pure x
 
 -- | Parse a single context-free UUID
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseOnly $
-    uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
+parseUuid =
+    parseOnly $
+        uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
 
 uuidFromText :: Text -> Either String UUID
 uuidFromText = parseUuid . BSL.fromStrict . Text.encodeUtf8
@@ -140,218 +187,243 @@ uuidFromString :: String -> Either String UUID
 uuidFromString = uuidFromText . Text.pack
 
 -- | Parse a UUID in key position
-parseUuidKey
-    :: UUID  -- ^ same key in the previous op (default is 'UUID.zero')
-    -> UUID  -- ^ previous key of the same op (default is 'UUID.zero')
-    -> ByteStringL
-    -> Either String UUID
+parseUuidKey ::
+    -- | same key in the previous op (default is 'UUID.zero')
+    UUID ->
+    -- | previous key of the same op (default is 'UUID.zero')
+    UUID ->
+    ByteStringL ->
+    Either String UUID
 parseUuidKey prevKey prev =
     parseOnly $ uuid prevKey prev PrevOpSameKey <* skipSpace <* endOfInputEx
 
 -- | Parse a UUID in value (atom) position
-parseUuidAtom
-    :: UUID  -- ^ previous
-    -> ByteStringL
-    -> Either String UUID
+parseUuidAtom ::
+    -- | previous
+    UUID ->
+    ByteStringL ->
+    Either String UUID
 parseUuidAtom prev = parseOnly $ uuidAtom prev <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 
 closedOp :: ClosedOp -> Parser (Bool, ClosedOp)
-closedOp prev = label "ClosedOp-cont" $ do
-    (hasTyp, reducerId) <- key "reducer" '*' (reducerId prev)  UUID.zero
-    (hasObj, objectId)  <- key "object"  '#' (objectId  prev)  reducerId
-    (hasEvt, opId)      <- key "opId"    '@' (opId      prev') objectId
-    (hasRef, refId)     <- key "ref"     ':' (refId     prev') opId
-    payload <- pPayload objectId
-    let op = Op{..}
-    pure
-        ( hasTyp || hasObj || hasEvt || hasRef || not (null payload)
-        , ClosedOp{..}
-        )
+closedOp prev =
+    label "ClosedOp-cont" do
+        (hasTyp, reducerId) <- key "reducer" '*' (reducerId prev) UUID.zero
+        (hasObj, objectId) <- key "object" '#' (objectId prev) reducerId
+        (hasEvt, opId) <- key "opId" '@' (opId prev') objectId
+        (hasRef, refId) <- key "ref" ':' (refId prev') opId
+        payload <- pPayload objectId
+        let op = Op{..}
+        pure
+            ( hasTyp || hasObj || hasEvt || hasRef || not (null payload)
+            , ClosedOp{..}
+            )
   where
     prev' = op prev
 
 reducedOp :: UUID -> Op -> Parser (Bool, Op)
-reducedOp opObject prev = label "Op-reduced-cont" $ do
-    (hasEvt, opId)  <- key "event" '@' (opId  prev) opObject
-    (hasRef, refId) <- key "ref"   ':' (refId prev) opId
-    payload <- pPayload opObject
-    let op = Op{opId, refId, payload}
-    pure (hasEvt || hasRef || not (null payload), op)
+reducedOp opObject prev =
+    label "Op-reduced-cont" do
+        (hasEvt, opId) <- key "event" '@' (opId prev) opObject
+        (hasRef, refId) <- key "ref" ':' (refId prev) opId
+        payload <- pPayload opObject
+        let op = Op{opId, refId, payload}
+        pure (hasEvt || hasRef || not (null payload), op)
 
 openOp :: UUID -> Parser Op
 openOp prev =
-  label "Op-open-cont" $ do
-    opId    <- openKey "event" '@' <|> pure (UUID.succValue prev)
-    refId   <- openKey "ref"   ':' <|> pure                 prev
-    payload <- pPayload opId
-    t       <- term
-    guard $ t == TReduced || t == TClosed
-    pure Op{opId, refId, payload}
+    label "Op-open-cont" do
+        opId <- openKey "event" '@' <|> pure (UUID.succValue prev)
+        refId <- openKey "ref" ':' <|> pure prev
+        payload <- pPayload opId
+        t <- term
+        guard $ t == TReduced || t == TClosed
+        pure Op{opId, refId, payload}
 
 key :: String -> Char -> UUID -> UUID -> Parser (Bool, UUID)
 key name keyChar prevOpSameKey sameOpPrevUuid =
-  label name $ do
-    skipSpace
-    isKeyPresent <- isSuccessful $ char keyChar
-    if isKeyPresent then do
-      u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
-      pure (True, u)
-    else
-      -- no key => use previous key
-      pure (False, prevOpSameKey)
+    label name do
+        skipSpace
+        isKeyPresent <- isSuccessful $ char keyChar
+        if isKeyPresent
+            then do
+                u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
+                pure (True, u)
+            else
+                -- no key => use previous key
+                pure (False, prevOpSameKey)
 
 openKey :: String -> Char -> Parser UUID
 openKey name keyChar =
-  label name $ do
-    skipSpace
-    _ <- char keyChar
-    uuid UUID.zero UUID.zero PrevOpSameKey
+    label name do
+        skipSpace
+        _ <- char keyChar
+        uuid UUID.zero UUID.zero PrevOpSameKey
 
 uuid :: UUID -> UUID -> UuidZipBase -> Parser UUID
-uuid prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID" $
-    uuid22 <+> uuid11 <+> uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase
+uuid prevOpSameKey sameOpPrevUuid defaultZipBase =
+    label "UUID" $
+        uuid22
+            <+> uuid11
+            <+> uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase
 
 uuid11 :: Parser UUID
-uuid11 = label "UUID-RON-11-letter-value" $ do
-    rawX <- base64word 11
-    guard $ BS.length rawX == 11
-    x <- Base64.decode64 rawX ?? fail "Base64.decode64"
-    rawUuidVersion <- optional pUuidVersion
-    y <- case rawUuidVersion of
-        Nothing -> pure 0
-        _ -> do
-            rawOrigin <- optional $ base64word $ maybe 11 (const 10) rawUuidVersion
-            origin <- case rawOrigin of
-                Nothing     -> pure $ ls60 0
-                Just origin -> Base64.decode60 origin ?? fail "Base64.decode60"
-            pure $ UUID.buildY b00 (fromMaybe b00 rawUuidVersion) origin
-    pure $ UUID x y
+uuid11 =
+    label "UUID-RON-11-letter-value" do
+        rawX <- base64word 11
+        guard $ BS.length rawX == 11
+        x <- Base64.decode64 rawX ?? fail "Base64.decode64"
+        rawUuidVersionM <- optional pUuidVersion
+        y <-
+            case rawUuidVersionM of
+                Nothing -> pure 0
+                Just rawUuidVersion -> do
+                    rawOrigin <- optional $ base64word 10
+                    origin <- case rawOrigin of
+                        Nothing -> pure $ ls60 0
+                        Just origin ->
+                            Base64.decode60 origin ?? fail "Base64.decode60"
+                    pure $ UUID.buildY b00 rawUuidVersion origin
+        pure $ UUID x y
 
 data UuidZipBase = PrevOpSameKey | SameOpPrevUuid
 
 uuidZip' :: Parser UUID
-uuidZip' = label "UUID-zip'" $ do
-    rawVariety <- optional pVariety
-    rawValue <- base64word60 10
-    rawUuidVersion <- optional pUuidVersion
-    rawOrigin <- case rawUuidVersion of
-                   Just _ -> optional $ base64word60 10
-                   Nothing -> pure Nothing
+uuidZip' =
+    label "UUID-zip'" do
+        rawVariety <- optional pVariety
+        rawValue <- base64word60 10
+        rawUuidVersion <- optional pUuidVersion
+        rawOrigin <- case rawUuidVersion of
+            Just _ -> optional $ base64word60 10
+            Nothing -> pure Nothing
 
-    pure $ UUID.build UuidFields
-        { uuidVariety = fromMaybe b0000    rawVariety
-        , uuidValue   = rawValue
-        , uuidVariant = b00
-        , uuidVersion = fromMaybe b00      rawUuidVersion
-        , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
-        }
+        pure $
+            UUID.build
+                UuidFields
+                    { uuidVariety = fromMaybe b0000 rawVariety
+                    , uuidValue = rawValue
+                    , uuidVariant = b00
+                    , uuidVersion = fromMaybe b00 rawUuidVersion
+                    , uuidOrigin = fromMaybe (ls60 0) rawOrigin
+                    }
 
 {-# DEPRECATED uuidZip "Deprecated since RON 2.1 ." #-}
 uuidZip :: UUID -> UUID -> UuidZipBase -> Parser UUID
-uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase = label "UUID-zip" $ do
-    changeZipBase <- isSuccessful $ char '`'
-    rawVariety <- optional pVariety
-    rawReuseValue <- optional pReuse
-    rawValue <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseValue
-    rawUuidVersion <- optional pUuidVersion
-    rawReuseOrigin <- optional pReuse
-    rawOrigin <- optional $ base64word60 $ 10 - fromMaybe 0 rawReuseOrigin
+uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase =
+    label "UUID-zip" do
+        changeZipBase <- isSuccessful $ char '`'
+        rawVariety <- optional pVariety
+        rawReuseValue <- optional pReuse
+        rawValue <- optional $ base64word60 $ 10 - (rawReuseValue ?: 0)
+        rawUuidVersion <- optional pUuidVersion
+        rawReuseOrigin <- optional pReuse
+        rawOrigin <- optional $ base64word60 $ 10 - (rawReuseOrigin ?: 0)
 
-    let prev = UUID.split $ whichPrev changeZipBase
-    let isSimple
-            =   uuidVariant prev /= b00
-            ||  (   not changeZipBase
-                &&  isNothing rawReuseValue && isJust rawValue
-                &&  isNothing rawReuseOrigin
-                &&  (isNothing rawUuidVersion || isJust rawOrigin)
-                )
+        let prev = UUID.split $ whichPrev changeZipBase
+        let isSimple =
+                uuidVariant prev /= b00
+                    || ( not changeZipBase
+                            && isNothing rawReuseValue
+                            && isJust rawValue
+                            && isNothing rawReuseOrigin
+                            && (isNothing rawUuidVersion || isJust rawOrigin)
+                       )
 
-    if isSimple then
-        pure $ UUID.build UuidFields
-            { uuidVariety = fromMaybe b0000    rawVariety
-            , uuidValue   = fromMaybe (ls60 0) rawValue
-            , uuidVariant = b00
-            , uuidVersion = fromMaybe b00      rawUuidVersion
-            , uuidOrigin  = fromMaybe (ls60 0) rawOrigin
-            }
-    else do
-        uuidVariety <- pure $ fromMaybe (uuidVariety prev) rawVariety
-        uuidValue <- pure $ reuse rawReuseValue rawValue (uuidValue prev)
-        let uuidVariant = b00
-        uuidVersion <- pure $ fromMaybe (uuidVersion prev) rawUuidVersion
-        uuidOrigin <-
-            pure $ reuse rawReuseOrigin rawOrigin (uuidOrigin prev)
-        pure $ UUID.build UuidFields{..}
+        let fields
+                | isSimple =
+                    UuidFields
+                        { uuidVariety = rawVariety ?: b0000
+                        , uuidValue = rawValue ?: 0
+                        , uuidVariant = b00
+                        , uuidVersion = rawUuidVersion ?: b00
+                        , uuidOrigin = rawOrigin ?: 0
+                        }
+                | otherwise =
+                    UuidFields
+                        { uuidVariety = rawVariety ?: prev.uuidVariety
+                        , uuidValue =
+                            reuse rawReuseValue rawValue prev.uuidValue
+                        , uuidVariant = b00
+                        , uuidVersion = rawUuidVersion ?: prev.uuidVersion
+                        , uuidOrigin =
+                            reuse rawReuseOrigin rawOrigin prev.uuidOrigin
+                        }
+        pure $ UUID.build fields
   where
-
     whichPrev changeZipBase
         | changeZipBase = sameOpPrevUuid
         | otherwise = case defaultZipBase of
-            PrevOpSameKey  -> prevOpSameKey
+            PrevOpSameKey -> prevOpSameKey
             SameOpPrevUuid -> sameOpPrevUuid
 
-    reuse :: Maybe Int -> Maybe Word60 -> Word60 -> Word60
-    reuse Nothing          Nothing    prev = prev
-    reuse Nothing          (Just new) _    = new
-    reuse (Just prefixLen) Nothing    prev =
-        ls60 $ safeCast prev .&. complement 0 `shiftL` (60 - 6 * prefixLen)
-    reuse (Just prefixLen) (Just new) prev = ls60 $ prefix .|. postfix
-      where
-        prefix  = safeCast prev .&. complement 0 `shiftL` (60 - 6 * prefixLen)
-        postfix = safeCast new `shiftR` (6 * prefixLen)
-
+reuse :: Maybe Int -> Maybe Word60 -> Word60 -> Word60
+reuse Nothing Nothing prev = prev
+reuse Nothing (Just new) _ = new
+reuse (Just prefixLen) Nothing prev =
+    ls60 $ safeCast prev .&. complement 0 `shiftL` (60 - 6 * prefixLen)
+reuse (Just prefixLen) (Just new) prev = ls60 $ prefix .|. postfix
+  where
+    prefix = safeCast prev .&. complement 0 `shiftL` (60 - 6 * prefixLen)
+    postfix = safeCast new `shiftR` (6 * prefixLen)
 
 pReuse :: Parser Int
-pReuse = anyChar >>= \case
-    '(' -> pure 4
-    '[' -> pure 5
-    '{' -> pure 6
-    '}' -> pure 7
-    ']' -> pure 8
-    ')' -> pure 9
-    _   -> fail "not a reuse symbol"
+pReuse =
+    anyChar >>= \case
+        '(' -> pure 4
+        '[' -> pure 5
+        '{' -> pure 6
+        '}' -> pure 7
+        ']' -> pure 8
+        ')' -> pure 9
+        _ -> fail "not a reuse symbol"
 
 uuid22 :: Parser UUID
-uuid22 = label "UUID-Base64-double-word" $ do
-    xy <- base64word 22
-    guard $ BS.length xy == 22
-    maybe (fail "Base64 decoding error") pure $
-        UUID
-            <$> Base64.decode64 (BS.take 11 xy)
-            <*> Base64.decode64 (BS.drop 11 xy)
+uuid22 =
+    label "UUID-Base64-double-word" do
+        xy <- base64word 22
+        guard $ BS.length xy == 22
+        maybe (fail "Base64 decoding error") pure $
+            UUID
+                <$> Base64.decode64 (BS.take 11 xy)
+                <*> Base64.decode64 (BS.drop 11 xy)
 
 base64word :: Int -> Parser ByteString
-base64word maxSize = label "Base64 word" $ do
-    word <- takeWhile1 Base64.isLetter
-    guard $ BS.length word <= maxSize
-    pure word
+base64word maxSize =
+    label "Base64 word" do
+        word <- takeWhile1 Base64.isLetter
+        guard $ BS.length word <= maxSize
+        pure word
 
 base64word60 :: Int -> Parser Word60
-base64word60 maxSize = label "Base64 word60" $ do
-    word <- base64word maxSize
-    Base64.decode60 word ?? fail "decode60"
+base64word60 maxSize =
+    label "Base64 word60" do
+        word <- base64word maxSize
+        Base64.decode60 word ?? fail "decode60"
 
 isUpperHexDigit :: Word8 -> Bool
 isUpperHexDigit c =
-    (fromIntegral (c - fromIntegral (ord '0')) :: Word) <= 9 ||
-    (fromIntegral (c - fromIntegral (ord 'A')) :: Word) <= 5
+    (fromIntegral (c - fromIntegral (ord '0')) :: Word) <= 9
+        || (fromIntegral (c - fromIntegral (ord 'A')) :: Word) <= 5
 
 pVariety :: Parser Word4
-pVariety = label "variety" $ do
-    letter <- satisfy isUpperHexDigit <* "/"
-    Base64.decodeLetter4 letter ?? fail "Base64.decodeLetter4"
+pVariety =
+    label "variety" do
+        letter <- satisfy isUpperHexDigit <* "/"
+        Base64.decodeLetter4 letter ?? fail "Base64.decodeLetter4"
 
 pUuidVersion :: Parser Word2
-pUuidVersion = label "UUID-version" $
-    anyChar >>= \case
-        '$' -> pure b00
-        '%' -> pure b01
-        '+' -> pure b10
-        '-' -> pure b11
-        _   -> fail "not a UUID-version"
+pUuidVersion =
+    label "UUID-version" $
+        anyChar >>= \case
+            '$' -> pure b00
+            '%' -> pure b01
+            '+' -> pure b10
+            '-' -> pure b11
+            _ -> fail "not a UUID-version"
 
 pPayload :: UUID -> Parser Payload
 pPayload = label "payload" . go
@@ -360,11 +432,11 @@ pPayload = label "payload" . go
         ma <- optional $ atom prevUuid
         case ma of
             Nothing -> pure []
-            Just a  -> (a :) <$> go newUuid
+            Just a -> (a :) <$> go newUuid
               where
                 newUuid = case a of
                     AUuid u -> u
-                    _       -> prevUuid
+                    _ -> prevUuid
 
 parsePayload :: ByteStringL -> Either String Payload
 parsePayload = parseOnly $ pPayload UUID.zero <* endOfInputEx
@@ -373,19 +445,25 @@ atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'
   where
     atom' =
-        char '^' *> skipSpace *> (AFloat   <$> double ) <+>
-        char '=' *> skipSpace *> (AInteger <$> integer) <+>
-        char '>' *> skipSpace *> (AUuid    <$> uuid'  ) <+>
-        (AString                           <$> string ) <+>
-        atomUnprefixed
+        char '^'
+            *> skipSpace
+            *> (AFloat <$> double)
+                <+> char '='
+            *> skipSpace
+            *> (AInteger <$> integer)
+                <+> char '>'
+            *> skipSpace
+            *> (AUuid <$> uuid')
+                <+> (AString <$> string)
+                <+> atomUnprefixed
     integer = signed decimal
-    uuid'   = uuidAtom prevUuid
+    uuid' = uuidAtom prevUuid
 
 atomUnprefixed :: Parser Atom
 atomUnprefixed =
-    (AFloat   <$> definiteDouble) <+>
-    (AInteger <$> integer       ) <+>
-    (AUuid    <$> uuidUnzipped  )
+    (AFloat <$> definiteDouble)
+        <+> (AInteger <$> integer)
+        <+> (AUuid <$> uuidUnzipped)
   where
     integer = signed decimal
     uuidUnzipped = uuid22 <+> uuid11 <+> uuidZip'
@@ -401,16 +479,17 @@ string :: Parser Text
 string = do
     bs <- char '\'' *> content
     case Json.decodeStrict $ '"' `BSC.cons` (bs `BSC.snoc` '"') of
-        Just s  -> pure s
+        Just s -> pure s
         Nothing -> fail "bad string"
   where
     content = do
-        chunk <- takeWhile $ \c -> c /= '\'' && c /= '\\'
+        chunk <- takeWhile \c -> c /= '\'' && c /= '\\'
         anyChar >>= \case
             '\'' -> pure chunk
-            '\\' -> anyChar >>= \case
-                '\'' -> (chunk <>) . BSC.cons '\'' <$> content
-                c    -> (chunk <>) . BSC.cons '\\' . BSC.cons c <$> content
+            '\\' ->
+                anyChar >>= \case
+                    '\'' -> (chunk <>) . BSC.cons '\'' <$> content
+                    c -> (chunk <>) . BSC.cons '\\' . BSC.cons c <$> content
             _ -> fail "cannot happen"
 
 -- | Parse a string atom
@@ -424,8 +503,8 @@ header prev = do
     t <- term
     case t of
         THeader -> pure (x, False)
-        TQuery  -> pure (x, True)
-        _       -> fail "not a header"
+        TQuery -> pure (x, True)
+        _ -> fail "not a header"
 
 term :: Parser OpTerm
 term = do
@@ -435,10 +514,11 @@ term = do
         '?' -> pure TQuery
         ',' -> pure TReduced
         ';' -> pure TClosed
-        _   -> fail "not a term"
+        _ -> fail "not a term"
 
--- | Parse a state frame
--- TODO deprecate multi-object states
+{- | Parse a state frame
+TODO deprecate multi-object states
+-}
 parseStateFrame :: ByteStringL -> Either String StateFrame
 parseStateFrame = parseWireFrame >=> findObjects
 
@@ -446,10 +526,12 @@ parseStateFrame = parseWireFrame >=> findObjects
 parseObject :: UUID -> ByteStringL -> Either String (ObjectFrame a)
 parseObject oid bytes = ObjectFrame oid <$> parseStateFrame bytes
 
--- | Extract object states from a common frame
--- TODO deprecate multi-object states
+{- | Extract object states from a common frame
+TODO deprecate multi-object states
+-}
 findObjects :: WireFrame -> Either String StateFrame
-findObjects = fmap Map.fromList . traverse loadBody where
+findObjects = fmap Map.fromList . traverse loadBody
+  where
     loadBody = \case
         Value WireReducedChunk{wrcHeader, wrcBody} -> do
             let ClosedOp{reducerId, objectId} = wrcHeader
@@ -461,22 +543,22 @@ findObjects = fmap Map.fromList . traverse loadBody where
 
 closedOpZero :: ClosedOp
 closedOpZero =
-  ClosedOp{reducerId = UUID.zero, objectId = UUID.zero, op = opZero}
+    ClosedOp{reducerId = UUID.zero, objectId = UUID.zero, op = opZero}
 
 opZero :: Op
 opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
 
 parseOpenFrame :: ByteStringL -> Either String [Op]
 parseOpenFrame =
-  parseOnly $ go UUID.zero <* skipSpace <* endOfInputEx
+    parseOnly $ go UUID.zero <* skipSpace <* endOfInputEx
   where
     go :: UUID -> Parser [Op]
     go prev =
-      do
-        op@Op{opId} <- openOp prev
-        (op :) <$> go opId
-      <|>
-        pure []
+        ( do
+            op@Op{opId} <- openOp prev
+            (op :) <$> go opId
+        )
+            <|> pure []
 
 parseOpenOp :: ByteStringL -> Either String Op
 parseOpenOp = parseOnly $ openOp UUID.zero <* skipSpace <* endOfInputEx
