@@ -263,7 +263,7 @@ evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
 evalEitherS = evalExceptT . liftEither
 
 prop_event_roundtrip = property do
-    event <- forAll Gen.event
+    event <- forAll Gen.anyEvent
     tripping event encodeEvent decodeEvent
 
 prop_name_roundtip = property do
@@ -405,7 +405,7 @@ prop_RGA_delete_deleted =
 
 prop_RGA_getAliveIndices = property do
     text <- forAll Gen.shortText
-    replica <- forAll Gen.replica
+    replica <- forAll Gen.anyReplica
     evalExceptT $ runNetworkSimT do
         rga <-
             runReplicaSimT replica $ newObjectFrameWith $ RGA.newFromText text
@@ -416,7 +416,7 @@ prop_RGA_getAliveIndices = property do
 -- generate RGAs from a series of ops.
 prop_RGA_insertAfter = property do
     (prefix, inset, suffix) <- forAll $ replicateM3 Gen.shortText
-    (replica1, replica2) <- forAll $ replicateM2 Gen.replica
+    (replica1, replica2) <- forAll $ replicateM2 Gen.replicaA
     evalExceptT $ runNetworkSimT do
         rgaState <-
             runReplicaSimT replica1 $
@@ -437,7 +437,7 @@ prop_RGA_insertAfter = property do
 prop_RGA_remove = property do
     text <- forAll $ Gen.filter (not . Text.null) Gen.shortText
     i <- forAll $ Gen.int $ Range.linear 0 (Text.length text - 1)
-    (replica1, replica2) <- forAll $ replicateM2 Gen.replica
+    (replica1, replica2) <- forAll $ replicateM2 Gen.replicaA
     evalExceptT $ runNetworkSimT do
         rgaState <-
             runReplicaSimT replica1 $ newObjectFrameWith $ RGA.newFromText text

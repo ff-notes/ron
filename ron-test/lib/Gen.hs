@@ -1,14 +1,16 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RecordWildCards #-}
 
 module Gen (
+    anyEvent,
+    anyReplica,
     atom,
-    event,
     calendarTime,
     closedOp,
-    replica,
+    replicaA,
     shortText,
     stateFrame,
     uuid,
@@ -39,6 +41,7 @@ import Hedgehog.Range qualified as Range
 import RON.Event (
     CalendarTime (CalendarTime),
     Event (Event),
+    OriginVariety (ApplicationSpecific),
     Replica,
     Time,
     TimeVariety (Calendar, Epoch, Logical),
@@ -46,6 +49,7 @@ import RON.Event (
     decodeReplica,
     hours,
     minutes,
+    mkReplica,
     mkTime,
     months,
     nanosecHundreds,
@@ -170,11 +174,15 @@ atom size =
         , AUuid <$> uuid
         ]
 
-event :: (MonadGen gen) => gen Event
-event = Event <$> eventTime <*> replica
+anyEvent :: (MonadGen gen) => gen Event
+anyEvent = Event <$> eventTime <*> anyReplica
 
-replica :: (MonadGen gen) => gen Replica
-replica = decodeReplica <$> uuid
+anyReplica :: (MonadGen gen) => gen Replica
+anyReplica = decodeReplica <$> uuid
+
+-- | Generate application-specific replica
+replicaA :: (MonadGen gen) => gen Replica
+replicaA = mkReplica ApplicationSpecific <$> word60
 
 shortText :: (MonadGen gen) => gen Text
 shortText = text (Range.linear 0 10) unicodeAll
