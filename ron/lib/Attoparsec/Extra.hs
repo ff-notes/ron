@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Attoparsec.Extra (
@@ -14,20 +15,25 @@ module Attoparsec.Extra (
     (<+>),
 ) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Data.Attoparsec.ByteString.Char8 (anyChar, decimal, isDigit_w8,
-                                                   signed)
-import           Data.Attoparsec.ByteString.Lazy as Attoparsec
-import qualified Data.Attoparsec.Internal.Types as Internal
-import qualified Data.ByteString as BS
-import           Data.ByteString.Lazy (fromStrict)
-import           Data.Maybe (isJust)
-import qualified Data.Scientific as Sci
-import           GHC.Real (toInteger)
+import Data.Attoparsec.ByteString.Char8 (
+    anyChar,
+    decimal,
+    isDigit_w8,
+    signed,
+ )
+import Data.Attoparsec.ByteString.Lazy as Attoparsec
+import Data.Attoparsec.Internal.Types qualified as Internal
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy (fromStrict)
+import Data.Maybe (isJust)
+import Data.Scientific qualified as Sci
+import GHC.Real (toInteger)
 
--- | TODO(2020-06-17, cblp) make parser lazy/incremental
--- TODO(2021-04-25, cblp) remove in favor of attoparsec-0.14 lazy version
+{- | TODO(2020-06-17, cblp) make parser lazy/incremental
+TODO(2021-04-25, cblp) remove in favor of attoparsec-0.14 lazy version
+-}
 parseOnlyL :: Parser a -> ByteStringL -> Either String a
 parseOnlyL p = eitherResult . parse p
 
@@ -63,7 +69,7 @@ endOfInputEx = do
         rest <- takeAtMost 11
         let cite
                 | BS.length rest < 11 = rest
-                | otherwise           = BS.take 10 rest <> "..."
+                | otherwise = BS.take 10 rest <> "..."
         fail $ show pos <> ": extra input: " <> show cite
 
 takeAtMost :: Int -> Parser ByteString
@@ -75,36 +81,38 @@ takeAtMost limit = do
         pos <- getPos
         guard (pos >= maxPos) <|> endOfInput
 
-(??) :: Applicative f => Maybe a -> f a -> f a
+(??) :: (Applicative f) => Maybe a -> f a -> f a
 a ?? alt = maybe alt pure a
 
--- | Apply parser and check it is applied successfully.
--- Kinda opposite to 'guard'.
-isSuccessful :: Alternative f => f a -> f Bool
+{- | Apply parser and check it is applied successfully.
+Kinda opposite to 'guard'.
+-}
+isSuccessful :: (Alternative f) => f a -> f Bool
 isSuccessful p = p $> True <|> pure False
 
 char :: Char -> Parser Char
 char c = do
     c' <- anyChar
-    if c == c' then
-        pure c
-    else
-        fail $ "Expected " ++ show c ++ ", got " ++ show c'
+    if c == c'
+        then
+            pure c
+        else
+            fail $ "Expected " ++ show c ++ ", got " ++ show c'
 
 -- | Parses a definite double, i.e. it is not an integer. For this, the double has either a '.', and 'e'/'E' part or both.
 {-# INLINE definiteDouble #-}
 definiteDouble :: Parser Double
-definiteDouble = withDot <|> noDot where
-
-    dot   = char '.'
+definiteDouble = withDot <|> noDot
+  where
+    dot = char '.'
     minus = char '-'
 
     integerPart = decimal
 
     fractionalPartWithLength =
         BS.foldl' step (0, 0) `fmap` Attoparsec.takeWhile1 isDigit_w8
-          where
-            step (a, l) w = (a * 10 + fromIntegral (w - 48), l + 1)
+      where
+        step (a, l) w = (a * 10 + fromIntegral (w - 48), l + 1)
 
     exponent = (char 'e' <|> char 'E') *> signed decimal
 
@@ -123,26 +131,39 @@ definiteDouble = withDot <|> noDot where
 
 buildDouble :: Bool -> Integer -> Integer -> Int -> Int -> Double
 buildDouble
-    isNegative integerPart fractionalPart fractionalPartLength exponentPart =
+    isNegative
+    integerPart
+    fractionalPart
+    fractionalPartLength
+    exponentPart =
         Sci.toRealFloat $ Sci.scientific coeff exponent
-  where
-    addOrSubFractionalPart
-        | integerPart < 0 = -fractionalPart
-        | otherwise       = fractionalPart
-    coeff =
-        (if isNegative then negate else id) $
-            integerPart * 10 ^ toInteger fractionalPartLength
-            + addOrSubFractionalPart
-    exponent = exponentPart - fractionalPartLength
+      where
+        addOrSubFractionalPart
+            | integerPart < 0 = -fractionalPart
+            | otherwise = fractionalPart
+        coeff =
+            (if isNegative then negate else id) $
+                integerPart * 10 ^ toInteger fractionalPartLength
+                    + addOrSubFractionalPart
+        exponent = exponentPart - fractionalPartLength
 
 (<+>) :: Parser a -> Parser a -> Parser a
-(<+>) p1 p2 = Internal.Parser $ \t pos more lose suc -> let
-    lose1 t' _pos more1 ctx1 msg1 = Internal.runParser p2 t' pos more1 lose2 suc
-      where
-        lose2 t2 pos2 more2 ctx2 msg2 = lose t2 pos2 more2 [] $ unwords
-            [ "Many fails:\n"
-            , intercalate " > " ctx1, ":", msg1, "|\n"
-            , intercalate " > " ctx2, ":", msg2
-            ]
-    in Internal.runParser p1 t pos more lose1 suc
+(<+>) p1 p2 = Internal.Parser $ \t pos more lose suc ->
+    let
+        lose1 t' _pos more1 ctx1 msg1 = Internal.runParser p2 t' pos more1 lose2 suc
+          where
+            lose2 t2 pos2 more2 ctx2 msg2 =
+                lose t2 pos2 more2 [] $
+                    unwords
+                        [ "Many fails:\n"
+                        , intercalate " > " ctx1
+                        , ":"
+                        , msg1
+                        , "|\n"
+                        , intercalate " > " ctx2
+                        , ":"
+                        , msg2
+                        ]
+     in
+        Internal.runParser p1 t pos more lose1 suc
 infixl 3 <+>
