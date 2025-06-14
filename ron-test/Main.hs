@@ -47,13 +47,16 @@ import RON.Binary.Serialize qualified as RB
 import RON.Data (
     evalObjectState,
     execObjectState,
+    getObjectStateChunk,
     newObjectFrame,
     newObjectFrameWith,
     runObjectState,
+    stateFromChunk,
  )
+import RON.Data.CT (CTRep, CTString)
+import RON.Data.CT qualified as CT
 import RON.Data.ORSet (ORSet (ORSet))
 import RON.Data.ORSet qualified as ORSet
-import RON.Data.RGA (RgaString)
 import RON.Data.RGA qualified as RGA
 import RON.Event (
     OriginVariety (ApplicationSpecific, TrieForked),
@@ -74,11 +77,13 @@ import RON.Types (
     ClosedOp (ClosedOp, objectId, op, reducerId),
     ObjectFrame,
     Op (Op, opId, payload, refId),
+    StateChunk (StateChunk),
     UUID (UUID),
     WireChunk (Closed),
  )
 import RON.UUID qualified as UUID
 
+import CT qualified
 import Gen qualified
 import HexDump (hexdump)
 import LwwStruct qualified
@@ -328,6 +333,9 @@ prop_ron_json_example =
 
 lwwType = $(UUID.liftName "lww")
 
+prop_causalTree0 = CT.prop_causalTree0
+prop_causalTree1 = CT.prop_causalTree1
+
 prop_lwwStruct = LwwStruct.prop_lwwStruct
 
 prop_structSet = StructSet.prop_structSet
@@ -345,6 +353,19 @@ prop_RGA_edit_idempotency = property do
                 textY' <- evalObjectState rgaY RGA.getText
                 textY === textY'
 
+prop_CT_edit_idempotency = property do
+    textX <- forAll Gen.shortText
+    textY <- forAll Gen.shortText
+    evalExceptT $
+        runNetworkSimT $
+            runReplicaSimT (mkReplica ApplicationSpecific 354) do
+                ctX <- newObjectFrameWith $ CT.newFromText textX
+                annotateShow ctX
+                ctY <- execObjectState ctX $ CT.editText textY
+                annotateShow ctY
+                textY' <- evalObjectState ctY CT.getText
+                textY === textY'
+
 prop_RGA_edit_idempotency_back = property do
     textX <- forAll Gen.shortText
     textY <- forAll Gen.shortText
@@ -355,6 +376,18 @@ prop_RGA_edit_idempotency_back = property do
                 rgaY <- execObjectState rgaX $ RGA.editText textY
                 rgaX' <- execObjectState rgaY $ RGA.editText textX
                 textX' <- evalObjectState rgaX' RGA.getText
+                textX === textX'
+
+prop_CT_edit_idempotency_back = property do
+    textX <- forAll Gen.shortText
+    textY <- forAll Gen.shortText
+    evalExceptT $
+        runNetworkSimT $
+            runReplicaSimT (mkReplica ApplicationSpecific 380) do
+                ctX <- newObjectFrameWith $ CT.newFromText textX
+                ctY <- execObjectState ctX $ CT.editText textY
+                ctX' <- execObjectState ctY $ CT.editText textX
+                textX' <- evalObjectState ctX' CT.getText
                 textX === textX'
 
 prop_RGA_delete_deleted =
@@ -403,6 +436,55 @@ prop_RGA_delete_deleted =
                     rga2 <- execObjectState rga1 $ RGA.editText "help"
                     rga2expect === prepObj rga2
 
+prop_CT_delete_deleted =
+    let
+        ct0expect =
+            prep
+                [s| *ct #7/0000000DmD+000000007J                    !
+                                                    @`}Klo          'h'
+                                                    @)p     :`)o    'e'
+                                                    @)q     :)p     'l'
+                                                    @)r     :)q     'l'
+                                                    @)s     :)r     'o'
+                    . |]
+        ct1expect =
+            prep
+                [s| *ct #7/0000000DmD+000000007J                    !
+                                                    @`}Klo          'h'
+                                                    @)p     :`)o    'e'
+                                                    @)q     :)p     'l'
+                                                    @)r     :)q     'l'
+                                                    @)s     :)r     'o'
+                                                    @}Z2B   :)s
+                    . |]
+        ct2expect =
+            prep
+                [s| *ct #7/0000000DmD+000000007J                    !
+                                                    @`}Klo          'h'
+                                                    @)p     :`)o    'e'
+                                                    @)q     :)p     'l'
+                                                    @)r     :)q     'l'
+                                                    @)s     :)r     'o'
+                                                    @}Z2B   :)s
+                                                    @}dkB   :)r
+                                                    @}o7B   :}dkB   'p'
+                    . |]
+     in
+        property $
+            ( evalExceptT
+                . runNetworkSimT
+                . runReplicaSimT (mkReplica ApplicationSpecific 467)
+            )
+                do
+                    ct0 <- newObjectFrameWith $ CT.newFromText "hello"
+                    ct0expect === prepObj ct0
+
+                    ct1 <- execObjectState ct0 $ CT.editText "hell"
+                    ct1expect === prepObj ct1
+
+                    ct2 <- execObjectState ct1 $ CT.editText "help"
+                    ct2expect === prepObj ct2
+
 prop_RGA_getAliveIndices = property do
     text <- forAll Gen.shortText
     replica <- forAll Gen.anyReplica
@@ -410,6 +492,14 @@ prop_RGA_getAliveIndices = property do
         rga <-
             runReplicaSimT replica $ newObjectFrameWith $ RGA.newFromText text
         indices <- evalObjectState rga RGA.getAliveIndices
+        Text.length text === length indices
+
+prop_CT_getAliveWithIndices = property do
+    text <- forAll Gen.shortText
+    replica <- forAll Gen.replicaA
+    evalExceptT $ runNetworkSimT do
+        ct <- runReplicaSimT replica $ newObjectFrameWith $ CT.newFromText text
+        indices <- evalObjectState ct CT.getAliveWithIndices
         Text.length text === length indices
 
 -- TODO(2019-04-17, #60, cblp) RGA objects are not random enough. Try to
@@ -434,6 +524,38 @@ prop_RGA_insertAfter = property do
                     RGA.getText
         prefix <> inset <> suffix === text'
 
+-- TODO(2019-04-17, #60, cblp) CT objects are not random enough. Try to
+-- generate CTs from a series of ops.
+prop_CT_insertAfter = property do
+    (prefix, inset, suffix) <- forAll $ replicateM3 Gen.shortText
+    (replica1, replica2) <- forAll $ replicateM2 Gen.replicaA
+    evalExceptT $ runNetworkSimT do
+        ctState <-
+            runReplicaSimT replica1 $
+                newObjectFrameWith $
+                    CT.newFromText $
+                        prefix <> suffix
+        annotateShow ctState
+        ctWithIndices <- evalObjectState ctState CT.getAliveWithIndices
+        annotateShow ctWithIndices
+        let pos =
+                maybe UUID.zero fst $ ctWithIndices !! (Text.length prefix - 1)
+        annotateShow pos
+        (text', ctState') <-
+            runReplicaSimT replica2 $
+                runObjectState ctState do
+                    CT.insertText inset pos
+                    CT.getText
+        annotateShow ctState'
+        ctRep' <-
+            evalObjectState ctState' do
+                StateChunk stateBody <- getObjectStateChunk
+                pure $ stateFromChunk @CTRep stateBody
+        annotateShow ctRep'
+        ctWithIndices' <- evalObjectState ctState' CT.getAliveWithIndices
+        annotateShow ctWithIndices'
+        prefix <> inset <> suffix === text'
+
 prop_RGA_remove = property do
     text <- forAll $ Gen.filter (not . Text.null) Gen.shortText
     i <- forAll $ Gen.int $ Range.linear 0 (Text.length text - 1)
@@ -447,6 +569,24 @@ prop_RGA_remove = property do
             runReplicaSimT replica2 $ evalObjectState rgaState do
                 RGA.remove u
                 RGA.getText
+        text_delete i text === text'
+  where
+    text_delete i t =
+        let (before, after) = Text.splitAt i t in before <> Text.tail after
+
+prop_CT_remove = property do
+    text <- forAll $ Gen.filter (not . Text.null) Gen.shortText
+    i <- forAll $ Gen.int $ Range.linear 0 (Text.length text - 1)
+    (replica1, replica2) <- forAll $ replicateM2 Gen.replicaA
+    evalExceptT $ runNetworkSimT do
+        ctState <-
+            runReplicaSimT replica1 $ newObjectFrameWith $ CT.newFromText text
+        indices <- evalObjectState ctState CT.getAliveWithIndices
+        let u = fst $ fromJust $ indices !! i
+        text' <-
+            runReplicaSimT replica2 $ evalObjectState ctState do
+                CT.remove u
+                CT.getText
         text_delete i text === text'
   where
     text_delete i t =
@@ -501,37 +641,37 @@ prop_ObjectORSet =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
                                                     @`}qDd          >}PsG
-                    *rga #}PsG                      @0              !
+                    *ct  #}PsG                      @0              !
                                                     @`}aHG          'M'
-                                                    @)H             'a'
-                                                    @)I             'r'
-                                                    @)J             'k'
+                                                    @)H     :`)G    'a'
+                                                    @)I     :)H     'r'
+                                                    @)J     :)I     'k'
                     . |]
         state2expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
                                                     @`{11DG :`{0qDd >}PsG
-                    *rga #}PsG                      @0      :0      !
+                    *ct  #}PsG                      @0      :0      !
                                                     @`}aHG          'M'
-                                                    @)H             'a'
-                                                    @)I             'r'
-                                                    @)J             'k'
+                                                    @)H     :`)G    'a'
+                                                    @)I     :)H     'r'
+                                                    @)J     :)I     'k'
                     . |]
      in
         property $
             evalExceptT $
                 runNetworkSimT $
                     runReplicaSimT (mkReplica ApplicationSpecific 400) do
-                        state0 <- newObjectFrame $ ORSet @RgaString []
+                        state0 <- newObjectFrame $ ORSet @CTString []
                         state0expect === prepObj state0
 
-                        (rga, state1) <- runObjectState state0 do
-                            rga <- RGA.newFromText "Mark"
-                            ORSet.addRef rga
-                            pure rga
+                        (ct, state1) <- runObjectState state0 do
+                            ct <- CT.newFromText "Mark"
+                            ORSet.addRef ct
+                            pure ct
                         state1expect === prepObj state1
 
-                        state2 <- execObjectState state1 $ ORSet.removeRef rga
+                        state2 <- execObjectState state1 $ ORSet.removeRef ct
                         state2expect === prepObj state2
 
 prop_ObjectORSet_recursive =

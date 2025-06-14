@@ -39,6 +39,7 @@ library
     , generic-lens
     , hashable
     , lens
+    , mtl
     , network-info
     , stm
     , text
@@ -50,6 +51,7 @@ library
   build-depends:   ron >=0.9
   exposed-modules:
     RON.Data
+    RON.Data.CT
     RON.Data.GTree
     RON.Data.LWW
     RON.Data.ORSet

@@ -21,6 +21,7 @@ import qualified Data.Text as Text
 import Language.Haskell.TH (Q, conT, normalB, varP)
 import qualified Language.Haskell.TH as TH
 import Language.Haskell.TH.Syntax (liftString)
+import RON.Data.CT (CT)
 import RON.Data.ORSet (ORSet, ORSetMap)
 import RON.Data.RGA (RGA)
 import RON.Data.VersionVector (VersionVector)
@@ -53,6 +54,7 @@ mkGuideType typ = case typ of
     TObjectRef t -> wrap ''ObjectRef t
   TEnum Enum {name} -> conT $ mkNameT name
   TObject t -> case t of
+    TCT item -> wrap ''CT item
     TOpaqueObject u -> mkOpaque u
     TORSet item -> wrap ''ORSet item
     TORSetMap key value -> wrap2 ''ORSetMap key value

@@ -62,7 +62,8 @@ data TEnum = Enum {name :: Text, items :: [Text]}
   deriving (Show)
 
 data TObject
-  = TOpaqueObject Opaque
+  = TCT RonType
+  | TOpaqueObject Opaque
   | TORSet RonType
   | TORSetMap RonType RonType
   | TRga RonType

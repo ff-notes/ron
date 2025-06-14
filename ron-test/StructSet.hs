@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -30,6 +31,8 @@ import RON.Data (
     newObjectFrame,
     readObject,
  )
+import RON.Data.CT (CT (CT))
+import RON.Data.CT qualified as CT
 import RON.Data.ORSet (ORSet (ORSet))
 import RON.Data.ORSet qualified as ORSet
 import RON.Data.RGA (RGA (RGA))
@@ -63,6 +66,7 @@ example0 =
         , set5 = []
         , nst6 = Nothing
         , ref7 = []
+        , str8 = Just $ CT "Anne"
         }
 
 -- | "r3pl1c4"
@@ -75,10 +79,16 @@ state1expect =
                                 @`}KUW          >int1   275
                                 @}OUW           >str2   >7/0000000WUW+r3pl1c4
                                 @}~mp           >str3   '190'
+                                @{140W          >str8   >7/0000001H2W+r3pl1c4
         *rga    #}WUW           @0              !
                                 @`}lUW          '2'
                                 @)X             '7'
                                 @)Y             '5'
+        *ct     #{1H2W          @0              !
+                                @`}MMW          'A'
+                                @)X     :`)W    'n'
+                                @)Y     :)X     'n'
+                                @)Z     :)Y     'e'
         .
     |]
 
@@ -86,38 +96,52 @@ state4expect :: ByteStringL
 state4expect =
     [s| *set    #7/0000000DrW+r3pl1c4   !
                         @`}OUW          >str2 >7/0000000WUW+r3pl1c4
-                        @{140W          >int1 166
-                        @}H2W   :`{0KUW >int1 275
-                        @}dUW   :0      >str3 '206'
-                        @}lUW   :`{0~mp >str3 '190'
-                        @{20UW  :0      >set4 >7/0000002GUW+r3pl1c4
-                        @{412W          >nst6 >7/00000046MW+r3pl1c4
-                        @{5GUW          >set5 172
-                        @}WUW   :`}0UW  >set5 170
-                        @{6GUW  :{60UW  >ref7 >7/0000005lUW+r3pl1c4
+                        @{140W          >str8 >7/0000001H2W+r3pl1c4
+                        @}MMW           >int1 166
+                        @}PUW   :`{0KUW >int1 275
+                        @{20UW  :0      >str3 '206'
+                        @}GUW   :`{0~mp >str3 '190'
+                        @}WUW   :0      >set4 >7/0000002lUW+r3pl1c4
+                        @{4X2W          >nst6 >7/0000004bMW+r3pl1c4
+                        @{5lUW          >set5 172
+                        @{60UW  :`{5WUW >set5 170
+                        @}lUW   :{6WUW  >ref7 >7/0000006GUW+r3pl1c4
         *rga    #}WUW   @0      :0      !
-                        @`}lUW  :`{1MMW '2'
-                        @)X     :}PUW   '7'
-                        @{1QUW  :0      '1'
-                        @}_UW           '4'
+                        @`}lUW  :`{1QUW '2'
+                        @)X     :}_UW   '7'
+                        @{1dUW  :0      '1'
+                        @}lUW           '4'
                         @{0lUY          '5'
-        *set    #{2GUW  @0              !
-                        @`{4WUW         >{4AUW
-                        @}lUW   :`{3p0W >}WUW
-                #}WUW   @0      :0      !
-                        @`}lUW          >int1 135
-                        @{30UW          >str2 >7/0000003GUW+r3pl1c4
-                        @}kmp           >str3 '137'
-        *rga    #{3GUW  @0              !
-                        @`}WUW          '1'
+        *ct     #{1H2W  @0              !
+                        @`}MMW          'A'
+                        @)X     :`)W    'n'
+                        @)Y     :)X     'n'
+                        @)Z     :)Y     'e'
+                        @{70UW  :)W
+                        @)X     :)X
+                        @)Y     :)Y
+                        @}Fmp   :{70UY  'J'
+                        @}K0W   :{1MMZ  's'
+                        @)X     :`)W    's'
+                        @)Y     :)X     'i'
+                        @)Z     :)Y     'e'
+        *set    #{2lUW  @0      :0      !
+                        @`{50UW         >{4fUW
+                        @}GUW   :`{4K0W >{30UW
+                #{30UW  @0      :0      !
+                        @`}GUW          >int1 135
+                        @}WUW           >str2 >7/0000003lUW+r3pl1c4
+                        @{4Fmp          >str3 '137'
+        *rga    #}lUW   @0              !
+                        @`{40UW         '1'
                         @)X             '3'
                         @)Y             '6'
-        *set    #{46MW  @0              !
-                        @`}9UW          >int1 138
-                #}AUW   @0              !
-                        @`}KUW          >int1 164
-                        @}OUW           >str3 '166'
-                #{5lUW  @0              !
+        *set    #{4bMW  @0              !
+                        @`}eUW          >int1 138
+                #}fUW   @0              !
+                        @`}pUW          >int1 164
+                        @}tUW           >str3 '166'
+                #{6GUW  @0              !
         .
     |]
 
@@ -131,6 +155,7 @@ example4expect =
         , set5 = [172]
         , nst6 = Just def{int1 = Just 138}
         , ref7 = []
+        , str8 = Just $ CT "Jessie"
         }
 
 prop_structSet :: Property
@@ -208,6 +233,8 @@ prop_structSet =
                     ref7_add ss13
                     checkCausality
                     ref7_removeIf \r -> pure $ r == ss13
+                    checkCausality
+                    str8_zoom $ CT.edit "Jessie"
                     checkCausality
 
         -- decode object after modification

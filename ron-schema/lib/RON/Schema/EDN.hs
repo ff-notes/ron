@@ -52,6 +52,8 @@ prelude =
     [ ( "Bool",
         Type0 $ opaqueAtoms "Bool" OpaqueAnnotations{haskellType = Just "Bool"}
       ),
+      ("CT", Type1 $ TObject . TCT),
+      ("CTString", Type0 $ TObject $ TCT char),
       ("Day", Type0 day),
       ("Float", Type0 $ TAtom TAFloat),
       ("Integer", Type0 $ TAtom TAInteger),

@@ -12,6 +12,8 @@ import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Hedgehog (Property, evalEither, evalExceptT, property, (===))
 
 import RON.Data (evalObjectState, execObjectState, newObjectFrame, readObject)
+import RON.Data.CT (CT (CT))
+import RON.Data.CT qualified as CT
 import RON.Data.ORSet (ORSet (ORSet))
 import RON.Data.ORSet qualified as ORSet
 import RON.Data.RGA (RGA (RGA))
@@ -29,6 +31,7 @@ import LwwStruct.Types (
     str2_zoom,
     str3_read,
     str3_set,
+    str6_zoom,
  )
 import Orphans ()
 import String (s)
@@ -41,6 +44,7 @@ example0 =
         , str3 = Just "190"
         , set4 = Just $ ORSet []
         , nst5 = Nothing
+        , str6 = Just $ CT "Erik"
         }
 
 -- | "r3pl1c4"
@@ -55,39 +59,59 @@ ex1expect =
                                                 :set4   >}KUW
                                                 :str2   >}OUW
                                                 :str3   '190'
+                                                :str6   >}kmp
         *set    #}KUW                   @0      :0      !
         *rga    #}OUW                                   !
                                         @`}WUW          '2'
                                         @)X             '7'
                                         @)Y             '5'
+        *ct     #}kmp                   @0              !
+                                        @`}p0W          'E'
+                                        @)X     :`)W    'r'
+                                        @)Y     :)X     'i'
+                                        @)Z     :)Y     'k'
         .
     |]
 
 ex4expect :: ByteStringL
 ex4expect =
     [s| *lww    #7/0000000DrW+r3pl1c4                   !
-                                        @`}WUW  :int1   166
-                                        @{1p0W  :nst5
+                                        @`}p0W  :int1   166
+                                        @{2K0W  :nst5
                                         @`      :set4   >}KUW
                                                 :str2   >}OUW
-                                        @{19UW  :str3   '206'
+                                        @{1KUW  :str3   '206'
+                                        @`      :str6   >}kmp
         *set    #}KUW                   @0      :0      !
-                                        @`{1kmp         >{1AUW
+                                        @`{2Fmp         >{1OUW
         *rga    #}OUW                   @0              !
-                                        @`}WUW  :`}kmp  '2'
-                                        @)X     :}p0W   '7'
-                                        @{112W  :0      '1'
-                                        @}6MW           '4'
+                                        @`}WUW  :`{112W '2'
+                                        @)X     :}6MW   '7'
+                                        @{19UW  :0      '1'
+                                        @}AUW           '4'
                                         @{0WUY          '5'
-        *lww    #{1AUW                  @0              !
+        *ct     #}kmp                   @0              !
+                                        @`}p0W          'E'
+                                        @)X     :`)W    'r'
+                                        @)Y     :)X     'i'
+                                        @)Z     :)Y     'k'
+                                        @{2X2W  :)W
+                                        @)X     :)X
+                                        @)Y     :)Y
+                                        @)Z     :)Z
+                                        @}i6t   :{2X2Z  'A'
+                                        @)u     :`)t    'd'
+                                        @)v     :)u     'a'
+        *lww    #{1OUW                  @0      :0      !
                                         @`      :int1   135
                                                 :nst5
-                                                :set4   >}KUW
-                                                :str2   >}OUW
+                                                :set4   >}WUW
+                                                :str2   >}lUW
                                                 :str3   '137'
-        *set    #}KUW                   @0      :0      !
-        *rga    #}OUW                                   !
-                                        @`}WUW          '1'
+                                                :str6
+        *set    #}WUW                   @0      :0      !
+        *rga    #}lUW                                   !
+                                        @`{20UW         '1'
                                         @)X             '3'
                                         @)Y             '6'
         .
@@ -108,9 +132,11 @@ example4expect =
                         , str3 = Just "137"
                         , set4 = Just $ ORSet []
                         , nst5 = Nothing
+                        , str6 = Nothing
                         }
                     ]
         , nst5 = Nothing
+        , str6 = Just $ CT "Ada"
         }
 
 prop_lwwStruct :: Property
@@ -151,10 +177,12 @@ prop_lwwStruct = property do
                             , str3 = Just "137"
                             , set4 = Just $ ORSet []
                             , nst5 = Nothing
+                            , str6 = Nothing
                             }
                 nst5Value <- nst5_read
                 nst5Value === Nothing
                 nst5_set Nothing
+                str6_zoom $ CT.edit "Ada"
 
     -- decode object after modification
     example4 <- evalEither $ evalObjectState ex4state readObject
