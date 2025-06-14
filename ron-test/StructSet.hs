@@ -41,7 +41,12 @@ import RON.Event (
  )
 import RON.Event.Simulation (runNetworkSimT, runReplicaSimT)
 import RON.Text (parseObject, serializeObject)
-import RON.Types (ObjectRef, Op (Op, opId, refId), StateFrame, WireStateChunk (WireStateChunk, stateBody, stateType))
+import RON.Types (
+    ObjectRef,
+    Op (Op, opId, refId),
+    StateFrame,
+    WireStateChunk (WireStateChunk, stateBody, stateType),
+ )
 import RON.UUID (zero)
 
 import Orphans ()
@@ -66,14 +71,14 @@ replica = mkReplica ApplicationSpecific 0xd83d30067100000
 
 state1expect :: ByteStringL
 state1expect =
-    [s| *set    #7/0000000DrW+r3pl1c4   !
-                                @`}KUW  >int1   275
-                                @}OUW   >str2   >7/0000000WUW+r3pl1c4
-                                @}~mp   >str3   '190'
-        *rga    #}WUW           @0      !
-                                @`}lUW  '2'
-                                @)X     '7'
-                                @)Y     '5'
+    [s| *set    #7/0000000DrW+r3pl1c4           !
+                                @`}KUW          >int1   275
+                                @}OUW           >str2   >7/0000000WUW+r3pl1c4
+                                @}~mp           >str3   '190'
+        *rga    #}WUW           @0              !
+                                @`}lUW          '2'
+                                @)X             '7'
+                                @)Y             '5'
         .
     |]
 
@@ -166,7 +171,7 @@ prop_structSet =
                     Nothing <- set4_get
                     set4_set $ ORSet []
                     Just set4ref1 <- set4_get
-                    set4_zoom $ do
+                    set4_zoom do
                         ORSet.addValue
                             def
                                 { int1 = Just 135
@@ -182,14 +187,14 @@ prop_structSet =
                         value === Nothing
                     nst6_set def{int1 = Just 138}
                     checkCausality
-                    set4_zoom $ do
+                    set4_zoom do
                         ORSet.addValue
                             def
                                 { int1 = Just 164
                                 , str2 = Nothing
                                 , str3 = Just "166"
                                 }
-                        ORSet.removeObjectIf $ do
+                        ORSet.removeObjectIf do
                             i1 <- int1_read
                             pure $ i1 == Just 135
                     checkCausality
@@ -229,21 +234,24 @@ checkCausality = do
     checkStateFrame root frame
   where
     checkStateFrame root = void . Map.traverseWithKey (checkObject root)
+
     checkObject root self WireStateChunk{stateType, stateBody} =
         withFrozenCallStack $
             for_ stateBody \Op{opId, refId} -> do
                 unless (opId > self) do
                     annotate $
                         unlines
-                            [ "root = " <> show root
+                            [ "Expected opId > self"
+                            , "root = " <> show root
                             , "self = " <> show self <> " :: " <> show stateType
                             , "opId = " <> show opId
                             ]
                     failure
-                unless (refId == zero || refId > self) do
+                unless (refId == zero || refId >= self) do
                     annotate $
                         unlines
-                            [ "root = " <> show root
+                            [ "Expected refId == zero || refId >= self"
+                            , "root = " <> show root
                             , "self = " <> show self <> " :: " <> show stateType
                             , "refId = " <> show refId
                             ]
