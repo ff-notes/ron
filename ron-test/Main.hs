@@ -500,20 +500,22 @@ prop_ObjectORSet =
         state1expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
-                                                    @`}ih_          >}PsG
+                                                    @`}qDd          >}PsG
                     *rga #}PsG                      @0              !
-                                                    @`}aHG          '4'
-                                                    @)H             '0'
-                                                    @)I             '3'
+                                                    @`}aHG          'M'
+                                                    @)H             'a'
+                                                    @)I             'r'
+                                                    @)J             'k'
                     . |]
         state2expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
-                                                    @`}vyl  :`}ih_  >}PsG
+                                                    @`{11DG :`{0qDd >}PsG
                     *rga #}PsG                      @0      :0      !
-                                                    @`}aHG          '4'
-                                                    @)H             '0'
-                                                    @)I             '3'
+                                                    @`}aHG          'M'
+                                                    @)H             'a'
+                                                    @)I             'r'
+                                                    @)J             'k'
                     . |]
      in
         property $
@@ -524,7 +526,7 @@ prop_ObjectORSet =
                         state0expect === prepObj state0
 
                         (rga, state1) <- runObjectState state0 do
-                            rga <- RGA.newFromText "403"
+                            rga <- RGA.newFromText "Mark"
                             ORSet.addRef rga
                             pure rga
                         state1expect === prepObj state1
