@@ -7,7 +7,6 @@ module Attoparsec.Extra (
     endOfInputEx,
     isSuccessful,
     label,
-    parseOnlyL,
     takeL,
     definiteDouble,
     withInputSize,
@@ -30,12 +29,6 @@ import Data.ByteString.Lazy (fromStrict)
 import Data.Maybe (isJust)
 import Data.Scientific qualified as Sci
 import GHC.Real (toInteger)
-
-{- | TODO(2020-06-17, cblp) make parser lazy/incremental
-TODO(2021-04-25, cblp) remove in favor of attoparsec-0.14 lazy version
--}
-parseOnlyL :: Parser a -> ByteStringL -> Either String a
-parseOnlyL p = eitherResult . parse p
 
 -- | 'Attoparsec.take' adapter to 'ByteStringL'
 takeL :: Int -> Parser ByteStringL

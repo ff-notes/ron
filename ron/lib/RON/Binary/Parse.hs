@@ -16,7 +16,7 @@ module RON.Binary.Parse (
 import           RON.Prelude
 
 import           Attoparsec.Extra (Parser, anyWord8, endOfInputEx, label,
-                                   parseOnlyL, takeL, withInputSize)
+                                   parseOnly, takeL, withInputSize)
 import qualified Attoparsec.Extra as Atto
 import qualified Data.Binary as Binary
 import           Data.Binary.Get (getDoublebe, runGet)
@@ -61,7 +61,7 @@ extendedLength = do
 
 -- | Parse frame
 parse :: ByteStringL -> Either String WireFrame
-parse = parseOnlyL $ parseFrame <* endOfInputEx
+parse = parseOnly $ parseFrame <* endOfInputEx
 
 -- | 'Parser' for frame
 parseFrame :: Parser WireFrame
@@ -202,7 +202,7 @@ atom = label "Atom" $ do
 
 -- | Parse an 'Atom'
 parseAtom :: ByteStringL -> Either String Atom
-parseAtom = parseOnlyL $ atom <* endOfInputEx
+parseAtom = parseOnly $ atom <* endOfInputEx
 
 -- | 'Parser' for a float atom
 float
@@ -231,4 +231,4 @@ string size = decodeUtf8 . toStrict <$> takeL (fromIntegral size)
 -- | Parse a string atom
 parseString :: ByteStringL -> Either String Text
 parseString bs =
-    parseOnlyL (string (fromIntegral $ BSL.length bs) <* endOfInputEx) bs
+    parseOnly (string (fromIntegral $ BSL.length bs) <* endOfInputEx) bs

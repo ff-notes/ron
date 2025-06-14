@@ -28,7 +28,7 @@ module RON.Text.Parse (
 import           RON.Prelude hiding (takeWhile)
 
 import           Attoparsec.Extra (Parser, char, definiteDouble, endOfInputEx,
-                                   isSuccessful, label, manyTill, parseOnlyL,
+                                   isSuccessful, label, manyTill, parseOnly,
                                    satisfy, (<+>), (??))
 import qualified Data.Aeson as Json
 import           Data.Attoparsec.ByteString (takeWhile1)
@@ -57,7 +57,7 @@ import qualified RON.UUID as UUID
 
 -- | Parse a common frame
 parseWireFrame :: ByteStringL -> Either String WireFrame
-parseWireFrame = parseOnlyL frame
+parseWireFrame = parseOnly frame
 
 chunksTill :: Parser () -> Parser [WireChunk]
 chunksTill end = label "[WireChunk]" $ go closedOpZero
@@ -105,7 +105,7 @@ wireReducedChunk prev = label "WireChunk-reduced" $ do
     stop = pure []
 
 parseStateChunk :: ByteStringL -> Either String WireStateChunk
-parseStateChunk = parseOnlyL $ do
+parseStateChunk = parseOnly $ do
   (Value value, _) <- wireReducedChunk closedOpZero
   let
     WireReducedChunk{wrcHeader, wrcBody} = value
@@ -117,20 +117,20 @@ frame = label "WireFrame" $ chunksTill (endOfFrame <|> endOfInputEx)
 
 -- | Parse a sequence of common frames
 parseWireFrames :: ByteStringL -> Either String [WireFrame]
-parseWireFrames = parseOnlyL $ manyTill frameInStream endOfInputEx
+parseWireFrames = parseOnly $ manyTill frameInStream endOfInputEx
 
 frameInStream :: Parser WireFrame
 frameInStream = label "WireFrame-stream" $ chunksTill endOfFrame
 
 -- | Parse a single context-free op
 parseOp :: ByteStringL -> Either String ClosedOp
-parseOp = parseOnlyL $ do
+parseOp = parseOnly $ do
     (_, x) <- closedOp closedOpZero <* skipSpace <* endOfInputEx
     pure x
 
 -- | Parse a single context-free UUID
 parseUuid :: ByteStringL -> Either String UUID
-parseUuid = parseOnlyL $
+parseUuid = parseOnly $
     uuid UUID.zero UUID.zero PrevOpSameKey <* skipSpace <* endOfInputEx
 
 uuidFromText :: Text -> Either String UUID
@@ -146,14 +146,14 @@ parseUuidKey
     -> ByteStringL
     -> Either String UUID
 parseUuidKey prevKey prev =
-    parseOnlyL $ uuid prevKey prev PrevOpSameKey <* skipSpace <* endOfInputEx
+    parseOnly $ uuid prevKey prev PrevOpSameKey <* skipSpace <* endOfInputEx
 
 -- | Parse a UUID in value (atom) position
 parseUuidAtom
     :: UUID  -- ^ previous
     -> ByteStringL
     -> Either String UUID
-parseUuidAtom prev = parseOnlyL $ uuidAtom prev <* skipSpace <* endOfInputEx
+parseUuidAtom prev = parseOnly $ uuidAtom prev <* skipSpace <* endOfInputEx
 
 endOfFrame :: Parser ()
 endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
@@ -367,7 +367,7 @@ pPayload = label "payload" . go
                     _       -> prevUuid
 
 parsePayload :: ByteStringL -> Either String Payload
-parsePayload = parseOnlyL $ pPayload UUID.zero <* endOfInputEx
+parsePayload = parseOnly $ pPayload UUID.zero <* endOfInputEx
 
 atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'
@@ -395,7 +395,7 @@ uuidAtom prev = uuid UUID.zero prev SameOpPrevUuid
 
 -- | Parse an atom
 parseAtom :: ByteStringL -> Either String Atom
-parseAtom = parseOnlyL $ atom UUID.zero <* endOfInputEx
+parseAtom = parseOnly $ atom UUID.zero <* endOfInputEx
 
 string :: Parser Text
 string = do
@@ -415,7 +415,7 @@ string = do
 
 -- | Parse a string atom
 parseString :: ByteStringL -> Either String Text
-parseString = parseOnlyL $ string <* endOfInputEx
+parseString = parseOnly $ string <* endOfInputEx
 
 -- | Return 'ClosedOp' and 'chunkIsQuery'
 header :: ClosedOp -> Parser (ClosedOp, Bool)
@@ -468,7 +468,7 @@ opZero = Op{opId = UUID.zero, refId = UUID.zero, payload = []}
 
 parseOpenFrame :: ByteStringL -> Either String [Op]
 parseOpenFrame =
-  parseOnlyL $ go UUID.zero <* skipSpace <* endOfInputEx
+  parseOnly $ go UUID.zero <* skipSpace <* endOfInputEx
   where
     go :: UUID -> Parser [Op]
     go prev =
@@ -479,4 +479,4 @@ parseOpenFrame =
         pure []
 
 parseOpenOp :: ByteStringL -> Either String Op
-parseOpenOp = parseOnlyL $ openOp UUID.zero <* skipSpace <* endOfInputEx
+parseOpenOp = parseOnly $ openOp UUID.zero <* skipSpace <* endOfInputEx
