@@ -362,30 +362,30 @@ prop_RGA_delete_deleted =
         rga0expect =
             prep
                 [s| *rga    #7/0000000Dqr+000000003f                    !
-                                                        @`}LaI          'h'
-                                                        @)J             'e'
-                                                        @)K             'l'
-                                                        @)L             'l'
-                                                        @)M             'o'
+                                                        @`}LxE          'h'
+                                                        @)F             'e'
+                                                        @)G             'l'
+                                                        @)H             'l'
+                                                        @)I             'o'
                     . |]
         rga1expect =
             prep
                 [s| *rga    #7/0000000Dqr+000000003f                    !
-                                                        @`}LaI          'h'
-                                                        @)J             'e'
-                                                        @)K             'l'
-                                                        @)L             'l'
-                                                        @)M     :`}WFE  'o'
+                                                        @`}LxE          'h'
+                                                        @)F             'e'
+                                                        @)G             'l'
+                                                        @)H             'l'
+                                                        @)I     :`}Ykz  'o'
                     . |]
         rga2expect =
             prep
                 [s| *rga    #7/0000000Dqr+000000003f                    !
-                                                        @`}LaI          'h'
-                                                        @)J             'e'
-                                                        @)K             'l'
-                                                        @)L     :`}cyz  'l'
-                                                        @)M     :}WFE   'o'
-                                                        @}kmU   :0      'p'
+                                                        @`}LxE          'h'
+                                                        @)F             'e'
+                                                        @)G             'l'
+                                                        @)H     :`}bXU  'l'
+                                                        @)I     :}Ykz   'o'
+                                                        @}rSU   :0      'p'
                     . |]
      in
         property $
@@ -500,20 +500,20 @@ prop_ObjectORSet =
         state1expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
-                                                    @`}ghG          >}PsG
+                                                    @`}ih_          >}PsG
                     *rga #}PsG                      @0              !
-                                                    @`}aXM          '4'
-                                                    @)N             '0'
-                                                    @)O             '3'
+                                                    @`}aHG          '4'
+                                                    @)H             '0'
+                                                    @)I             '3'
                     . |]
         state2expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
-                                                    @`}psG  :`}ghG  >}PsG
+                                                    @`}vyl  :`}ih_  >}PsG
                     *rga #}PsG                      @0      :0      !
-                                                    @`}aXM          '4'
-                                                    @)N             '0'
-                                                    @)O             '3'
+                                                    @`}aHG          '4'
+                                                    @)H             '0'
+                                                    @)I             '3'
                     . |]
      in
         property $

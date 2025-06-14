@@ -60,9 +60,9 @@ ex1expect =
         *set    #}KUW                   @0      :0      !
 
         *rga    #}OUW                                   !
-                                        @`}Wg6          '2'
-                                        @)7             '7'
-                                        @)8             '5'
+                                        @`}WUW          '2'
+                                        @)X             '7'
+                                        @)Y             '5'
         .
     |]
 
@@ -71,34 +71,34 @@ ex4expect =
     [s|
         *lww    #7/0000000DrW+r3pl1c4                   !
                                         @`}WUW  :int1   166
-                                        @{23dW  :nst5
+                                        @{1p0W  :nst5
                                         @`      :set4   >}KUW
                                                 :str2   >}OUW
-                                        @{1HUW  :str3   '206'
+                                        @{19UW  :str3   '206'
 
         *set    #}KUW                   @0      :0      !
-                                        @`{1qcW         >{1QUW
+                                        @`{1kmp         >{1AUW
 
         *rga    #}OUW                   @0              !
-                                        @`}Wg6  :`}acW  '2'
-                                        @)7     :}odW   '7'
-                                        @}~2W   :0      '1'
-                                        @{12MW          '4'
-                                        @{0Wg8          '5'
+                                        @`}WUW  :`}kmp  '2'
+                                        @)X     :}p0W   '7'
+                                        @{112W  :0      '1'
+                                        @}6MW           '4'
+                                        @{0WUY          '5'
 
-        *lww    #{1QUW                  @0              !
+        *lww    #{1AUW                  @0              !
                                         @`      :int1   135
                                                 :nst5
-                                                :set4   >}_UW
-                                                :str2   >}dUW
+                                                :set4   >}KUW
+                                                :str2   >}OUW
                                                 :str3   '137'
 
-        *set    #}_UW                   @0      :0      !
+        *set    #}KUW                   @0      :0      !
 
-        *rga    #}dUW                                   !
-                                        @`}lg6          '1'
-                                        @)7             '3'
-                                        @)8             '6'
+        *rga    #}OUW                                   !
+                                        @`}WUW          '1'
+                                        @)X             '3'
+                                        @)Y             '6'
         .
     |]
 

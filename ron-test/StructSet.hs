@@ -50,12 +50,12 @@ state1expect = [s|
     *set    #7/0000000DrW+r3pl1c4           !
                                     @`}KUW  >int1   275
                                     @}OUW   >str2   >7/0000000WUW+r3pl1c4
-                                    @}acW   >str3   '190'
+                                    @}~mp   >str3   '190'
 
     *rga    #}WUW                   @0      !
-                                    @`]g6   '2'
-                                    @)7     '7'
-                                    @)8     '5'
+                                    @`}lUW  '2'
+                                    @)X     '7'
+                                    @)Y     '5'
     .
     |]
 
@@ -63,41 +63,41 @@ state4expect :: ByteStringL
 state4expect = [s|
     *set    #7/0000000DrW+r3pl1c4                   !
                                     @`}OUW          >str2 >7/0000000WUW+r3pl1c4
-                                    @}odW           >int1 166
-                                    @}~2W   :`}KUW  >int1 275
-                                    @{1dUW  :0      >str3 '206'
-                                    @}lUW   :`{0acW >str3 '190'
+                                    @{140W          >int1 166
+                                    @}H2W   :`{0KUW >int1 275
+                                    @}dUW   :0      >str3 '206'
+                                    @}lUW   :`{0~mp >str3 '190'
                                     @{20UW  :0      >set4 >7/0000002GUW+r3pl1c4
-                                    @{3k2W          >nst6 >7/0000003nMW+r3pl1c4
+                                    @{412W          >nst6 >7/00000046MW+r3pl1c4
                                     @{5GUW          >set5 172
                                     @}WUW   :`}0UW  >set5 170
                                     @{6GUW  :{60UW  >ref7 >7/0000005lUW+r3pl1c4
 
     *rga    #}WUW                   @0      :0      !
-                                    @`]g6   :`{12MW '2'
-                                    @)7     :}HUW   '7'
+                                    @`}lUW  :`{1MMW '2'
+                                    @)X     :}PUW   '7'
                                     @{1QUW  :0      '1'
                                     @}_UW           '4'
-                                    @`]g8           '5'
+                                    @{0lUY          '5'
 
     *set    #{2GUW                  @0              !
                                     @`{4WUW         >{4AUW
-                                    @}lUW   :`{3ZdW >}WUW
+                                    @}lUW   :`{3p0W >}WUW
 
             #}WUW                   @0      :0      !
                                     @`}lUW          >int1 135
                                     @{30UW          >str2 >7/0000003GUW+r3pl1c4
-                                    @}LcW           >str3 '137'
+                                    @}kmp           >str3 '137'
 
     *rga    #{3GUW                  @0              !
-                                    @`]g6           '1'
-                                    @)7             '3'
-                                    @)8             '6'
+                                    @`}WUW          '1'
+                                    @)X             '3'
+                                    @)Y             '6'
 
-    *set    #}nMW                   @0              !
-                                    @`{41UW         >int1 138
+    *set    #{46MW                  @0              !
+                                    @`}9UW          >int1 138
 
-            #{4AUW                  @0              !
+            #}AUW                   @0              !
                                     @`}KUW          >int1 164
                                     @}OUW           >str3 '166'
 

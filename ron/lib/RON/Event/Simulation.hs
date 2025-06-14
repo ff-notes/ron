@@ -49,10 +49,9 @@ newtype ReplicaSimT m a = ReplicaSim (ReaderT Replica (NetworkSimT m) a)
 instance MonadTrans ReplicaSimT where
     lift = ReplicaSim . lift . lift
 
--- Hash backported from older version of hashable
-oldHash :: Word60 -> Word60 -> Word64 -> Word64
-oldHash x y z =
-    defaultSalt `combine` safeCast x `combine` safeCast y `combine` z
+-- Hash backported from older version of `hashable`
+oldHash :: Word60 -> Word64 -> Word64
+oldHash x y = defaultSalt `combine` safeCast x `combine` 1 `combine` y
   where
     defaultSalt = 0xdc36d1615b7400a4
     combine a b = (a * 16777619) `xor` b
@@ -66,7 +65,7 @@ instance (Monad m) => ReplicaClock (ReplicaSimT m) where
             lift $ NetworkSim $ state \replicaStates ->
                 let t0orig = HM.lookupDefault (ls60 0) replica replicaStates
                     Replica r = replica
-                    randomLeap = ls60 $ oldHash t0orig n r `mod` 0x10000
+                    randomLeap = ls60 $ oldHash t0orig r `mod` 0x10000
                     t0 = t0orig + randomLeap
                     t1 = t0 + n
                  in ((t0, t1), HM.insert replica t1 replicaStates)
