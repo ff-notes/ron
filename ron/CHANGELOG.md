@@ -10,6 +10,9 @@ and this project adheres to
 - `RON.Text.Parse.parsePayload`
 - `instance MonadTrans EpochClockT`
 - `instance MonadUnliftIO EpochClockT`
+- Lenses for UUID fields
+- `UUID.addValue`
+- Packing ops with '%' extension
 
 ### Changed
 - RON.Epoch:

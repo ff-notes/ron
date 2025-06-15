@@ -9,9 +9,11 @@ and this project adheres to
 ### Added
 - `VersionVector`: operator (·≻)
 - Experimental `GTree` -- grow-only tree
+- `CausalTree`
 
 ### Fixed
 - Adapt to changes in RON.Prelude
+- `advanceToObject`
 
 ## [0.10] - 2019-10-08
 ### Added
