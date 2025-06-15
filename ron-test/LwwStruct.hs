@@ -62,14 +62,9 @@ ex1expect =
                                                 :str6   >}kmp
         *set    #}KUW                   @0      :0      !
         *rga    #}OUW                                   !
-                                        @`}WUW          '2'
-                                        @)X             '7'
-                                        @)Y             '5'
+                                        @`}WUW          %f '275'
         *ct     #}kmp                   @0              !
-                                        @`}p0W          'E'
-                                        @)X     :`)W    'r'
-                                        @)Y     :)X     'i'
-                                        @)Z     :)Y     'k'
+                                        @`}p0W          %c 'Erik'
         .
     |]
 
@@ -91,17 +86,9 @@ ex4expect =
                                         @}AUW           '4'
                                         @{0WUY          '5'
         *ct     #}kmp                   @0              !
-                                        @`}p0W          'E'
-                                        @)X     :`)W    'r'
-                                        @)Y     :)X     'i'
-                                        @)Z     :)Y     'k'
-                                        @{2X2W  :)W
-                                        @)X     :)X
-                                        @)Y     :)Y
-                                        @)Z     :)Z
-                                        @}i6t   :{2X2Z  'A'
-                                        @)u     :`)t    'd'
-                                        @)v     :)u     'a'
+                                        @`}p0W          %c 'Erik'
+                                        @{2X2W  :)W     %i 4
+                                        @}i6t   :{2X2Z  %c 'Ada'
         *lww    #{1OUW                  @0      :0      !
                                         @`      :int1   135
                                                 :nst5
@@ -111,9 +98,7 @@ ex4expect =
                                                 :str6
         *set    #}WUW                   @0      :0      !
         *rga    #}lUW                                   !
-                                        @`{20UW         '1'
-                                        @)X             '3'
-                                        @)Y             '6'
+                                        @`{20UW         %f '136'
         .
     |]
 

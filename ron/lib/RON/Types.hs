@@ -19,6 +19,7 @@ module RON.Types (
     Op (..),
     OpenFrame,
     OpTerm (..),
+    Packer (..),
     Payload,
     StateChunk (..),
     StateFrame,
@@ -200,3 +201,8 @@ mapBoth :: (a -> b) -> (a, a) -> (b, b)
 mapBoth f (x, y) = (f x, f y)
 
 type OpenFrame = [Op]
+
+data Packer
+    = PackChain -- ^ op = prev.op + 1, ref = prev.op
+    | PackFixed -- ^ op = prev.op + 1, ref = prev.ref
+    | PackIncrement -- ^ op = prev.op + 1, ref = prev.ref + 1

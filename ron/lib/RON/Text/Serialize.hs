@@ -30,6 +30,7 @@ import Data.Aeson qualified as Json
 import Data.ByteString.Lazy.Char8 (cons, elem, snoc)
 import Data.ByteString.Lazy.Char8 qualified as BSL
 import Data.Map.Strict qualified as Map
+import Data.Text qualified as Text
 
 import RON.Text.Serialize.UUID (
     serializeUuid,
@@ -43,6 +44,7 @@ import RON.Types (
     ClosedOp (ClosedOp),
     ObjectFrame (ObjectFrame),
     Op (Op),
+    Packer (PackChain, PackFixed, PackIncrement),
     Payload,
     StateFrame,
     WireChunk (Closed, Query, Value),
@@ -53,7 +55,7 @@ import RON.Types (
     reducerId,
  )
 import RON.Types qualified
-import RON.UUID (UUID, succValue, zero)
+import RON.UUID (UUID, addValue, succValue, zero)
 
 -- | Serialize a common frame
 serializeWireFrame :: WireFrame -> ByteStringL
@@ -82,10 +84,103 @@ serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
     serializeBody = state \ClosedOp{op = opBefore, ..} ->
         let (body, opAfter) =
                 (`runState` opBefore) $
-                    for wrcBody $
-                        fmap ("\t" <>)
-                            . serializeReducedOpZip objectId
+                    for (packOps wrcBody) $
+                        fmap ("\t" <>) . serializeReducedOpPack objectId
          in (body, ClosedOp{op = opAfter, ..})
+
+data Pack p = Pack
+    { firstOpId, firstRefId, lastOpId, lastRefId :: UUID
+    , packedPayload :: p
+    }
+
+packOps :: [Op] -> [(Maybe Packer, Op)]
+packOps = goWithoutPack
+  where
+    goWithoutPack :: [Op] -> [(Maybe Packer, Op)]
+    goWithoutPack = \case
+        [] -> []
+        a@Op{payload = [AString ac]} : b@Op{payload = [AString bc]} : cont
+            | Text.length ac == 1
+            , Text.length bc == 1
+            , b.opId == succValue a.opId
+            , Just packer <- guessPacker a.opId a.refId b.refId ->
+                goWithText
+                    packer
+                    Pack
+                        { firstOpId = a.opId
+                        , firstRefId = a.refId
+                        , lastOpId = b.opId
+                        , lastRefId = b.refId
+                        , packedPayload = ac <> bc
+                        }
+                    cont
+        a@Op{payload = []} : b@Op{payload = []} : cont
+            | b.opId == succValue a.opId
+            , b.refId == succValue a.refId ->
+                goWithIncrement_
+                    Pack
+                        { firstOpId = a.opId
+                        , firstRefId = a.refId
+                        , lastOpId = b.opId
+                        , lastRefId = b.refId
+                        , packedPayload = 2
+                        }
+                    cont
+        op : cont -> (Nothing, op) : goWithoutPack cont
+
+    nextRef opId refId = \case
+        PackChain -> opId
+        PackFixed -> refId
+        PackIncrement -> succValue refId
+
+    guessPacker lastOpId lastRefId refId
+        | refId == lastOpId = Just PackChain
+        | refId == lastRefId = Just PackFixed
+        | refId == succValue lastRefId = Just PackIncrement
+        | otherwise = Nothing
+
+    goWithText :: Packer -> Pack Text -> [Op] -> [(Maybe Packer, Op)]
+    goWithText packer pack@Pack{lastOpId, lastRefId, packedPayload} = \case
+        Op{opId, refId, payload = [AString c]} : cont
+            | Text.length c == 1
+            , opId == succValue lastOpId
+            , refId == nextRef lastOpId lastRefId packer ->
+                goWithText
+                    packer
+                    pack
+                        { packedPayload = packedPayload <> c
+                        , lastOpId = opId
+                        , lastRefId = refId
+                        }
+                    cont
+        cont ->
+            wrap (fromIntegral . Text.length) AString packer pack
+                : goWithoutPack cont
+
+    goWithIncrement_ :: Pack Int64 -> [Op] -> [(Maybe Packer, Op)]
+    goWithIncrement_ pack@Pack{lastOpId, lastRefId, packedPayload} = \case
+        Op{opId, refId, payload = []} : cont
+            | opId == succValue lastOpId
+            , refId == succValue lastRefId ->
+                goWithIncrement_
+                    pack
+                        { packedPayload = succ packedPayload
+                        , lastOpId = opId
+                        , lastRefId = refId
+                        }
+                    cont
+        cont -> wrap id AInteger PackIncrement pack : goWithoutPack cont
+
+    wrap ::
+        (a -> Int64) -> (a -> Atom) -> Packer -> Pack a -> (Maybe Packer, Op)
+    wrap getSize mkAtom packer Pack{firstOpId, firstRefId, packedPayload} =
+        ( guard (getSize packedPayload > 1) $> packer
+        , Op
+            { opId = firstOpId
+            , refId = firstRefId
+            , payload = [mkAtom packedPayload]
+            }
+        )
 
 -- | Serialize a context-free raw op
 serializeRawOp :: ClosedOp -> ByteStringL
@@ -111,22 +206,51 @@ serializeClosedOpZip this = state \prev ->
     key c u = [c `cons` u | not $ BSL.null u]
 
 -- | Serialize a reduced op with compression in stream context
-serializeReducedOpZip ::
+serializeReducedOpPack ::
     -- | enclosing object
     UUID ->
-    Op ->
+    (Maybe Packer, Op) ->
     State Op ByteStringL
-serializeReducedOpZip opObject this = state \prev ->
-    let evt = serializeUuidKey prev.opId opObject this.opId
-        ref = serializeUuidKey prev.refId this.opId this.refId
-        payloadAtoms = serializePayloadZip opObject this.payload
-        keys
-            | BSL.null evt && BSL.null ref = ["@"]
-            | otherwise = key '@' evt ++ key ':' ref
-        op = keys ++ [payloadAtoms | not $ BSL.null payloadAtoms]
-     in (BSL.intercalate "\t" op, this)
+serializeReducedOpPack object (packerM, this) =
+    state \prev ->
+        let evt = serializeUuidKey prev.opId object this.opId
+            ref = serializeUuidKey prev.refId this.opId this.refId
+            payload =
+                serializePacker packerM
+                    <> serializePayloadZip object this.payload
+            keys
+                | BSL.null evt && BSL.null ref = ["@"]
+                | otherwise = key '@' evt ++ key ':' ref
+            op = keys ++ [payload | not $ BSL.null payload]
+         in (BSL.intercalate "\t" op, lastOp)
   where
     key c u = [c `cons` u | not $ BSL.null u]
+    packSize =
+        case this.payload of
+            [AString s] -> fromIntegral $ Text.length s
+            [AInteger i] -> fromIntegral i
+            _ -> undefined
+    lastOp =
+        case packerM of
+            Nothing -> this
+            Just packer ->
+                Op
+                    { opId = this.opId `addValue` (packSize - 1)
+                    , refId =
+                        case packer of
+                            PackChain -> this.opId `addValue` (packSize - 2)
+                            PackFixed -> this.refId
+                            PackIncrement ->
+                                this.refId `addValue` (packSize - 1)
+                    , payload = []
+                    }
+
+serializePacker :: Maybe Packer -> ByteStringL
+serializePacker = \case
+    Nothing -> ""
+    Just PackChain -> "%c "
+    Just PackFixed -> "%f "
+    Just PackIncrement -> "%i "
 
 serializeOp :: Op -> ByteStringL
 serializeOp Op{opId, refId, payload} =

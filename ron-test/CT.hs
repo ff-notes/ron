@@ -61,57 +61,15 @@ replica = mkReplica ApplicationSpecific 0xd83d30067100000
 state1expect :: ByteStringL
 state1expect =
     [s| *ct #7/0000000DrW+r3pl1c4                   !
-                                    @`}KUW          'a'
-                                    @)X     :`)W    'b'
-                                    @)Y     :)X     'c'
-                                    @)Z     :)Y     '['
-                                    @)_     :)Z     'D'
-                                    @)a     :)_     'E'
-                                    @)b     :)a     'L'
-                                    @)c     :)b     ']'
-                                    @)d     :)c     'g'
-                                    @)e     :)d     'h'
-                                    @)f     :)e     'i'
-                                    @)g     :)f     '['
-                                    @)h     :)g     'I'
-                                    @)i     :)h     'N'
-                                    @)j     :)i     'S'
-                                    @)k     :)j     ':'
-                                    @)l     :)k     ']'
-                                    @)m     :)l     'j'
-                                    @)n     :)m     'k'
-                                    @)o     :)n     'l'
+                                    @`}KUW          %c 'abc[DEL]ghi[INS:]jkl'
         . |]
 
 state4expect :: ByteStringL
 state4expect =
     [s| *ct #7/0000000DrW+r3pl1c4                   !
-                                    @`}KUW          'a'
-                                    @)X     :`)W    'b'
-                                    @)Y     :)X     'c'
-                                    @)Z     :)Y     '['
-                                    @)_     :)Z     'D'
-                                    @)a     :)_     'E'
-                                    @)b     :)a     'L'
-                                    @)c     :)b     ']'
-                                    @)d     :)c     'g'
-                                    @)e     :)d     'h'
-                                    @)f     :)e     'i'
-                                    @)g     :)f     '['
-                                    @)h     :)g     'I'
-                                    @)i     :)h     'N'
-                                    @)j     :)i     'S'
-                                    @)k     :)j     ':'
-                                    @)l     :)k     ']'
-                                    @)m     :)l     'j'
-                                    @)n     :)m     'k'
-                                    @)o     :)n     'l'
-                                    @}PeO   :)_
-                                    @)P     :)a
-                                    @)Q     :)b
-                                    @}b1K   :)k     'm'
-                                    @)L     :`)K    'n'
-                                    @)M     :)L     'o'
+                                    @`}KUW          %c 'abc[DEL]ghi[INS:]jkl'
+                                    @}PeO   :)_     %i 3
+                                    @}b1K   :)k     %c 'mno'
         . |]
 
 example4expect :: CTString
@@ -197,26 +155,15 @@ example10 = CT "Erik"
 ex11expect :: ByteStringL
 ex11expect =
     [s| *ct #7/0000000DrW+r3pl1c4                   !
-                                    @`}KUW          'E'
-                                    @)X     :`)W    'r'
-                                    @)Y     :)X     'i'
-                                    @)Z     :)Y     'k'
+                                    @`}KUW          %c 'Erik'
         . |]
 
 ex14expect :: ByteStringL
 ex14expect =
     [s| *ct #7/0000000DrW+r3pl1c4                   !
-                                    @`}KUW          'E'
-                                    @)X     :`)W    'r'
-                                    @)Y     :)X     'i'
-                                    @)Z     :)Y     'k'
-                                    @}VEt   :)W
-                                    @)u     :)X
-                                    @)v     :)Y
-                                    @)w     :)Z
-                                    @]xO    :}VEw   'A'
-                                    @)P     :]xO    'd'
-                                    @)Q     :)P     'a'
+                                    @`}KUW          %c 'Erik'
+                                    @}VEt   :)W     %i 4
+                                    @]xO    :}VEw   %c 'Ada'
         . |]
 
 example14expect :: CTString

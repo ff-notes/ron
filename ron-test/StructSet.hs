@@ -81,14 +81,9 @@ state1expect =
                                 @}~mp           >str3   '190'
                                 @{140W          >str8   >7/0000001H2W+r3pl1c4
         *rga    #}WUW           @0              !
-                                @`}lUW          '2'
-                                @)X             '7'
-                                @)Y             '5'
+                                @`}lUW          %f '275'
         *ct     #{1H2W          @0              !
-                                @`}MMW          'A'
-                                @)X     :`)W    'n'
-                                @)Y     :)X     'n'
-                                @)Z     :)Y     'e'
+                                @`}MMW          %c 'Anne'
         .
     |]
 
@@ -113,18 +108,10 @@ state4expect =
                         @}lUW           '4'
                         @{0lUY          '5'
         *ct     #{1H2W  @0              !
-                        @`}MMW          'A'
-                        @)X     :`)W    'n'
-                        @)Y     :)X     'n'
-                        @)Z     :)Y     'e'
-                        @{70UW  :)W
-                        @)X     :)X
-                        @)Y     :)Y
+                        @`}MMW          %c 'Anne'
+                        @{70UW  :)W     %i 3
                         @}Fmp   :{70UY  'J'
-                        @}K0W   :{1MMZ  's'
-                        @)X     :`)W    's'
-                        @)Y     :)X     'i'
-                        @)Z     :)Y     'e'
+                        @}K0W   :{1MMZ  %c 'ssie'
         *set    #{2lUW  @0      :0      !
                         @`{50UW         >{4fUW
                         @}GUW   :`{4K0W >{30UW
@@ -133,9 +120,7 @@ state4expect =
                         @}WUW           >str2 >7/0000003lUW+r3pl1c4
                         @{4Fmp          >str3 '137'
         *rga    #}lUW   @0              !
-                        @`{40UW         '1'
-                        @)X             '3'
-                        @)Y             '6'
+                        @`{40UW         %f '136'
         *set    #{4bMW  @0              !
                         @`}eUW          >int1 138
                 #}fUW   @0              !

@@ -391,99 +391,74 @@ prop_CT_edit_idempotency_back = property do
                 textX === textX'
 
 prop_RGA_delete_deleted =
-    let
-        rga0expect =
+    let rga0expect =
             prep
-                [s| *rga    #7/0000000Dqr+000000003f                    !
-                                                        @`}LxE          'h'
-                                                        @)F             'e'
-                                                        @)G             'l'
-                                                        @)H             'l'
-                                                        @)I             'o'
+                [s| *rga    #7/0000000Dqr+000000003f                !
+                                                    @`}LxE          %f 'hello'
                     . |]
         rga1expect =
             prep
-                [s| *rga    #7/0000000Dqr+000000003f                    !
-                                                        @`}LxE          'h'
-                                                        @)F             'e'
-                                                        @)G             'l'
-                                                        @)H             'l'
-                                                        @)I     :`}Ykz  'o'
+                [s| *rga    #7/0000000Dqr+000000003f                !
+                                                    @`}LxE          %f 'hell'
+                                                    @)I     :`}Ykz  'o'
                     . |]
         rga2expect =
             prep
-                [s| *rga    #7/0000000Dqr+000000003f                    !
-                                                        @`}LxE          'h'
-                                                        @)F             'e'
-                                                        @)G             'l'
-                                                        @)H     :`}bXU  'l'
-                                                        @)I     :}Ykz   'o'
-                                                        @}rSU   :0      'p'
+                [s| *rga    #7/0000000Dqr+000000003f                !
+                                                    @`}LxE          %f 'hel'
+                                                    @)H     :`}bXU  'l'
+                                                    @)I     :}Ykz   'o'
+                                                    @}rSU   :0      'p'
                     . |]
-     in
-        property $
-            ( evalExceptT
-                . runNetworkSimT
-                . runReplicaSimT (mkReplica ApplicationSpecific 234)
-            )
-                do
-                    rga0 <- newObjectFrameWith $ RGA.newFromText "hello"
-                    rga0expect === prepObj rga0
+     in ( property
+            . evalExceptT
+            . runNetworkSimT
+            . runReplicaSimT (mkReplica ApplicationSpecific 234)
+        )
+            do
+                rga0 <- newObjectFrameWith $ RGA.newFromText "hello"
+                rga0expect === prepObj rga0
 
-                    rga1 <- execObjectState rga0 $ RGA.editText "hell"
-                    rga1expect === prepObj rga1
+                rga1 <- execObjectState rga0 $ RGA.editText "hell"
+                rga1expect === prepObj rga1
 
-                    rga2 <- execObjectState rga1 $ RGA.editText "help"
-                    rga2expect === prepObj rga2
+                rga2 <- execObjectState rga1 $ RGA.editText "help"
+                rga2expect === prepObj rga2
 
 prop_CT_delete_deleted =
-    let
-        ct0expect =
+    let ct0expect =
             prep
                 [s| *ct #7/0000000DmD+000000007J                    !
-                                                    @`}Klo          'h'
-                                                    @)p     :`)o    'e'
-                                                    @)q     :)p     'l'
-                                                    @)r     :)q     'l'
-                                                    @)s     :)r     'o'
+                                                    @`}Klo          %c 'hello'
                     . |]
         ct1expect =
             prep
                 [s| *ct #7/0000000DmD+000000007J                    !
-                                                    @`}Klo          'h'
-                                                    @)p     :`)o    'e'
-                                                    @)q     :)p     'l'
-                                                    @)r     :)q     'l'
-                                                    @)s     :)r     'o'
+                                                    @`}Klo          %c 'hello'
                                                     @}Z2B   :)s
                     . |]
         ct2expect =
             prep
                 [s| *ct #7/0000000DmD+000000007J                    !
-                                                    @`}Klo          'h'
-                                                    @)p     :`)o    'e'
-                                                    @)q     :)p     'l'
-                                                    @)r     :)q     'l'
-                                                    @)s     :)r     'o'
+                                                    @`}Klo          %c 'hello'
                                                     @}Z2B   :)s
                                                     @}dkB   :)r
                                                     @}o7B   :}dkB   'p'
                     . |]
-     in
-        property $
-            ( evalExceptT
-                . runNetworkSimT
-                . runReplicaSimT (mkReplica ApplicationSpecific 467)
-            )
-                do
-                    ct0 <- newObjectFrameWith $ CT.newFromText "hello"
-                    ct0expect === prepObj ct0
+     in ( property
+            . evalExceptT
+            . runNetworkSimT
+            . runReplicaSimT (mkReplica ApplicationSpecific 467)
+        )
+            do
+                ct0 <- newObjectFrameWith $ CT.newFromText "hello"
+                ct0expect === prepObj ct0
 
-                    ct1 <- execObjectState ct0 $ CT.editText "hell"
-                    ct1expect === prepObj ct1
+                ct1 <- execObjectState ct0 $ CT.editText "hell"
+                ct1expect === prepObj ct1
 
-                    ct2 <- execObjectState ct1 $ CT.editText "help"
-                    ct2expect === prepObj ct2
+                ct2 <- execObjectState ct1 $ CT.editText "help"
+                ct2expect === prepObj ct2
 
 prop_RGA_getAliveIndices = property do
     text <- forAll Gen.shortText
@@ -602,8 +577,7 @@ instance Show (ShowAs a) where
     show (ShowAs _ str) = str
 
 prop_ORSet =
-    let
-        state0expect =
+    let state0expect =
             prep
                 [s| *set #7/0000000Don+000000005j !
                     . |]
@@ -617,23 +591,23 @@ prop_ORSet =
                 [s| *set #7/0000000Don+000000005j !
                     @`}U_Y :`}HJ2 370
                     . |]
-     in
-        property $
-            evalExceptT $
-                runNetworkSimT $
-                    runReplicaSimT (mkReplica ApplicationSpecific 366) do
-                        state0 <- newObjectFrame $ ORSet @Int64 []
-                        state0expect === prepObj state0
+     in ( property
+            . evalExceptT
+            . runNetworkSimT
+            . runReplicaSimT (mkReplica ApplicationSpecific 366)
+        )
+            do
+                state0 <- newObjectFrame $ ORSet @Int64 []
+                state0expect === prepObj state0
 
-                        state1 <- execObjectState state0 $ ORSet.addValue 370
-                        state1expect === prepObj state1
+                state1 <- execObjectState state0 $ ORSet.addValue 370
+                state1expect === prepObj state1
 
-                        state2 <- execObjectState state1 $ ORSet.removeValue 370
-                        state2expect === prepObj state2
+                state2 <- execObjectState state1 $ ORSet.removeValue 370
+                state2expect === prepObj state2
 
 prop_ObjectORSet =
-    let
-        state0expect =
+    let state0expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
                     . |]
@@ -642,41 +616,35 @@ prop_ObjectORSet =
                 [s| *set #7/0000000DlG+000000006G                   !
                                                     @`}qDd          >}PsG
                     *ct  #}PsG                      @0              !
-                                                    @`}aHG          'M'
-                                                    @)H     :`)G    'a'
-                                                    @)I     :)H     'r'
-                                                    @)J     :)I     'k'
+                                                    @`}aHG          %c 'Mark'
                     . |]
         state2expect =
             prep
                 [s| *set #7/0000000DlG+000000006G                   !
                                                     @`{11DG :`{0qDd >}PsG
                     *ct  #}PsG                      @0      :0      !
-                                                    @`}aHG          'M'
-                                                    @)H     :`)G    'a'
-                                                    @)I     :)H     'r'
-                                                    @)J     :)I     'k'
+                                                    @`}aHG          %c 'Mark'
                     . |]
-     in
-        property $
-            evalExceptT $
-                runNetworkSimT $
-                    runReplicaSimT (mkReplica ApplicationSpecific 400) do
-                        state0 <- newObjectFrame $ ORSet @CTString []
-                        state0expect === prepObj state0
+     in ( property
+            . evalExceptT
+            . runNetworkSimT
+            . runReplicaSimT (mkReplica ApplicationSpecific 400)
+        )
+            do
+                state0 <- newObjectFrame $ ORSet @CTString []
+                state0expect === prepObj state0
 
-                        (ct, state1) <- runObjectState state0 do
-                            ct <- CT.newFromText "Mark"
-                            ORSet.addRef ct
-                            pure ct
-                        state1expect === prepObj state1
+                (ct, state1) <- runObjectState state0 do
+                    ct <- CT.newFromText "Mark"
+                    ORSet.addRef ct
+                    pure ct
+                state1expect === prepObj state1
 
-                        state2 <- execObjectState state1 $ ORSet.removeRef ct
-                        state2expect === prepObj state2
+                state2 <- execObjectState state1 $ ORSet.removeRef ct
+                state2expect === prepObj state2
 
 prop_ObjectORSet_recursive =
-    let
-        state0 = TestRecursiveORSet{testRecSet = Just $ ORSet []}
+    let state0 = TestRecursiveORSet{testRecSet = Just $ ORSet []}
         state1expect =
             prep
                 [s| *lww #7/0000000Dl7+000000006P !
@@ -690,19 +658,20 @@ prop_ObjectORSet_recursive =
                     *set #}NbH @0 :0 !
                         @`}_gy >}Dl7
                     . |]
-     in
-        property $
-            evalExceptT $
-                runNetworkSimT $
-                    runReplicaSimT (mkReplica ApplicationSpecific 409) do
-                        state1 <- newObjectFrame state0
-                        state1expect === prepObj state1
+     in ( property
+            . evalExceptT
+            . runNetworkSimT
+            . runReplicaSimT (mkReplica ApplicationSpecific 409)
+        )
+            do
+                state1 <- newObjectFrame state0
+                state1expect === prepObj state1
 
-                        state2 <-
-                            execObjectState state1 do
-                                outerSet <- ask
-                                testRecSet_zoom $ ORSet.addRef outerSet
-                        state2expect === prepObj state2
+                state2 <-
+                    execObjectState state1 do
+                        outerSet <- ask
+                        testRecSet_zoom $ ORSet.addRef outerSet
+                state2expect === prepObj state2
 
 prepObj :: ObjectFrame a -> [ByteStringL]
 prepObj = prep . snd . RT.serializeObject

@@ -69,6 +69,7 @@ import RON.Types (
     ObjectFrame (ObjectFrame),
     Op (..),
     OpTerm (TClosed, THeader, TQuery, TReduced),
+    Packer (PackChain, PackFixed, PackIncrement),
     Payload,
     StateFrame,
     UUID (UUID),
@@ -77,7 +78,7 @@ import RON.Types (
     WireReducedChunk (..),
     WireStateChunk (..),
  )
-import RON.UUID (UuidFields (..))
+import RON.UUID (UuidFields (..), addValue, succValue)
 import RON.UUID qualified as UUID
 import RON.Util.Word (
     Word2,
@@ -127,25 +128,13 @@ wireReducedChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
 wireReducedChunk prev =
     label "WireChunk-reduced" do
         (wrcHeader, isQuery) <- header prev
-        let reducedOps y = do
-                skipSpace
-                (isNotEmpty, x) <- reducedOp (objectId wrcHeader) y
-                t <- optional term
-                unless (t == Just TReduced || isNothing t) $
-                    fail "reduced op may end with `,` only"
-                unless (isNotEmpty || t == Just TReduced) $
-                    fail "Empty reduced op"
-                xs <- reducedOps x <|> stop
-                pure $ x : xs
-        wrcBody <- reducedOps (op wrcHeader) <|> stop
-        let lastOp = lastDef (op wrcHeader) wrcBody
-            wrap op =
-                ClosedOp
-                    { reducerId = reducerId wrcHeader
-                    , objectId = objectId wrcHeader
-                    , op
-                    }
-        pure ((if isQuery then Query else Value) WireReducedChunk{..}, wrap lastOp)
+        wrcBody <- reducedOps wrcHeader.objectId wrcHeader.op <|> stop
+        let lastOp = lastDef wrcHeader.op wrcBody
+            lastClosedOp = wrcHeader{op = lastOp}
+        pure
+            ( (if isQuery then Query else Value) WireReducedChunk{..}
+            , lastClosedOp
+            )
   where
     stop = pure []
 
@@ -224,14 +213,69 @@ closedOp prev =
   where
     prev' = op prev
 
-reducedOp :: UUID -> Op -> Parser (Bool, Op)
-reducedOp opObject prev =
+reducedOps :: UUID -> Op -> Parser [Op]
+reducedOps objectId y = do
+    skipSpace
+    (isNotEmpty, packerM, x) <- reducedOpOrPack objectId y
+    t <- optional term
+    unless (t == Just TReduced || isNothing t) $
+        fail "reduced op may end with `,` only"
+    unless (isNotEmpty || t == Just TReduced) $ fail "Empty reduced op"
+    let (ops, lastOp) = maybe ([x], x) (unpackOps x) packerM
+    cont <- reducedOps objectId lastOp <|> pure []
+    pure $ ops ++ cont
+
+unpackOps :: Op -> Packer -> ([Op], Op)
+unpackOps first packer =
+    case first.payload of
+        [AString s] ->
+            ( unpackLetters first.opId first.refId $ Text.unpack s
+            , lastOp $ fromIntegral $ Text.length s
+            )
+        [AInteger i] ->
+            (unpackEmpties first.opId first.refId i, lastOp $ fromIntegral i)
+        _ -> undefined
+  where
+    nextRef opId refId =
+        case packer of
+            PackChain -> opId
+            PackFixed -> refId
+            PackIncrement -> succValue refId
+
+    lastRef size =
+        case packer of
+            PackChain -> first.opId `addValue` (size - 2)
+            PackFixed -> first.refId
+            PackIncrement -> first.refId `addValue` (size - 1)
+
+    lastOp size =
+        Op
+            { opId = first.opId `addValue` (size - 1)
+            , refId = lastRef size
+            , payload = ["CANNOT HAPPEN! TODO OpHead"]
+            }
+
+    unpackLetters opId refId = \case
+        [] -> []
+        c : cs ->
+            Op{opId, refId, payload = [AString $ Text.singleton c]}
+                : unpackLetters (succValue opId) (nextRef opId refId) cs
+
+    unpackEmpties opId refId size
+        | size > 0 =
+            Op{opId, refId, payload = []}
+                : unpackEmpties (succValue opId) (nextRef opId refId) (size - 1)
+        | otherwise = []
+
+reducedOpOrPack :: UUID -> Op -> Parser (Bool, Maybe Packer, Op)
+reducedOpOrPack opObject prev =
     label "Op-reduced-cont" do
         (hasEvt, opId) <- key "event" '@' (opId prev) opObject
         (hasRef, refId) <- key "ref" ':' (refId prev) opId
+        packerM <- optional pPacker
         payload <- pPayload opObject
         let op = Op{opId, refId, payload}
-        pure (hasEvt || hasRef || not (null payload), op)
+        pure (hasEvt || hasRef || not (null payload), packerM, op)
 
 openOp :: UUID -> Parser Op
 openOp prev =
@@ -424,6 +468,16 @@ pUuidVersion =
             '+' -> pure b10
             '-' -> pure b11
             _ -> fail "not a UUID-version"
+
+pPacker :: Parser Packer
+pPacker = do
+    skipSpace
+    _ <- char '%'
+    anyChar >>= \case
+        'c' -> pure PackChain
+        'f' -> pure PackFixed
+        'i' -> pure PackIncrement
+        _ -> fail "bad packer"
 
 pPayload :: UUID -> Parser Payload
 pPayload = label "payload" . go
