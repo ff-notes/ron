@@ -6,8 +6,11 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.10] - 2025-06-15
 ### Added
 - Positions to syntax errors.
+- Support for CausalTree.
 
 ### Changed
 - Struct field syntax made explicit.
@@ -165,7 +168,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-schema-0.9...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-schema-0.10...HEAD
+[0.10]: https://github.com/ff-notes/ron/compare/ron-schema-0.9...ron-schema-0.10
 [0.9]: https://github.com/ff-notes/ron/compare/ron-schema-0.8...ron-schema-0.9
 [0.8]: https://github.com/ff-notes/ron/compare/ron-schema-0.7...ron-schema-0.8
 [0.7]: https://github.com/ff-notes/ron/compare/ron-schema-0.6...ron-schema-0.7
