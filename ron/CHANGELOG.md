@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.13] - 2025-06-15
 ### Added
 - `RON.Text.Parse.parsePayload`
 - `instance MonadTrans EpochClockT`
@@ -185,7 +187,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-0.12...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-0.13...HEAD
+[0.13]: https://github.com/ff-notes/ron/compare/ron-0.12...ron-0.13
 [0.12]: https://github.com/ff-notes/ron/compare/ron-0.11...ron-0.12
 [0.11]: https://github.com/ff-notes/ron/compare/ron-0.10...ron-0.11
 [0.10]: https://github.com/ff-notes/ron/compare/ron-0.9...ron-0.10
