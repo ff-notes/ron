@@ -19,6 +19,7 @@ module RON.UUID (
     buildY,
     split,
     succValue,
+    addValue,
     zero,
     pattern Zero,
 
@@ -219,6 +220,12 @@ succValue = build . go . split
             { uuidValue =
                 if uuidValue < maxBound then succ uuidValue else uuidValue
             }
+
+-- | Increase field 'uuidValue' of a UUID
+addValue :: UUID -> Word60 -> UUID
+addValue uu v = build u{uuidValue = uuidValue + v}
+  where
+    u@UuidFields{uuidValue} = split uu
 
 -- | Encode a UUID to a Base32 string
 encodeBase32 :: UUID -> FilePath
