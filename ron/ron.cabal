@@ -1,88 +1,88 @@
-cabal-version:  2.2
-
-name:           ron
-version:        0.13
-
-bug-reports:    https://github.com/ff-notes/ron/issues
-category:       Distributed Systems, Protocol, Database
-copyright:      2018-2021, 2025 Yuriy Syrovetskiy
-homepage:       https://github.com/ff-notes/ron
-license:        BSD-3-Clause
-license-file:   LICENSE
-maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       RON
-
+cabal-version:      2.2
+name:               ron
+version:            0.13
+bug-reports:        https://github.com/ff-notes/ron/issues
+category:           Distributed Systems, Protocol, Database
+copyright:          2018-2021, 2025 Yuriy Syrovetskiy
+homepage:           https://github.com/ff-notes/ron
+license:            BSD-3-Clause
+license-file:       LICENSE
+maintainer:         Yuriy Syrovetskiy <haskell@cblp.su>
+synopsis:           RON
 description:
-    Replicated Object Notation (RON), data types (RDT), and RON-Schema
-    .
-    Examples: https://github.com/ff-notes/ron/tree/master/examples
+  Replicated Object Notation (RON), data types (RDT), and RON-Schema
+  .
+  Examples: https://github.com/ff-notes/ron/tree/master/examples
 
-build-type:     Simple
-
-extra-source-files:
-    CHANGELOG.md
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 common language
-    build-depends: base >= 4.10
-    default-extensions: NoImplicitPrelude StrictData
-    default-language: GHC2021
+  build-depends:      base >=4.10
+  default-extensions:
+    NoFieldSelectors
+    NoImplicitPrelude
+    StrictData
+
+  default-language:   GHC2021
 
 library
-    import: language
-    build-depends:
-        aeson,
-        attoparsec,
-        binary,
-        bytestring,
-        containers,
-        hashable,
-        -- integer-gmp,
-        mtl,
-        scientific,
-        template-haskell,
-        text,
-        time,
-        -- transformers >= 0.5.6.0,
-            -- ^ TODO Writer.CPS
-        unliftio,
-        unordered-containers,
-        vector,
-    exposed-modules:
-        RON.Base64
-        RON.Binary
-        RON.Binary.Parse
-        RON.Binary.Serialize
-        RON.Binary.Types
-        RON.Epoch
-        RON.Error
-        RON.Event
-        RON.Event.Simulation
-        RON.Prelude
-        RON.Semilattice
-        RON.Text
-        RON.Text.Parse
-        RON.Text.Serialize
-        RON.Text.Serialize.Experimental
-        RON.Text.Serialize.UUID
-        RON.Types
-        RON.Types.Experimental
-        RON.Util
-        RON.Util.Word
-        RON.UUID
-    other-modules:
-        Attoparsec.Extra
-        Data.ZigZag
-        -- TODO RON.Prelude.Writer
-    hs-source-dirs: lib
+  import:          language
+  build-depends:
+    , aeson
+    , attoparsec
+    , binary
+    , bytestring
+    , containers
+    , hashable
+    , mtl
+    , scientific
+    , template-haskell
+    , text
+    , time
+    , unliftio
+    , unordered-containers
+    , vector
+
+  exposed-modules:
+    RON.Base64
+    RON.Binary
+    RON.Binary.Parse
+    RON.Binary.Serialize
+    RON.Binary.Types
+    RON.Epoch
+    RON.Error
+    RON.Event
+    RON.Event.Simulation
+    RON.Prelude
+    RON.Semilattice
+    RON.Text
+    RON.Text.Parse
+    RON.Text.Serialize
+    RON.Text.Serialize.Experimental
+    RON.Text.Serialize.UUID
+    RON.Types
+    RON.Types.Experimental
+    RON.Util
+    RON.Util.Word
+    RON.UUID
+
+  other-modules:
+    Attoparsec.Extra
+    Data.ZigZag
+
+  hs-source-dirs:  lib
 
 benchmark bench
-    import: language
-    build-depends:
-        -- global
-        criterion,
-        deepseq,
-        -- package
-        ron
-    main-is: Main.hs
-    hs-source-dirs: bench
-    type: exitcode-stdio-1.0
+  import:         language
+
+  -- global
+  build-depends:
+    , criterion
+    , deepseq
+
+  -- package
+  build-depends:  ron
+  main-is:        Main.hs
+  hs-source-dirs: bench
+  type:           exitcode-stdio-1.0

@@ -9,7 +9,13 @@ common common
 
   -- project
   build-depends:      ron-rdt
+  default-extensions:
+    NoFieldSelectors
+    StrictData
+
   default-language:   GHC2021
+
+  -- workaround for HLint
   default-extensions: QuasiQuotes
 
 executable TypicalUsage

@@ -1,117 +1,143 @@
-cabal-version:  2.2
-
-name:           ron-test
-version:        0
+cabal-version: 2.2
+name:          ron-test
+version:       0
 
 flag style
-    description: Enable style check
-    default: False
-    manual: True
+  description: Enable style check
+  default:     False
+  manual:      True
 
 common language
-    build-depends: base >= 4.10
-    default-extensions: NoImplicitPrelude QuasiQuotes StrictData
-    default-language: GHC2021
+  build-depends:      base >=4.10
+  default-extensions:
+    NoFieldSelectors
+    NoImplicitPrelude
+    QuasiQuotes
+    StrictData
+
+  default-language:   GHC2021
 
 library
-    import: language
-    build-depends:
-        -- global
-        data-default,
-        hedgehog,
-        -- project
-        ron,
-        ron-rdt,
-        ron-schema
-    exposed-modules:
-        Gen
-        LwwStruct.Types
-        Orphans
-        StructSet.Types
-    hs-source-dirs: lib
+  import:          language
+
+  -- global
+  build-depends:
+    , data-default
+    , hedgehog
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+    , ron-schema
+
+  exposed-modules:
+    Gen
+    LwwStruct.Types
+    Orphans
+    StructSet.Types
+
+  hs-source-dirs:  lib
 
 test-suite common
-    import: language
-    build-depends:
-        -- global
-        bytestring,
-        containers,
-        directory,
-        directory-tree,
-        extra,
-        filepath,
-        hedgehog,
-        syb,
-        tasty,
-        tasty-hedgehog,
-        tasty-hunit,
-        -- project
-        ron,
-        ron-rdt
-    hs-source-dirs: .
-    main-is: Common.hs
-    type: exitcode-stdio-1.0
+  import:         language
+
+  -- global
+  build-depends:
+    , bytestring
+    , containers
+    , directory
+    , directory-tree
+    , extra
+    , filepath
+    , hedgehog
+    , syb
+    , tasty
+    , tasty-hedgehog
+    , tasty-hunit
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+
+  hs-source-dirs: .
+  main-is:        Common.hs
+  type:           exitcode-stdio-1.0
 
 test-suite test
-    import: language
-    build-depends:
-        -- global
-        bytestring,
-        containers,
-        data-default,
-        directory,
-        hedgehog >= 1,
-        lens,
-        tasty-hedgehog,
-        tasty-th,
-        template-haskell,
-        text,
-        -- project
-        ron,
-        ron-rdt,
-        ron-schema,
-        -- package
-        ron-test
-    hs-source-dirs: .
-    main-is: Main.hs
-    other-modules:
-        CT
-        HexDump
-        LwwStruct
-        ORSet
-        String
-        StructSet
-        Types
-    type: exitcode-stdio-1.0
+  import:         language
+
+  -- global
+  build-depends:
+    , bytestring
+    , containers
+    , data-default
+    , directory
+    , hedgehog          >=1
+    , lens
+    , tasty-hedgehog
+    , tasty-th
+    , template-haskell
+    , text
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+    , ron-schema
+
+  -- package
+  build-depends:  ron-test
+  hs-source-dirs: .
+  main-is:        Main.hs
+  other-modules:
+    CT
+    HexDump
+    LwwStruct
+    ORSet
+    String
+    StructSet
+    Types
+
+  type:           exitcode-stdio-1.0
 
 executable words
-    import: language
-    build-depends:
-        -- global
-        text,
-        text-metrics,
-        unordered-containers,
-        -- project
-        ron,
-        ron-rdt
-    hs-source-dirs: .
-    main-is: Words.hs
+  import:         language
+
+  -- global
+  build-depends:
+    , text
+    , text-metrics
+    , unordered-containers
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+
+  hs-source-dirs: .
+  main-is:        Words.hs
 
 test-suite style
-    import: language
-    if flag(style)
-        buildable: True
-    else
-        buildable: False
-    build-depends:
-        -- global
-        bytestring,
-        directory,
-        extra,
-        filepath,
-        text,
-        typed-process,
-        -- project
-        ron,
-    type: exitcode-stdio-1.0
-    main-is: Style.hs
+  import:        language
+
+  if flag(style)
+    buildable: True
+
+  else
+    buildable: False
+
+  -- global
+  build-depends:
+    , bytestring
+    , directory
+    , extra
+    , filepath
+    , text
+    , typed-process
+
+  -- project
+  build-depends: ron
+  type:          exitcode-stdio-1.0
+  main-is:       Style.hs

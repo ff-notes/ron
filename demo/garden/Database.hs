@@ -15,7 +15,7 @@ loadTheTree :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m (Tree UUID)
 loadTheTree db =
   runStore db do
     forest <- GTree.loadForest theTreeRef
-    pure $ Node theTreeId $ map (fmap opId) forest
+    pure $ Node theTreeId $ map (fmap (.opId)) forest
 
 theTreeId :: UUID
 theTreeId = $(UUID.liftName "theTree")

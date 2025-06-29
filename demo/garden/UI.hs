@@ -108,10 +108,10 @@ zoom (windowWidth, windowHeight) tree =
     scaleY = fromIntegral windowHeight / (baseHeight + 2 * padding)
 
     -- TODO a single run?
-    left    = minimum $ x <$> tree
-    right   = maximum $ x <$> tree
-    top     = maximum $ y <$> tree
-    bottom  = minimum $ y <$> tree
+    left    = minimum $ (.x) <$> tree
+    right   = maximum $ (.x) <$> tree
+    top     = maximum $ (.y) <$> tree
+    bottom  = minimum $ (.y) <$> tree
 
     baseWidth  = right - left
     baseHeight = top - bottom

@@ -1,9 +1,12 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Rank2Types #-}
@@ -65,7 +68,7 @@ import RON.Error (
     errorContext,
     liftMaybe,
  )
-import RON.Event (ReplicaClock, advance, decodeEvent, time, timeValue)
+import RON.Event (Event (..), ReplicaClock, advance, decodeEvent, timeValue)
 import RON.Semilattice (BoundedSemilattice)
 import RON.Types (
     Atom (AInteger, AString, AUuid),
@@ -109,8 +112,8 @@ class (Eq a, BoundedSemilattice a) => Reducible a where
     applyPatches :: a -> Unapplied -> (a, Unapplied)
     applyPatches a (patches, ops) =
         ( a
-            <> foldMap (patchValue . patchFromChunk) patches
-            <> foldMap (patchValue . patchFromRawOp) ops
+            <> foldMap ((.patchValue) . patchFromChunk) patches
+            <> foldMap ((.patchValue) . patchFromRawOp) ops
         , mempty
         )
 
@@ -186,13 +189,13 @@ data Encoding a = Encoding
 -- | Encode typed data to a payload with possible addition objects
 newRon ::
     (Replicated a, ReplicaClock m, MonadState StateFrame m) => a -> m Payload
-newRon = encodingNewRon encoding
+newRon = encodingNewRon where Encoding{encodingNewRon} = encoding
 
 {- | Decode typed data from a payload.
 The implementation may use other objects in the frame to resolve references.
 -}
 fromRon :: (MonadE m, Replicated a, MonadState StateFrame m) => Payload -> m a
-fromRon = encodingFromRon encoding
+fromRon = encodingFromRon where Encoding{encodingFromRon} = encoding
 
 -- | Standard implementation of 'Replicated' for 'ReplicatedAsObject' types.
 objectEncoding :: (ReplicatedAsObject a) => Encoding a
@@ -367,7 +370,7 @@ advanceToObject = do
     for_ (maximumMay allObjectTimes) advance
   where
     getAllObjectTimes =
-        map (timeValue . time) . mapMaybe decodeEvent <$> getAllObjectUuids
+        map (\Event{time} -> timeValue time) . mapMaybe decodeEvent <$> getAllObjectUuids
 
     getAllObjectUuids = do
         ObjectRef objectId <- ask

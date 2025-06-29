@@ -4,8 +4,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -49,7 +51,7 @@ import Data.Typeable (typeRep)
 import Text.Show (showParen, showString, showsPrec)
 import Text.Show qualified
 
-import RON.UUID (UUID (UUID), uuidVersion)
+import RON.UUID (UUID (UUID))
 import RON.UUID qualified as UUID
 import RON.Util.Word (Word2, pattern B00, pattern B10, pattern B11)
 
@@ -187,7 +189,7 @@ pattern UndeleteP = (B11, B11)
 
 opPattern :: Op -> Maybe OpPattern
 opPattern Op{opId, refId} =
-    case mapBoth (uuidVersion . UUID.split) (opId, refId) of
+    case mapBoth ((.uuidVersion) . UUID.split) (opId, refId) of
         AnnotationP -> Just Annotation
         AnnotationDerivedP -> Just AnnotationDerived
         CreateP -> Just Create
@@ -203,6 +205,9 @@ mapBoth f (x, y) = (f x, f y)
 type OpenFrame = [Op]
 
 data Packer
-    = PackChain -- ^ op = prev.op + 1, ref = prev.op
-    | PackFixed -- ^ op = prev.op + 1, ref = prev.ref
-    | PackIncrement -- ^ op = prev.op + 1, ref = prev.ref + 1
+    = -- | op = prev.op + 1, ref = prev.op
+      PackChain
+    | -- | op = prev.op + 1, ref = prev.ref
+      PackFixed
+    | -- | op = prev.op + 1, ref = prev.ref + 1
+      PackIncrement

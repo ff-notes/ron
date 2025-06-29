@@ -1,31 +1,30 @@
 cabal-version: 2.2
-
-name: garden
-version: 0
-
-build-type: Simple
+name:          garden
+version:       0
+build-type:    Simple
 
 executable garden
   build-depends:
-    aeson,
-    base,
-    bytestring,
-    colour,
-    containers,
-    gloss,
-    lens,
-    monad-logger,
-    mtl,
-    network-uri,
-    optparse-applicative,
-    ron-rdt,
-    ron-store-sqlite,
-    ron,
-    stm,
-    text,
-    tree-view,
-    unliftio,
-    websockets,
+    , aeson
+    , base
+    , bytestring
+    , colour
+    , containers
+    , gloss
+    , lens
+    , monad-logger
+    , mtl
+    , network-uri
+    , optparse-applicative
+    , ron
+    , ron-rdt
+    , ron-store-sqlite
+    , stm
+    , text
+    , tree-view
+    , unliftio
+    , websockets
+
   default-extensions:
     ApplicativeDo
     BlockArguments
@@ -34,6 +33,8 @@ executable garden
     ImportQualifiedPost
     LambdaCase
     NamedFieldPuns
+    NoFieldSelectors
+    OverloadedRecordDot
     OverloadedStrings
     ParallelListComp
     RankNTypes
@@ -41,7 +42,13 @@ executable garden
     StrictData
     TemplateHaskell
     ViewPatterns
-  default-language: Haskell2010
-  ghc-options: -O2 -threaded -rtsopts -with-rtsopts=-N
-  main-is: Main.hs
-  other-modules: Database Fork NetNode Options UI
+
+  default-language:   GHC2021
+  ghc-options:        -O2 -threaded -rtsopts -with-rtsopts=-N
+  main-is:            Main.hs
+  other-modules:
+    Database
+    Fork
+    NetNode
+    Options
+    UI

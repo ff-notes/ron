@@ -39,21 +39,15 @@ import Hedgehog.Gen qualified as Gen
 import Hedgehog.Range qualified as Range
 
 import RON.Event (
-    CalendarTime (CalendarTime),
-    Event (Event),
+    CalendarTime (..),
+    Event (..),
     OriginVariety (ApplicationSpecific),
     Replica,
     Time,
     TimeVariety (Calendar, Epoch, Logical),
-    days,
     decodeReplica,
-    hours,
-    minutes,
     mkReplica,
     mkTime,
-    months,
-    nanosecHundreds,
-    seconds,
  )
 import RON.Types (
     Atom (AFloat, AInteger, AString, AUuid),

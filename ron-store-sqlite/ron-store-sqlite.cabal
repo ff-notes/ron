@@ -1,26 +1,31 @@
 cabal-version: 2.2
-
-name: ron-store-sqlite
-version: 0
-
-build-type: Simple
+name:          ron-store-sqlite
+version:       0
+build-type:    Simple
 
 library
+  -- global
   build-depends:
-    -- global
-    base,
-    bytestring,
-    monad-logger,
-    persistent-sqlite,
-    persistent,
-    resource-pool,
-    resourcet,
-    stm,
-    text,
-    tf-random,
-    unliftio,
-    -- project
-    ron,
-    ron-rdt,
-  default-language: Haskell2010
-  exposed-modules: RON.Store.Sqlite
+    , base
+    , bytestring
+    , monad-logger
+    , persistent
+    , persistent-sqlite
+    , resource-pool
+    , resourcet
+    , stm
+    , text
+    , tf-random
+    , unliftio
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+
+  default-language:   GHC2021
+  default-extensions:
+    NoFieldSelectors
+    StrictData
+
+  exposed-modules:    RON.Store.Sqlite

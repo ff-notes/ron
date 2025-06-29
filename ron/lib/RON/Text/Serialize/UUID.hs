@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -13,28 +14,36 @@ module RON.Text.Serialize.UUID (
     uuidToText,
 ) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Data.Bits (countLeadingZeros, shiftL, xor)
+import Data.Bits (countLeadingZeros, shiftL, xor)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Foldable (minimumBy)
+import Data.Foldable (minimumBy)
 import qualified Data.Text as Text
 
 import qualified RON.Base64 as Base64
-import           RON.Util.Word (pattern B00, pattern B0000, pattern B01,
-                                pattern B10, pattern B11, Word2, Word60, ls60,
-                                safeCast)
-import           RON.UUID (UUID (..), UuidFields (..), split, zero)
+import RON.UUID (UUID (..), UuidFields (..), split, zero)
+import RON.Util.Word (
+    Word2,
+    Word60,
+    ls60,
+    safeCast,
+    pattern B00,
+    pattern B0000,
+    pattern B01,
+    pattern B10,
+    pattern B11,
+ )
 
 -- | Serialize UUID without context (used for test)
 serializeUuid :: UUID -> ByteStringL
 serializeUuid this =
     BSL.fromStrict $ case uuidVariant of
         B00 -> unzipped thisFields
-        _   -> serializeUuidGeneric this
+        _ -> serializeUuidGeneric this
   where
     thisFields@UuidFields{..} = split this
 
@@ -45,31 +54,41 @@ uuidToText :: UUID -> Text
 uuidToText = Text.pack . uuidToString
 
 -- | Serialize UUID in op key context
-serializeUuidKey
-    :: UUID  -- ^ same key in the previous op (default is 'zero')
-    -> UUID  -- ^ previous key of the same op (default is 'zero')
-    -> UUID  -- ^ this
-    -> ByteStringL
+serializeUuidKey ::
+    -- | same key in the previous op (default is 'zero')
+    UUID ->
+    -- | previous key of the same op (default is 'zero')
+    UUID ->
+    -- | this
+    UUID ->
+    ByteStringL
 serializeUuidKey prevKey prev this =
-    BSL.fromStrict $ case uuidVariant thisFields of
-        B00 -> minimumByLength $
+    BSL.fromStrict $ case thisFields.uuidVariant of
+        B00 ->
+            minimumByLength $
                 unzipped thisFields
-            :   zipIfDefaultVariant prevKey this
-            ++  ["`" <> z | prev /= zero, z <- zipIfDefaultVariant prev this]
+                    : zipIfDefaultVariant prevKey this
+                    ++ [ "`" <> z
+                       | prev /= zero
+                       , z <- zipIfDefaultVariant prev this
+                       ]
         _ -> serializeUuidGeneric this
   where
     thisFields = split this
 
 -- | Serialize UUID in op value (atom) context
-serializeUuidAtom
-    :: UUID  -- ^ previous
-    -> UUID  -- ^ this
-    -> ByteStringL
+serializeUuidAtom ::
+    -- | previous
+    UUID ->
+    -- | this
+    UUID ->
+    ByteStringL
 serializeUuidAtom prev this =
-    BSL.fromStrict $ case uuidVariant thisFields of
-        B00 -> minimumByLength $
+    BSL.fromStrict $ case thisFields.uuidVariant of
+        B00 ->
+            minimumByLength $
                 unzipped thisFields
-            :   (guard (prev /= zero) *> zipIfDefaultVariant prev this)
+                    : (guard (prev /= zero) *> zipIfDefaultVariant prev this)
         _ -> serializeUuidGeneric this
   where
     thisFields = split this
@@ -77,7 +96,7 @@ serializeUuidAtom prev this =
 zipIfDefaultVariant :: UUID -> UUID -> [ByteString]
 zipIfDefaultVariant prev this =
     [ z
-    | uuidVariant (split prev) == B00
+    | (split prev).uuidVariant == B00
     , Just z <- [zipUuid (split prev) (split this)]
     ]
 
@@ -86,33 +105,33 @@ unzipped UuidFields{..} = x' <> y'
   where
     variety = case uuidVariety of
         B0000 -> ""
-        _     -> BS.singleton (Base64.encodeLetter4 uuidVariety) <> "/"
+        _ -> BS.singleton (Base64.encodeLetter4 uuidVariety) <> "/"
     x' = variety <> Base64.encode60short uuidValue
     y' = case (uuidVersion, uuidOrigin) of
         (B00, safeCast -> 0 :: Word64) -> ""
         _ ->
             serializeVersion uuidVersion
-            `BSC.cons` Base64.encode60short uuidOrigin
+                `BSC.cons` Base64.encode60short uuidOrigin
 
 zipUuid :: UuidFields -> UuidFields -> Maybe ByteString
 zipUuid prev this
-    | prev == this  = Just ""
+    | prev == this = Just ""
     | canReuseValue = valueZip
-    | otherwise     = Nothing
+    | otherwise = Nothing
   where
-    canReuseValue = prev{uuidValue = uuidValue this} == this
-    valueZip = zipPrefix (uuidValue prev) (uuidValue this)
+    canReuseValue = prev{uuidValue = this.uuidValue} == this
+    valueZip = zipPrefix prev.uuidValue this.uuidValue
 
 zipPrefix :: Word60 -> Word60 -> Maybe ByteString
 zipPrefix prev this
     | commonBits >= 6 * 10 = pure ""
-    | commonBits >= 6 *  9 = ok ')' 9
-    | commonBits >= 6 *  8 = ok ']' 8
-    | commonBits >= 6 *  7 = ok '}' 7
-    | commonBits >= 6 *  6 = ok '{' 6
-    | commonBits >= 6 *  5 = ok '[' 5
-    | commonBits >= 6 *  4 = ok '(' 4
-    | otherwise        = Nothing
+    | commonBits >= 6 * 9 = ok ')' 9
+    | commonBits >= 6 * 8 = ok ']' 8
+    | commonBits >= 6 * 7 = ok '}' 7
+    | commonBits >= 6 * 6 = ok '{' 6
+    | commonBits >= 6 * 5 = ok '[' 5
+    | commonBits >= 6 * 4 = ok '(' 4
+    | otherwise = Nothing
   where
     ok c n = pure $ BSC.cons c $ encode60short' $ safeCast this `shiftL` (6 * n)
     commonBits =
@@ -132,5 +151,5 @@ serializeUuidGeneric :: UUID -> ByteString
 serializeUuidGeneric (UUID x y) = Base64.encode64 x <> Base64.encode64 y
 
 -- | XXX Partial for lists!
-minimumByLength :: Foldable f => f ByteString -> ByteString
+minimumByLength :: (Foldable f) => f ByteString -> ByteString
 minimumByLength = minimumBy $ comparing BS.length

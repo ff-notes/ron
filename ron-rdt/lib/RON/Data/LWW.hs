@@ -3,6 +3,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -47,19 +48,19 @@ import RON.Event (ReplicaClock, getEventUuid)
 import RON.Semilattice (Semilattice)
 import RON.Types (
     Atom (AUuid),
-    ObjectRef (ObjectRef),
-    Op (Op, opId, payload, refId),
-    StateChunk (StateChunk),
+    ObjectRef (..),
+    Op (..),
+    StateChunk (..),
     StateFrame,
     UUID,
-    WireStateChunk (WireStateChunk, stateBody, stateType),
+    WireStateChunk (..),
  )
 import RON.UUID qualified as UUID
 import RON.Util (Instance (Instance))
 
 -- | Last-Write-Wins: select an op with latter event
 lww :: Op -> Op -> Op
-lww = maxOn opId
+lww = maxOn (.opId)
 
 -- | Untyped LWW. Implementation: a map from 'opRef' to the original op.
 newtype LwwRep = LwwRep (Map UUID Op)
@@ -116,8 +117,8 @@ viewField ::
     m (Maybe a)
 viewField field (StateChunk ops) =
     errorContext "LWW.viewField" $
-        maybe (pure Nothing) (tryOptionFromRon . payload) $
-            maximumMayOn opId $
+        maybe (pure Nothing) (tryOptionFromRon . (.payload)) $
+            maximumMayOn (.opId) $
                 filter (\Op{refId} -> refId == field) ops
 
 -- | Read field value
@@ -148,7 +149,7 @@ assignField field mvalue =
         event <- getEventUuid
         p <- maybe (pure []) newRon mvalue
         let newOp = Op event field p
-        pure $ StateChunk $ sortOn refId $ newOp : chunk
+        pure $ StateChunk $ sortOn (.refId) $ newOp : chunk
 
 -- | Pseudo-lens to an object inside a specified field
 zoomField ::

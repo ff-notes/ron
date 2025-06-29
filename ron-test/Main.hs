@@ -74,11 +74,11 @@ import RON.Text.Serialize.Experimental qualified as RT
 import RON.Text.Serialize.UUID qualified as RT
 import RON.Types (
     Atom (AInteger, AUuid),
-    ClosedOp (ClosedOp, objectId, op, reducerId),
+    ClosedOp (..),
     ObjectFrame,
-    Op (Op, opId, payload, refId),
-    StateChunk (StateChunk),
-    UUID (UUID),
+    Op (..),
+    StateChunk (..),
+    UUID (..),
     WireChunk (Closed),
  )
 import RON.UUID qualified as UUID
@@ -91,11 +91,7 @@ import ORSet qualified
 import Orphans ()
 import String (s)
 import StructSet qualified
-import Types (
-    TestRecursiveORSet (TestRecursiveORSet),
-    testRecSet,
-    testRecSet_zoom,
- )
+import Types (TestRecursiveORSet (..), testRecSet_zoom)
 
 main :: IO ()
 main = do

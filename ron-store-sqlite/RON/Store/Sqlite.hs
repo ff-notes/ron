@@ -9,6 +9,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -114,7 +115,8 @@ instance PersistFieldSql UUID where
 instance PersistField Payload where
     toPersistValue = PersistByteString . BSL.toStrict . serializePayload
     fromPersistValue = \case
-        PersistByteString bs -> fmapL Text.pack $ parsePayload $ BSL.fromStrict bs
+        PersistByteString bs ->
+            fmapL Text.pack $ parsePayload $ BSL.fromStrict bs
         _ -> Left "expected PersistByteString"
 
 instance PersistFieldSql Payload where
@@ -184,7 +186,8 @@ appendPatch Patch{object, log} =
             [] -> pure ()
             op : ops -> do
                 Handle{onNewPatch} <- Store ask
-                atomically $ writeTChan onNewPatch Patch{object, log = op :| ops}
+                atomically
+                    $ writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadWholeObjectLog ::
     (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
@@ -192,7 +195,10 @@ loadWholeObjectLog object version =
     errorContext "loadWholeObjectLog @Store" do
         ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
         pure
-            [opFromDatabase op | Entity _ op@Op{opEvent} <- ops, opEvent ·≻ version]
+            [ opFromDatabase op
+            | Entity _ op@Op{opEvent} <- ops
+            , opEvent ·≻ version
+            ]
 
 loadOpLog :: (MonadLogger m, MonadUnliftIO m) => StoreT m [Patch]
 loadOpLog =
@@ -200,7 +206,7 @@ loadOpLog =
         oplog <- runDB $ map entityVal <$> selectList [] [Asc OpEvent]
         pure
             [ Patch opObject $ opFromDatabase <$> ops
-            | ops@(Op{opObject} :| _) <- groupWith opObject oplog
+            | ops@(Op{opObject} :| _) <- groupWith (.opObject) oplog
             ]
 
 runDB ::
@@ -209,17 +215,16 @@ runDB ::
     StoreT m a
 runDB action = do
     Handle{dbPool} <- Store ask
-    let action' =
-            (`runSqlPool` dbPool) do
-                runMigration migrateAll
-                action
     lift
-        $ withRunInIO \unlift ->
-            let
-                monadLoggerLog' loc src lvl msg =
-                    unlift $ monadLoggerLog loc src lvl msg
-             in
-                runResourceT $ runLoggingT action' monadLoggerLog'
+        $ withRunInIO \runInIO ->
+            runResourceT
+                $ (`runLoggingT` monadLoggerLog' runInIO)
+                $ (`runSqlPool` dbPool) do
+                    runMigration migrateAll
+                    action
+  where
+    monadLoggerLog' runInIO loc src lvl msg =
+        runInIO $ monadLoggerLog loc src lvl msg
 
 runStore :: Handle -> StoreT m a -> m a
 runStore h@Handle{replica, clock} (Store action) =
@@ -253,5 +258,6 @@ newReplica = do
 
 runLoggerIO :: (MonadLogger m, MonadUnliftIO m) => LoggingT IO a -> m a
 runLoggerIO action =
-    withRunInIO \run ->
-        runLoggingT action \loc src lvl msg -> run $ monadLoggerLog loc src lvl msg
+    withRunInIO \runInIO ->
+        runLoggingT action \loc src lvl msg ->
+            runInIO $ monadLoggerLog loc src lvl msg

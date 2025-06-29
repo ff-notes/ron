@@ -20,6 +20,7 @@ extra-source-files: CHANGELOG.md
 common language
   build-depends:      base >=4.10
   default-extensions:
+    NoFieldSelectors
     NoImplicitPrelude
     StrictData
 

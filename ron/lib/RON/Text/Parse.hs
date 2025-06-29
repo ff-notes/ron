@@ -200,18 +200,16 @@ endOfFrame = label "end of frame" $ void $ skipSpace *> char '.'
 closedOp :: ClosedOp -> Parser (Bool, ClosedOp)
 closedOp prev =
     label "ClosedOp-cont" do
-        (hasTyp, reducerId) <- key "reducer" '*' (reducerId prev) UUID.zero
-        (hasObj, objectId) <- key "object" '#' (objectId prev) reducerId
-        (hasEvt, opId) <- key "opId" '@' (opId prev') objectId
-        (hasRef, refId) <- key "ref" ':' (refId prev') opId
+        (hasTyp, reducerId) <- key "reducer" '*' prev.reducerId UUID.zero
+        (hasObj, objectId) <- key "object" '#' prev.objectId reducerId
+        (hasEvt, opId) <- key "opId" '@' prev.op.opId objectId
+        (hasRef, refId) <- key "ref" ':' prev.op.refId opId
         payload <- pPayload objectId
         let op = Op{..}
         pure
             ( hasTyp || hasObj || hasEvt || hasRef || not (null payload)
             , ClosedOp{..}
             )
-  where
-    prev' = op prev
 
 reducedOps :: UUID -> Op -> Parser [Op]
 reducedOps objectId y = do
@@ -270,8 +268,8 @@ unpackOps first packer =
 reducedOpOrPack :: UUID -> Op -> Parser (Bool, Maybe Packer, Op)
 reducedOpOrPack opObject prev =
     label "Op-reduced-cont" do
-        (hasEvt, opId) <- key "event" '@' (opId prev) opObject
-        (hasRef, refId) <- key "ref" ':' (refId prev) opId
+        (hasEvt, opId) <- key "event" '@' prev.opId opObject
+        (hasRef, refId) <- key "ref" ':' prev.refId opId
         packerM <- optional pPacker
         payload <- pPayload opObject
         let op = Op{opId, refId, payload}
@@ -369,7 +367,7 @@ uuidZip prevOpSameKey sameOpPrevUuid defaultZipBase =
 
         let prev = UUID.split $ whichPrev changeZipBase
         let isSimple =
-                uuidVariant prev /= b00
+                prev.uuidVariant /= b00
                     || ( not changeZipBase
                             && isNothing rawReuseValue
                             && isJust rawValue

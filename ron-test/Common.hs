@@ -2,6 +2,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
@@ -145,7 +146,7 @@ sortChunkOps chunk = case chunk of
 
 chunkObject :: WireChunk -> UUID
 chunkObject =
-    objectId
+    (.objectId)
         . \case
             Closed op -> op
             Value WireReducedChunk{wrcHeader} -> wrcHeader

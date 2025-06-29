@@ -1,17 +1,18 @@
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module RON.Text.Serialize.Experimental (serializeOpenFrame) where
 
-import           RON.Prelude
+import RON.Prelude
 
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 
-import           RON.Text.Serialize (serializeOpenOp)
-import           RON.Types (Op (opId), OpenFrame)
+import RON.Text.Serialize (serializeOpenOp)
+import RON.Types (Op (opId), OpenFrame)
 import qualified RON.UUID as UUID
 
 serializeOpenFrame :: OpenFrame -> ByteStringL
 serializeOpenFrame ops =
-  BSLC.intercalate ",\n" opsSerialized <> ";\n"
+    BSLC.intercalate ",\n" opsSerialized <> ";\n"
   where
-    opsSerialized = zipWith serializeOpenOp (UUID.zero : map opId ops) ops
+    opsSerialized = zipWith serializeOpenOp (UUID.zero : map (.opId) ops) ops

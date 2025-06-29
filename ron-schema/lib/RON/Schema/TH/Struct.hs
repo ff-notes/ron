@@ -3,6 +3,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -166,7 +167,7 @@ mkInstanceReplicated type' =
 mkInstanceReplicatedAOLww :: StructLww Equipped -> TH.DecsQ
 mkInstanceReplicatedAOLww Struct{name, fields} = do
     ops <- newName "ops"
-    vars <- traverse (newNameT . haskellName . ext) fields
+    vars <- traverse (newNameT . (.ext.haskellName)) fields
     let packFields =
             listE
                 [ [|($ronName', Instance <$> $(varE var))|]
@@ -215,7 +216,7 @@ mkInstanceReplicatedAOLww Struct{name, fields} = do
 mkInstanceReplicatedAOSet :: StructSet Equipped -> TH.DecsQ
 mkInstanceReplicatedAOSet Struct{name, fields} = do
     ops <- newName "ops"
-    vars <- traverse (newNameT . haskellName . ext) fields
+    vars <- traverse (newNameT . (.ext.haskellName)) fields
     let packFields =
             listE
                 [ [|[($ronName', Instance val) | val <- toList $(varE var)]|]

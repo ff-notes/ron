@@ -1,50 +1,55 @@
-cabal-version:  2.2
-
-name:           ron-schema
-version:        0.10
-
-bug-reports:    https://github.com/ff-notes/ron/issues
-category:       Distributed Systems, Protocol, Database
-copyright:      2018-2019, 2025 Yuriy Syrovetskiy
-homepage:       https://github.com/ff-notes/ron
-license:        BSD-3-Clause
-license-file:   LICENSE
-maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       RON-Schema
-
+cabal-version:      2.2
+name:               ron-schema
+version:            0.10
+bug-reports:        https://github.com/ff-notes/ron/issues
+category:           Distributed Systems, Protocol, Database
+copyright:          2018-2019, 2025 Yuriy Syrovetskiy
+homepage:           https://github.com/ff-notes/ron
+license:            BSD-3-Clause
+license-file:       LICENSE
+maintainer:         Yuriy Syrovetskiy <haskell@cblp.su>
+synopsis:           RON-Schema
 description:
-    Replicated Object Notation (RON), data types (RDT), and RON-Schema
-    .
-    Examples: https://github.com/ff-notes/ron/tree/master/examples
+  Replicated Object Notation (RON), data types (RDT), and RON-Schema
+  .
+  Examples: https://github.com/ff-notes/ron/tree/master/examples
 
-build-type:     Simple
-
-extra-source-files:
-    CHANGELOG.md
+build-type:         Simple
+extra-source-files: CHANGELOG.md
 
 common language
-    build-depends: base >= 4.10
-    default-extensions: NoImplicitPrelude StrictData
-    default-language: Haskell2010
+  build-depends:      base >=4.10
+  default-extensions:
+    NoFieldSelectors
+    NoImplicitPrelude
+    StrictData
+
+  default-language:   GHC2021
 
 library
-    import: language
-    build-depends:
-        -- global
-        containers,
-        hedn >= 0.2 && < 0.4,
-        megaparsec,
-        template-haskell,
-        text,
-        -- project
-        ron     >= 0.9,
-        ron-rdt >= 0.9.1,
-    exposed-modules:
-        RON.Schema
-        RON.Schema.TH
-    other-modules:
-        Data.EDN.Extra
-        RON.Schema.EDN
-        RON.Schema.TH.Common
-        RON.Schema.TH.Struct
-    hs-source-dirs: lib
+  import:          language
+
+  -- global
+  build-depends:
+    , containers
+    , hedn              >=0.2 && <0.4
+    , megaparsec
+    , template-haskell
+    , text
+
+  -- project
+  build-depends:
+    , ron      >=0.9
+    , ron-rdt  >=0.9.1
+
+  exposed-modules:
+    RON.Schema
+    RON.Schema.TH
+
+  other-modules:
+    Data.EDN.Extra
+    RON.Schema.EDN
+    RON.Schema.TH.Common
+    RON.Schema.TH.Struct
+
+  hs-source-dirs:  lib

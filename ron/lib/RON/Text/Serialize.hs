@@ -1,5 +1,6 @@
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
@@ -51,8 +52,6 @@ import RON.Types (
     WireFrame,
     WireReducedChunk (WireReducedChunk),
     WireStateChunk (WireStateChunk),
-    objectId,
-    reducerId,
  )
 import RON.Types qualified
 import RON.UUID (UUID, addValue, succValue, zero)
@@ -346,7 +345,7 @@ serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs
     wrapChunk (objectId, WireStateChunk{stateType, stateBody}) =
         Value
             WireReducedChunk
-                { wrcHeader = closedOpZero{reducerId = stateType, objectId}
+                { wrcHeader = ClosedOp{reducerId = stateType, objectId, op = opZero}
                 , wrcBody = stateBody
                 }
 
@@ -355,9 +354,7 @@ serializeObject :: ObjectFrame a -> (UUID, ByteStringL)
 serializeObject (ObjectFrame oid frame) = (oid, serializeStateFrame frame)
 
 closedOpZero :: ClosedOp
-closedOpZero =
-    ClosedOp
-        { reducerId = zero
-        , objectId = zero
-        , op = Op{opId = zero, refId = zero, payload = []}
-        }
+closedOpZero = ClosedOp{reducerId = zero, objectId = zero, op = opZero}
+
+opZero :: Op
+opZero = Op{opId = zero, refId = zero, payload = []}

@@ -1,77 +1,89 @@
 cabal-version: 2.2
-
-name:           swarm
-version:        0
-
-category:       Distributed Systems, Database
-license:        BSD-3-Clause
-maintainer:     Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:       SwarmDB connector
-
+name:          swarm
+version:       0
+category:      Distributed Systems, Database
+license:       BSD-3-Clause
+maintainer:    Yuriy Syrovetskiy <haskell@cblp.su>
+synopsis:      SwarmDB connector
 description:
-    Haskell binding to the embedded distributed database SwarmDB
-    http://replicated.cc/swarm/
+  Haskell binding to the embedded distributed database SwarmDB
+  http://replicated.cc/swarm/
 
-build-type: Simple
+build-type:    Simple
 
 flag swarm
-    description: Build swarm package (experimental)
-    default: False
-    manual: True
+  description: Build swarm package (experimental)
+  default:     False
+  manual:      True
 
 common language
-    build-depends: base >= 4.10
-    default-language: Haskell2010
-    if flag(swarm)
-        buildable: True
-    else
-        buildable: False
+  build-depends:      base >=4.10
+  default-extensions:
+    NoFieldSelectors
+    StrictData
+
+  default-language:   GHC2021
+
+  if flag(swarm)
+    buildable: True
+
+  else
+    buildable: False
 
 library
-    import: language
-    build-depends:
-        -- global
-        bytestring,
-        containers,
-        inline-c,
-        inline-c-cpp,
-        -- project
-        ron,
-    ghc-options: -optc=-std=c++11
+  import:          language
 
-    include-dirs: _artifacts/include
-    if os(linux)
-        include-dirs:
-            /usr/include/botan-2
-    if os(osx)
-        include-dirs:
-            /usr/local/opt/botan/include/botan-2
-            /usr/local/opt/rocksdb/include
+  -- global
+  build-depends:
+    , bytestring
+    , containers
+    , inline-c
+    , inline-c-cpp
 
-    exposed-modules:
-        Swarm.DB.Replica
-        Swarm.RON.Status
-        Swarm.RON.Text
-    extra-libraries: stdc++ swarmdb
-    hs-source-dirs: lib
-    other-modules:
-        Cxx.Std
-        Cxx.Std.String
+  -- project
+  build-depends:   ron
+  ghc-options:     -optc=-std=c++11
+  include-dirs:    _artifacts/include
+
+  if os(linux)
+    include-dirs: /usr/include/botan-2
+
+  if os(osx)
+    include-dirs:
+      /usr/local/opt/botan/include/botan-2 /usr/local/opt/rocksdb/include
+
+  exposed-modules:
+    Swarm.DB.Replica
+    Swarm.RON.Status
+    Swarm.RON.Text
+
+  extra-libraries:
+    stdc++
+    swarmdb
+
+  hs-source-dirs:  lib
+  other-modules:
+    Cxx.Std
+    Cxx.Std.String
 
 test-suite test
-    import: language
-    build-depends:
-        -- global
-        hedgehog,
-        tasty-hedgehog,
-        tasty-th,
-        -- project
-        ron,
-        ron-rdt,
-        ron-test,
-        -- package
-        swarm,
-    ghc-options: -dynamic
-    hs-source-dirs: test
-    main-is: Main.hs
-    type: exitcode-stdio-1.0
+  import:         language
+
+  -- global
+  build-depends:
+    , hedgehog
+    , tasty-hedgehog
+    , tasty-th
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+    , ron-test
+
+  -- package
+  build-depends:  swarm
+  ghc-options:    -dynamic
+  hs-source-dirs: test
+  main-is:        Main.hs
+  type:           exitcode-stdio-1.0

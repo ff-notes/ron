@@ -1,13 +1,17 @@
-module Database
-  ( chatroomUuid
-  , databaseToUIUpdater
-  , loadAllMessages
-  , messagePoster
-  , newMessage
-  ) where
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-import Prelude hiding (show)
+module Database (
+    chatroomUuid,
+    databaseToUIUpdater,
+    loadAllMessages,
+    messagePoster,
+    newMessage,
+) where
+
 import RON.Prelude
+import Prelude hiding (show)
 
 import Control.Concurrent.STM (TChan, readTChan, writeTChan)
 import Control.Monad (forever)
@@ -24,39 +28,41 @@ import RON.Types.Experimental (Ref (..))
 import RON.UUID qualified as UUID
 import UnliftIO (MonadUnliftIO, atomically)
 
-import Types (Message (..), MessageView, getMessageView, postTime)
+import Types (Message (..), MessageView (..), getMessageView)
 
 loadAllMessages ::
-  (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
+    (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m [MessageView]
 loadAllMessages db =
-  runStore db do
-    messageRefs <- ORSet.getDecode gMessageSetRef
-    sortOn postTime . catMaybes <$> for messageRefs getMessageView
+    runStore db do
+        messageRefs <- ORSet.getDecode gMessageSetRef
+        sortOn (.postTime) . catMaybes <$> for messageRefs getMessageView
 
 newMessage ::
-  (MonadE m, MonadStore m, ReplicaClock m) => Message -> m (Ref Message)
+    (MonadE m, MonadStore m, ReplicaClock m) => Message -> m (Ref Message)
 newMessage msg = do
-  msgRef <- newObject msg
-  ORSet.add_ gMessageSetRef msgRef
-  pure msgRef
+    msgRef <- newObject msg
+    ORSet.add_ gMessageSetRef msgRef
+    pure msgRef
 
 messagePoster ::
-  (MonadLogger m, MonadUnliftIO m) => TChan Message -> Store.Handle -> m ()
+    (MonadLogger m, MonadUnliftIO m) => TChan Message -> Store.Handle -> m ()
 messagePoster onMessagePosted db =
-  forever $ do
-    message <- atomically $ readTChan onMessagePosted
-    $logDebug $ "Saving message " <> show message
-    runStore db $ newMessage message
+    forever $ do
+        message <- atomically $ readTChan onMessagePosted
+        $logDebug $ "Saving message " <> show message
+        runStore db $ newMessage message
 
 databaseToUIUpdater ::
-  (MonadLogger m, MonadUnliftIO m) =>
-  Store.Handle -> TChan [MessageView] -> m ()
+    (MonadLogger m, MonadUnliftIO m) =>
+    Store.Handle ->
+    TChan [MessageView] ->
+    m ()
 databaseToUIUpdater db onMessageListUpdated = do
-  onUpdate <- fetchUpdates db
-  forever $ do
-    _ <- atomically $ readTChan onUpdate
-    messages <- loadAllMessages db
-    atomically $ writeTChan onMessageListUpdated messages
+    onUpdate <- fetchUpdates db
+    forever $ do
+        _ <- atomically $ readTChan onUpdate
+        messages <- loadAllMessages db
+        atomically $ writeTChan onMessageListUpdated messages
 
 chatroomUuid :: UUID
 chatroomUuid = $(UUID.liftName "chatroom")

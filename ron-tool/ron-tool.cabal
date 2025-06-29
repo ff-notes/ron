@@ -1,22 +1,28 @@
 cabal-version: 2.2
-
-name: ron-tool
-version: 0
+name:          ron-tool
+version:       0
 
 executable ron
-    build-depends:
-        -- global
-        aeson,
-        aeson-pretty,
-        base,
-        bytestring,
-        containers,
-        directory,
-        optparse-applicative,
-        text,
-        yaml,
-        -- project
-        ron,
-        ron-rdt,
-    default-language: Haskell2010
-    main-is: Main.hs
+  -- global
+  build-depends:
+    , aeson
+    , aeson-pretty
+    , base
+    , bytestring
+    , containers
+    , directory
+    , optparse-applicative
+    , text
+    , yaml
+
+  -- project
+  build-depends:
+    , ron
+    , ron-rdt
+
+  default-language:   GHC2021
+  default-extensions:
+    NoFieldSelectors
+    StrictData
+
+  main-is:            Main.hs

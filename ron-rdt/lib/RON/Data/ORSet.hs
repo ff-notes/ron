@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,6 +25,7 @@ module RON.Data.ORSet (
     removeValue,
     setType,
     zoomItem,
+
     -- * struct_set
     addFieldValue,
     assignField,
@@ -39,47 +41,68 @@ module RON.Data.ORSet (
     zoomFieldObject,
 ) where
 
-import           RON.Prelude
+import RON.Prelude
 
 import qualified Data.Map.Strict as Map
 
-import           RON.Data.Internal (MonadObjectState, ObjectStateT, Reducible,
-                                    Rep, Replicated (encoding),
-                                    ReplicatedAsObject,
-                                    ReplicatedAsPayload (fromPayload),
-                                    eqPayload, eqRef, evalObjectState, fromRon,
-                                    getObjectState, getObjectStateChunk,
-                                    modifyObjectStateChunk_, newObject, newRon,
-                                    objectEncoding, rconcat, readObject,
-                                    reduceObjectStates, reducibleOpType,
-                                    stateFromChunk, stateToChunk)
-import           RON.Error (MonadE, errorContext, throwErrorText)
-import           RON.Event (ReplicaClock, getEventUuid)
-import           RON.Semilattice (Semilattice)
-import           RON.Types (Atom (AUuid),
-                            ObjectFrame (ObjectFrame, frame, uuid),
-                            ObjectRef (ObjectRef),
-                            Op (Op, opId, payload, refId), Payload,
-                            StateChunk (StateChunk), StateFrame, UUID,
-                            WireStateChunk (WireStateChunk, stateBody, stateType))
-import           RON.Util (Instance (Instance))
-import           RON.UUID (pattern Zero)
+import RON.Data.Internal (
+    MonadObjectState,
+    ObjectStateT,
+    Reducible,
+    Rep,
+    Replicated (encoding),
+    ReplicatedAsObject,
+    ReplicatedAsPayload (fromPayload),
+    eqPayload,
+    eqRef,
+    evalObjectState,
+    fromRon,
+    getObjectState,
+    getObjectStateChunk,
+    modifyObjectStateChunk_,
+    newObject,
+    newRon,
+    objectEncoding,
+    rconcat,
+    readObject,
+    reduceObjectStates,
+    reducibleOpType,
+    stateFromChunk,
+    stateToChunk,
+ )
+import RON.Error (MonadE, errorContext, throwErrorText)
+import RON.Event (ReplicaClock, getEventUuid)
+import RON.Semilattice (Semilattice)
+import RON.Types (
+    Atom (AUuid),
+    ObjectFrame (..),
+    ObjectRef (..),
+    Op (..),
+    Payload,
+    StateChunk (..),
+    StateFrame,
+    UUID,
+    WireStateChunk (..),
+ )
+import RON.UUID (pattern Zero)
 import qualified RON.UUID as UUID
+import RON.Util (Instance (..))
 
--- | Untyped OR-Set.
--- Implementation: a map from the itemKey to the original op.
--- Each time a value is added, a new item=op is created.
--- Deletion of a value replaces all its known items with tombstone ops.
+{- | Untyped OR-Set.
+Implementation: a map from the itemKey to the original op.
+Each time a value is added, a new item=op is created.
+Deletion of a value replaces all its known items with tombstone ops.
+-}
 newtype ORSetRep = ORSetRep (Map UUID Op)
     deriving (Eq, Show)
 
 itemKey :: Op -> UUID
 itemKey Op{opId, refId} = case refId of
-    Zero -> opId   -- alive
-    _    -> refId  -- tombstone
+    Zero -> opId -- alive
+    _ -> refId -- tombstone
 
 preferTombstone :: Op -> Op -> Op
-preferTombstone = maxOn refId
+preferTombstone = maxOn (.refId)
 
 instance Semigroup ORSetRep where
     ORSetRep set1 <> ORSetRep set2 =
@@ -88,18 +111,20 @@ instance Semigroup ORSetRep where
 instance Monoid ORSetRep where
     mempty = ORSetRep mempty
 
--- | Laws:
--- 1. Idempotent because 'Map.unionWith' is idempotent.
--- 2. Commutative because 'preferTombstone' is commutative.
+{- | Laws:
+1. Idempotent because 'Map.unionWith' is idempotent.
+2. Commutative because 'preferTombstone' is commutative.
+-}
 instance Semilattice ORSetRep
 
 instance Reducible ORSetRep where
     reducibleOpType = setType
 
-    stateFromChunk ops = ORSetRep $
-        Map.fromListWith preferTombstone [(itemKey op, op) | op <- ops]
+    stateFromChunk ops =
+        ORSetRep $
+            Map.fromListWith preferTombstone [(itemKey op, op) | op <- ops]
 
-    stateToChunk (ORSetRep set) = sortOn opId $ Map.elems set
+    stateToChunk (ORSetRep set) = sortOn (.opId) $ Map.elems set
 
 wireStateChunk :: [Op] -> WireStateChunk
 wireStateChunk stateBody = WireStateChunk{stateType = setType, stateBody}
@@ -108,20 +133,22 @@ wireStateChunk stateBody = WireStateChunk{stateType = setType, stateBody}
 setType :: UUID
 setType = $(UUID.liftName "set")
 
--- | Type-directing wrapper for typed OR-Set.
--- 'Eq' instance is purely technical, it doesn't use 'Ord', nor 'Hashable',
--- so its result may be confusing.
+{- | Type-directing wrapper for typed OR-Set.
+'Eq' instance is purely technical, it doesn't use 'Ord', nor 'Hashable',
+so its result may be confusing.
+-}
 newtype ORSet a = ORSet [a]
     deriving (Eq, Show)
+
 {- TODO(2019-07-24, cblp, #102) data family ORSet c a where
     newtype instance ORSet Ord      a = ORSetOrd  (Set     a)
     newtype instance ORSet Hashable a = ORSetHash (HashSet a)
 -}
 
-instance Replicated a => Replicated (ORSet a) where
+instance (Replicated a) => Replicated (ORSet a) where
     encoding = objectEncoding
 
-instance Replicated a => ReplicatedAsObject (ORSet a) where
+instance (Replicated a) => ReplicatedAsObject (ORSet a) where
     type Rep (ORSet a) = ORSetRep
 
     newObject (ORSet items) = do
@@ -139,7 +166,7 @@ instance Replicated a => ReplicatedAsObject (ORSet a) where
             Zero -> do
                 item <- fromRon payload
                 pure $ Just item
-            _    -> pure Nothing
+            _ -> pure Nothing
         pure . ORSet $ catMaybes mItems
 
 -- | XXX Internal. Common implementation of 'addValue' and 'addRef'.
@@ -150,37 +177,40 @@ commonAdd payload =
         pure $ StateChunk $ stateBody ++ [Op event Zero payload]
 
 -- | Encode a value and add a it to the OR-Set
-addValue
-    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m)
-    => a -> m ()
+addValue ::
+    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m) =>
+    a ->
+    m ()
 addValue item = do
     payload <- newRon item
     commonAdd payload
 
-addRef
-    :: (ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m)
-    => ObjectRef a -> m ()
+addRef ::
+    (ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m) =>
+    ObjectRef a ->
+    m ()
 addRef (ObjectRef itemUuid) = commonAdd [AUuid itemUuid]
 
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
-commonRemove
-    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
-    => (Payload -> m Bool) -> m ()
+commonRemove ::
+    (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m) =>
+    (Payload -> m Bool) ->
+    m ()
 commonRemove isTarget =
     modifyObjectStateChunk_ $ \(StateChunk chunk) -> do
         let state0@(ORSetRep opMap) = stateFromChunk chunk
         targetEvents <-
-            fmap catMaybes
-            $ for (toList opMap) $ \op@Op{refId, payload} ->
-                case refId of
-                    Zero -> do
-                        t <- isTarget payload
-                        pure $ if t then Just op else Nothing
-                    _ -> pure Nothing
-        StateChunk <$>
-            case targetEvents of
+            fmap catMaybes $
+                for (toList opMap) $ \op@Op{refId, payload} ->
+                    case refId of
+                        Zero -> do
+                            t <- isTarget payload
+                            pure $ if t then Just op else Nothing
+                        _ -> pure Nothing
+        StateChunk
+            <$> case targetEvents of
                 [] -> pure chunk
-                _  -> do
+                _ -> do
                     tombstone <- getEventUuid
                     let patch =
                             [ op{opId = tombstone, refId = observed}
@@ -189,9 +219,10 @@ commonRemove isTarget =
                     let state' = state0 <> stateFromChunk patch
                     pure $ stateToChunk state'
 
-removeObjectIf
-    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
-    => ObjectStateT a m Bool -> m ()
+removeObjectIf ::
+    (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m) =>
+    ObjectStateT a m Bool ->
+    m ()
 removeObjectIf isTarget = commonRemove $ \case
     AUuid uuid' : _ -> do
         frame <- get
@@ -199,53 +230,60 @@ removeObjectIf isTarget = commonRemove $ \case
     _ -> pure False
 
 -- | Remove an atomic value from the OR-Set
-removeValue
-    ::  ( ReplicatedAsPayload a
-        , MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m
-        )
-    => a -> m ()
+removeValue ::
+    ( ReplicatedAsPayload a
+    , MonadE m
+    , ReplicaClock m
+    , MonadObjectState (ORSet a) m
+    ) =>
+    a ->
+    m ()
 removeValue v = commonRemove $ pure . eqPayload v
 
 -- | Remove from a field all values that equal to the specified value.
-removeFieldValue
-    ::  ( MonadE m
-        , MonadObjectState struct m
-        , ReplicaClock m
-        , ReplicatedAsPayload a
-        )
-    => UUID -- ^ Field name
-    -> a -- ^ Value
-    -> m ()
+removeFieldValue ::
+    ( MonadE m
+    , MonadObjectState struct m
+    , ReplicaClock m
+    , ReplicatedAsPayload a
+    ) =>
+    -- | Field name
+    UUID ->
+    -- | Value
+    a ->
+    m ()
 removeFieldValue field value =
     removeFieldValueIfP field $ pure . eqPayload value
 
 -- | Remove from a field all values that obey the predicate.
-removeFieldValueIf
-    ::  ( MonadE m
-        , MonadObjectState struct m
-        , ReplicaClock m
-        , ReplicatedAsPayload a
-        )
-    => UUID -- ^ Field name
-    -> (a -> m Bool)
-    -> m ()
+removeFieldValueIf ::
+    ( MonadE m
+    , MonadObjectState struct m
+    , ReplicaClock m
+    , ReplicatedAsPayload a
+    ) =>
+    -- | Field name
+    UUID ->
+    (a -> m Bool) ->
+    m ()
 removeFieldValueIf field isTarget =
     removeFieldValueIfP field $ \valuePayload -> do
         value <- fromPayload valuePayload
         isTarget value
 
 -- | Remove from a field all payloads that obey the predicate.
-removeFieldValueIfP
-    :: (MonadE m, MonadObjectState struct m, ReplicaClock m)
-    => UUID -- ^ Field name
-    -> (Payload -> m Bool)
-    -> m ()
+removeFieldValueIfP ::
+    (MonadE m, MonadObjectState struct m, ReplicaClock m) =>
+    -- | Field name
+    UUID ->
+    (Payload -> m Bool) ->
+    m ()
 removeFieldValueIfP field isTarget =
     modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
         (observedOps, stateBody1) <-
             partitionM isFieldAliveAndSameValue stateBody
         removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
-            tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
+            tombstone <- getEventUuid -- TODO(2019-07-10, cblp) sequential
             pure op{opId = tombstone, refId = observedEvent}
         let stateBody2 = stateBody1 ++ removeOps
         pure $ StateChunk stateBody2
@@ -256,20 +294,24 @@ removeFieldValueIfP field isTarget =
         _ -> pure False
 
 -- | Remove an object reference from the OR-Set
-removeRef
-    :: (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m)
-    => ObjectRef a -> m ()
+removeRef ::
+    (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m) =>
+    ObjectRef a ->
+    m ()
 removeRef r = commonRemove $ pure . eqRef r
 
 -- | Reference to an item inside an 'ORSet'.
 newtype ORSetItem a = ORSetItem UUID
     deriving (Show)
 
--- | Go from modification of the whole set to the modification of an item
--- object.
-zoomItem
-    :: MonadE m
-    => ORSetItem item -> ObjectStateT item m a -> ObjectStateT (ORSet item) m a
+{- | Go from modification of the whole set to the modification of an item
+object.
+-}
+zoomItem ::
+    (MonadE m) =>
+    ORSetItem item ->
+    ObjectStateT item m a ->
+    ObjectStateT (ORSet item) m a
 zoomItem (ORSetItem key) innerModifier = do
     ORSetRep opMap <- getObjectState
     itemValueRef <- case Map.lookup key opMap of
@@ -282,66 +324,74 @@ zoomItem (ORSetItem key) innerModifier = do
     lift $ runReaderT innerModifier $ ObjectRef itemValueRef
 
 -- | Find any alive item. If no alive item found, return 'Nothing'.
-findAnyAlive
-    :: (MonadE m, MonadObjectState (ORSet item) m) => m (Maybe (ORSetItem item))
+findAnyAlive ::
+    (MonadE m, MonadObjectState (ORSet item) m) => m (Maybe (ORSetItem item))
 findAnyAlive = do
     ORSetRep opMap <- getObjectState
     let aliveItems = [op | op@Op{refId = Zero} <- toList opMap]
     pure $ case listToMaybe aliveItems of
-        Nothing       -> Nothing
+        Nothing -> Nothing
         Just Op{opId} -> Just $ ORSetItem opId
 
 -- | Find any alive item. If no alive item found, report an error.
-findAnyAlive'
-    :: (MonadE m, MonadObjectState (ORSet item) m) => m (ORSetItem item)
+findAnyAlive' ::
+    (MonadE m, MonadObjectState (ORSet item) m) => m (ORSetItem item)
 findAnyAlive' = do
     mx <- findAnyAlive
     case mx of
-        Just x  -> pure x
+        Just x -> pure x
         Nothing -> throwErrorText "empty set"
 
 type ORSetMap k v = ORSet (k, v)
 
--- | Assign a value to a field, deleting all previous (observed) values.
--- Assignment of 'Nothing' just deletes all values.
-assignField
-    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
-    => UUID     -- ^ Field name
-    -> Maybe a  -- ^ Value
-    -> m ()
+{- | Assign a value to a field, deleting all previous (observed) values.
+Assignment of 'Nothing' just deletes all values.
+-}
+assignField ::
+    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m) =>
+    -- | Field name
+    UUID ->
+    -- | Value
+    Maybe a ->
+    m ()
 assignField field mvalue =
     modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
         addOp <- case mvalue of
             Just value -> do
                 event <- getEventUuid
                 valuePayload <- newRon value
-                pure $ Just Op
-                    { opId = event
-                    , refId = Zero
-                    , payload = AUuid field : valuePayload
-                    }
+                pure $
+                    Just
+                        Op
+                            { opId = event
+                            , refId = Zero
+                            , payload = AUuid field : valuePayload
+                            }
             Nothing -> pure Nothing
         let (observedOps, stateBody1) = partition (isAliveField field) stateBody
         removeOps <- for observedOps $ \op@Op{opId = observedEvent} -> do
-            tombstone <- getEventUuid  -- TODO(2019-07-10, cblp) sequential
+            tombstone <- getEventUuid -- TODO(2019-07-10, cblp) sequential
             pure op{opId = tombstone, refId = observedEvent}
         let stateBody2 = stateBody1 ++ toList addOp ++ removeOps
         pure $ StateChunk stateBody2
 
-addFieldValue
-    :: (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m)
-    => UUID  -- ^ Field name
-    -> a     -- ^ Value
-    -> m ()
+addFieldValue ::
+    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m) =>
+    -- | Field name
+    UUID ->
+    -- | Value
+    a ->
+    m ()
 addFieldValue field value =
     modifyObjectStateChunk_ $ \(StateChunk stateBody) -> do
         event <- getEventUuid
         valuePayload <- newRon value
-        let addOp = Op
-                { opId = event
-                , refId = Zero
-                , payload = AUuid field : valuePayload
-                }
+        let addOp =
+                Op
+                    { opId = event
+                    , refId = Zero
+                    , payload = AUuid field : valuePayload
+                    }
         pure $ StateChunk $ stateBody ++ [addOp]
 
 isAliveField :: UUID -> Op -> Bool
@@ -349,20 +399,26 @@ isAliveField field = \case
     Op{refId = Zero, payload = AUuid field' : _} -> field == field'
     _ -> False
 
-filterAliveFieldPayloads
-    :: UUID               -- ^ field
-    -> [Op]               -- ^ state body
-    -> [Payload]  -- ^ value payloads
+filterAliveFieldPayloads ::
+    -- | field
+    UUID ->
+    -- | state body
+    [Op] ->
+    -- | value payloads
+    [Payload]
 filterAliveFieldPayloads field ops =
     [ valuePayload
     | Op{refId = Zero, payload = AUuid field' : valuePayload} <- ops
     , field' == field
     ]
 
-filterAliveFieldIdsAndPayloads
-    :: UUID               -- ^ field
-    -> [Op]               -- ^ state body
-    -> [(UUID, Payload)]  -- ^ op ids and value payloads
+filterAliveFieldIdsAndPayloads ::
+    -- | field
+    UUID ->
+    -- | state body
+    [Op] ->
+    -- | op ids and value payloads
+    [(UUID, Payload)]
 filterAliveFieldIdsAndPayloads field ops =
     [ (opId, valuePayload)
     | Op{opId, refId = Zero, payload = AUuid field' : valuePayload} <- ops
@@ -370,95 +426,108 @@ filterAliveFieldIdsAndPayloads field ops =
     ]
 
 -- | Find object field, merge all versions, return 'Nothing' if no versions
-getFieldObject
-    :: (MonadE m, MonadObjectState struct m, ReplicatedAsObject a)
-    => UUID                 -- ^ Field name
-    -> m (Maybe (ObjectRef a))
+getFieldObject ::
+    (MonadE m, MonadObjectState struct m, ReplicatedAsObject a) =>
+    -- | Field name
+    UUID ->
+    m (Maybe (ObjectRef a))
 getFieldObject field =
     errorContext "ORSet.getFieldObject" $ do
         StateChunk ops <- getObjectStateChunk
         let payloads = filterAliveFieldPayloads field ops
             refs = [ref | AUuid ref : _ <- payloads]
         case refs of
-            []   -> pure Nothing
-            p:ps -> fmap Just $ reduceObjectStates $ fmap ObjectRef $ p :| ps
+            [] -> pure Nothing
+            p : ps -> fmap Just $ reduceObjectStates $ fmap ObjectRef $ p :| ps
 
 -- | Decode field value, merge all versions, return 'Nothing' if no versions
-viewField
-    :: (MonadE m, MonadState StateFrame m, ReplicatedAsObject a)
-    => UUID                 -- ^ Field name
-    -> StateChunk ORSetRep  -- ^ ORSet object chunk
-    -> m (Maybe a)
+viewField ::
+    (MonadE m, MonadState StateFrame m, ReplicatedAsObject a) =>
+    -- | Field name
+    UUID ->
+    -- | ORSet object chunk
+    StateChunk ORSetRep ->
+    m (Maybe a)
 viewField field (StateChunk stateBody) =
     errorContext "ORSet.viewField" $ do
         let payloads = filterAliveFieldPayloads field stateBody
             refs = [ref | AUuid ref : _ <- payloads]
         case refs of
-            []   -> pure Nothing
-            p:ps -> fmap Just . rconcat $ p :| ps
+            [] -> pure Nothing
+            p : ps -> fmap Just . rconcat $ p :| ps
 
 -- | Decode field value, keep last version only
-viewFieldLWW
-    :: (MonadE m, MonadState StateFrame m, Replicated a)
-    => UUID                 -- ^ Field name
-    -> StateChunk ORSetRep  -- ^ ORSet object chunk
-    -> m (Maybe a)
+viewFieldLWW ::
+    (MonadE m, MonadState StateFrame m, Replicated a) =>
+    -- | Field name
+    UUID ->
+    -- | ORSet object chunk
+    StateChunk ORSetRep ->
+    m (Maybe a)
 viewFieldLWW field (StateChunk stateBody) =
     errorContext "ORSet.viewFieldLWW" $ do
-    let mPayload =
-            fmap snd . maximumMayOn fst $
-            filterAliveFieldIdsAndPayloads field stateBody
-    case mPayload of
-        Nothing      -> pure Nothing
-        Just []      -> pure Nothing
-        Just payload -> Just <$> fromRon payload
+        let mPayload =
+                fmap snd . maximumMayOn fst $
+                    filterAliveFieldIdsAndPayloads field stateBody
+        case mPayload of
+            Nothing -> pure Nothing
+            Just [] -> pure Nothing
+            Just payload -> Just <$> fromRon payload
 
 -- | Decode field value, keep max value only, only for Integer and Float
-viewFieldMax
-    :: (MonadE m, Ord a, ReplicatedAsPayload a)
-    => UUID                 -- ^ Field name
-    -> StateChunk ORSetRep  -- ^ ORSet object chunk
-    -> m (Maybe a)
+viewFieldMax ::
+    (MonadE m, Ord a, ReplicatedAsPayload a) =>
+    -- | Field name
+    UUID ->
+    -- | ORSet object chunk
+    StateChunk ORSetRep ->
+    m (Maybe a)
 viewFieldMax field (StateChunk stateBody) =
     errorContext "ORSet.viewFieldMax" $
-    fmap maximumMay $
-    traverse fromPayload $
-    filterAliveFieldPayloads field stateBody
+        fmap maximumMay $
+            traverse fromPayload $
+                filterAliveFieldPayloads field stateBody
 
 -- | Decode field value, keep min value only, only for Integer and Float
-viewFieldMin
-    :: (MonadE m, Ord a, ReplicatedAsPayload a)
-    => UUID                 -- ^ Field name
-    -> StateChunk ORSetRep  -- ^ ORSet object chunk
-    -> m (Maybe a)
+viewFieldMin ::
+    (MonadE m, Ord a, ReplicatedAsPayload a) =>
+    -- | Field name
+    UUID ->
+    -- | ORSet object chunk
+    StateChunk ORSetRep ->
+    m (Maybe a)
 viewFieldMin field (StateChunk stateBody) =
     errorContext "ORSet.viewFieldMin" $
-    fmap minimumMay $
-    traverse fromPayload $
-    filterAliveFieldPayloads field stateBody
+        fmap minimumMay $
+            traverse fromPayload $
+                filterAliveFieldPayloads field stateBody
 
 -- | Decode field value, keep all versions
-viewFieldSet
-    :: (MonadE m, MonadState StateFrame m, Replicated a)
-    => UUID                 -- ^ Field name
-    -> StateChunk ORSetRep  -- ^ ORSet object chunk
-    -> m [a]
+viewFieldSet ::
+    (MonadE m, MonadState StateFrame m, Replicated a) =>
+    -- | Field name
+    UUID ->
+    -- | ORSet object chunk
+    StateChunk ORSetRep ->
+    m [a]
 viewFieldSet field (StateChunk stateBody) =
     errorContext "ORSet.viewFieldSet" $
-    traverse fromRon $
-    filterAliveFieldPayloads field stateBody
+        traverse fromRon $
+            filterAliveFieldPayloads field stateBody
 
 -- | Pseudo-lens to an object inside a specified field
-zoomFieldObject
-    ::  forall a field m struct
-    .   ( MonadE m
-        , ReplicaClock m
-        , ReplicatedAsObject field
-        , ReplicatedAsObject struct
-        )
-    =>  UUID                     -- ^ Field name
-    ->  ObjectStateT field  m a  -- ^ Inner object modifier
-    ->  ObjectStateT struct m a
+zoomFieldObject ::
+    forall a field m struct.
+    ( MonadE m
+    , ReplicaClock m
+    , ReplicatedAsObject field
+    , ReplicatedAsObject struct
+    ) =>
+    -- | Field name
+    UUID ->
+    -- | Inner object modifier
+    ObjectStateT field m a ->
+    ObjectStateT struct m a
 zoomFieldObject field innerModifier =
     errorContext ("ORSet.zoomFieldObject " <> show field) $ do
         (StateChunk stateBody) <- getObjectStateChunk
@@ -467,14 +536,15 @@ zoomFieldObject field innerModifier =
                 | AUuid objectId : _ <- filterAliveFieldPayloads field stateBody
                 ]
         object <- case objectIds of
-            []       -> ObjectRef <$> getEventUuid  -- create empty object
-            oid:oids -> reduceObjectStates @field $ fmap ObjectRef $ oid :| oids
+            [] -> ObjectRef <$> getEventUuid -- create empty object
+            oid : oids -> reduceObjectStates @field $ fmap ObjectRef $ oid :| oids
         lift $ runReaderT innerModifier object
 
 -- | Create an ORSet object from a list of named fields.
-newStruct
-    :: (MonadState StateFrame m, ReplicaClock m)
-    => [(UUID, Instance Replicated)] -> m UUID
+newStruct ::
+    (MonadState StateFrame m, ReplicaClock m) =>
+    [(UUID, Instance Replicated)] ->
+    m UUID
 newStruct fields = do
     objectId <- getEventUuid
     stateBody <-
@@ -485,10 +555,10 @@ newStruct fields = do
     modify' $ Map.insert objectId $ wireStateChunk stateBody
     pure objectId
 
-partitionM :: Applicative m => (a -> m Bool) -> [a] -> m ([a], [a])
+partitionM :: (Applicative m) => (a -> m Bool) -> [a] -> m ([a], [a])
 partitionM f = \case
     [] -> pure ([], [])
-    x:xs -> do
+    x : xs -> do
         res <- f x
         (as, bs) <- partitionM f xs
         pure ([x | res] ++ as, [x | not res] ++ bs)

@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module UI (initUI, runUI) where
@@ -54,7 +55,7 @@ import UnliftIO (MonadIO, MonadUnliftIO, liftIO)
 
 import Database (loadAllMessages)
 import Fork (forkLinked)
-import Types (Env (..), Message (..), MessageView (..), postTime)
+import Types (Env (..), Message (..), MessageView (..))
 
 data Handle = Handle
     { db :: Store.Handle
@@ -113,7 +114,7 @@ appDraw username State{userMessages, messageInput} =
         [ viewport VPMessages Brick.Vertical $
             vBox $
                 map renderMessage $
-                    sortOn postTime userMessages
+                    sortOn (.postTime) userMessages
         , border $
             vBox
                 [ txt $ username <> ":"

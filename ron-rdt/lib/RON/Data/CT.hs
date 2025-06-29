@@ -111,7 +111,7 @@ instance Monoid CTRep where
 instance Reducible CTRep where
     reducibleOpType = ctType
     stateFromChunk = ctRepFromChunk
-    stateToChunk CTRep{ops} = map op $ Foldable.toList ops
+    stateToChunk CTRep{ops} = map (.op) $ Foldable.toList ops
 
 ctRepFromChunk :: [Op] -> CTRep
 ctRepFromChunk ops = CTRep{ops = items, start}
