@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,14 +18,14 @@ module RON.Text.Serialize.UUID (
 import RON.Prelude
 
 import Data.Bits (countLeadingZeros, shiftL, xor)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSLC
+import Data.ByteString qualified as BS
+import Data.ByteString.Char8 qualified as BSC
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.Foldable (minimumBy)
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 
-import qualified RON.Base64 as Base64
+import RON.Base64 qualified as Base64
 import RON.UUID (UUID (..), UuidFields (..), split, zero)
 import RON.Util.Word (
     Word2,

@@ -109,7 +109,7 @@ newStruct fields = do
 
 -- | Decode field value
 viewField ::
-    (Replicated a, MonadE m, MonadState StateFrame m) =>
+    (MonadE m, MonadState StateFrame m, Replicated a) =>
     -- | Field name
     UUID ->
     -- | LWW object chunk
@@ -137,7 +137,7 @@ readField field = do
 
 -- | Assign a value to a field
 assignField ::
-    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m) =>
+    (MonadE m, MonadObjectState struct m, Replicated a, ReplicaClock m) =>
     -- | Field name
     UUID ->
     -- | Value

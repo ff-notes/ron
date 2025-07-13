@@ -31,7 +31,7 @@ import RON.Types.Experimental (Patch (..), Ref (..))
 
 newObject ::
     forall a m.
-    (ReplicatedObject a, MonadStore m, ReplicaClock m) =>
+    (MonadStore m, ReplicaClock m, ReplicatedObject a) =>
     a ->
     m (Ref a)
 newObject a = do

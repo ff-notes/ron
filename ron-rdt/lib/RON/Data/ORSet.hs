@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
@@ -178,7 +179,7 @@ commonAdd payload =
 
 -- | Encode a value and add a it to the OR-Set
 addValue ::
-    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m) =>
+    (MonadE m, MonadObjectState (ORSet a) m, ReplicaClock m, Replicated a) =>
     a ->
     m ()
 addValue item = do
@@ -186,14 +187,14 @@ addValue item = do
     commonAdd payload
 
 addRef ::
-    (ReplicaClock m, MonadE m, MonadObjectState (ORSet a) m) =>
+    (MonadE m, MonadObjectState (ORSet a) m, ReplicaClock m) =>
     ObjectRef a ->
     m ()
 addRef (ObjectRef itemUuid) = commonAdd [AUuid itemUuid]
 
 -- | XXX Internal. Common implementation of 'removeValue' and 'removeRef'.
 commonRemove ::
-    (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m) =>
+    (MonadE m, MonadObjectState (ORSet a) m, ReplicaClock m) =>
     (Payload -> m Bool) ->
     m ()
 commonRemove isTarget =
@@ -220,7 +221,7 @@ commonRemove isTarget =
                     pure $ stateToChunk state'
 
 removeObjectIf ::
-    (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m) =>
+    (MonadE m, MonadObjectState (ORSet a) m, ReplicaClock m) =>
     ObjectStateT a m Bool ->
     m ()
 removeObjectIf isTarget = commonRemove $ \case
@@ -231,10 +232,10 @@ removeObjectIf isTarget = commonRemove $ \case
 
 -- | Remove an atomic value from the OR-Set
 removeValue ::
-    ( ReplicatedAsPayload a
-    , MonadE m
-    , ReplicaClock m
+    ( MonadE m
     , MonadObjectState (ORSet a) m
+    , ReplicaClock m
+    , ReplicatedAsPayload a
     ) =>
     a ->
     m ()
@@ -295,7 +296,7 @@ removeFieldValueIfP field isTarget =
 
 -- | Remove an object reference from the OR-Set
 removeRef ::
-    (MonadE m, ReplicaClock m, MonadObjectState (ORSet a) m) =>
+    (MonadE m, MonadObjectState (ORSet a) m, ReplicaClock m) =>
     ObjectRef a ->
     m ()
 removeRef r = commonRemove $ pure . eqRef r
@@ -348,7 +349,7 @@ type ORSetMap k v = ORSet (k, v)
 Assignment of 'Nothing' just deletes all values.
 -}
 assignField ::
-    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m) =>
+    (MonadE m, MonadObjectState struct m, ReplicaClock m, Replicated a) =>
     -- | Field name
     UUID ->
     -- | Value
@@ -376,7 +377,7 @@ assignField field mvalue =
         pure $ StateChunk stateBody2
 
 addFieldValue ::
-    (Replicated a, ReplicaClock m, MonadE m, MonadObjectState struct m) =>
+    (MonadE m, MonadObjectState struct m, ReplicaClock m, Replicated a) =>
     -- | Field name
     UUID ->
     -- | Value

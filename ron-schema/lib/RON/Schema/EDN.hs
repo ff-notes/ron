@@ -130,9 +130,8 @@ rememberDeclaration ::
     (MonadFail m, MonadState Env m) => Declaration 'Parsed -> m ()
 rememberDeclaration decl = do
     env@Env{userTypes} <- get
-    if name `Map.member` userTypes
-        then fail $ "duplicate declaration of type " ++ Text.unpack name
-        else put env{userTypes = Map.insert name decl userTypes}
+    if name `Map.member` userTypes then fail $ "duplicate declaration of type " ++ Text.unpack name
+    else put env{userTypes = Map.insert name decl userTypes}
   where
     name = declarationName decl
 
@@ -206,11 +205,10 @@ parseField ::
 parseField StructConfig{parseMergeStrategy, errorMessage} tv = do
     (name, field) <- lift $ parseNamedField tv
     definedAlready <- gets $ Map.member name
-    if definedAlready
-        then
-            fail $ "Field " <> Text.unpack name <> " is defined already"
-        else
-            modify' $ Map.insert name field
+    if definedAlready then
+        fail $ "Field " <> Text.unpack name <> " is defined already"
+    else
+        modify' $ Map.insert name field
   where
     parseNamedField = withNoTag . withList $ \case
         nameSym : rest1@(_ : _) -> do
@@ -346,7 +344,7 @@ evalSchema env = fst <$> userTypes'
     evalDeclaration = \case
         DAlias Alias{name, target} ->
             let target' = evalType target
-             in (DAlias Alias{name, target = target'}, Type0 target')
+            in  (DAlias Alias{name, target = target'}, Type0 target')
         DEnum t -> (DEnum t, Type0 $ TEnum t)
         DOpaqueAtoms t -> (DOpaqueAtoms t, Type0 $ TOpaqueAtoms t)
         DOpaqueObject t -> (DOpaqueObject t, Type0 $ TObject $ TOpaqueObject t)
@@ -412,7 +410,7 @@ unwrapTag = \case
         let name = case prefix of
                 "" -> tag
                 _ -> prefix <> "/" <> tag
-         in pure (name, value)
+        in  pure (name, value)
     NoTag _ -> fail "annotation must be a tagged value"
 
 instance FromEDN MergeStrategy where

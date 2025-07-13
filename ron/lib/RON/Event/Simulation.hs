@@ -68,7 +68,7 @@ instance (Monad m) => ReplicaClock (ReplicaSimT m) where
                     randomLeap = ls60 $ oldHash t0orig r `mod` 0x10000
                     t0 = t0orig + randomLeap
                     t1 = t0 + n
-                 in ((t0, t1), HM.insert replica t1 replicaStates)
+                in  ((t0, t1), HM.insert replica t1 replicaStates)
         pure [Event{time = mkTime Logical t, replica} | t <- [succ t0 .. t1]]
       where
         n = max n' (ls60 1)

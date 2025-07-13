@@ -1,6 +1,7 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
@@ -129,7 +130,7 @@ vertexListToOps v@VertexList{..} = go listHead listItems
             rest = case itemNext of
                 Just next -> go next (HashMap.delete root items)
                 Nothing -> []
-        in itemValue : rest
+        in  itemValue : rest
 
 vertexListFromOps :: [Vertex] -> Maybe VertexList
 vertexListFromOps = foldr go mempty
@@ -399,10 +400,10 @@ instance (Replicated a) => ReplicatedAsObject (RGA a) where
 'getGroupedDiffBy'.
 -}
 edit ::
-    ( ReplicatedAsPayload a
-    , ReplicaClock m
-    , MonadE m
+    ( MonadE m
     , MonadObjectState (RGA a) m
+    , ReplicaClock m
+    , ReplicatedAsPayload a
     ) =>
     [a] ->
     m ()
@@ -444,7 +445,7 @@ edit newItems =
 
 -- | Speciaization of 'edit' for 'Text'
 editText ::
-    (ReplicaClock m, MonadE m, MonadObjectState RgaString m) => Text -> m ()
+    (MonadE m, MonadObjectState RgaString m, ReplicaClock m) => Text -> m ()
 editText = edit . Text.unpack
 
 {- | Speciaization of 'RGA' to 'Char'.
@@ -454,7 +455,7 @@ type RgaString = RGA Char
 
 -- | Create an RGA from a list
 newFromList ::
-    (Replicated a, MonadState StateFrame m, ReplicaClock m) =>
+    (MonadState StateFrame m, ReplicaClock m, Replicated a) =>
     [a] ->
     m (ObjectRef (RGA a))
 newFromList = newObject . RGA
@@ -472,7 +473,7 @@ getAliveIndices = do
     pure [opId | Op{opId, refId = Zero} <- stateBody]
 
 -- | Read elements from RGA
-getList :: (Replicated a, MonadE m, MonadObjectState (RGA a) m) => m [a]
+getList :: (MonadE m, MonadObjectState (RGA a) m, Replicated a) => m [a]
 getList = coerce <$> readObject
 
 -- | Read characters from 'RgaString'
@@ -483,7 +484,7 @@ getText = Text.pack <$> getList
 Position is identified by 'UUID'. 'Nothing' means the beginning.
 -}
 insert ::
-    (Replicated a, MonadE m, MonadObjectState (RGA a) m, ReplicaClock m) =>
+    (MonadE m, MonadObjectState (RGA a) m, ReplicaClock m, Replicated a) =>
     [a] ->
     -- | position
     Maybe UUID ->
@@ -511,13 +512,13 @@ insert items mPosition =
                 | otherwise -> (op :) <$> go ops
 
 insertAtBegin ::
-    (Replicated a, MonadE m, MonadObjectState (RGA a) m, ReplicaClock m) =>
+    (MonadE m, MonadObjectState (RGA a) m, ReplicaClock m, Replicated a) =>
     [a] ->
     m ()
 insertAtBegin items = insert items Nothing
 
 insertAfter ::
-    (Replicated a, MonadE m, MonadObjectState (RGA a) m, ReplicaClock m) =>
+    (MonadE m, MonadObjectState (RGA a) m, ReplicaClock m, Replicated a) =>
     [a] ->
     -- | position
     UUID ->
@@ -528,7 +529,7 @@ insertAfter items = insert items . Just
 Position is identified by 'UUID'. 'Nothing' means the beginning.
 -}
 insertText ::
-    (ReplicaClock m, MonadE m, MonadObjectState RgaString m) =>
+    (MonadE m, MonadObjectState RgaString m, ReplicaClock m) =>
     Text ->
     -- | position
     Maybe UUID ->
@@ -536,11 +537,11 @@ insertText ::
 insertText = insert . Text.unpack
 
 insertTextAtBegin ::
-    (ReplicaClock m, MonadE m, MonadObjectState RgaString m) => Text -> m ()
+    (MonadE m, MonadObjectState RgaString m, ReplicaClock m) => Text -> m ()
 insertTextAtBegin text = insertText text Nothing
 
 insertTextAfter ::
-    (ReplicaClock m, MonadE m, MonadObjectState RgaString m) =>
+    (MonadE m, MonadObjectState RgaString m, ReplicaClock m) =>
     Text ->
     -- | position
     UUID ->

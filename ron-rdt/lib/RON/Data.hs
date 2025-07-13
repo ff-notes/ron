@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
@@ -136,14 +137,14 @@ mkWireReducer obj chunks = chunks' <> leftovers
     (stateChunk', (unappliedPatches, unappliedOps)) = case mStates of
         Nothing -> (Nothing, reduceUnappliedPatches @a (patches, closedOps))
         Just nStates ->
-            let
-                nState = sconcat $ fmap snd nStates
+            let nState = sconcat $ fmap snd nStates
                 (reducedState, unapplied') =
                     applyPatches nState (patches, closedOps)
                 reducedStateBody = stateToChunk @a reducedState
                 rc = ReducedChunk{rcRef = Zero, rcBody = reducedStateBody}
-            in
-                (Just $ Value $ wrapRChunk rc, reduceUnappliedPatches @a unapplied')
+            in  ( Just $ Value $ wrapRChunk rc
+                , reduceUnappliedPatches @a unapplied'
+                )
     typ = reducibleOpType @a
     wrapOp = ClosedOp typ obj
     (states, patches, closedOps, leftovers) = foldMap load chunks
@@ -192,7 +193,8 @@ reduceStateFrame s1 s2 =
                     modify' $ Map.insertWith stateReducer oid chunk
                 Nothing ->
                     throwErrorString $
-                        "Cannot reduce StateFrame of unknown type " ++ show stateType
+                        "Cannot reduce StateFrame of unknown type "
+                            ++ show stateType
 
 unsafeReduceObject ::
     (MonadE m) => ObjectFrame a -> StateFrame -> m (ObjectFrame a)
@@ -201,7 +203,8 @@ unsafeReduceObject obj@ObjectFrame{frame = s1} s2 = do
     pure obj{frame = frame'}
 
 -- | Reduce object with frame from another version of the same object.
-reduceObject :: (MonadE m) => ObjectFrame a -> ObjectFrame a -> m (ObjectFrame a)
+reduceObject ::
+    (MonadE m) => ObjectFrame a -> ObjectFrame a -> m (ObjectFrame a)
 reduceObject o1@ObjectFrame{uuid = id1} ObjectFrame{uuid = id2, frame = frame2}
     | id1 == id2 = unsafeReduceObject o1 frame2
     | otherwise = throwErrorString $ "Object ids differ: " ++ show (id1, id2)
@@ -242,4 +245,5 @@ runObjectState_ action = runStateT action mempty
 newObjectFrameWith ::
     (Functor m) => StateT StateFrame m (ObjectRef a) -> m (ObjectFrame a)
 newObjectFrameWith action =
-    runObjectState_ action <&> \(ObjectRef uuid, frame) -> ObjectFrame{uuid, frame}
+    runObjectState_ action
+        <&> \(ObjectRef uuid, frame) -> ObjectFrame{uuid, frame}

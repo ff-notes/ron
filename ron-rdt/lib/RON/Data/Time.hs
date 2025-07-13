@@ -21,7 +21,7 @@ instance Replicated Day where encoding = payloadEncoding
 instance ReplicatedAsPayload Day where
     toPayload x =
         let (y, m, d) = toGregorian x
-        in map AInteger [fromIntegral y, fromIntegral m, fromIntegral d]
+        in  map AInteger [fromIntegral y, fromIntegral m, fromIntegral d]
 
     fromPayload = \case
         [AInteger y, AInteger m, AInteger d] ->

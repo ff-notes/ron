@@ -85,7 +85,7 @@ serializeReducedChunk isQuery WireReducedChunk{wrcHeader, wrcBody} =
                 (`runState` opBefore) $
                     for (packOps wrcBody) $
                         fmap ("\t" <>) . serializeReducedOpPack objectId
-         in (body, ClosedOp{op = opAfter, ..})
+        in  (body, ClosedOp{op = opAfter, ..})
 
 data Pack p = Pack
     { firstOpId, firstRefId, lastOpId, lastRefId :: UUID
@@ -193,7 +193,7 @@ serializeClosedOpZip this = state \prev ->
         evt = serializeUuidKey prev.op.opId this.objectId this.op.opId
         ref = serializeUuidKey prev.op.refId this.op.opId this.op.refId
         payloadAtoms = serializePayloadZip this.objectId this.op.payload
-     in ( BSL.intercalate "\t" $
+    in  ( BSL.intercalate "\t" $
             key '*' typ
                 ++ key '#' obj
                 ++ key '@' evt
@@ -221,7 +221,7 @@ serializeReducedOpPack object (packerM, this) =
                 | BSL.null evt && BSL.null ref = ["@"]
                 | otherwise = key '@' evt ++ key ':' ref
             op = keys ++ [payload | not $ BSL.null payload]
-         in (BSL.intercalate "\t" op, lastOp)
+        in  (BSL.intercalate "\t" op, lastOp)
   where
     key c u = [c `cons` u | not $ BSL.null u]
     packSize =

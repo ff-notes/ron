@@ -3,40 +3,39 @@
 -- | Common types for binary format (parser and serializer)
 module RON.Binary.Types where
 
-import           RON.Prelude
+import RON.Prelude
 
 type Size = Word32
 
 -- | Data block descriptor
 data Desc
-
-    = DOpClosed
+    = -- op descriptors
+      DOpClosed
     | DOpReduced
     | DOpHeader
     | DOpQueryHeader
-
-    | DUuidReducer
+    | -- op key descriptors
+      DUuidReducer
     | DUuidObject
     | DUuidOp
     | DUuidRef
-
-    | DAtomUuidZip
+    | -- zipped uuid descriptors
+      DAtomUuidZip
     | DUuidZipObject
     | DUuidZipOp
     | DUuidZipRef
-
-    | DAtomUuid
+    | -- atom descriptors
+      DAtomUuid
     | DAtomInteger
     | DAtomString
     | DAtomFloat
-
     deriving (Enum, Eq, Show)
 
 -- | Does the descriptor refer to an op
 descIsOp :: Desc -> Bool
 descIsOp = \case
-    DOpClosed       -> True
-    DOpReduced      -> True
-    DOpHeader       -> True
-    DOpQueryHeader  -> True
-    _               -> False
+    DOpClosed -> True
+    DOpReduced -> True
+    DOpHeader -> True
+    DOpQueryHeader -> True
+    _ -> False

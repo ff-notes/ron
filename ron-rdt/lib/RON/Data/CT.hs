@@ -99,8 +99,8 @@ data CTRep = CTRep
     -- ^ indexed by opId
     , start :: Maybe UUID
     }
-    deriving anyclass (Semilattice)
     deriving stock (Eq, Show)
+    deriving anyclass (Semilattice)
 
 instance Semigroup CTRep where
     c <> d = CTRep{ops = c.ops <> d.ops, start = min c.start d.start}
@@ -191,10 +191,10 @@ instance (Replicated a) => ReplicatedAsObject (CT a) where
 'getGroupedDiffBy'.
 -}
 edit ::
-    ( ReplicatedAsPayload a
-    , ReplicaClock m
-    , MonadE m
+    ( MonadE m
     , MonadObjectState (CT a) m
+    , ReplicaClock m
+    , ReplicatedAsPayload a
     ) =>
     [a] ->
     m ()
@@ -230,7 +230,7 @@ edit newItems =
 
 -- | Speciaization of 'edit' for 'Text'
 editText ::
-    (ReplicaClock m, MonadE m, MonadObjectState CTString m) => Text -> m ()
+    (MonadE m, MonadObjectState CTString m, ReplicaClock m) => Text -> m ()
 editText = edit . Text.unpack
 
 {- | Speciaization of 'CT' to 'Char'.
@@ -240,7 +240,7 @@ type CTString = CT Char
 
 -- | Create a CT from a list
 newFromList ::
-    (Replicated a, MonadState StateFrame m, ReplicaClock m) =>
+    (MonadState StateFrame m, ReplicaClock m, Replicated a) =>
     [a] ->
     m (ObjectRef (CT a))
 newFromList = newObject . CT
@@ -253,7 +253,7 @@ newFromText ::
 newFromText = newFromList . Text.unpack
 
 -- | Read elements from CT
-getList :: (Replicated a, MonadE m, MonadObjectState (CT a) m) => m [a]
+getList :: (MonadE m, MonadObjectState (CT a) m, Replicated a) => m [a]
 getList = coerce <$> readObject
 
 -- | Read characters from 'CTString'
@@ -264,7 +264,7 @@ getText = Text.pack <$> getList
 Position is identified by 'UUID'. 'Nothing' means the beginning.
 -}
 insert ::
-    (Replicated a, MonadE m, MonadObjectState (CT a) m, ReplicaClock m) =>
+    (MonadE m, MonadObjectState (CT a) m, ReplicaClock m, Replicated a) =>
     [a] ->
     -- | position
     UUID ->
@@ -280,7 +280,7 @@ insert items startRef =
         pure $ StateChunk $ stateBody <> ops
 
 insertAtBegin ::
-    (Replicated a, MonadE m, MonadObjectState (CT a) m, ReplicaClock m) =>
+    (MonadE m, MonadObjectState (CT a) m, ReplicaClock m, Replicated a) =>
     [a] ->
     m ()
 insertAtBegin items = insert items zero
@@ -289,7 +289,7 @@ insertAtBegin items = insert items zero
 Position is identified by 'UUID'. 'zero' means the beginning.
 -}
 insertText ::
-    (ReplicaClock m, MonadE m, MonadObjectState CTString m) =>
+    (MonadE m, MonadObjectState CTString m, ReplicaClock m) =>
     Text ->
     -- | position
     UUID ->
@@ -297,7 +297,7 @@ insertText ::
 insertText = insert . Text.unpack
 
 insertTextAtBegin ::
-    (ReplicaClock m, MonadE m, MonadObjectState CTString m) => Text -> m ()
+    (MonadE m, MonadObjectState CTString m, ReplicaClock m) => Text -> m ()
 insertTextAtBegin text = insertText text zero
 
 -- | Record a removal of a specific item

@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -86,11 +87,10 @@ isSuccessful p = p $> True <|> pure False
 char :: Char -> Parser Char
 char c = do
     c' <- anyChar
-    if c == c'
-        then
-            pure c
-        else
-            fail $ "Expected " ++ show c ++ ", got " ++ show c'
+    if c == c' then
+        pure c
+    else
+        fail $ "Expected " ++ show c ++ ", got " ++ show c'
 
 -- | Parses a definite double, i.e. it is not an integer. For this, the double has either a '.', and 'e'/'E' part or both.
 {-# INLINE definiteDouble #-}
@@ -141,22 +141,22 @@ buildDouble
         exponent = exponentPart - fractionalPartLength
 
 (<+>) :: Parser a -> Parser a -> Parser a
-(<+>) p1 p2 = Internal.Parser $ \t pos more lose suc ->
-    let
-        lose1 t' _pos more1 ctx1 msg1 = Internal.runParser p2 t' pos more1 lose2 suc
-          where
-            lose2 t2 pos2 more2 ctx2 msg2 =
-                lose t2 pos2 more2 [] $
-                    unwords
-                        [ "Many fails:\n"
-                        , intercalate " > " ctx1
-                        , ":"
-                        , msg1
-                        , "|\n"
-                        , intercalate " > " ctx2
-                        , ":"
-                        , msg2
-                        ]
-     in
-        Internal.runParser p1 t pos more lose1 suc
+(<+>) p1 p2 =
+    Internal.Parser \t pos more lose suc ->
+        let lose1 t' _pos more1 ctx1 msg1 =
+                Internal.runParser p2 t' pos more1 lose2 suc
+              where
+                lose2 t2 pos2 more2 ctx2 msg2 =
+                    lose t2 pos2 more2 [] $
+                        unwords
+                            [ "Many fails:\n"
+                            , intercalate " > " ctx1
+                            , ":"
+                            , msg1
+                            , "|\n"
+                            , intercalate " > " ctx2
+                            , ":"
+                            , msg2
+                            ]
+        in  Internal.runParser p1 t pos more lose1 suc
 infixl 3 <+>

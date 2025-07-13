@@ -180,22 +180,23 @@ class (Monad m) => ReplicaClock m where
     -- | Get current replica id
     getPid :: m Replica
 
-    -- | Get sequential timestamps.
-    --
-    -- Laws:
-    --
-    -- 1. @
-    -- t <- getEvents n
-    -- (t !! i) == head t + i
-    -- @
-    --
-    -- 2. @
-    -- t1 <- 'getEvent'
-    -- t2 <- 'getEvent'
-    -- t2 >= t1 + 1
-    -- @
-    --
-    -- 3. @getEvents 0 == getEvents 1@
+    {- | Get sequential timestamps.
+
+    Laws:
+
+    1. @
+    t <- getEvents n
+    (t !! i) == head t + i
+    @
+
+    2. @
+    t1 <- 'getEvent'
+    t2 <- 'getEvent'
+    t2 >= t1 + 1
+    @
+
+    3. @getEvents 0 == getEvents 1@
+    -}
     getEvents ::
         -- | number of needed timestamps
         Word60 ->

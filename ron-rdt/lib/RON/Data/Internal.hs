@@ -98,7 +98,7 @@ type Unapplied = ([ReducedChunk], [Op])
 Untyped means if this type is a container then the types of data contained in
 it is not considered.
 -}
-class (Eq a, BoundedSemilattice a) => Reducible a where
+class (BoundedSemilattice a, Eq a) => Reducible a where
     -- | UUID of the type
     reducibleOpType :: UUID
 
@@ -169,14 +169,15 @@ patchToChunk Patch{patchRef, patchValue} =
 
 -- | Base class for typed encoding
 class Replicated a where
-    -- | Instances SHOULD implement 'encoding' either as 'objectEncoding' or as
-    -- 'payloadEncoding'
+    {- | Instances SHOULD implement 'encoding' either as 'objectEncoding' or as
+    'payloadEncoding'
+    -}
     encoding :: Encoding a
 
 data Encoding a = Encoding
     { encodingNewRon ::
         forall m.
-        (ReplicaClock m, MonadState StateFrame m) =>
+        (MonadState StateFrame m, ReplicaClock m) =>
         a ->
         m Payload
     , encodingFromRon ::
@@ -188,13 +189,13 @@ data Encoding a = Encoding
 
 -- | Encode typed data to a payload with possible addition objects
 newRon ::
-    (Replicated a, ReplicaClock m, MonadState StateFrame m) => a -> m Payload
+    (MonadState StateFrame m, ReplicaClock m, Replicated a) => a -> m Payload
 newRon = encodingNewRon where Encoding{encodingNewRon} = encoding
 
 {- | Decode typed data from a payload.
 The implementation may use other objects in the frame to resolve references.
 -}
-fromRon :: (MonadE m, Replicated a, MonadState StateFrame m) => Payload -> m a
+fromRon :: (MonadE m, MonadState StateFrame m, Replicated a) => Payload -> m a
 fromRon = encodingFromRon where Encoding{encodingFromRon} = encoding
 
 -- | Standard implementation of 'Replicated' for 'ReplicatedAsObject' types.
@@ -269,7 +270,7 @@ class (Reducible (Rep a), Replicated a) => ReplicatedAsObject a where
 
     -- | Encode data. Write frame and return id.
     newObject ::
-        (ReplicaClock m, MonadState StateFrame m) => a -> m (ObjectRef a)
+        (MonadState StateFrame m, ReplicaClock m) => a -> m (ObjectRef a)
 
     -- | Decode data
     readObject :: (MonadE m, MonadObjectState a m) => m a
@@ -283,7 +284,7 @@ objectFromRon handler atoms =
 
 -- | Create new 'ObjectFrame' from a value
 newObjectFrame ::
-    (ReplicatedAsObject a, ReplicaClock m) => a -> m (ObjectFrame a)
+    (ReplicaClock m, ReplicatedAsObject a) => a -> m (ObjectFrame a)
 newObjectFrame a = do
     (ObjectRef uuid, frame) <- runStateT (newObject a) mempty
     pure ObjectFrame{uuid, frame}
@@ -306,7 +307,7 @@ getObjectStateChunk = do
 
 modifyObjectStateChunk ::
     forall a b m.
-    (MonadObjectState a m, ReplicaClock m, MonadE m) =>
+    (MonadE m, MonadObjectState a m, ReplicaClock m) =>
     (StateChunk (Rep a) -> m (b, StateChunk (Rep a))) ->
     m b
 modifyObjectStateChunk f = do
@@ -324,7 +325,7 @@ modifyObjectStateChunk f = do
     pure a
 
 modifyObjectStateChunk_ ::
-    (MonadObjectState a m, ReplicaClock m, MonadE m) =>
+    (MonadE m, MonadObjectState a m, ReplicaClock m) =>
     (StateChunk (Rep a) -> m (StateChunk (Rep a))) ->
     m ()
 modifyObjectStateChunk_ f =

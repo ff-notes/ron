@@ -103,12 +103,11 @@ chunksTill end = label "[WireChunk]" $ go closedOpZero
     go prev = do
         skipSpace
         atEnd <- isSuccessful end
-        if atEnd
-            then
-                pure []
-            else do
-                (ch, lastOp) <- pChunk prev
-                (ch :) <$> go lastOp
+        if atEnd then
+            pure []
+        else do
+            (ch, lastOp) <- pChunk prev
+            (ch :) <$> go lastOp
 
 -- | Returns a chunk and the last op in it
 pChunk :: ClosedOp -> Parser (WireChunk, ClosedOp)
@@ -290,13 +289,12 @@ key name keyChar prevOpSameKey sameOpPrevUuid =
     label name do
         skipSpace
         isKeyPresent <- isSuccessful $ char keyChar
-        if isKeyPresent
-            then do
-                u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
-                pure (True, u)
-            else
-                -- no key => use previous key
-                pure (False, prevOpSameKey)
+        if isKeyPresent then do
+            u <- uuid prevOpSameKey sameOpPrevUuid PrevOpSameKey
+            pure (True, u)
+        else
+            -- no key => use previous key
+            pure (False, prevOpSameKey)
 
 openKey :: String -> Char -> Parser UUID
 openKey name keyChar =
@@ -497,17 +495,11 @@ atom :: UUID -> Parser Atom
 atom prevUuid = skipSpace *> atom'
   where
     atom' =
-        char '^'
-            *> skipSpace
-            *> (AFloat <$> double)
-                <+> char '='
-            *> skipSpace
-            *> (AInteger <$> integer)
-                <+> char '>'
-            *> skipSpace
-            *> (AUuid <$> uuid')
-                <+> (AString <$> string)
-                <+> atomUnprefixed
+        (char '^' *> skipSpace *> (AFloat <$> double))
+            <+> (char '=' *> skipSpace *> (AInteger <$> integer))
+            <+> (char '>' *> skipSpace *> (AUuid <$> uuid'))
+            <+> (AString <$> string)
+            <+> atomUnprefixed
     integer = signed decimal
     uuid' = uuidAtom prevUuid
 

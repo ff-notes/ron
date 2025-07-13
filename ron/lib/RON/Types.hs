@@ -142,8 +142,8 @@ TODO hide data constructor in Internal module
 TODO deprecate in favor of 'Ref'?
 -}
 newtype ObjectRef a = ObjectRef UUID
-    deriving newtype (Eq, Hashable, Ord)
     deriving stock (Generic)
+    deriving newtype (Eq, Hashable, Ord)
 
 instance (Typeable a) => Show (ObjectRef a) where
     showsPrec a (ObjectRef b) =

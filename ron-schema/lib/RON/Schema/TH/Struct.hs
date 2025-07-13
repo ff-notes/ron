@@ -290,7 +290,7 @@ mkAccessorsLww name' field = do
             [ sigD
                 set
                 [t|
-                    (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
+                    (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m) =>
                     Maybe $guideType ->
                     $m ()
                     |]
@@ -333,7 +333,7 @@ mkAccessorsSet name' field = do
             [ sigD
                 add
                 [t|
-                    (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
+                    (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m) =>
                     $guideType ->
                     $m ()
                     |]
@@ -343,7 +343,7 @@ mkAccessorsSet name' field = do
             [ sigD
                 set
                 [t|
-                    (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
+                    (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m) =>
                     $guideType ->
                     $m ()
                     |]
@@ -353,7 +353,7 @@ mkAccessorsSet name' field = do
             [ sigD
                 clear
                 [t|
-                    (ReplicaClock $m, MonadE $m, MonadObjectState $type' $m) =>
+                    (MonadE $m, MonadObjectState $type' $m, ReplicaClock $m) =>
                     $m ()
                     |]
             , valDP
