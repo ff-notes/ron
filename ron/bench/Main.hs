@@ -1,21 +1,27 @@
 {-# OPTIONS -Wno-orphans #-}
-
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Control.DeepSeq (NFData, force)
-import           Control.Exception (evaluate)
-import           Criterion (bench, nf)
-import           Criterion.Main (defaultConfig, defaultMainWith)
-import           Criterion.Types (timeLimit)
+import Control.DeepSeq (NFData, force)
+import Control.Exception (evaluate)
+import Criterion (bench, nf)
+import Criterion.Main (defaultConfig, defaultMainWith)
+import Criterion.Types (timeLimit)
 
-import           RON.Text (parseWireFrames, serializeWireFrames)
-import           RON.Types (Atom, ClosedOp (..), Op (..), UUID,
-                            WireChunk (Closed), WireReducedChunk)
-import qualified RON.UUID as UUID
+import RON.Text (parseWireFrames, serializeWireFrames)
+import RON.Types (
+    Atom,
+    ClosedOp (..),
+    Op (..),
+    UUID,
+    WireChunk (Closed),
+    WireReducedChunk,
+ )
+import RON.UUID qualified as UUID
 
 deriving instance NFData Atom
 deriving instance NFData ClosedOp
@@ -37,5 +43,6 @@ main = do
 
     serialized =
         [ (n :: Int, serializeWireFrames $ replicate 100 $ frame n)
-        | i <- [1 .. 10], let n = 100 * i
+        | i <- [1 .. 10]
+        , let n = 100 * i
         ]

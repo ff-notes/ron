@@ -1,12 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module RON.Schema
-  ( Alias (..),
+module RON.Schema (
+    Alias (..),
     CaseTransform (..),
     Declaration (..),
     Field (..),
@@ -35,10 +36,10 @@ module RON.Schema
     TypeExpr (..),
     TypeName,
     UseType,
-  )
+)
 where
 
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import RON.Prelude
 
 data Stage = Parsed | Resolved | Equipped
@@ -46,72 +47,73 @@ data Stage = Parsed | Resolved | Equipped
 type TypeName = Text
 
 data TypeExpr = Use TypeName | Apply TypeName [TypeExpr]
-  deriving (Show)
+    deriving (Show)
 
 data TAtom = TAFloat | TAInteger | TAString | TAUuid | TObjectRef RonType
-  deriving (Show)
+    deriving (Show)
 
 data RonType
-  = TAtom TAtom
-  | TEnum TEnum
-  | TObject TObject
-  | TOpaqueAtoms Opaque
-  deriving (Show)
+    = TAtom TAtom
+    | TEnum TEnum
+    | TObject TObject
+    | TOpaqueAtoms Opaque
+    deriving (Show)
 
 data TEnum = Enum {name :: Text, items :: [Text]}
-  deriving (Show)
+    deriving (Show)
 
 data TObject
-  = TCT RonType
-  | TOpaqueObject Opaque
-  | TORSet RonType
-  | TORSetMap RonType RonType
-  | TRga RonType
-  | TStructLww (StructLww Resolved)
-  | TStructSet (StructSet Resolved)
-  | TVersionVector
-  deriving (Show)
+    = TCT RonType
+    | TOpaqueObject Opaque
+    | TORSet RonType
+    | TORSetMap RonType RonType
+    | TRga RonType
+    | TStructLww (StructLww Resolved)
+    | TStructSet (StructSet Resolved)
+    | TVersionVector
+    deriving (Show)
 
 data StructEncoding = SELww | SESet
 
 data Struct (encoding :: StructEncoding) stage = Struct
-  { name :: Text
-  , fields :: Map Text (Field stage)
-  , annotations :: StructAnnotations
-  }
+    { name :: Text
+    , fields :: Map Text (Field stage)
+    , annotations :: StructAnnotations
+    }
 
-deriving instance Show (Field stage) => Show (Struct encoding stage)
+deriving instance (Show (Field stage)) => Show (Struct encoding stage)
 
 type StructLww = Struct SELww
 
 type StructSet = Struct SESet
 
 data StructAnnotations
-  = StructAnnotations
-      { haskellFieldPrefix :: Text,
-        haskellFieldCaseTransform :: Maybe CaseTransform
-      }
-  deriving (Show)
+    = StructAnnotations
+    { haskellFieldPrefix :: Text
+    , haskellFieldCaseTransform :: Maybe CaseTransform
+    }
+    deriving (Show)
 
 defaultStructAnnotations :: StructAnnotations
-defaultStructAnnotations = StructAnnotations
-  { haskellFieldPrefix = Text.empty,
-    haskellFieldCaseTransform = Nothing
-  }
+defaultStructAnnotations =
+    StructAnnotations
+        { haskellFieldPrefix = Text.empty
+        , haskellFieldCaseTransform = Nothing
+        }
 
 data CaseTransform = TitleCase
-  deriving (Show)
+    deriving (Show)
 
 data Field (stage :: Stage) = Field
-  { mergeStrategy :: MergeStrategy
+    { mergeStrategy :: MergeStrategy
     -- ^ Used only for 'StructSet'; for 'StructLww' must be 'LWW'
-  , ronType     :: UseType stage
-  , annotations :: FieldAnnotations
-  , ext         :: XField stage
-  }
+    , ronType :: UseType stage
+    , annotations :: FieldAnnotations
+    , ext :: XField stage
+    }
 
 deriving instance
-  (Show (UseType stage), Show (XField stage)) => Show (Field stage)
+    (Show (UseType stage), Show (XField stage)) => Show (Field stage)
 
 data FieldAnnotations = FieldAnnotations deriving (Show)
 
@@ -119,38 +121,38 @@ defaultFieldAnnotations :: FieldAnnotations
 defaultFieldAnnotations = FieldAnnotations
 
 type family XField (stage :: Stage)
-type instance XField Parsed   = ()
+type instance XField Parsed = ()
 type instance XField Resolved = ()
 
 type family UseType (stage :: Stage) where
-  UseType Parsed   = TypeExpr
-  UseType Resolved = RonType
-  UseType Equipped = RonType
+    UseType Parsed = TypeExpr
+    UseType Resolved = RonType
+    UseType Equipped = RonType
 
 data Declaration stage
-  = DAlias (Alias stage)
-  | DEnum TEnum
-  | DOpaqueAtoms Opaque
-  | DOpaqueObject Opaque
-  | DStructLww (StructLww stage)
-  | DStructSet (StructSet stage)
+    = DAlias (Alias stage)
+    | DEnum TEnum
+    | DOpaqueAtoms Opaque
+    | DOpaqueObject Opaque
+    | DStructLww (StructLww stage)
+    | DStructSet (StructSet stage)
 
 deriving instance
-  (Show (Alias stage), Show (StructLww stage), Show (StructSet stage)) =>
-  Show (Declaration stage)
+    (Show (Alias stage), Show (StructLww stage), Show (StructSet stage)) =>
+    Show (Declaration stage)
 
 type family Schema (stage :: Stage) where
-  Schema Parsed   = [Declaration 'Parsed]
-  Schema Resolved = Map TypeName (Declaration 'Resolved)
+    Schema Parsed = [Declaration 'Parsed]
+    Schema Resolved = Map TypeName (Declaration 'Resolved)
 
 newtype OpaqueAnnotations = OpaqueAnnotations {haskellType :: Maybe Text}
-  deriving (Show)
+    deriving (Show)
 
 defaultOpaqueAnnotations :: OpaqueAnnotations
-defaultOpaqueAnnotations = OpaqueAnnotations {haskellType = Nothing}
+defaultOpaqueAnnotations = OpaqueAnnotations{haskellType = Nothing}
 
 data Opaque = Opaque {name :: Text, annotations :: OpaqueAnnotations}
-  deriving (Show)
+    deriving (Show)
 
 opaqueObject :: Text -> OpaqueAnnotations -> RonType
 opaqueObject tyname = TObject . TOpaqueObject . Opaque tyname
@@ -163,13 +165,18 @@ opaqueAtoms_ tyname = TOpaqueAtoms $ Opaque tyname defaultOpaqueAnnotations
 
 data Alias stage = Alias {name :: Text, target :: UseType stage}
 
-deriving instance Show (UseType stage) => Show (Alias stage)
+deriving instance (Show (UseType stage)) => Show (Alias stage)
 
 data MergeStrategy
-  = LWW    -- ^ Keep the last value,    use 'Nothing' if no values
-  | Max    -- ^ Keep the maximum value, use 'Nothing' if no values
-  | Min    -- ^ Keep the minimum value, use 'Nothing' if no values
-  | Set    -- ^ Keep all values,        use 'mempty'  if no values
-  | Monoid -- ^ Merge all values,       use 'mempty'  if no values
-  -- TODO Semigroup -- ^ Merge all values, use 'Nothing' if no values
-  deriving (Eq, Show)
+    = -- | Keep the last value,    use 'Nothing' if no values
+      LWW
+    | -- | Keep the maximum value, use 'Nothing' if no values
+      Max
+    | -- | Keep the minimum value, use 'Nothing' if no values
+      Min
+    | -- | Keep all values,        use 'mempty'  if no values
+      Set
+    | -- | Merge all values,       use 'mempty'  if no values
+      -- TODO Semigroup -- ^ Merge all values, use 'Nothing' if no values
+      Monoid
+    deriving (Eq, Show)

@@ -75,9 +75,10 @@ data Handle = Handle
     { clock :: IORef Word60
     , dataDir :: FilePath
     , onObjectChanged :: TChan UUID
-    -- ^ A channel of changes in the database.
-    -- This is a broadcast channel, so you MUST NOT read from it directly,
-    -- call 'fetchUpdates' to read from derived channel instead.
+    {- ^ A channel of changes in the database.
+    This is a broadcast channel, so you MUST NOT read from it directly,
+    call 'fetchUpdates' to read from derived channel instead.
+    -}
     , opLock :: MVar ()
     , replica :: Replica
     }
@@ -117,14 +118,13 @@ loadWholeObjectLogFS objectId version = do
     patchNames <- getObjectPatches objectId
     fold . catMaybes <$> for patchNames \patchName -> do
         patchTimestamp <- uuidFromFileName patchName
-        if patchTimestamp ·≼ version
-            then
-                pure Nothing
-            else do
-                let patchFile = objectLogsDir </> patchName
-                patchContent <- tryIO $ BSL.readFile patchFile
-                patch <- liftEitherString $ parseOpenFrame patchContent
-                pure $ Just patch
+        if patchTimestamp ·≼ version then
+            pure Nothing
+        else do
+            let patchFile = objectLogsDir </> patchName
+            patchContent <- tryIO $ BSL.readFile patchFile
+            patch <- liftEitherString $ parseOpenFrame patchContent
+            pure $ Just patch
 
 appendPatchFS :: Patch -> Store ()
 appendPatchFS Patch{object, log} = do

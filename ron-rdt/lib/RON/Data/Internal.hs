@@ -371,7 +371,8 @@ advanceToObject = do
     for_ (maximumMay allObjectTimes) advance
   where
     getAllObjectTimes =
-        map (\Event{time} -> timeValue time) . mapMaybe decodeEvent <$> getAllObjectUuids
+        map (\Event{time} -> timeValue time) . mapMaybe decodeEvent
+            <$> getAllObjectUuids
 
     getAllObjectUuids = do
         ObjectRef objectId <- ask
@@ -444,7 +445,8 @@ getObjectState = do
     StateChunk chunk <- getObjectStateChunk
     pure $ stateFromChunk chunk
 
-wireStateChunk :: forall rep. (Reducible rep) => StateChunk rep -> WireStateChunk
+wireStateChunk ::
+    forall rep. (Reducible rep) => StateChunk rep -> WireStateChunk
 wireStateChunk (StateChunk stateBody) =
     WireStateChunk{stateType = reducibleOpType @rep, stateBody}
 

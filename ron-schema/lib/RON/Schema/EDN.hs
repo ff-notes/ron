@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -48,7 +49,8 @@ import RON.Schema
 readSchema :: (MonadFail m) => SourcePos -> Text -> m (Schema 'Resolved)
 readSchema sourcePos source = do
     parsed <- parseSchema sourcePos source
-    env <- (`execStateT` Env{userTypes = Map.empty}) $ collectDeclarations parsed
+    env <-
+        (`execStateT` Env{userTypes = Map.empty}) $ collectDeclarations parsed
     validateParsed env parsed
     let resolved = evalSchema env
     validateResolved resolved
@@ -130,8 +132,10 @@ rememberDeclaration ::
     (MonadFail m, MonadState Env m) => Declaration 'Parsed -> m ()
 rememberDeclaration decl = do
     env@Env{userTypes} <- get
-    if name `Map.member` userTypes then fail $ "duplicate declaration of type " ++ Text.unpack name
-    else put env{userTypes = Map.insert name decl userTypes}
+    if name `Map.member` userTypes then
+        fail $ "duplicate declaration of type " ++ Text.unpack name
+    else
+        put env{userTypes = Map.insert name decl userTypes}
   where
     name = declarationName decl
 

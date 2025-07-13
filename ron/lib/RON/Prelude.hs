@@ -294,7 +294,7 @@ replicateM2 ma = (,) <$> ma <*> ma
 replicateM3 :: (Applicative m) => m a -> m (a, a, a)
 replicateM3 ma = (,,) <$> ma <*> ma <*> ma
 
-show :: (Show a, IsString s) => a -> s
+show :: (IsString s, Show a) => a -> s
 show = fromString . Text.Show.show
 
 whenJust :: (Applicative m) => Maybe a -> (a -> m ()) -> m ()

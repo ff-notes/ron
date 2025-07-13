@@ -1,3 +1,5 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+
 module UI (runUI) where
 
 import Prelude hiding (id)
@@ -12,50 +14,73 @@ import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
 import Data.Tree (Tree (Node))
 import Data.Word (Word64)
-import Graphics.Gloss (Color, Display (InWindow), Picture, Point, circle,
-                       circleSolid, color, line, makeColor, translate, white)
+import Graphics.Gloss (
+    Color,
+    Display (InWindow),
+    Picture,
+    Point,
+    circle,
+    circleSolid,
+    color,
+    line,
+    makeColor,
+    translate,
+    white,
+ )
 import Graphics.Gloss.Data.Point.Arithmetic qualified as Point
 import Graphics.Gloss.Data.Vector (magV)
-import Graphics.Gloss.Data.ViewPort (ViewPort (..), applyViewPortToPicture,
-                                     invertViewPort, viewPortInit)
-import Graphics.Gloss.Interface.IO.Game (Event (EventKey, EventMotion, EventResize),
-                                         Key (MouseButton), KeyState (Down),
-                                         MouseButton (LeftButton), playIO)
+import Graphics.Gloss.Data.ViewPort (
+    ViewPort (..),
+    applyViewPortToPicture,
+    invertViewPort,
+    viewPortInit,
+ )
+import Graphics.Gloss.Interface.IO.Game (
+    Event (EventKey, EventMotion, EventResize),
+    Key (MouseButton),
+    KeyState (Down),
+    MouseButton (LeftButton),
+    playIO,
+ )
 import RON.Data.GTree qualified as GTree
 import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store (Handle)
 import RON.Types (UUID)
 import RON.UUID (origin)
 import RON.Util.Word (safeCast)
-import UnliftIO (MonadUnliftIO, TChan, atomically, liftIO, tryReadTChan,
-                 withRunInIO)
+import UnliftIO (
+    MonadUnliftIO,
+    TChan,
+    atomically,
+    liftIO,
+    tryReadTChan,
+    withRunInIO,
+ )
 
 import Database (loadTheTree, theTreeRef)
 
 type Size = (Int, Int)
 
-data Bud = Bud{id :: UUID, x :: Float, y :: Float}
+data Bud = Bud {id :: UUID, x :: Float, y :: Float}
 
 data World = World
-  { target      :: Maybe Bud
-  , tree        :: Tree Bud
-  , viewPort    :: ViewPort
-  , windowSize  :: Size
-  , cursorPos   :: Point
-  }
+    { target :: Maybe Bud
+    , tree :: Tree Bud
+    , viewPort :: ViewPort
+    , windowSize :: Size
+    , cursorPos :: Point
+    }
 
 runUI :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m ()
 runUI db = do
-  theTree <- loadTheTree db
-  let worldInit = resetFromRon windowSize theTree
-  updates <- fetchUpdates db
-  withRunInIO \run -> do
-    let onEvent' event world = run $ onEvent db event   world
-    let onTick'  _dt   world = run $ onTick  db updates world
-    liftIO $ playIO display white 30 worldInit draw' onEvent' onTick'
-
+    theTree <- loadTheTree db
+    let worldInit = resetFromRon windowSize theTree
+    updates <- fetchUpdates db
+    withRunInIO \run -> do
+        let onEvent' event world = run $ onEvent db event world
+        let onTick' _dt world = run $ onTick db updates world
+        liftIO $ playIO display white 30 worldInit draw' onEvent' onTick'
   where
-
     draw' = pure . draw
     display = InWindow "RON Garden" windowSize (400, 300)
     windowSize = (800, 500)
@@ -64,20 +89,20 @@ dist :: Point -> Point -> Float
 dist p q = magV $ p Point.- q
 
 transformMouseCursor :: Point -> Point -> Point
-transformMouseCursor cursorPos pos = pos Point.+ len Point.* vec where
-  dst = dist cursorPos pos
-  area = 800
-  lensing = 3
-  vec = pos Point.- cursorPos
-  len
-    | dst < area  = let lensingP = 1 - dst / area in lensingP ** 2 * lensing
-    | otherwise   = 0
+transformMouseCursor cursorPos pos = pos Point.+ len Point.* vec
+  where
+    dst = dist cursorPos pos
+    area = 800
+    lensing = 3
+    vec = pos Point.- cursorPos
+    len
+        | dst < area = let lensingP = 1 - dst / area in lensingP ** 2 * lensing
+        | otherwise = 0
 
 draw :: World -> Picture
 draw World{tree, target, viewPort, cursorPos} =
-  applyViewPortToPicture viewPort pic
+    applyViewPortToPicture viewPort pic
   where
-
     pic = mconcat $ targetPic : walk tree
 
     translatePos = transformMouseCursor cursorPos
@@ -86,103 +111,103 @@ draw World{tree, target, viewPort, cursorPos} =
 
     -- TODO a kind of zigomorphism?
     walk (Node Bud{x, y} subs) =
-      [ color (colorFromOrigin id') $ line $ map translatePos [(x, y), (x', y')]
-      | Node Bud{x = x', y = y', id = id'} _ <- subs
-      ]
-      ++ concatMap walk subs
+        [ color (colorFromOrigin id') $ line $ map translatePos [(x, y), (x', y')]
+        | Node Bud{x = x', y = y', id = id'} _ <- subs
+        ]
+            ++ concatMap walk subs
 
     targetPic =
-      foldMap
-        (\Bud{x, y} -> stranslate x y $ circle targetRadius <> circleSolid 1)
-        target
+        foldMap
+            (\Bud{x, y} -> stranslate x y $ circle targetRadius <> circleSolid 1)
+            target
 
 zoom :: Size -> Tree Bud -> ViewPort
 zoom (windowWidth, windowHeight) tree =
-  viewPortInit
-    { viewPortTranslate = Point.negate center
-    , viewPortScale     = min scaleX scaleY
-    }
+    viewPortInit
+        { viewPortTranslate = Point.negate center
+        , viewPortScale = min scaleX scaleY
+        }
   where
-
-    scaleX = fromIntegral windowWidth  / (baseWidth  + 2 * padding)
+    scaleX = fromIntegral windowWidth / (baseWidth + 2 * padding)
     scaleY = fromIntegral windowHeight / (baseHeight + 2 * padding)
 
     -- TODO a single run?
-    left    = minimum $ (.x) <$> tree
-    right   = maximum $ (.x) <$> tree
-    top     = maximum $ (.y) <$> tree
-    bottom  = minimum $ (.y) <$> tree
+    left = minimum $ (. x) <$> tree
+    right = maximum $ (. x) <$> tree
+    top = maximum $ (. y) <$> tree
+    bottom = minimum $ (. y) <$> tree
 
-    baseWidth  = right - left
+    baseWidth = right - left
     baseHeight = top - bottom
 
     center = ((left + right) / 2, (top + bottom) / 2)
 
 onEvent ::
-  (MonadLogger m, MonadUnliftIO m) => Store.Handle -> Event -> World -> m World
+    (MonadLogger m, MonadUnliftIO m) => Store.Handle -> Event -> World -> m World
 onEvent db event world@World{viewPort = vp, tree, target} =
-  case event of
-    EventKey (MouseButton LeftButton) Down _ _
-      | Just Bud{id = parent} <- target -> do
-          runStore db $ GTree.insert theTreeRef parent
-          pure world -- TODO optimistic UI: apply immediately
-    EventKey{} -> pure world
-    EventMotion (invertViewPort vp -> m) ->
-      pure world{target = targetNear tree m, cursorPos = m}
-    EventResize windowSize -> pure $ reset windowSize tree
+    case event of
+        EventKey (MouseButton LeftButton) Down _ _
+            | Just Bud{id = parent} <- target -> do
+                runStore db $ GTree.insert theTreeRef parent
+                pure world -- TODO optimistic UI: apply immediately
+        EventKey{} -> pure world
+        EventMotion (invertViewPort vp -> m) ->
+            pure world{target = targetNear tree m, cursorPos = m}
+        EventResize windowSize -> pure $ reset windowSize tree
 
 targetNear :: Tree Bud -> Point -> Maybe Bud
 targetNear tree m =
-  fmap snd $
-  listToMaybe $
-  sortOn
-    fst
-    [ (d, bud)
-    | bud@Bud{x, y} <- toList tree
-    , let d = dist (x, y) m
-    , d < targetRadius
-    ]
+    fmap snd $
+        listToMaybe $
+            sortOn
+                fst
+                [ (d, bud)
+                | bud@Bud{x, y} <- toList tree
+                , let d = dist (x, y) m
+                , d < targetRadius
+                ]
 
 onTick ::
-  (MonadLogger m, MonadUnliftIO m) =>
-  Store.Handle -> TChan a -> World -> m World
+    (MonadLogger m, MonadUnliftIO m) =>
+    Store.Handle ->
+    TChan a ->
+    World ->
+    m World
 onTick db updates world = do
-  mupdate <- atomically $ tryReadTChan updates
-  case mupdate of
-    Nothing -> pure world
-    Just _patch -> do
-      -- TODO apply only patch
-      theTree <- loadTheTree db
-      pure $ world{tree = placeBuds theTree}
+    mupdate <- atomically $ tryReadTChan updates
+    case mupdate of
+        Nothing -> pure world
+        Just _patch -> do
+            -- TODO apply only patch
+            theTree <- loadTheTree db
+            pure $ world{tree = placeBuds theTree}
 
 placeBuds :: Tree UUID -> Tree Bud
 placeBuds =
-  (`evalState` {- x may be mutated by placement -} 0)
-  . go {- y is increasing recursively -} 0
+    (`evalState` {- x may be mutated by placement -} 0)
+        . go {- y is increasing recursively -} 0
   where
-
     go y (Node id subs) = do
-      xLeft <- get
-      subs' <- intersperseSequence (modify (+ leafDistanceX)) $ map (go y') subs
-      xRight <- get
-      let x = (xLeft + xRight) / 2
-      pure $ Node Bud{id, x, y} subs'
-
+        xLeft <- get
+        subs' <- intersperseSequence (modify (+ leafDistanceX)) $ map (go y') subs
+        xRight <- get
+        let x = (xLeft + xRight) / 2
+        pure $ Node Bud{id, x, y} subs'
       where
         y' = y + levelHeight
 
 -- | Like 'sequence', but original list is interspersed with additional action
-intersperseSequence :: Applicative f => f a -> [f b] -> f [b]
+intersperseSequence :: (Applicative f) => f a -> [f b] -> f [b]
 intersperseSequence inter = \case
-  []    -> pure []
-  a:as  -> (:) <$> a <*> traverse (inter *>) as
+    [] -> pure []
+    a : as -> (:) <$> a <*> traverse (inter *>) as
 
 resetFromRon :: Size -> Tree UUID -> World
 resetFromRon windowSize ronTree = reset windowSize $ placeBuds ronTree
 
 reset :: Size -> Tree Bud -> World
 reset windowSize tree =
-  World{tree, windowSize, viewPort = zoom windowSize tree, target = Nothing, cursorPos = (-1000,-1000)}
+    World{tree, windowSize, viewPort = zoom windowSize tree, target = Nothing, cursorPos = (-1000, -1000)}
 
 leafDistanceX :: Float
 leafDistanceX = 10
@@ -197,9 +222,10 @@ targetRadius :: Float
 targetRadius = 8
 
 colorFromOrigin :: UUID -> Color
-colorFromOrigin u = makeColor r g b 1 where
-  RGB r g b =
-    hsv
-      (fromIntegral (safeCast (u ^. origin) `mod` 360 :: Word64) :: Float)
-      1
-      0.8
+colorFromOrigin u = makeColor r g b 1
+  where
+    RGB r g b =
+        hsv
+            (fromIntegral (safeCast (u ^. origin) `mod` 360 :: Word64) :: Float)
+            1
+            0.8

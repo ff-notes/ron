@@ -146,9 +146,10 @@ data Handle = Handle
     { clock :: IORef Word60
     , dbPool :: Pool SqlBackend
     , onNewPatch :: TChan Patch
-    -- ^ A channel of changes in the database.
-    -- This is a broadcast channel, so you MUST NOT read from it directly,
-    -- call 'fetchUpdates' to read from derived channel instead.
+    {- ^ A channel of changes in the database.
+    This is a broadcast channel, so you MUST NOT read from it directly,
+    call 'fetchUpdates' to read from derived channel instead.
+    -}
     , replica :: Replica
     }
 
@@ -176,18 +177,18 @@ appendPatch :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
 appendPatch Patch{object, log} =
     errorContext "appendPatch @Store" do
         opsInserted <-
-            runDB
-                $ catMaybes
-                . toList
-                <$> for log \op ->
-                    (op <$) <$> insertUnique (opToDatabase object op)
+            runDB $
+                catMaybes
+                    . toList
+                    <$> for log \op ->
+                        (op <$) <$> insertUnique (opToDatabase object op)
         -- if successful, return op
         case opsInserted of
             [] -> pure ()
             op : ops -> do
                 Handle{onNewPatch} <- Store ask
-                atomically
-                    $ writeTChan onNewPatch Patch{object, log = op :| ops}
+                atomically $
+                    writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadWholeObjectLog ::
     (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
@@ -210,18 +211,18 @@ loadOpLog =
             ]
 
 runDB ::
-    (MonadUnliftIO m, MonadLogger m) =>
+    (MonadLogger m, MonadUnliftIO m) =>
     ReaderT SqlBackend (LoggingT (ResourceT IO)) a ->
     StoreT m a
 runDB action = do
     Handle{dbPool} <- Store ask
-    lift
-        $ withRunInIO \runInIO ->
-            runResourceT
-                $ (`runLoggingT` monadLoggerLog' runInIO)
-                $ (`runSqlPool` dbPool) do
-                    runMigration migrateAll
-                    action
+    lift $
+        withRunInIO \runInIO ->
+            runResourceT $
+                (`runLoggingT` monadLoggerLog' runInIO) $
+                    (`runSqlPool` dbPool) do
+                        runMigration migrateAll
+                        action
   where
     monadLoggerLog' runInIO loc src lvl msg =
         runInIO $ monadLoggerLog loc src lvl msg

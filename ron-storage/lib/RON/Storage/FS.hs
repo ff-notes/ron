@@ -187,9 +187,9 @@ data Handle
     , stopWatching :: IORef (Maybe StopListening)
     , onDocumentChanged :: TChan (CollectionName, RawDocId)
     -- ^ A channel of changes in the database.
-    -- To activate it, call 'startWatching'.
-    -- You should NOT read from it directly,
-    -- call 'subscribe' to read from derived channel instead.
+    --     To activate it, call 'startWatching'.
+    --     You should NOT read from it directly,
+    --     call 'subscribe' to read from derived channel instead.
     , replica :: Replica
     }
 
@@ -259,7 +259,11 @@ startWatching handle = do
     isWatching <- isJust <$> readIORef stopWatching
     unless isWatching $ do
         stopListening <-
-            FSNotify.watchTree fsWatchManager dataDir isStorageEvent mapFSEventToDB
+            FSNotify.watchTree
+                fsWatchManager
+                dataDir
+                isStorageEvent
+                mapFSEventToDB
         writeIORef stopWatching $ Just stopListening
   where
     Handle{dataDir, fsWatchManager, stopWatching, onDocumentChanged} = handle

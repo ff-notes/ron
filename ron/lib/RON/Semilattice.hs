@@ -6,10 +6,10 @@ module RON.Semilattice (
     BoundedSemilattice,
 ) where
 
-import           Prelude
+import Prelude
 
-import           Data.Semigroup (Max)
-import           Data.Set (Set)
+import Data.Semigroup (Max)
+import Data.Set (Set)
 
 {- |
 A semilattice.
@@ -33,11 +33,10 @@ In addition to 'Semigroup', Semilattice defines these laws:
     @x '≼' y == (x '<>' y == y)@
     @x '<>' y == minimum \z -> x '≼' z && y '≼' z@
 -}
-class Semigroup a => Semilattice a where
-
+class (Semigroup a) => Semilattice a where
     -- | Semilattice relation.
     (≼) :: a -> a -> Bool
-    default (≼) :: Eq a => a -> a -> Bool
+    default (≼) :: (Eq a) => a -> a -> Bool
     a ≼ b = a <> b == b
 
 {- |
@@ -50,11 +49,11 @@ type BoundedSemilattice a = (Monoid a, Semilattice a)
 
 -- instances for base types
 
-instance Ord a => Semilattice (Max a)
+instance (Ord a) => Semilattice (Max a)
 
-instance Ord a => Semilattice (Set a)
+instance (Ord a) => Semilattice (Set a)
 
-instance Semilattice a => Semilattice (Maybe a) where
-    Nothing ≼ _       = True
-    _       ≼ Nothing = False
-    Just a  ≼ Just b  = a ≼ b
+instance (Semilattice a) => Semilattice (Maybe a) where
+    Nothing ≼ _ = True
+    _ ≼ Nothing = False
+    Just a ≼ Just b = a ≼ b

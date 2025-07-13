@@ -137,7 +137,7 @@ readField field = do
 
 -- | Assign a value to a field
 assignField ::
-    (MonadE m, MonadObjectState struct m, Replicated a, ReplicaClock m) =>
+    (MonadE m, MonadObjectState struct m, ReplicaClock m, Replicated a) =>
     -- | Field name
     UUID ->
     -- | Value

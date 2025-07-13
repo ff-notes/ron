@@ -345,7 +345,8 @@ serializeStateFrame = serializeWireFrame . map wrapChunk . Map.assocs
     wrapChunk (objectId, WireStateChunk{stateType, stateBody}) =
         Value
             WireReducedChunk
-                { wrcHeader = ClosedOp{reducerId = stateType, objectId, op = opZero}
+                { wrcHeader =
+                    ClosedOp{reducerId = stateType, objectId, op = opZero}
                 , wrcBody = stateBody
                 }
 

@@ -15,9 +15,20 @@ module RON.Text (
     uuidToText,
 ) where
 
-import           RON.Text.Parse (parseObject, parseStateChunk, parseStateFrame,
-                                 parseWireFrame, parseWireFrames,
-                                 uuidFromString, uuidFromText)
-import           RON.Text.Serialize (serializeObject, serializeStateFrame,
-                                     serializeWireFrame, serializeWireFrames,
-                                     uuidToString, uuidToText)
+import RON.Text.Parse (
+    parseObject,
+    parseStateChunk,
+    parseStateFrame,
+    parseWireFrame,
+    parseWireFrames,
+    uuidFromString,
+    uuidFromText,
+ )
+import RON.Text.Serialize (
+    serializeObject,
+    serializeStateFrame,
+    serializeWireFrame,
+    serializeWireFrames,
+    uuidToString,
+    uuidToText,
+ )

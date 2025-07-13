@@ -1,4 +1,5 @@
 {-# LANGUAGE BinaryLiterals #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -22,14 +23,21 @@ module RON.Base64 (
     isLetter,
 ) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
+import Data.Bits (complement, shiftL, shiftR, (.&.), (.|.))
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
 
-import           RON.Util.Word (Word4, Word6 (W6), Word60, leastSignificant4,
-                                leastSignificant6, leastSignificant60, safeCast)
+import RON.Util.Word (
+    Word4,
+    Word6 (W6),
+    Word60,
+    leastSignificant4,
+    leastSignificant6,
+    leastSignificant60,
+    safeCast,
+ )
 
 -- | Base64 alphabet
 alphabet :: ByteString
@@ -37,25 +45,25 @@ alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 
 -- | Check if a character is in the Base64 alphabet.
 isLetter :: Word8 -> Bool
-isLetter c
-    =  c - ord0 <= 9
-    || c - ordA <= 25
-    || c - orda <= 25
-    || c == ord_
-    || c == ordõ
+isLetter c =
+    c - ord0 <= 9
+        || c - ordA <= 25
+        || c - orda <= 25
+        || c == ord_
+        || c == ordõ
 
 -- | Convert a Base64 letter to a number [0-63]
 decodeLetter :: Word8 -> Maybe Word6
 decodeLetter x
-    | x <  ord0 = Nothing
+    | x < ord0 = Nothing
     | x <= ord9 = Just . leastSignificant6 $ x - ord0
-    | x <  ordA = Nothing
+    | x < ordA = Nothing
     | x <= ordZ = Just . leastSignificant6 $ x - ordA + posA
     | x == ord_ = Just $ leastSignificant6 pos_
-    | x <  orda = Nothing
+    | x < orda = Nothing
     | x <= ordz = Just . leastSignificant6 $ x - orda + posa
     | x == ordõ = Just $ leastSignificant6 posõ
-    | otherwise  = Nothing
+    | otherwise = Nothing
 
 -- ASCII milestone codes
 ord0, ord9, ordA, ordZ, ord_, orda, ordz, ordõ :: Word8
@@ -78,11 +86,11 @@ posõ = 63
 -- | Convert a subset [0-F] of Base64 letters to a number [0-15]
 decodeLetter4 :: Word8 -> Maybe Word4
 decodeLetter4 x
-    | x <  ord0 = Nothing
+    | x < ord0 = Nothing
     | x <= ord9 = Just . leastSignificant4 $ x - ord0
-    | x <  ordA = Nothing
+    | x < ordA = Nothing
     | x <= ordZ = Just . leastSignificant4 $ x - ordA + posA
-    | otherwise  = Nothing
+    | otherwise = Nothing
 
 -- | Decode a blob from a Base64 string
 decode :: ByteStringL -> Maybe ByteStringL
@@ -90,52 +98,56 @@ decode =
     fmap (BSL.pack . go . map safeCast) . traverse decodeLetter . BSL.unpack
   where
     go = \case
-        [a, b]       -> decode2 a b
-        [a, b, c]    -> decode3 a b c
-        a:b:c:d:rest -> decode4 a b c d ++ go rest
-        _            -> []
+        [a, b] -> decode2 a b
+        [a, b, c] -> decode3 a b c
+        a : b : c : d : rest -> decode4 a b c d ++ go rest
+        _ -> []
     decode2 a b = [(a `shiftL` 2) .|. (b `shiftR` 4)]
     decode3 a b c =
-        [ ( a             `shiftL` 2) .|. (b `shiftR` 4)
+        [ (a `shiftL` 2) .|. (b `shiftR` 4)
         , ((b .&. 0b1111) `shiftL` 4) .|. (c `shiftR` 2)
         ]
     decode4 a b c d =
-        [ ( a             `shiftL` 2) .|. (b `shiftR` 4)
+        [ (a `shiftL` 2) .|. (b `shiftR` 4)
         , ((b .&. 0b1111) `shiftL` 4) .|. (c `shiftR` 2)
-        , ((c .&.   0b11) `shiftL` 6) .|.  d
+        , ((c .&. 0b11) `shiftL` 6) .|. d
         ]
 
 -- | Decode a 60-bit number from a Base64 string
 decode60 :: ByteString -> Maybe Word60
 decode60 =
-    fmap leastSignificant60 . go 10
-    <=< traverse (fmap safeCast . decodeLetter) . BS.unpack
+    fmap leastSignificant60
+        . go 10
+        <=< traverse (fmap safeCast . decodeLetter)
+        . BS.unpack
   where
     go :: Int -> [Word8] -> Maybe Word64
     go n = \case
-        []  | n >= 0 -> Just 0
+        [] | n >= 0 -> Just 0
         [a] | n >= 1 -> Just $ decode4 a 0 0 0
         [a, b]
             | n >= 2 -> Just $ decode4 a b 0 0
         [a, b, c]
             | n >= 3 -> Just $ decode4 a b c 0
-        (a:b:c:d:rest)
+        (a : b : c : d : rest)
             | n >= 4 -> do
                 lowerPart <- go (n - 4) rest
                 pure $ decode4 a b c d .|. (lowerPart `shiftR` 24)
-        _ -> Nothing  -- extra input
+        _ -> Nothing -- extra input
     decode4 :: Word8 -> Word8 -> Word8 -> Word8 -> Word64
     decode4 a b c d =
-        (safeCast a `shiftL` 54) .|.
-        (safeCast b `shiftL` 48) .|.
-        (safeCast c `shiftL` 42) .|.
-        (safeCast d `shiftL` 36)
+        (safeCast a `shiftL` 54)
+            .|. (safeCast b `shiftL` 48)
+            .|. (safeCast c `shiftL` 42)
+            .|. (safeCast d `shiftL` 36)
 
 -- | Decode a 60-bit number from a Base32 string
 decode60base32 :: ByteString -> Maybe Word60
 decode60base32 =
-    fmap leastSignificant60 . go12
-    <=< traverse (fmap safeCast . decodeLetter) . BS.unpack
+    fmap leastSignificant60
+        . go12
+        <=< traverse (fmap safeCast . decodeLetter)
+        . BS.unpack
   where
     go12 :: [Word8] -> Maybe Word64
     go12 letters = do
@@ -146,12 +158,12 @@ decode60base32 =
     go4 :: [Word8] -> Maybe Word64
     go4 letters = case splitAt 4 letters of
         (letters4, []) -> pure $ decodeBase32 4 letters4
-        _ -> Nothing  -- extra input
+        _ -> Nothing -- extra input
     decodeBase32 :: Int -> [Word8] -> Word64
-    decodeBase32 len
-        = foldl' (\acc b -> (acc `shiftL` 5) .|. safeCast b) 0
-        . take len
-        . (++ repeat 0)
+    decodeBase32 len =
+        foldl' (\acc b -> (acc `shiftL` 5) .|. safeCast b) 0
+            . take len
+            . (++ repeat 0)
 
 -- | Decode a 64-bit number from a Base64 string
 decode64 :: ByteString -> Maybe Word64
@@ -173,24 +185,29 @@ encode :: ByteStringL -> ByteStringL
 encode = BSL.pack . go . BSL.unpack
   where
     go = \case
-        []         -> []
-        [a]        -> encode1 a
-        [a, b]     -> encode2 a b
-        a:b:c:rest -> encode3 a b c ++ go rest
+        [] -> []
+        [a] -> encode1 a
+        [a, b] -> encode2 a b
+        a : b : c : rest -> encode3 a b c ++ go rest
     encode1 a =
-        map (encodeLetter . leastSignificant6)
+        map
+            (encodeLetter . leastSignificant6)
             [a `shiftR` 2, (a .&. 0b11) `shiftL` 4]
-    encode2 a b = map (encodeLetter . leastSignificant6)
-        [                                  a `shiftR` 2
-        , ((a .&.   0b11) `shiftL` 4) .|. (b `shiftR` 4)
-        ,  (b .&. 0b1111) `shiftL` 2
-        ]
-    encode3 a b c = map (encodeLetter . leastSignificant6)
-        [                                    a `shiftR` 2
-        , ((a .&.     0b11) `shiftL` 4) .|. (b `shiftR` 4)
-        , ((b .&.   0b1111) `shiftL` 2) .|. (c `shiftR` 6)
-        ,   c .&. 0b111111
-        ]
+    encode2 a b =
+        map
+            (encodeLetter . leastSignificant6)
+            [ a `shiftR` 2
+            , ((a .&. 0b11) `shiftL` 4) .|. (b `shiftR` 4)
+            , (b .&. 0b1111) `shiftL` 2
+            ]
+    encode3 a b c =
+        map
+            (encodeLetter . leastSignificant6)
+            [ a `shiftR` 2
+            , ((a .&. 0b11) `shiftL` 4) .|. (b `shiftR` 4)
+            , ((b .&. 0b1111) `shiftL` 2) .|. (c `shiftR` 6)
+            , c .&. 0b111111
+            ]
 
 -- | Convert a number from [0..63] to a single letter
 encodeLetter :: Word6 -> Word8
@@ -202,10 +219,12 @@ encodeLetter4 i = alphabet `BS.index` safeCast i
 
 -- | Encode a 60-bit number to a Base64 string
 encode60 :: Word60 -> ByteString
-encode60 w = BS.pack
-    [ encodeLetter $ leastSignificant6 (safeCast w `shiftR` (6 * i) :: Word64)
-    | i <- [9, 8 .. 0]
-    ]
+encode60 w =
+    BS.pack
+        [ encodeLetter $
+            leastSignificant6 (safeCast w `shiftR` (6 * i) :: Word64)
+        | i <- [9, 8 .. 0]
+        ]
 
 -- | Encode a 60-bit number to a Base64 string, dropping trailing zeroes
 encode60short :: Word60 -> ByteString
@@ -215,8 +234,8 @@ encode60short v = case safeCast v :: Word64 of
   where
     go _ 0 = []
     go i w =
-        (w `shiftR` (6 * i)) .&. 0b111111 :
-        go (i - 1) (w .&. complement (0b111111 `shiftL` (6 * i)))
+        (w `shiftR` (6 * i)) .&. 0b111111
+            : go (i - 1) (w .&. complement (0b111111 `shiftL` (6 * i)))
 
 -- | Encode a 64-bit number to a Base32 string, dropping trailing zeroes
 encode64base32short :: Word64 -> ByteString
@@ -226,8 +245,8 @@ encode64base32short = \case
   where
     go _ 0 = []
     go i w =
-        (w `shiftR` (5 * i)) .&. 0b11111 :
-        go (i - 1) (w .&. complement (0b11111 `shiftL` (5 * i)))
+        (w `shiftR` (5 * i)) .&. 0b11111
+            : go (i - 1) (w .&. complement (0b11111 `shiftL` (5 * i)))
 
     leastSignificant5 w = W6 $ fromIntegral w .&. 0b11111
 
@@ -235,4 +254,4 @@ encode64base32short = \case
 encode64 :: Word64 -> ByteString
 encode64 w =
     encodeLetter (leastSignificant6 $ w `shiftR` 60)
-    `BS.cons` encode60 (leastSignificant60 w)
+        `BS.cons` encode60 (leastSignificant60 w)

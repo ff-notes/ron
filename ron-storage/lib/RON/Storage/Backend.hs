@@ -45,7 +45,7 @@ should be a RON-Base32-encoded RON-UUID.
 type RawDocId = FilePath
 
 newtype DocId a = DocId RawDocId
-    deriving (Eq, Ord, Hashable)
+    deriving (Eq, Hashable, Ord)
 
 instance (Collection a) => Show (DocId a) where
     show (DocId file) = collectionName @a </> file
@@ -64,7 +64,7 @@ class (ReplicatedAsObject a, Typeable a) => Collection a where
     fallbackParse _ _ = throwError "no fallback parser implemented"
 
 -- | Storage backend interface
-class (ReplicaClock m, MonadE m) => MonadStorage m where
+class (MonadE m, ReplicaClock m) => MonadStorage m where
     getCollections :: m [CollectionName]
 
     -- | Must return @[]@ for non-existent collection

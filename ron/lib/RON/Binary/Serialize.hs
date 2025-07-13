@@ -1,3 +1,4 @@
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -12,11 +13,11 @@ module RON.Binary.Serialize (
 
 import RON.Prelude
 
-import qualified Data.Binary as Binary
+import Data.Binary qualified as Binary
 import Data.Binary.Put (putDoublebe, runPut)
 import Data.Bits (bit, shiftL, (.|.))
 import Data.ByteString.Lazy (cons, fromStrict)
-import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Lazy qualified as BSL
 import Data.Text.Encoding (encodeUtf8)
 import Data.ZigZag (zzEncode)
 
@@ -155,5 +156,5 @@ serializeReducedChunk isQuery WireReducedChunk{..} = do
 serializeString :: Text -> ByteStringL
 serializeString = fromStrict . encodeUtf8
 
-foldMapA :: (Monoid b, Applicative f, Foldable t) => (a -> f b) -> t a -> f b
+foldMapA :: (Applicative f, Foldable t, Monoid b) => (a -> f b) -> t a -> f b
 foldMapA f = fmap fold . traverse f . toList

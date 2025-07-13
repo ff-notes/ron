@@ -13,9 +13,10 @@ class (Monad m) => MonadStore m where
     -- | Append a sequence of operations to an object.
     appendPatch :: Patch -> m ()
 
-    -- | Get all RON-object logs split by replicas.
-    -- Replicas order is not guaranteed.
-    -- Implementation SHOULD return object creation op.
+    {- | Get all RON-object logs split by replicas.
+    Replicas order is not guaranteed.
+    Implementation SHOULD return object creation op.
+    -}
     loadWholeObjectLog ::
         -- | Object id
         UUID ->

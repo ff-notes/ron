@@ -92,7 +92,9 @@ char c = do
     else
         fail $ "Expected " ++ show c ++ ", got " ++ show c'
 
--- | Parses a definite double, i.e. it is not an integer. For this, the double has either a '.', and 'e'/'E' part or both.
+{- | Parses a definite double, i.e. it is not an integer.
+For this, the double has either a '.', and 'e'/'E' part or both.
+-}
 {-# INLINE definiteDouble #-}
 definiteDouble :: Parser Double
 definiteDouble = withDot <|> noDot
