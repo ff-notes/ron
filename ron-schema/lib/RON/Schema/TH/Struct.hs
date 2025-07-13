@@ -300,7 +300,8 @@ mkAccessorsLww name' field = do
             [ sigD
                 read
                 [t|
-                    (MonadE $m, MonadObjectState $type' $m) => $m (Maybe $guideType)
+                    (MonadE $m, MonadObjectState $type' $m) =>
+                    $m (Maybe $guideType)
                     |]
             , valDP read [|LWW.readField $ronName'|]
             ]
