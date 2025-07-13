@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 
@@ -29,7 +30,7 @@ minimumStylishness = 0.2
 
 main :: IO ()
 main =
-    withCurrentDirectory projectDir $ do
+    withCurrentDirectory projectDir do
         haskellFiles <- collectHaskellFiles
         styleOkCount <- sum . map fromEnum <$> for haskellFiles checkStyle
         let stylishness =
@@ -44,7 +45,7 @@ isHaskellFile path = takeExtension path == ".hs"
 listFilesRecursive :: FilePath -> IO [FilePath]
 listFilesRecursive dir = do
     entities <- listDirectory dir
-    fmap fold . for entities $ \case
+    fold <$> for entities \case
         '.' : _ ->
             -- skip hidden
             pure []
@@ -92,7 +93,7 @@ checkStyle file = allM ($ file) [checkFormatting, checkWidth]
 checkWidth :: FilePath -> IO Bool
 checkWidth file = do
     content <- Text.readFile file
-    fmap and . for (zip [1 :: Int ..] $ Text.lines content) $ \(n, line) ->
+    and <$> for (zip [1 :: Int ..] $ Text.lines content) \(n, line) ->
         if Text.length line > 80
             then do
                 hPutStrLn stderr $ intercalate ":" [file, show n, "line is too long"]
