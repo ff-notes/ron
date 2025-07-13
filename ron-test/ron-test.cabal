@@ -130,7 +130,6 @@ test-suite style
 
   -- global
   build-depends:
-    , bytestring
     , directory
     , extra
     , filepath
