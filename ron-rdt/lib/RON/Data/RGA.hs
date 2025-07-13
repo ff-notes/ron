@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -37,18 +37,12 @@ module RON.Data.RGA (
 )
 where
 
-#if MIN_VERSION_Diff(0,4,0)
-import           Data.Algorithm.Diff (PolyDiff (Both, First, Second),
-                                      getGroupedDiffBy)
-#else
-import           Data.Algorithm.Diff (Diff (Both, First, Second),
-                                      getGroupedDiffBy)
-#endif
+import Data.Algorithm.Diff (PolyDiff (Both, First, Second), getGroupedDiffBy)
 import Data.Bifunctor (second)
-import qualified Data.HashMap.Strict as HashMap
+import Data.HashMap.Strict qualified as HashMap
 import Data.Map.Strict ((!?))
-import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
+import Data.Map.Strict qualified as Map
+import Data.Text qualified as Text
 
 import RON.Data.Internal (
     MonadObjectState,
@@ -86,7 +80,7 @@ import RON.Types (
     WireStateChunk (WireStateChunk, stateBody, stateType),
  )
 import RON.UUID (pattern Zero)
-import qualified RON.UUID as UUID
+import RON.UUID qualified as UUID
 import RON.Util.Word (ls60, pattern B11)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
@@ -417,23 +411,23 @@ edit newItems =
         -- 'Replicated'
         let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
         (stateBody', Last lastEvent) <-
-            runWriterT . fmap fold . for diff $ \case
-                First removed -> for removed $ \case
-                    op@Op{refId = Zero} -> do
-                        -- not deleted yet
-                        -- TODO(2018-11-03, #15, cblp) get sequential ids
-                        tombstone <- getEventUuid
-                        tell . Last $ Just tombstone
-                        pure op{refId = tombstone}
-                    op ->
-                        -- deleted already
-                        pure op
+            runWriterT $ fold <$> for diff \case
+                First removed -> do
+                    tombstones <- getEventUuids $ genericLength removed
+                    for (zip removed tombstones) \case
+                        (op@Op{refId = Zero}, tombstone) -> do
+                            -- not deleted yet
+                            tell . Last $ Just tombstone
+                            pure op{refId = tombstone}
+                        (op, _) ->
+                            -- deleted already
+                            pure op
                 Both v _ -> pure v
-                Second added -> for added $ \op -> do
-                    -- TODO(2018-11-03, #15, cblp) get sequential ids
-                    opId <- getEventUuid
-                    tell . Last $ Just opId
-                    pure op{opId}
+                Second added -> do
+                    opIds <- getEventUuids $ genericLength added
+                    for (zip added opIds) \(op, opId) -> do
+                        tell . Last $ Just opId
+                        pure op{opId}
         pure $ case lastEvent of
             Nothing -> chunk
             Just _ -> StateChunk stateBody'

@@ -404,14 +404,13 @@ prop_RGA_delete_deleted =
                                                     @`}LxE          %f 'hel'
                                                     @)H     :`}bXU  'l'
                                                     @)I     :}Ykz   'o'
-                                                    @}rSU   :0      'p'
+                                                    @}isI   :0      'p'
                     . |]
-     in ( property
+     in property
             . evalExceptT
             . runNetworkSimT
             . runReplicaSimT (mkReplica ApplicationSpecific 234)
-        )
-            do
+            $ do
                 rga0 <- newObjectFrameWith $ RGA.newFromText "hello"
                 rga0expect === prepObj rga0
 

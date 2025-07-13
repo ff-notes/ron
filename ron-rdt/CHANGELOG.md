@@ -6,6 +6,8 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Changed
+- Use sequential ids on RGA block insertion and deletions (#15).
 
 ## [0.11] - 2021-06-15
 ### Added

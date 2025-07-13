@@ -94,39 +94,37 @@ state4expect =
                         @{140W          >str8 >7/0000001H2W+r3pl1c4
                         @}MMW           >int1 166
                         @}PUW   :`{0KUW >int1 275
-                        @{20UW  :0      >str3 '206'
-                        @}GUW   :`{0~mp >str3 '190'
-                        @}WUW   :0      >set4 >7/0000002lUW+r3pl1c4
-                        @{4X2W          >nst6 >7/0000004bMW+r3pl1c4
-                        @{5lUW          >set5 172
-                        @{60UW  :`{5WUW >set5 170
-                        @}lUW   :{6WUW  >ref7 >7/0000006GUW+r3pl1c4
+                        @}VN4   :0      >str3 '206'
+                        @}ZM    :`{0~mp >str3 '190'
+                        @}lIW   :0      >set4 >7/0000001rrW+r3pl1c4
+                        @{3H2W          >nst6 >7/0000003MMW+r3pl1c4
+                        @{4WUW          >set5 172
+                        @}lUW   :`}GUW  >set5 170
+                        @{5WUW  :{5GUW  >ref7 >7/00000050UW+r3pl1c4
         *rga    #}WUW   @0      :0      !
-                        @`}lUW  :`{1QUW '2'
-                        @)X     :}_UW   '7'
-                        @{1dUW  :0      '1'
-                        @}lUW           '4'
+                        @`}lUW  :`{1QUW %i '27'
+                        @{1Rw_  :0      %f '14'
                         @{0lUY          '5'
         *ct     #{1H2W  @0              !
                         @`}MMW          %c 'Anne'
-                        @{70UW  :)W     %i 3
-                        @}Fmp   :{70UY  'J'
-                        @}K0W   :{1MMZ  %c 'ssie'
-        *set    #{2lUW  @0      :0      !
-                        @`{50UW         >{4fUW
-                        @}GUW   :`{4K0W >{30UW
-                #{30UW  @0      :0      !
-                        @`}GUW          >int1 135
-                        @}WUW           >str2 >7/0000003lUW+r3pl1c4
-                        @{4Fmp          >str3 '137'
-        *rga    #}lUW   @0              !
-                        @`{40UW         %f '136'
-        *set    #{4bMW  @0              !
-                        @`}eUW          >int1 138
-                #}fUW   @0              !
-                        @`}pUW          >int1 164
-                        @}tUW           >str3 '166'
-                #{6GUW  @0              !
+                        @{5lUW  :)W     %i 3
+                        @}~mp   :{5lUY  'J'
+                        @{640W  :{1MMZ  %c 'ssie'
+        *set    #}rrW   @0      :0      !
+                        @`{3lUW         >{3QUW
+                        @{40UW  :`{340W >}zUW
+                #}zUW   @0      :0      !
+                        @`{2CUW         >int1 135
+                        @}OUW           >str2 >7/0000002WUW+r3pl1c4
+                        @}~mp           >str3 '137'
+        *rga    #{2WUW  @0              !
+                        @`}lUW          %f '136'
+        *set    #{3MMW  @0              !
+                        @`}PUW          >int1 138
+                #}QUW   @0              !
+                        @`}_UW          >int1 164
+                        @}dUW           >str3 '166'
+                #{50UW  @0              !
         .
     |]
 

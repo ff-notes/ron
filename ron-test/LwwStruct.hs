@@ -72,33 +72,31 @@ ex4expect :: ByteStringL
 ex4expect =
     [s| *lww    #7/0000000DrW+r3pl1c4                   !
                                         @`}p0W  :int1   166
-                                        @{2K0W  :nst5
+                                        @{2C0W  :nst5
                                         @`      :set4   >}KUW
                                                 :str2   >}OUW
-                                        @{1KUW  :str3   '206'
+                                        @{1GN4  :str3   '206'
                                         @`      :str6   >}kmp
         *set    #}KUW                   @0      :0      !
-                                        @`{2Fmp         >{1OUW
+                                        @`{2Bmp         >{1TM
         *rga    #}OUW                   @0              !
-                                        @`}WUW  :`{112W '2'
-                                        @)X     :}6MW   '7'
-                                        @{19UW  :0      '1'
-                                        @}AUW           '4'
+                                        @`}WUW  :`{112W %i '27'
+                                        @{1Do_  :0      %f '14'
                                         @{0WUY          '5'
         *ct     #}kmp                   @0              !
                                         @`}p0W          %c 'Erik'
-                                        @{2X2W  :)W     %i 4
-                                        @}i6t   :{2X2Z  %c 'Ada'
-        *lww    #{1OUW                  @0      :0      !
+                                        @{2H2W  :)W     %i 4
+                                        @}T6t   :{2H2Z  %c 'Ada'
+        *lww    #{1TM                   @0      :0      !
                                         @`      :int1   135
                                                 :nst5
-                                                :set4   >}WUW
-                                                :str2   >}lUW
+                                                :set4   >}_IW
+                                                :str2   >}jrW
                                                 :str3   '137'
                                                 :str6
-        *set    #}WUW                   @0      :0      !
-        *rga    #}lUW                                   !
-                                        @`{20UW         %f '136'
+        *set    #}_IW                   @0      :0      !
+        *rga    #}jrW                                   !
+                                        @`}zUW          %f '136'
         .
     |]
 
