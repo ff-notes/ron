@@ -26,7 +26,7 @@ import System.Process.Typed (
  )
 
 minimumStylishness :: Double
-minimumStylishness = 0.96
+minimumStylishness = 0.97
 
 main :: IO ()
 main =
