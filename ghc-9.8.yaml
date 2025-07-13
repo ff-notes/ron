@@ -37,3 +37,5 @@ extra-lib-dirs:
 flags:
   brick:
     demos: false
+  ron-test:
+    style: true
