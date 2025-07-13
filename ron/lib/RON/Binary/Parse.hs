@@ -66,12 +66,11 @@ parseDesc = label "desc" $ do
 extendedLength :: Parser Size
 extendedLength = do
     b <- anyWord8
-    if testBit b 7
-        then do
-            bbb <- takeL 3
-            pure $ leastSignificant31 $ Binary.decode (b `cons` bbb)
-        else
-            pure $ safeCast b
+    if testBit b 7 then do
+        bbb <- takeL 3
+        pure $ leastSignificant31 $ Binary.decode (b `cons` bbb)
+    else
+        pure $ safeCast b
 
 -- | Parse frame
 parse :: ByteStringL -> Either String WireFrame

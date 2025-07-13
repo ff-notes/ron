@@ -23,6 +23,7 @@ module LwwStruct.Types (
     str6_read,
     str6_set,
     str6_zoom,
+
     -- * tests
     tfp_field_read,
     tfp_field_set,
@@ -33,20 +34,26 @@ module LwwStruct.Types (
     Enum67 (..),
 ) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Data.Type.Equality ((:~:) (Refl))
+import Data.Type.Equality ((:~:) (Refl))
 
-import           RON.Data (Replicated, ReplicatedAsPayload, encoding,
-                           fromPayload, payloadEncoding, toPayload)
-import           RON.Data.ORSet (ORSet, ORSetMap)
-import           RON.Schema.TH (mkReplicated)
+import RON.Data (
+    Replicated,
+    ReplicatedAsPayload,
+    encoding,
+    fromPayload,
+    payloadEncoding,
+    toPayload,
+ )
+import RON.Data.ORSet (ORSet, ORSetMap)
+import RON.Schema.TH (mkReplicated)
 
 data Opaque49 = Opaque49
     deriving (Eq, Show)
 instance Replicated Opaque49 where encoding = payloadEncoding
 instance ReplicatedAsPayload Opaque49 where
-    toPayload   = undefined
+    toPayload = undefined
     fromPayload = undefined
 
 [mkReplicated|
@@ -75,7 +82,7 @@ instance ReplicatedAsPayload Opaque49 where
     (alias Alias75 (ORSet.Map String String))
 |]
 
-deriving instance Eq   Struct51
+deriving instance Eq Struct51
 deriving instance Show Struct51
 
 _check_Alias69 :: Alias69 :~: ORSet Struct51

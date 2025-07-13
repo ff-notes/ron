@@ -186,10 +186,11 @@ data Handle
     , fsWatchManager :: FSNotify.WatchManager
     , stopWatching :: IORef (Maybe StopListening)
     , onDocumentChanged :: TChan (CollectionName, RawDocId)
-    -- ^ A channel of changes in the database.
-    --     To activate it, call 'startWatching'.
-    --     You should NOT read from it directly,
-    --     call 'subscribe' to read from derived channel instead.
+    {- ^ A channel of changes in the database.
+    To activate it, call 'startWatching'.
+    You should NOT read from it directly,
+    call 'subscribe' to read from derived channel instead.
+    -}
     , replica :: Replica
     }
 

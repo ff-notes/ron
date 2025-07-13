@@ -148,7 +148,7 @@ prop_binary_roundtrip_atom =
 --     binaryRoundtrip (Gen.wireFrame 10) RB.serialize RB.parse
 
 textRoundtrip ::
-    (Show a, Show b, Applicative f, Eq (f a), Show (f a), Monad m) =>
+    (Applicative f, Eq (f a), Monad m, Show (f a), Show a, Show b) =>
     Gen a ->
     (a -> b) ->
     (b -> f a) ->
@@ -260,7 +260,7 @@ prop_uuid_abbreviations = property do
         ]
     aLed = either error id $ RT.parseUuid "A/LED"
 
-evalEitherS :: (MonadTest m, HasCallStack) => Either String a -> m a
+evalEitherS :: (HasCallStack, MonadTest m) => Either String a -> m a
 evalEitherS = evalExceptT . liftEither
 
 prop_event_roundtrip = property do
@@ -322,7 +322,7 @@ prop_ron_json_example =
                     replicaGritzko
         gritzko = fromJust $ Base64.decode60 "gritzko"
         replicaGritzko = mkReplica TrieForked gritzko
-     in
+    in
         property do
             parsed <- evalEitherS $ RT.parseWireFrame input
             output === parsed
@@ -406,7 +406,7 @@ prop_RGA_delete_deleted =
                                                     @)I     :}Ykz   'o'
                                                     @}isI   :0      'p'
                     . |]
-     in property
+    in  property
             . evalExceptT
             . runNetworkSimT
             . runReplicaSimT (mkReplica ApplicationSpecific 234)
@@ -440,7 +440,7 @@ prop_CT_delete_deleted =
                                                     @}dkB   :)r
                                                     @}o7B   :}dkB   'p'
                     . |]
-     in ( property
+    in  ( property
             . evalExceptT
             . runNetworkSimT
             . runReplicaSimT (mkReplica ApplicationSpecific 467)
@@ -586,7 +586,7 @@ prop_ORSet =
                 [s| *set #7/0000000Don+000000005j !
                     @`}U_Y :`}HJ2 370
                     . |]
-     in ( property
+    in  ( property
             . evalExceptT
             . runNetworkSimT
             . runReplicaSimT (mkReplica ApplicationSpecific 366)
@@ -620,7 +620,7 @@ prop_ObjectORSet =
                     *ct  #}PsG                      @0      :0      !
                                                     @`}aHG          %c 'Mark'
                     . |]
-     in ( property
+    in  ( property
             . evalExceptT
             . runNetworkSimT
             . runReplicaSimT (mkReplica ApplicationSpecific 400)
@@ -653,7 +653,7 @@ prop_ObjectORSet_recursive =
                     *set #}NbH @0 :0 !
                         @`}_gy >}Dl7
                     . |]
-     in ( property
+    in  ( property
             . evalExceptT
             . runNetworkSimT
             . runReplicaSimT (mkReplica ApplicationSpecific 409)

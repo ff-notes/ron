@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module UI (runUI) where
 
@@ -111,14 +112,18 @@ draw World{tree, target, viewPort, cursorPos} =
 
     -- TODO a kind of zigomorphism?
     walk (Node Bud{x, y} subs) =
-        [ color (colorFromOrigin id') $ line $ map translatePos [(x, y), (x', y')]
+        [ color (colorFromOrigin id') $
+            line $
+                map translatePos [(x, y), (x', y')]
         | Node Bud{x = x', y = y', id = id'} _ <- subs
         ]
             ++ concatMap walk subs
 
     targetPic =
         foldMap
-            (\Bud{x, y} -> stranslate x y $ circle targetRadius <> circleSolid 1)
+            ( \Bud{x, y} ->
+                stranslate x y $ circle targetRadius <> circleSolid 1
+            )
             target
 
 zoom :: Size -> Tree Bud -> ViewPort
@@ -132,10 +137,10 @@ zoom (windowWidth, windowHeight) tree =
     scaleY = fromIntegral windowHeight / (baseHeight + 2 * padding)
 
     -- TODO a single run?
-    left = minimum $ (. x) <$> tree
-    right = maximum $ (. x) <$> tree
-    top = maximum $ (. y) <$> tree
-    bottom = minimum $ (. y) <$> tree
+    left = minimum $ (.x) <$> tree
+    right = maximum $ (.x) <$> tree
+    top = maximum $ (.y) <$> tree
+    bottom = minimum $ (.y) <$> tree
 
     baseWidth = right - left
     baseHeight = top - bottom
@@ -143,7 +148,8 @@ zoom (windowWidth, windowHeight) tree =
     center = ((left + right) / 2, (top + bottom) / 2)
 
 onEvent ::
-    (MonadLogger m, MonadUnliftIO m) => Store.Handle -> Event -> World -> m World
+    (MonadLogger m, MonadUnliftIO m) =>
+    Store.Handle -> Event -> World -> m World
 onEvent db event world@World{viewPort = vp, tree, target} =
     case event of
         EventKey (MouseButton LeftButton) Down _ _
@@ -189,7 +195,8 @@ placeBuds =
   where
     go y (Node id subs) = do
         xLeft <- get
-        subs' <- intersperseSequence (modify (+ leafDistanceX)) $ map (go y') subs
+        subs' <-
+            intersperseSequence (modify (+ leafDistanceX)) $ map (go y') subs
         xRight <- get
         let x = (xLeft + xRight) / 2
         pure $ Node Bud{id, x, y} subs'
@@ -207,7 +214,13 @@ resetFromRon windowSize ronTree = reset windowSize $ placeBuds ronTree
 
 reset :: Size -> Tree Bud -> World
 reset windowSize tree =
-    World{tree, windowSize, viewPort = zoom windowSize tree, target = Nothing, cursorPos = (-1000, -1000)}
+    World
+        { tree
+        , windowSize
+        , viewPort = zoom windowSize tree
+        , target = Nothing
+        , cursorPos = (-1000, -1000)
+        }
 
 leafDistanceX :: Float
 leafDistanceX = 10

@@ -76,47 +76,45 @@ example4expect :: CTString
 example4expect = CT "abc[]ghi[INS:mno]jkl"
 
 prop_causalTree0 :: Property
-prop_causalTree0 = property do
-    -- create an object
-    state1 <- runNetworkSimT $ runReplicaSimT replica $ newObjectFrame example0
-    let (oid, state1ser) = serializeObject state1
-    prep state1expect === prep state1ser
+prop_causalTree0 =
+    property do
+        -- create an object
+        state1 <-
+            runNetworkSimT $ runReplicaSimT replica $ newObjectFrame example0
+        let (oid, state1ser) = serializeObject state1
+        prep state1expect === prep state1ser
 
-    -- parse newly created object
-    state2 <- evalEither $ parseObject oid state1ser
-    state1 === state2
+        -- parse newly created object
+        state2 <- evalEither $ parseObject oid state1ser
+        state1 === state2
 
-    -- decode newly created object
-    example3 <- evalEither $ evalObjectState state2 readObject
-    example0 === example3
+        -- decode newly created object
+        example3 <- evalEither $ evalObjectState state2 readObject
+        example0 === example3
 
-    -- apply operations to the object (frame)
-    state4 <-
-        ( evalExceptT
-                . runNetworkSimT
-                . runReplicaSimT replica
-                . execObjectState state2
-            )
-            do
-                checkCausality
-                CT.edit "abc[]ghi[INS:mno]jkl"
-                checkCausality
+        -- apply operations to the object (frame)
+        state4 <-
+            evalExceptT . runNetworkSimT . runReplicaSimT replica $
+                execObjectState state2 do
+                    checkCausality
+                    CT.edit "abc[]ghi[INS:mno]jkl"
+                    checkCausality
 
-    -- decode object after modification
-    example4 <- evalEither $ evalObjectState state4 readObject
-    example4expect === example4
+        -- decode object after modification
+        example4 <- evalEither $ evalObjectState state4 readObject
+        example4expect === example4
 
-    -- serialize object after modification
-    prep state4expect === prep (snd $ serializeObject state4)
+        -- serialize object after modification
+        prep state4expect === prep (snd $ serializeObject state4)
 
 prep :: ByteStringL -> [ByteStringL]
 prep = filter (not . BSLC.null) . map (BSLC.unwords . BSLC.words) . BSLC.lines
 
 checkCausality ::
     ( HasCallStack
-    , MonadTest m
     , MonadReader (ObjectRef a) m
     , MonadState StateFrame m
+    , MonadTest m
     , Typeable a
     ) =>
     m ()
@@ -187,12 +185,8 @@ prop_causalTree1 = property do
 
     -- apply operations to the object (frame)
     ex14state <-
-        ( evalExceptT
-                . runNetworkSimT
-                . runReplicaSimT replica
-                . execObjectState ex12state
-            )
-            do
+        evalExceptT . runNetworkSimT . runReplicaSimT replica $
+            execObjectState ex12state do
                 checkCausality
                 CT.edit "Ada"
                 checkCausality

@@ -26,7 +26,7 @@ import System.Process.Typed (
  )
 
 minimumStylishness :: Double
-minimumStylishness = 0.3
+minimumStylishness = 0.96
 
 main :: IO ()
 main =
@@ -63,7 +63,9 @@ projectDir :: FilePath
 projectDir = ".."
 
 runFormatter :: FilePath -> IO ByteStringL
-runFormatter file = readProcessStdout_ $ proc "fourmolu" ["--", file]
+runFormatter file =
+    -- TODO --mode=check
+    readProcessStdout_ $ proc "fourmolu" ["--quiet", "--", file]
 
 runColorDiff :: FilePath -> ByteStringL -> IO ExitCode
 runColorDiff file content = do
@@ -94,9 +96,9 @@ checkWidth :: FilePath -> IO Bool
 checkWidth file = do
     content <- Text.readFile file
     and <$> for (zip [1 :: Int ..] $ Text.lines content) \(n, line) ->
-        if Text.length line > 80
-            then do
-                hPutStrLn stderr $
-                    intercalate ":" [file, show n, "line is too long"]
-                pure False
-            else pure True
+        if Text.length line > 80 then do
+            hPutStrLn stderr $
+                intercalate ":" [file, show n, "line is too long"]
+            pure False
+        else
+            pure True

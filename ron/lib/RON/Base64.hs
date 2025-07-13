@@ -116,10 +116,9 @@ decode =
 -- | Decode a 60-bit number from a Base64 string
 decode60 :: ByteString -> Maybe Word60
 decode60 =
-    fmap leastSignificant60
-        . go 10
-        <=< traverse (fmap safeCast . decodeLetter)
-        . BS.unpack
+    BS.unpack
+        >>> traverse (fmap safeCast . decodeLetter)
+        >=> (go 10 >>> fmap leastSignificant60)
   where
     go :: Int -> [Word8] -> Maybe Word64
     go n = \case
@@ -144,10 +143,9 @@ decode60 =
 -- | Decode a 60-bit number from a Base32 string
 decode60base32 :: ByteString -> Maybe Word60
 decode60base32 =
-    fmap leastSignificant60
-        . go12
-        <=< traverse (fmap safeCast . decodeLetter)
-        . BS.unpack
+    BS.unpack
+        >>> traverse (fmap safeCast . decodeLetter)
+        >=> (go12 >>> fmap leastSignificant60)
   where
     go12 :: [Word8] -> Maybe Word64
     go12 letters = do

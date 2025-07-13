@@ -160,12 +160,10 @@ prop_structSet =
 
         -- apply operations to the object (frame)
         state4 <-
-            ( evalExceptT
-                    . runNetworkSimT
-                    . runReplicaSimT replica
-                    . execObjectState state2
-                )
-                do
+            evalExceptT
+                . runNetworkSimT
+                . runReplicaSimT replica
+                $ execObjectState state2 do
                     checkCausality
                     int1_set 166 -- plain field
                     checkCausality
@@ -232,9 +230,9 @@ prep = filter (not . BSLC.null) . map (BSLC.unwords . BSLC.words) . BSLC.lines
 
 checkCausality ::
     ( HasCallStack
-    , MonadTest m
     , MonadReader (ObjectRef a) m
     , MonadState StateFrame m
+    , MonadTest m
     , Typeable a
     ) =>
     m ()

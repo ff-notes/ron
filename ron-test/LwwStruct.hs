@@ -140,12 +140,10 @@ prop_lwwStruct = property do
 
     -- apply operations to the object (frame)
     ex4state <-
-        ( evalExceptT
-                . runNetworkSimT
-                . runReplicaSimT replica
-                . execObjectState ex2state
-            )
-            do
+        evalExceptT
+            . runNetworkSimT
+            . runReplicaSimT replica
+            $ execObjectState ex2state do
                 -- plain field
                 int1_set $ Just 166
                 str2_zoom $ RGA.edit "145"

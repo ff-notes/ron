@@ -176,7 +176,8 @@ data MergeStrategy
       Min
     | -- | Keep all values,        use 'mempty'  if no values
       Set
-    | -- | Merge all values,       use 'mempty'  if no values
-      -- TODO Semigroup -- ^ Merge all values, use 'Nothing' if no values
+    | {- | Merge all values,       use 'mempty'  if no values
+      TODO Semigroup -- ^ Merge all values, use 'Nothing' if no values
+      -}
       Monoid
     deriving (Eq, Show)

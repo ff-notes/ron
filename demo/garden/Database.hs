@@ -6,12 +6,12 @@ module Database (loadTheTree, theTreeRef) where
 import Control.Monad.Logger (MonadLogger)
 import Data.Tree (Tree (Node))
 import RON.Data.GTree (GTree)
-import qualified RON.Data.GTree as GTree
+import RON.Data.GTree qualified as GTree
 import RON.Store.Sqlite (runStore)
-import qualified RON.Store.Sqlite as Store (Handle)
+import RON.Store.Sqlite qualified as Store (Handle)
 import RON.Types (Op (..), UUID)
 import RON.Types.Experimental (Ref (..))
-import qualified RON.UUID as UUID
+import RON.UUID qualified as UUID
 import UnliftIO (MonadUnliftIO)
 
 loadTheTree :: (MonadLogger m, MonadUnliftIO m) => Store.Handle -> m (Tree UUID)

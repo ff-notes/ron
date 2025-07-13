@@ -6,10 +6,10 @@
 
 module StructSet.Types where
 
-import           RON.Prelude
+import RON.Prelude
 
-import           Data.Default (Default)
-import           RON.Schema.TH (mkReplicated)
+import Data.Default (Default)
+import RON.Schema.TH (mkReplicated)
 
 [mkReplicated|
     (struct_set StructSet13
@@ -24,6 +24,6 @@ import           RON.Schema.TH (mkReplicated)
 |]
 
 deriving instance Default StructSet13
-deriving instance Eq      StructSet13
+deriving instance Eq StructSet13
 deriving instance Generic StructSet13
-deriving instance Show    StructSet13
+deriving instance Show StructSet13

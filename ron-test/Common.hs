@@ -88,9 +88,9 @@ loadCases = do
                                         ( "comparing roundtrip for object "
                                             <> show ks
                                         )
-                             in map (testCase fileIn . assertFailure) lefts
+                            in  map (testCase fileIn . assertFailure) lefts
                                     ++ [ newTestCase ks $
-                                        assertEqual "not equal" w w'
+                                            assertEqual "not equal" w w'
                                        | (w, ks, w') <- rights
                                        ]
     pure $ testsInOut ++ testsNote
@@ -111,7 +111,7 @@ loadCases = do
     zipWithWireFrameRoundtrip w =
         let r = wireFrameRoundtrip w
             f x = (w, listToMaybe $ Map.keys x, concat . Map.elems $ x)
-         in f <$> r
+        in  f <$> r
 
     zipDef a b =
         Map.merge

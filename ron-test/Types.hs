@@ -3,7 +3,7 @@
 
 module Types where
 
-import           RON.Schema.TH (mkReplicated)
+import RON.Schema.TH (mkReplicated)
 
 [mkReplicated|
     (struct_lww TestRecursiveORSet
