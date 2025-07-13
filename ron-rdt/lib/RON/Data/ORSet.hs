@@ -43,7 +43,7 @@ module RON.Data.ORSet (
 
 import RON.Prelude
 
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 
 import RON.Data.Internal (
     MonadObjectState,
@@ -85,7 +85,7 @@ import RON.Types (
     WireStateChunk (..),
  )
 import RON.UUID (pattern Zero)
-import qualified RON.UUID as UUID
+import RON.UUID qualified as UUID
 import RON.Util (Instance (..))
 
 {- | Untyped OR-Set.
@@ -537,7 +537,8 @@ zoomFieldObject field innerModifier =
                 ]
         object <- case objectIds of
             [] -> ObjectRef <$> getEventUuid -- create empty object
-            oid : oids -> reduceObjectStates @field $ fmap ObjectRef $ oid :| oids
+            oid : oids ->
+                reduceObjectStates @field $ fmap ObjectRef $ oid :| oids
         lift $ runReaderT innerModifier object
 
 -- | Create an ORSet object from a list of named fields.

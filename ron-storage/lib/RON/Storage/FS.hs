@@ -144,9 +144,10 @@ instance MonadStorage Storage where
     deleteVersion docid version = Storage $ do
         Handle{dataDir} <- ask
         liftIO $
-            do
+            ( do
                 let file = dataDir </> docDir docid </> version
                 removeFile file
+            )
                 `catch` \e ->
                     unless (isDoesNotExistError e) $ throwIO e
 

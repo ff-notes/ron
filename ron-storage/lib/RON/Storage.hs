@@ -17,7 +17,7 @@ module RON.Storage (
 )
 where
 
-import qualified Data.Text as Text
+import Data.Text qualified as Text
 import RON.Data (ObjectStateT, reduceObject, runObjectState)
 import RON.Error (Error (Error), errorContext, throwErrorString)
 import RON.Prelude
@@ -34,7 +34,7 @@ import RON.Storage.Backend (
     readVersion,
  )
 import RON.Types (ObjectFrame, UUID)
-import qualified RON.UUID as UUID
+import RON.UUID qualified as UUID
 
 -- | Load all versions of a document
 loadDocument :: (Collection a, MonadStorage m) => DocId a -> m (Document a)

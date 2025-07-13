@@ -26,7 +26,7 @@ import System.Process.Typed (
  )
 
 minimumStylishness :: Double
-minimumStylishness = 0.2
+minimumStylishness = 0.3
 
 main :: IO ()
 main =
@@ -96,6 +96,7 @@ checkWidth file = do
     and <$> for (zip [1 :: Int ..] $ Text.lines content) \(n, line) ->
         if Text.length line > 80
             then do
-                hPutStrLn stderr $ intercalate ":" [file, show n, "line is too long"]
+                hPutStrLn stderr $
+                    intercalate ":" [file, show n, "line is too long"]
                 pure False
             else pure True

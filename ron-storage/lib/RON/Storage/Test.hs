@@ -6,25 +6,38 @@
 
 module RON.Storage.Test (TestDB, runStorageSim) where
 
-import           RON.Prelude
+import RON.Prelude
 
-import qualified Data.ByteString.Lazy.Char8 as BSLC
-import           Data.Functor.Compose (Compose (Compose), getCompose)
-import           Data.Map.Strict ((!), (!?))
-import qualified Data.Map.Strict as Map
+import Data.ByteString.Lazy.Char8 qualified as BSLC
+import Data.Functor.Compose (Compose (Compose), getCompose)
+import Data.Map.Strict ((!), (!?))
+import Data.Map.Strict qualified as Map
 
-import           RON.Error (Error)
-import           RON.Event (OriginVariety (ApplicationSpecific), ReplicaClock,
-                            mkReplica)
-import           RON.Event.Simulation (ReplicaSimT, runNetworkSimT,
-                                       runReplicaSimT)
+import RON.Error (Error)
+import RON.Event (
+    OriginVariety (ApplicationSpecific),
+    ReplicaClock,
+    mkReplica,
+ )
+import RON.Event.Simulation (
+    ReplicaSimT,
+    runNetworkSimT,
+    runReplicaSimT,
+ )
 
-import           RON.Storage (Collection, CollectionName, collectionName)
-import           RON.Storage.Backend (DocId (DocId), DocVersion, MonadStorage,
-                                      changeDocId, deleteVersion,
-                                      getCollections, getDocumentVersions,
-                                      getDocuments, loadVersionContent,
-                                      saveVersionContent)
+import RON.Storage (Collection, CollectionName, collectionName)
+import RON.Storage.Backend (
+    DocId (DocId),
+    DocVersion,
+    MonadStorage,
+    changeDocId,
+    deleteVersion,
+    getCollections,
+    getDocumentVersions,
+    getDocuments,
+    loadVersionContent,
+    saveVersionContent,
+ )
 
 type TestDB = Map CollectionName (Map DocumentId (Map DocVersion Document))
 
@@ -39,13 +52,14 @@ newtype StorageSim a = StorageSim (StateT TestDB (ReplicaSimT (Either Error)) a)
 
 runStorageSim :: TestDB -> StorageSim a -> Either Error (a, TestDB)
 runStorageSim db (StorageSim action) =
-    runNetworkSimT $ runReplicaSimT (mkReplica ApplicationSpecific 34) $
-    runStateT action db
+    runNetworkSimT $
+        runReplicaSimT (mkReplica ApplicationSpecific 34) $
+            runStateT action db
 
 instance MonadStorage StorageSim where
     getCollections = StorageSim $ gets Map.keys
 
-    getDocuments :: forall a . Collection a => StorageSim [DocId a]
+    getDocuments :: forall a. (Collection a) => StorageSim [DocId a]
     getDocuments = StorageSim $ do
         db <- get
         pure $ map DocId $ Map.keys $ db !. collectionName @a
@@ -58,10 +72,10 @@ instance MonadStorage StorageSim where
         let document = BSLC.lines content
         let insertDocumentVersion =
                 Just . Map.insertWith (<>) version document . fromMaybe mempty
-        let alterDocument
-                = Just
-                . Map.alter insertDocumentVersion docid
-                . fromMaybe mempty
+        let alterDocument =
+                Just
+                    . Map.alter insertDocumentVersion docid
+                    . fromMaybe mempty
         let alterCollection = Map.alter alterDocument (collectionName @a)
         StorageSim $ modify' alterCollection
 
@@ -69,23 +83,25 @@ instance MonadStorage StorageSim where
         db <- get
         pure $ BSLC.unlines $ db !. collectionName @a !. dir ! version
 
-    deleteVersion (DocId doc :: DocId a) version
-        = StorageSim
-        . modify'
-        . (`Map.adjust` collectionName @a)
-        . (`Map.adjust` doc)
-        $ Map.delete version
+    deleteVersion (DocId doc :: DocId a) version =
+        StorageSim
+            . modify'
+            . (`Map.adjust` collectionName @a)
+            . (`Map.adjust` doc)
+            $ Map.delete version
 
     changeDocId (DocId old :: DocId a) (DocId new :: DocId a) = StorageSim $
-        modify' $ (`Map.adjust` collectionName @a) $ \collection ->
-            maybe collection (uncurry $ Map.insert new) $
-            mapTake old collection
+        modify' $
+            (`Map.adjust` collectionName @a) \collection ->
+                maybe collection (uncurry $ Map.insert new) $
+                    mapTake old collection
 
-(!.) :: Ord a => Map a (Map b c) -> a -> Map b c
+(!.) :: (Ord a) => Map a (Map b c) -> a -> Map b c
 m !. a = fromMaybe Map.empty $ m !? a
 
-mapTake :: Ord k => k -> Map k a -> Maybe (a, Map k a)
-mapTake k = getCompose . Map.alterF (Compose . f) k where
+mapTake :: (Ord k) => k -> Map k a -> Maybe (a, Map k a)
+mapTake k = getCompose . Map.alterF (Compose . f) k
+  where
     f = \case
         Nothing -> Nothing
-        Just a  -> Just (a, Nothing)
+        Just a -> Just (a, Nothing)

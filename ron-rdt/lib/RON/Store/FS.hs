@@ -29,8 +29,8 @@ import Control.Concurrent.STM (
  )
 import Control.Exception (throwIO)
 import Data.Bits (shiftL)
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSLC
+import Data.ByteString.Lazy qualified as BSL
+import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.Foldable (find)
 import Data.IORef (newIORef)
 import Network.Info (MAC (MAC), getNetworkInterfaces, mac)
@@ -67,7 +67,7 @@ import RON.Text.Parse (parseOpenFrame)
 import RON.Text.Serialize.Experimental (serializeOpenFrame)
 import RON.Types (Op (..), UUID)
 import RON.Types.Experimental (Patch (..))
-import qualified RON.UUID as UUID
+import RON.UUID qualified as UUID
 import RON.Util.Word (Word60, leastSignificant60)
 
 -- | Store handle (uses the “Handle pattern”).

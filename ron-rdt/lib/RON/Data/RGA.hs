@@ -129,7 +129,7 @@ vertexListToOps v@VertexList{..} = go listHead listItems
             rest = case itemNext of
                 Just next -> go next (HashMap.delete root items)
                 Nothing -> []
-         in itemValue : rest
+        in itemValue : rest
 
 vertexListFromOps :: [Vertex] -> Maybe VertexList
 vertexListFromOps = foldr go mempty
@@ -268,8 +268,11 @@ reapplyPatchesToOtherPatches ps@PatchSet{..} =
             pure
                 ps
                     { psPatches =
-                        Map.insert targetParent (VertexList targetHead targetItems') $
-                            Map.delete parent psPatches
+                        Map.insert
+                            targetParent
+                            (VertexList targetHead targetItems')
+                            . Map.delete parent
+                            $ psPatches
                     }
         | (parent, patch) <- Map.assocs psPatches
         , (targetParent, targetPatch) <- Map.assocs psPatches
@@ -411,23 +414,24 @@ edit newItems =
         -- 'Replicated'
         let diff = getGroupedDiffBy eqAliveOnPayload stateBody newItems'
         (stateBody', Last lastEvent) <-
-            runWriterT $ fold <$> for diff \case
-                First removed -> do
-                    tombstones <- getEventUuids $ genericLength removed
-                    for (zip removed tombstones) \case
-                        (op@Op{refId = Zero}, tombstone) -> do
-                            -- not deleted yet
-                            tell . Last $ Just tombstone
-                            pure op{refId = tombstone}
-                        (op, _) ->
-                            -- deleted already
-                            pure op
-                Both v _ -> pure v
-                Second added -> do
-                    opIds <- getEventUuids $ genericLength added
-                    for (zip added opIds) \(op, opId) -> do
-                        tell . Last $ Just opId
-                        pure op{opId}
+            runWriterT $
+                fold <$> for diff \case
+                    First removed -> do
+                        tombstones <- getEventUuids $ genericLength removed
+                        for (zip removed tombstones) \case
+                            (op@Op{refId = Zero}, tombstone) -> do
+                                -- not deleted yet
+                                tell . Last $ Just tombstone
+                                pure op{refId = tombstone}
+                            (op, _) ->
+                                -- deleted already
+                                pure op
+                    Both v _ -> pure v
+                    Second added -> do
+                        opIds <- getEventUuids $ genericLength added
+                        for (zip added opIds) \(op, opId) -> do
+                            tell . Last $ Just opId
+                            pure op{opId}
         pure $ case lastEvent of
             Nothing -> chunk
             Just _ -> StateChunk stateBody'

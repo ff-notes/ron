@@ -41,9 +41,9 @@ module RON.Data (
 
 import RON.Prelude
 
-import qualified Data.List.NonEmpty as NonEmpty
+import Data.List.NonEmpty qualified as NonEmpty
 import Data.Map.Strict ((!?))
-import qualified Data.Map.Strict as Map
+import Data.Map.Strict qualified as Map
 
 import RON.Data.Internal
 import RON.Data.LWW (LwwRep)
@@ -142,7 +142,7 @@ mkWireReducer obj chunks = chunks' <> leftovers
                     applyPatches nState (patches, closedOps)
                 reducedStateBody = stateToChunk @a reducedState
                 rc = ReducedChunk{rcRef = Zero, rcBody = reducedStateBody}
-             in
+            in
                 (Just $ Value $ wrapRChunk rc, reduceUnappliedPatches @a unapplied')
     typ = reducibleOpType @a
     wrapOp = ClosedOp typ obj
@@ -186,7 +186,7 @@ reduceStateFrame s1 s2 =
     (`execStateT` s1) . (`Map.traverseWithKey` s2) $ \oid chunk ->
         let
             WireStateChunk{stateType} = chunk
-         in
+        in
             case reducers !? stateType of
                 Just Reducer{stateReducer} ->
                     modify' $ Map.insertWith stateReducer oid chunk
