@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedRecordDot #-}
@@ -48,7 +49,7 @@ readObject ::
     Ref a ->
     m (Maybe a)
 readObject object@(Ref objectId _) =
-    errorContext ("readObject " <> show object) $ do
+    errorContext ("readObject " <> show object) do
         ops <- loadSubObjectLog object mempty
         case ops of
             [] -> pure Nothing
@@ -57,7 +58,7 @@ readObject object@(Ref objectId _) =
 loadSubObjectLog ::
     (MonadE m, MonadStore m, Typeable a) => Ref a -> VV -> m [Op]
 loadSubObjectLog object@(Ref objectId path) version =
-    errorContext ("loadSubObjectLog " <> show object) $ do
+    errorContext ("loadSubObjectLog " <> show object) do
         ops <- loadWholeObjectLog objectId version
         pure
             [ op{payload = payload'}

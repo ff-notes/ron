@@ -58,7 +58,11 @@ instance Show Peer where
             nullURI
                 { uriScheme = "ws:"
                 , uriAuthority =
-                    Just nullURIAuth{uriRegName = host, uriPort = ':' : show port}
+                    Just
+                        nullURIAuth
+                            { uriRegName = host
+                            , uriPort = ':' : show port
+                            }
                 }
 
 data Options = Options
@@ -109,30 +113,26 @@ parseOptions =
     parserInfo = i parser "RON demo chat application"
 
 parser :: Parser Options
-parser =
-    do
-        database <-
-            strOption
-                ( long "data"
-                    <> metavar "FILE"
-                    <> help "database (default: ./ron-demo-chat.sqlite)"
-                    <> value "./ron-demo-chat.sqlite"
-                )
-        logFile <-
-            strOption
-                ( long "log"
-                    <> metavar "FILE"
-                    <> help "logfile (default: ./log.txt)"
-                    <> value "./log.txt"
-                )
-        cmd <-
-            subparser
-                ( command "show" (i pShow "Offline: Show chat messages and exit")
-                    <> command "post" (i pPost "Offline: Post messages to chat")
-                    <> command "node" (i pNode "Start node without UI")
-                    <> command "ui" (i pUI "Start UI with network node")
-                )
-        pure Options{database, logFile, cmd}
+parser = do
+    database <-
+        strOption $
+            long "data"
+                <> metavar "FILE"
+                <> help "database (default: ./ron-demo-chat.sqlite)"
+                <> value "./ron-demo-chat.sqlite"
+    logFile <-
+        strOption $
+            long "log"
+                <> metavar "FILE"
+                <> help "logfile (default: ./log.txt)"
+                <> value "./log.txt"
+    cmd <-
+        subparser $
+            command "show" (i pShow "Offline: Show chat messages and exit")
+                <> command "post" (i pPost "Offline: Post messages to chat")
+                <> command "node" (i pNode "Start node without UI")
+                <> command "ui" (i pUI "Start UI with network node")
+    pure Options{database, logFile, cmd}
   where
     pShow = pure Show
 
@@ -151,27 +151,29 @@ parser =
 nodeOptions :: Parser NodeOptions
 nodeOptions = do
     peers <-
-        many
-            $ option
+        many $
+            option
                 readPeer
                 ( long "peer"
                     <> metavar "PORT"
                     <> help "Connect to localhost peers using specifed ports"
                 )
     listenPorts <-
-        many
-            $ option
+        many $
+            option
                 auto
                 ( long "listen"
                     <> metavar "PORT"
-                    <> help "Run server on specified port and accept connections"
+                    <> help
+                        "Run server on specified port and accept connections"
                 )
     listenHost <-
         flag
             Localhost
             AnyAddress
             ( long "listen-any"
-                <> help "Run server on any IP interface (::), default is localhost"
+                <> help
+                    "Run server on any IP interface (::), default is localhost"
             )
     pure NodeOptions{peers, listenPorts, listenHost}
 
@@ -181,7 +183,8 @@ readPeer =
         uri <-
             maybe
                 ( Left
-                    "Peer must be set as 'ws://HOST:PORT' or 'ws://:PORT' for localhost"
+                    "Peer must be set as 'ws://HOST:PORT'\
+                    \ or 'ws://:PORT' for localhost"
                 )
                 Right
                 (parseAbsoluteURI str)
