@@ -29,6 +29,7 @@ import Control.Concurrent.STM (
  )
 import Control.Exception (throwIO)
 import Data.Bits (shiftL)
+import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Lazy.Char8 qualified as BSLC
 import Data.Foldable (find)
@@ -122,8 +123,9 @@ loadWholeObjectLogFS objectId version = do
             pure Nothing
         else do
             let patchFile = objectLogsDir </> patchName
-            patchContent <- tryIO $ BSL.readFile patchFile
-            patch <- liftEitherString $ parseOpenFrame patchContent
+            patchContent <- tryIO $ BS.readFile patchFile
+            patch <-
+                liftEitherString $ parseOpenFrame $ BSL.fromStrict patchContent
             pure $ Just patch
 
 appendPatchFS :: Patch -> Store ()
