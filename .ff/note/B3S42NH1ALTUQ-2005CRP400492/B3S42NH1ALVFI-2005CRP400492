@@ -1,0 +1,13 @@
+*set	#B/7lWgm2fkVQ+00gDu8014Y	!
+	@`]Wf	>start 2020 6 11
+	@]X8	>status >Archived
+	@)b	>text >B/7lWgm2fkXv+00gDu8014Y
+	@]mO	>track >B/7lWgm2fkmh+00gDu8014Y
+*rga	#]Xv	@0	!
+	@`]Y4	%f 'Add indexing of NoteView.tags with their UUID or URI\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/230)\n<!-- Reviewable:end -->\n'
+*set	#]mh	@0	!
+	@`)r	>externalId '230'
+	@]rr	>provider 'github'
+	@]s	>source 'ff-notes/ff'
+	@)A	>url 'https://github.com/ff-notes/ff/pull/230'
+.

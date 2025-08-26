@@ -1,0 +1,18 @@
+*set	#B/7lWgm2unjI+00gDu8014Y	!
+	@`]kO	>start 2018 7 30
+	@)r	>status >Active
+	@]l	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)K	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)U	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@)n	>tags >B/7lWgm2gSeQ+00gDu8014Y
+	@)x	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@]mG	>text >B/7lWgm2unmQ+00gDu8014Y
+	@}o0t	>track >B/7lWgm2uo1M+00gDu8014Y
+*rga	#]mQ	@0	!
+	@`)j	%f 'Support multiple external note sources\n\nCreate a dedicated table for sources'
+*set	#}o1M	@0	!
+	@`)f	>externalId '83'
+	@)p	>provider 'github'
+	@]28	>source 'ff-notes/ff'
+	@)I	>url 'https://github.com/ff-notes/ff/issues/83'
+.

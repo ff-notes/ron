@@ -1,0 +1,13 @@
+*set	#B/7lWgm2j666+00gDu8014Y	!
+	@`)t	>start 2019 10 3
+	@]7C	>status >Archived
+	@)W	>text >B/7lWgm2j67p+00gDu8014Y
+	@]R2	>track >B/7lWgm2j6RW+00gDu8014Y
+*rga	#]7p	@0	!
+	@`)z	%f 'Filter untagged note\n\nResolves #178\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/186)\n<!-- Reviewable:end -->\n'
+*set	#]RW	@0	!
+	@`)f	>externalId '186'
+	@)z	>provider 'github'
+	@]S8	>source 'ff-notes/ff'
+	@)I	>url 'https://github.com/ff-notes/ff/pull/186'
+.

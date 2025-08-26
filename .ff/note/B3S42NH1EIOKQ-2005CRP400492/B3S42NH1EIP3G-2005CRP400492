@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vMAQ+00gDu8014Y	!
+	@`]BC	>start 2018 6 16
+	@)W	>status >Archived
+	@)z	>text >B/7lWgm2vMC8+00gDu8014Y
+	@]GC	>track >B/7lWgm2vMGW+00gDu8014Y
+*rga	#]C8	@0	!
+	@`)I	%f 'Github sync: extract repository address from git remote \"origin\"'
+*set	#]GW	@0	!
+	@`)f	>externalId '58'
+	@)p	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]HI	>url 'https://github.com/ff-notes/ff/issues/58'
+.

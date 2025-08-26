@@ -1,0 +1,13 @@
+*set	#B/7lO04eiD4M+00gDu8014Y	!
+	@`]64	>start 2020 6 12
+	@)Y	>status >Archived
+	@)r	>text >B/7lO04eiD7A+00gDu8014Y
+	@]OC	>track >B/7lO04eiDOp+00gDu8014Y
+*rga	#]7A	@0	!
+	@`)U	%f 'Fix travis build\n\nAdd npm to deps, as requested by apt.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ron/154)\n<!-- Reviewable:end -->\n'
+*set	#]Op	@0	!
+	@`)z	>externalId '154'
+	@]PI	>provider 'github'
+	@)b	>source 'ff-notes/ron'
+	@)l	>url 'https://github.com/ff-notes/ron/pull/154'
+.

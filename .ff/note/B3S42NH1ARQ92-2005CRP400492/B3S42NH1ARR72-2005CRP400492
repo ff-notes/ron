@@ -1,0 +1,13 @@
+*set	#B/7lWgm2gU_Y+00gDu8014Y	!
+	@`]aK	>start 2019 12 18
+	@)d	>status >Active
+	@]b6	>text >B/7lWgm2gUbG+00gDu8014Y
+	@]mp	>track >B/7lWgm2gUn8+00gDu8014Y
+*rga	#]bG	@0	!
+	@`)Q	%f 'connect_ editor QTextEdit.textChangedSignal $ saveTheText storage editor\n\n\nhttps://github.com/ff-notes/ff/blob/4617d27ba6e342500bfcf6f28a29f8690731cc76/ff-qtah/FF/Qt/MainWindow.hs#L123-L126\n\n* Found on master\n\n'
+*set	#]n8	@0	!
+	@`)I	>externalId '219'
+	@)b	>provider 'github'
+	@)l	>source 'ff-notes/ff'
+	@)v	>url 'https://github.com/ff-notes/ff/issues/219'
+.

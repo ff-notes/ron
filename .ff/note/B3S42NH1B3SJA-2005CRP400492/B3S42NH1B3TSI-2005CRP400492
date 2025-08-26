@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hV9f+00gDu8014Y	!
+	@`]AS	>start 2019 11 5
+	@)v	>status >Archived
+	@]BE	>text >B/7lWgm2hVBO+00gDu8014Y
+	@]S_	>track >B/7lWgm2hVSt+00gDu8014Y
+*rga	#]BO	@0	!
+	@`)h	%f 'Use `txt` extension for temporary externally edited files\n\nTo improve UX of VS Code usage.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/209)\n<!-- Reviewable:end -->\n'
+*set	#]St	@0	!
+	@`]T2	>externalId '209'
+	@)M	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/pull/209'
+.

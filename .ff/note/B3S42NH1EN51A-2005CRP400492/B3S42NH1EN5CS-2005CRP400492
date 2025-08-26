@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vuGf+00gDu8014Y	!
+	@`]HS	>start 2018 4 2
+	@)v	>status >Archived
+	@]IE	>text >B/7lWgm2vuIO+00gDu8014Y
+	@]Kt	>track >B/7lWgm2vuL2+00gDu8014Y
+*rga	#]IO	@0	!
+	@`)Y	%f 'Unit test for parsing config'
+*set	#]L2	@0	!
+	@`)C	>externalId '37'
+	@)W	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/issues/37'
+.

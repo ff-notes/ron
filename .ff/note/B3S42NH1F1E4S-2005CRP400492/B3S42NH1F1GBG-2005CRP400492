@@ -1,0 +1,16 @@
+*set	#B/7lWgm2xBYS+00gDu8014Y	!
+	@`]eU	>start 2018 1 8
+	@)x	>status >Active
+	@]fG	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)_	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)j	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@]g2	>text >B/7lWgm2xBgM+00gDu8014Y
+	@]z_	>track >B/7lWgm2xB~2+00gDu8014Y
+*rga	#]gM	@0	!
+	@`)f	%f 'Links between notes\n\nUse for:\r\n- dependencies\r\n- tags (#20)\r\n- contexts (#21)\r\n- contact contexts (#22)\r\n\r\nImplementation variants:\r\n1. A field in Note with a set of links (incoming, outgoing).\r\n2. A separate type Link{from, to :: DocId Note}\r\n3. Something else?'
+*set	#]~2	@0	!
+	@`)C	>externalId '19'
+	@}C4W	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)z	>url 'https://github.com/ff-notes/ff/issues/19'
+.

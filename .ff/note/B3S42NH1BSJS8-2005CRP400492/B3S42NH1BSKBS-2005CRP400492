@@ -1,0 +1,13 @@
+*set	#B/7lWgm2k_z8+00gDu8014Y	!
+	@`]~4	>start 2019 9 1
+	@)O	>status >Archived
+	@)h	>text >B/7lWgm2ka+00gDu8014Y
+	@}a4O	>track >B/7lWgm2ka4h+00gDu8014Y
+*rga	#}a	@0	!
+	@`)A	%f 'Fetch github tags when tracking\n\nLook at `issueToNote` of `Github.hs`'
+*set	#]4h	@0	!
+	@`)r	>externalId '168'
+	@]5	>provider 'github'
+	@)K	>source 'ff-notes/ff'
+	@)U	>url 'https://github.com/ff-notes/ff/issues/168'
+.

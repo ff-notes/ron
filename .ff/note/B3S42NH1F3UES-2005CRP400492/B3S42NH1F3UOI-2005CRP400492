@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xVcS+00gDu8014Y	!
+	@`]dE	>start 2018 1 8
+	@)Y	>status >Archived
+	@)r	>text >B/7lWgm2xVe+00gDu8014Y
+	@]fj	>track >B/7lWgm2xVft+00gDu8014Y
+*rga	#]e	@0	!
+	@`)A	%f 'Import from gmail'
+*set	#]ft	@0	!
+	@`]gC	>externalId '11'
+	@)M	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/issues/11'
+.

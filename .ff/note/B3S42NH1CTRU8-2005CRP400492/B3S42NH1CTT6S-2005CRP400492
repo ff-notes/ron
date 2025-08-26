@@ -1,0 +1,16 @@
+*set	#B/7lWgm2oj~8+00gDu8014Y	!
+	@`}k0h	>start 2019 3 19
+	@]1A	>status >Active
+	@)d	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)n	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)x	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@]2Q	>text >B/7lWgm2ok2_+00gDu8014Y
+	@]HQ	>track >B/7lWgm2okHt+00gDu8014Y
+*rga	#}k2_	@0	!
+	@`)t	%f 'Add `--color=auto/always/never`\n\nAs in git\r\n\r\nAlso, check terminal detection under docker.\r\n\r\nalways — colorize the output unconditionally\r\nnever — do not colorize the output\r\nauto [default] — detect if we are running in a terminal (isatty?) and colorize only if in terminal'
+*set	#]Ht	@0	!
+	@`]IC	>externalId '137'
+	@)M	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/issues/137'
+.

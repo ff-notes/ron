@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hWKz+00gDu8014Y	!
+	@`]Ll	>start 2019 11 5
+	@]M4	>status >Archived
+	@)O	>text >B/7lWgm2hWMh+00gDu8014Y
+	@]_v	>track >B/7lWgm2hWaE+00gDu8014Y
+*rga	#]Mh	@0	!
+	@`)r	%f 'Add message about waiting for editor\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/208)\n<!-- Reviewable:end -->\n'
+*set	#]aE	@0	!
+	@`)Y	>externalId '208'
+	@)h	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]bA	>url 'https://github.com/ff-notes/ff/pull/208'
+.

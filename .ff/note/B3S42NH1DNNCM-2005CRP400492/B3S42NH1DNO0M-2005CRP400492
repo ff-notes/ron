@@ -1,0 +1,16 @@
+*set	#B/7lWgm2ryrM+00gDu8014Y	!
+	@`]tO	>start 2019 2 7
+	@)r	>status >Active
+	@]uK	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)d	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@)n	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@]vG	>text >B/7lWgm2ryv_+00gDu8014Y
+	@]zK	>track >B/7lWgm2ryzd+00gDu8014Y
+*rga	#]v_	@0	!
+	@`)t	%f 'export to org-mode format\n\nwith UUID as metadata'
+*set	#]zd	@0	!
+	@`)x	>externalId '119'
+	@]~6	>provider 'github'
+	@)Q	>source 'ff-notes/ff'
+	@)j	>url 'https://github.com/ff-notes/ff/issues/119'
+.

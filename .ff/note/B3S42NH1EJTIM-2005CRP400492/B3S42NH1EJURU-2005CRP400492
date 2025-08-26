@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vVPM+00gDu8014Y	!
+	@`]Q8	>start 2018 5 26
+	@)b	>status >Archived
+	@)v	>text >B/7lWgm2vVR4+00gDu8014Y
+	@]hG	>track >B/7lWgm2vVhj+00gDu8014Y
+*rga	#]R4	@0	!
+	@`)E	%f 'Github hash shows with version\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/50)\n<!-- Reviewable:end -->\n'
+*set	#]hj	@0	!
+	@`)t	>externalId '50'
+	@]i2	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)W	>url 'https://github.com/ff-notes/ff/pull/50'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vKVr+00gDu8014Y	!
+	@`]Wd	>start 2018 6 21
+	@)x	>status >Archived
+	@]XG	>text >B/7lWgm2vKX_+00gDu8014Y
+	@]b_	>track >B/7lWgm2vKbt+00gDu8014Y
+*rga	#]X_	@0	!
+	@`)j	%f 'import issues (GitHub -> ff)\n\n- [ ] implement this feature\r\n- [ ] import ff notes'
+*set	#]bt	@0	!
+	@`]c2	>externalId '60'
+	@)M	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/issues/60'
+.

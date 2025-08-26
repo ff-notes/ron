@@ -1,0 +1,13 @@
+*set	#B/7lWgm2ssaM+00gDu8014Y	!
+	@`]bI	>start 2018 12 15
+	@)b	>status >Archived
+	@)v	>text >B/7lWgm2ssc4+00gDu8014Y
+	@]uW	>track >B/7lWgm2ssup+00gDu8014Y
+*rga	#]c4	@0	!
+	@`)O	%f '[#86] Use modern prettyprinter\n\nResolves #86\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/112)\n<!-- Reviewable:end -->\n'
+*set	#]up	@0	!
+	@`]v8	>externalId '112'
+	@)I	>provider 'github'
+	@)b	>source 'ff-notes/ff'
+	@)l	>url 'https://github.com/ff-notes/ff/pull/112'
+.

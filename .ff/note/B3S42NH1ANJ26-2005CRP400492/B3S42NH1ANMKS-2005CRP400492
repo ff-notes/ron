@@ -1,0 +1,16 @@
+*set	#B/7lWgm2fxm6+00gDu8014Y	!
+	@`]o8	>start 2020 6 4
+	@)l	>status >Archived
+	@]p4	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)O	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)Y	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@]q	>text >B/7lWgm2fxqA+00gDu8014Y
+	@}ycn	>track >B/7lWgm2fyd_+00gDu8014Y
+*rga	#]qA	@0	!
+	@`)U	%f 'JSON input and output for scripting\n\nExample for `show` subcommand:\r\n\r\n```\r\n$ ff show B3Q6V9RBBJJTU-2005CRP400492\r\n* check https://getpocket.com/\r\n\r\n  | id B3Q6V9RBBJJTU-2005CRP400492 | start 2019-03-05\r\n\r\nDatabase: /Users/cblp/Yandex.Disk.localized/Apps/ff\r\n\r\n$ ff show --json B3Q6V9RBBJJTU-2005CRP400492\r\n{ \"text\": \"check https://getpocket.com/\"\r\n, \"start\": \"2019-03-05\"\r\n, \"id\": \"B3Q6V9RBBJJTU-2005CRP400492\"\r\n, \"database\": \"/Users/cblp/Yandex.Disk.localized/Apps/ff\"\r\n}\r\n```\r\n\r\nThis is needed for all commands.'
+*set	#}yd_	@0	!
+	@`)t	>externalId '228'
+	@]eC	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/issues/228'
+.

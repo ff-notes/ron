@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xUCC+00gDu8014Y	!
+	@`)z	>start 2018 1 8
+	@]DI	>status >Archived
+	@)b	>text >B/7lWgm2xUDl+00gDu8014Y
+	@]KK	>track >B/7lWgm2xUKd+00gDu8014Y
+*rga	#]Dl	@0	!
+	@`]E4	%f 'Delete merged version files\n\nHandle parallel execution effects, like unexpected version file disappearance.'
+*set	#]Kd	@0	!
+	@`)n	>externalId '13'
+	@]L6	>provider 'github'
+	@)G	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/issues/13'
+.

@@ -1,0 +1,15 @@
+*set	#B/7lWgm2mXOn+00gDu8014Y	!
+	@`]Qp	>start 2019 4 1
+	@]RI	>status >Archived
+	@)b	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)v	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@]SE	>text >B/7lWgm2mXSY+00gDu8014Y
+	@]Xr	>track >B/7lWgm2mXYA+00gDu8014Y
+*rga	#]SY	@0	!
+	@`)h	%f 'Add useful commands to .vscode/tasks.json\n\nstylish-haskell\r\nstack repl\r\nstack test'
+*set	#]YA	@0	!
+	@`)U	>externalId '149'
+	@)d	>provider 'github'
+	@)x	>source 'ff-notes/ff'
+	@]Z6	>url 'https://github.com/ff-notes/ff/issues/149'
+.

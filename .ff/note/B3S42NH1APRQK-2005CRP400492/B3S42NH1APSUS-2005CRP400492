@@ -1,0 +1,13 @@
+*set	#B/7lWgm2gEyK+00gDu8014Y	!
+	@`]zG	>start 2019 12 18
+	@)_	>status >Archived
+	@)t	>text >B/7lWgm2gE~C+00gDu8014Y
+	@}FD_	>track >B/7lWgm2gFDt+00gDu8014Y
+*rga	#]~C	@0	!
+	@`)M	%f 'Travis: Use apt declaratively\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/222)\n<!-- Reviewable:end -->\n'
+*set	#}FDt	@0	!
+	@`]EC	>externalId '222'
+	@)M	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/pull/222'
+.

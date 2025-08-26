@@ -1,0 +1,13 @@
+*set	#B/7lWgm2x_gf+00gDu8014Y	!
+	@`]hS	>start 2018 1 8
+	@)v	>status >Archived
+	@]iE	>text >B/7lWgm2x_iO+00gDu8014Y
+	@}a36	>track >B/7lWgm2xa3Q+00gDu8014Y
+*rga	#]iO	@0	!
+	@`)h	%f 'Setting dataDir should prompt to create it\n\nOtherwise, until a first note recorded:\r\n```\r\n$ ff\r\nff: /home/user/.local/share/ff/note: getDirectoryContents:openDirStream: does not exist (No such file or directory)\r\n```'
+*set	#}a3Q	@0	!
+	@`)_	>externalId '7'
+	@)t	>provider 'github'
+	@]42	>source 'ff-notes/ff'
+	@)M	>url 'https://github.com/ff-notes/ff/issues/7'
+.

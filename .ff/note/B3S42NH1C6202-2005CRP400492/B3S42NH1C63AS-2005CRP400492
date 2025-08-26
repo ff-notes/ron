@@ -1,0 +1,13 @@
+*set	#B/7lWgm2llW2+00gDu8014Y	!
+	@`)p	>start 2019 4 19
+	@]X8	>status >Archived
+	@)S	>text >B/7lWgm2llXb+00gDu8014Y
+	@]oj	>track >B/7lWgm2llpC+00gDu8014Y
+*rga	#]Xb	@0	!
+	@`)v	%f 'Make error comprehensible\n\nResolves #139\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/156)\n<!-- Reviewable:end -->\n'
+*set	#]pC	@0	!
+	@`)M	>externalId '156'
+	@)W	>provider 'github'
+	@)p	>source 'ff-notes/ff'
+	@)z	>url 'https://github.com/ff-notes/ff/pull/156'
+.

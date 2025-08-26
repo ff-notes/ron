@@ -1,0 +1,16 @@
+*set	#B/7lWgm2qIQQ+00gDu8014Y	!
+	@`]S8	>start 2019 2 25
+	@)b	>status >Active
+	@)v	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@]TE	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)O	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)r	>text >B/7lWgm2qIU+00gDu8014Y
+	@]Yr	>track >B/7lWgm2qIZA+00gDu8014Y
+*rga	#]U	@0	!
+	@`)K	%f 'git: stage versions unconditionally, even if working in the same branch'
+*set	#]ZA	@0	!
+	@`)U	>externalId '128'
+	@)d	>provider 'github'
+	@)x	>source 'ff-notes/ff'
+	@]_6	>url 'https://github.com/ff-notes/ff/issues/128'
+.

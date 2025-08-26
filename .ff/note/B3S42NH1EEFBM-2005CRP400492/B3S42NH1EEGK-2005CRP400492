@@ -1,0 +1,13 @@
+*set	#B/7lWgm2uoqr+00gDu8014Y	!
+	@`]rn	>start 2018 7 28
+	@]s6	>status >Archived
+	@)Q	>text >B/7lWgm2uos_+00gDu8014Y
+	@}p8I	>track >B/7lWgm2up8b+00gDu8014Y
+*rga	#]s_	@0	!
+	@`)t	%f 'Archive issue after the one closed on github\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/82)\n<!-- Reviewable:end -->\n'
+*set	#}p8b	@0	!
+	@`)l	>externalId '82'
+	@]94	>provider 'github'
+	@)E	>source 'ff-notes/ff'
+	@)O	>url 'https://github.com/ff-notes/ff/pull/82'
+.

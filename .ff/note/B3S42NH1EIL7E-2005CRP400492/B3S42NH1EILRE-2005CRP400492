@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vLJj+00gDu8014Y	!
+	@`]KW	>start 2018 6 16
+	@)p	>status >Active
+	@]L8	>text >B/7lWgm2vLLS+00gDu8014Y
+	@]SA	>track >B/7lWgm2vLSU+00gDu8014Y
+*rga	#]LS	@0	!
+	@`)b	%f 'export issue status (ff -> GitHub)\n\nclose GitHub issue and sync it with ff when a user tries to complete the task in ff'
+*set	#]SU	@0	!
+	@`)d	>externalId '59'
+	@)n	>provider 'github'
+	@]T6	>source 'ff-notes/ff'
+	@)G	>url 'https://github.com/ff-notes/ff/issues/59'
+.

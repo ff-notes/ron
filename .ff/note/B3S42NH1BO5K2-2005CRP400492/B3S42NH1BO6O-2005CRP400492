@@ -1,0 +1,13 @@
+*set	#B/7lWgm2k1Q2+00gDu8014Y	!
+	@`)z	>start 2019 9 23
+	@]RI	>status >Archived
+	@)b	>text >B/7lWgm2k1Rl+00gDu8014Y
+	@]fI	>track >B/7lWgm2k1fb+00gDu8014Y
+*rga	#]Rl	@0	!
+	@`)v	%f 'Add option to add tags to existing note\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/175)\n<!-- Reviewable:end -->\n'
+*set	#]fb	@0	!
+	@`)v	>externalId '175'
+	@]g4	>provider 'github'
+	@)O	>source 'ff-notes/ff'
+	@)Y	>url 'https://github.com/ff-notes/ff/pull/175'
+.

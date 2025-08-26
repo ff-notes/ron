@@ -1,0 +1,13 @@
+*set	#B/7lO04ehtbC+00gDu8014Y	!
+	@`]cS	>start 2021 8 17
+	@)v	>status >Archived
+	@]dE	>text >B/7lO04ehtdY+00gDu8014Y
+	@}u0b	>track >B/7lO04ehu0v+00gDu8014Y
+*rga	#]dY	@0	!
+	@`)r	%f 'garden: greatly simplified lensing implementation.\n\narea now actually configures affected area rather than affected / 3\r\npoints are mapped withing area, without overlapping the neighborhood.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ron/159)\n<!-- Reviewable:end -->\n'
+*set	#}u0v	@0	!
+	@`]7U	>externalId '159'
+	@)n	>provider 'github'
+	@]8j	>source 'ff-notes/ron'
+	@)t	>url 'https://github.com/ff-notes/ron/pull/159'
+.

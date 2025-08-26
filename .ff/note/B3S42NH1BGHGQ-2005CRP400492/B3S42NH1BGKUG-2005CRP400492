@@ -1,0 +1,13 @@
+*set	#B/7lWgm2j4OQ+00gDu8014Y	!
+	@`]TQ	>start 2019 10 4
+	@)t	>status >Archived
+	@]UC	>text >B/7lWgm2j4UW+00gDu8014Y
+	@}5DE	>track >B/7lWgm2j5Dr+00gDu8014Y
+*rga	#]UW	@0	!
+	@`)f	%f 'Small update of ron-storage dep\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/187)\n<!-- Reviewable:end -->\n'
+*set	#}5Dr	@0	!
+	@`]E	>externalId '187'
+	@)K	>provider 'github'
+	@)U	>source 'ff-notes/ff'
+	@)n	>url 'https://github.com/ff-notes/ff/pull/187'
+.

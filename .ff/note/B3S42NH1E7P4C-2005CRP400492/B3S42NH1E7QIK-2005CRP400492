@@ -1,0 +1,13 @@
+*set	#B/7lWgm2tzIC+00gDu8014Y	!
+	@`]J8	>start 2018 9 1
+	@)S	>status >Archived
+	@)l	>text >B/7lWgm2tzK4+00gDu8014Y
+	@]cb	>track >B/7lWgm2tzd4+00gDu8014Y
+*rga	#]K4	@0	!
+	@`)E	%f 'Add instruction for  completion\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/93)\n<!-- Reviewable:end -->\n'
+*set	#]d4	@0	!
+	@`)E	>externalId '93'
+	@)O	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@)r	>url 'https://github.com/ff-notes/ff/pull/93'
+.

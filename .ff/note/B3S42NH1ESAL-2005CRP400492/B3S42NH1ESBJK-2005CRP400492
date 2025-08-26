@@ -1,0 +1,13 @@
+*set	#B/7lWgm2wYfW+00gDu8014Y	!
+	@`]gI	>start 2018 1 8
+	@)b	>status >Archived
+	@)v	>text >B/7lWgm2wYh4+00gDu8014Y
+	@]tG	>track >B/7lWgm2wYt_+00gDu8014Y
+*rga	#]h4	@0	!
+	@`)E	%f 'Contacts\n\nA contact is a document in the _ff_ database.\r\n\r\nIt must contain one text field (RgaText) — for a human name.\r\n\r\nA note must have a field \"assignee\" of type `[Contact]`, containing a reference (id) to a contact object.'
+*set	#]t_	@0	!
+	@`)j	>externalId '22'
+	@)t	>provider 'github'
+	@]uC	>source 'ff-notes/ff'
+	@)M	>url 'https://github.com/ff-notes/ff/issues/22'
+.

@@ -1,0 +1,14 @@
+*set	#B/7lWgm2vjvU+00gDu8014Y	!
+	@`]wj	>start 2018 5 8
+	@]xC	>status >Archived
+	@)W	>tags >B/7euRTb_HMv+00xXYO6tTI
+	@)z	>text >B/7lWgm2vjy8+00gDu8014Y
+	@}k06	>track >B/7lWgm2vk0Q+00gDu8014Y
+*rga	#]y8	@0	!
+	@`)S	%f 'Start date can\'t be less than current'
+*set	#}k0Q	@0	!
+	@`)_	>externalId '45'
+	@)t	>provider 'github'
+	@]12	>source 'ff-notes/ff'
+	@)C	>url 'https://github.com/ff-notes/ff/issues/45'
+.

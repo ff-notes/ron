@@ -1,0 +1,13 @@
+*set	#B/7lWgm2suEf+00gDu8014Y	!
+	@`]FS	>start 2018 12 14
+	@]d8	>status >Archived
+	@)v	>text >B/7lWgm2sueE+00gDu8014Y
+	@]yE	>track >B/7lWgm2suyY+00gDu8014Y
+*rga	#]eE	@0	!
+	@`)Y	%f 'Option to specify work directory\n\nResolves #109\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/110)\n<!-- Reviewable:end -->\n'
+*set	#]yY	@0	!
+	@`)h	>externalId '110'
+	@]z	>provider 'github'
+	@)A	>source 'ff-notes/ff'
+	@)U	>url 'https://github.com/ff-notes/ff/pull/110'
+.

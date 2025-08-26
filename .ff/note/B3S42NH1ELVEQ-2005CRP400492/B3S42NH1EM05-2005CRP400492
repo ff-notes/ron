@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vksQ+00gDu8014Y	!
+	@`]tM	>start 2018 5 8
+	@)f	>status >Archived
+	@)z	>text >B/7lWgm2vkuI+00gDu8014Y
+	@]y2	>track >B/7lWgm2vl1G+00gDu8014Y
+*rga	#]uI	@0	!
+	@`)S	%f 'Remove comma from agenda messages\n\nFor fast id selecting '
+*set	#}l1G	@0	!
+	@`)Q	>externalId '44'
+	@)j	>provider 'github'
+	@)t	>source 'ff-notes/ff'
+	@]22	>url 'https://github.com/ff-notes/ff/issues/44'
+.

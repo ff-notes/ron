@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xSgx+00gDu8014Y	!
+	@`]hj	>start 2018 1 8
+	@]i2	>status >Archived
+	@)M	>text >B/7lWgm2xSiW+00gDu8014Y
+	@]kE	>track >B/7lWgm2xSkY+00gDu8014Y
+*rga	#]iW	@0	!
+	@`)p	%f 'Edit subcommand'
+*set	#]kY	@0	!
+	@`)h	>externalId '15'
+	@)r	>provider 'github'
+	@]lA	>source 'ff-notes/ff'
+	@)K	>url 'https://github.com/ff-notes/ff/issues/15'
+.

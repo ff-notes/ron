@@ -1,0 +1,13 @@
+*set	#B/7lWgm2kcV4+00gDu8014Y	!
+	@`]WA	>start 2019 8 28
+	@)U	>status >Archived
+	@)x	>text >B/7lWgm2kcX6+00gDu8014Y
+	@}d4j	>track >B/7lWgm2kd5M+00gDu8014Y
+*rga	#]X6	@0	!
+	@`)Q	%f 'Add build files for nix\n\nAdd needed packages to stack.yaml and shell.nix file for development environment\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/166)\n<!-- Reviewable:end -->\n'
+*set	#}d5M	@0	!
+	@`)f	>externalId '166'
+	@)z	>provider 'github'
+	@]68	>source 'ff-notes/ff'
+	@)I	>url 'https://github.com/ff-notes/ff/pull/166'
+.

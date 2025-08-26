@@ -1,0 +1,13 @@
+*set	#B/7lWgm2j8FS+00gDu8014Y	!
+	@`]GO	>start 2019 10 1
+	@)r	>status >Archived
+	@]HA	>text >B/7lWgm2j8HK+00gDu8014Y
+	@]aU	>track >B/7lWgm2j8an+00gDu8014Y
+*rga	#]HK	@0	!
+	@`)U	%f 'Add extended Entity\' and EntityView\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/184)\n<!-- Reviewable:end -->\n'
+*set	#]an	@0	!
+	@`]b6	>externalId '184'
+	@)G	>provider 'github'
+	@)_	>source 'ff-notes/ff'
+	@)j	>url 'https://github.com/ff-notes/ff/pull/184'
+.

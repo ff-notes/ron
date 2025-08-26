@@ -1,0 +1,14 @@
+*set	#B/7lO04eiQX8+00gDu8014Y	!
+	@`]YE	>start 2020 6 12
+	@)h	>status >Archived
+	@]ZA	>tags >B/7lO04eiPfb+00gDu8014Y
+	@)d	>text >B/7lO04eiQZx+00gDu8014Y
+	@]~v	>track >B/7lO04eiR1A+00gDu8014Y
+*rga	#]Zx	@0	!
+	@`]_G	%f 'Update deps\n\n* New stack config with GHC 8.8\r\n* GHC 8.6 config switched to hackage versions of qtah\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ron/153)\n<!-- Reviewable:end -->\n'
+*set	#}R1A	@0	!
+	@`)K	>externalId '153'
+	@)n	>provider 'github'
+	@)x	>source 'ff-notes/ron'
+	@]2G	>url 'https://github.com/ff-notes/ron/pull/153'
+.

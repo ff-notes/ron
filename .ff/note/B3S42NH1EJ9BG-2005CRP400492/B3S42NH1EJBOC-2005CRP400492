@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vQLl+00gDu8014Y	!
+	@`]MY	>start 2018 6 6
+	@)r	>status >Archived
+	@]NA	>text >B/7lWgm2vQNU+00gDu8014Y
+	@]vU	>track >B/7lWgm2vQvn+00gDu8014Y
+*rga	#]NU	@0	!
+	@`)d	%f 'Choose repo by user and list as command\n\nПока не работает. Загвоздка в файле `Main.hs`  в строке 116:\r\n`CmdGithub list -> liftIO $ runCmdGithub list`\r\nгде\r\n`CmdGithub` принимает один аргумент, а `runCmdGithub` два. И не ясно, нужно дополнительную функцию писать или как-то здесь же можно реализовать.\r\n\r\nUpdate: \r\nНашел как сделать. Вопрос снят.\r\n\r\n<!-- Reviewable:start -->\r\n---\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/54)\r\n<!-- Reviewable:end -->\r\n'
+*set	#]vn	@0	!
+	@`]w6	>externalId '54'
+	@)G	>provider 'github'
+	@)_	>source 'ff-notes/ff'
+	@)j	>url 'https://github.com/ff-notes/ff/pull/54'
+.

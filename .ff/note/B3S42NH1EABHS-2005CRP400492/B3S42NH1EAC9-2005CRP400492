@@ -1,0 +1,13 @@
+*set	#B/7lWgm2uItx+00gDu8014Y	!
+	@`]uj	>start 2018 8 22
+	@]vC	>status >Archived
+	@)W	>text >B/7lWgm2uIvf+00gDu8014Y
+	@}J2n	>track >B/7lWgm2uJ36+00gDu8014Y
+*rga	#]vf	@0	!
+	@`)p	%f 'Add Wiki\n\n1. new status `Wiki`\r\n1. `add` adds task\r\n1. `add --wiki` adds wiki\r\n1. `edit` works with both\r\n1. `agenda` doesn\'t list wikis'
+*set	#}J36	@0	!
+	@`)Q	>externalId '88'
+	@)_	>provider 'github'
+	@)t	>source 'ff-notes/ff'
+	@]42	>url 'https://github.com/ff-notes/ff/issues/88'
+.

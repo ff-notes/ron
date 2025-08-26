@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xUvS+00gDu8014Y	!
+	@`]wE	>start 2018 1 8
+	@)Y	>status >Archived
+	@)r	>text >B/7lWgm2xUxA+00gDu8014Y
+	@}V1d	>track >B/7lWgm2xV1n+00gDu8014Y
+*rga	#]xA	@0	!
+	@`)K	%f 'Add notes without subcommand\n\nMake command `ff TEXT` equivalent to `ff new TEXT`'
+*set	#}V1n	@0	!
+	@`]26	>externalId '12'
+	@)G	>provider 'github'
+	@)_	>source 'ff-notes/ff'
+	@)j	>url 'https://github.com/ff-notes/ff/issues/12'
+.

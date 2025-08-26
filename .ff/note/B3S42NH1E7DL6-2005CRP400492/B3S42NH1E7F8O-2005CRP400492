@@ -1,0 +1,13 @@
+*set	#B/7lWgm2twQb+00gDu8014Y	!
+	@`]RO	>start 2018 9 5
+	@)h	>status >Archived
+	@]S	>text >B/7lWgm2twSK+00gDu8014Y
+	@]nW	>track >B/7lWgm2twnp+00gDu8014Y
+*rga	#]SK	@0	!
+	@`)U	%f 'Colorized output\n\n`printOrPage` from [pager](https://github.com/pharpend/pager/blob/master/System/Pager.hs) shows colors when env Pager = `more`. For `less` it does not. `less` required flag `-r` to show colors.\r\n\r\nWe wait until end of 01.19 for [PR](https://github.com/pharpend/pager/pull/1) approving. '
+*set	#]np	@0	!
+	@`]o8	>externalId '95'
+	@)I	>provider 'github'
+	@)S	>source 'ff-notes/ff'
+	@)l	>url 'https://github.com/ff-notes/ff/issues/95'
+.

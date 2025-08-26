@@ -1,0 +1,13 @@
+*set	#B/7lWgm2jTz4+00gDu8014Y	!
+	@`]~A	>start 2019 9 30
+	@)U	>status >Archived
+	@)x	>text >B/7lWgm2jU06+00gDu8014Y
+	@}UMl	>track >B/7lWgm2jUNE+00gDu8014Y
+*rga	#}U06	@0	!
+	@`)Q	%f '[WIP] Add ff-qtah program: pure Haskell GUI based on Qtah library\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/180)\n<!-- Reviewable:end -->\n'
+*set	#]NE	@0	!
+	@`)O	>externalId '180'
+	@)h	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]OA	>url 'https://github.com/ff-notes/ff/pull/180'
+.

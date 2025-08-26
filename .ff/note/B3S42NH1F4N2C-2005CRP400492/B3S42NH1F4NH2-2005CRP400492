@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xamC+00gDu8014Y	!
+	@`)p	>start 2018 1 8
+	@]n8	>status >Archived
+	@)S	>text >B/7lWgm2xanl+00gDu8014Y
+	@]rz	>track >B/7lWgm2xasI+00gDu8014Y
+*rga	#]nl	@0	!
+	@`)v	%f 'Add shell completion\n\nThose IDs aren\'t gonna type themselves...'
+*set	#]sI	@0	!
+	@`)S	>externalId '6'
+	@)l	>provider 'github'
+	@)v	>source 'ff-notes/ff'
+	@]t4	>url 'https://github.com/ff-notes/ff/issues/6'
+.

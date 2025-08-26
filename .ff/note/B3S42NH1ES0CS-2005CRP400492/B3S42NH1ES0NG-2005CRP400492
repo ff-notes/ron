@@ -1,0 +1,13 @@
+*set	#B/7lWgm2wW6S+00gDu8014Y	!
+	@`]7E	>start 2018 1 9
+	@)Y	>status >Archived
+	@)r	>text >B/7lWgm2wW8A+00gDu8014Y
+	@]AC	>track >B/7lWgm2wWAM+00gDu8014Y
+*rga	#]8A	@0	!
+	@`)K	%f 'Use Swarm as a backend'
+*set	#]AM	@0	!
+	@`)f	>externalId '25'
+	@)p	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]BI	>url 'https://github.com/ff-notes/ff/issues/25'
+.

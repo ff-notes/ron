@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hRQ8+00gDu8014Y	!
+	@`]Tj	>start 2019 11 7
+	@]U2	>status >Archived
+	@)W	>text >B/7lWgm2hRUp+00gDu8014Y
+	@}Sdt	>track >B/7lWgm2hSez+00gDu8014Y
+*rga	#]Up	@0	!
+	@`]V8	%f 'Remove usage of Text.IO for files and decodeUtf8\n\nProblem: `Text.IO` is locale-dependent, `decodeUtf8` is partial.\r\n\r\nSolution: replace `Text.IO` with `ByteString` IO for files, replace `decodeUtf8`\r\nwith `decodeUtf8\'` and `decodeUtf8With`.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/211)\n<!-- Reviewable:end -->\n'
+*set	#}Sez	@0	!
+	@`]fI	>externalId '211'
+	@)b	>provider 'github'
+	@)v	>source 'ff-notes/ff'
+	@]g4	>url 'https://github.com/ff-notes/ff/pull/211'
+.

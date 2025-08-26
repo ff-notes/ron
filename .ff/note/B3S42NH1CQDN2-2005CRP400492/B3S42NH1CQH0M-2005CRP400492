@@ -1,0 +1,17 @@
+*set	#B/7lWgm2oJRY+00gDu8014Y	!
+	@`]TQ	>start 2019 3 19
+	@)t	>status >Archived
+	@]UC	>tags >B/7euRTbXYMI+00xXYO6tTI
+	@)W	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)f	>tags >B/7euRTbZ1YK+00xXYO6tTI
+	@)p	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@]V8	>text >B/7lWgm2oJVS+00gDu8014Y
+	@}KE	>track >B/7lWgm2oKEd+00gDu8014Y
+*rga	#]VS	@0	!
+	@`)l	%f 'Comprehensible tracked task error message\n\nThis error message is not comprehensible:\r\n\r\n```\r\n$ ff done 4710P17JRPQ-1333OPN2L\r\nff: Error \"A tracked note must be modified in its source.\" []\r\n```\r\n\r\nShould be something like\r\n```\r\nff: error: A tracked note must be edited in its source: https://github.com/ff-notes/ff/issues/83\r\n```'
+*set	#}KEd	@0	!
+	@`)x	>externalId '139'
+	@]F6	>provider 'github'
+	@)Q	>source 'ff-notes/ff'
+	@)_	>url 'https://github.com/ff-notes/ff/issues/139'
+.

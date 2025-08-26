@@ -1,0 +1,13 @@
+*set	#B/7lWgm2uyfI+00gDu8014Y	!
+	@`]h	>start 2018 7 26
+	@)U	>status >Archived
+	@)x	>text >B/7lWgm2uyiG+00gDu8014Y
+	@]lY	>track >B/7lWgm2uylr+00gDu8014Y
+*rga	#]iG	@0	!
+	@`)_	%f 'Track issue content\n\nalong with title'
+*set	#]lr	@0	!
+	@`]m	>externalId '78'
+	@)K	>provider 'github'
+	@)d	>source 'ff-notes/ff'
+	@)n	>url 'https://github.com/ff-notes/ff/issues/78'
+.

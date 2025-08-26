@@ -1,0 +1,15 @@
+*set	#B/7lWgm2toGG+00gDu8014Y	!
+	@`]HW	>start 2018 11 3
+	@)z	>status >Archived
+	@]II	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)b	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)v	>text >B/7lWgm2toJ4+00gDu8014Y
+	@]Nv	>track >B/7lWgm2toOE+00gDu8014Y
+*rga	#]J4	@0	!
+	@`)E	%f 'Support git-urls in `ff track`\n\nlike `git@github.com:ff-notes/ff.git`'
+*set	#]OE	@0	!
+	@`)O	>externalId '102'
+	@)h	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]PA	>url 'https://github.com/ff-notes/ff/issues/102'
+.

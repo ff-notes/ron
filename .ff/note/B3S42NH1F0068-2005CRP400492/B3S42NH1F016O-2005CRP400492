@@ -1,0 +1,16 @@
+*set	#B/7lWgm2x038+00gDu8014Y	!
+	@`]4O	>start 2018 1 8
+	@)r	>status >Archived
+	@]5A	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)U	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)d	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)x	>text >B/7lWgm2x06G+00gDu8014Y
+	@]HM	>track >B/7lWgm2x0Hp+00gDu8014Y
+*rga	#]6G	@0	!
+	@`)Q	%f 'Tags\n\nA tag is a document in the _ff_ database.\r\n\r\nIt must contain one text field (RgaText).\r\n\r\nA note must have a field \"tags\" of type OR-Set, containing references (ids) to tag objects.'
+*set	#]Hp	@0	!
+	@`)z	>externalId '20'
+	@]II	>provider 'github'
+	@)S	>source 'ff-notes/ff'
+	@)l	>url 'https://github.com/ff-notes/ff/issues/20'
+.

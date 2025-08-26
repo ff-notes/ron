@@ -1,0 +1,16 @@
+*set	#B/7lWgm2kqjA+00gDu8014Y	!
+	@`]kt	>start 2019 8 13
+	@]lM	>status >Active
+	@)f	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)z	>tags >B/7euRTbZUqA+00xXYO6tTI
+	@]m8	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)S	>text >B/7lWgm2kqml+00gDu8014Y
+	@]vz	>track >B/7lWgm2kqwS+00gDu8014Y
+*rga	#]ml	@0	!
+	@`)v	%f 'Drop LWW-rep support in Contact/Note/Track after 2020-08-14\n\n- [x] Upgrade Note to ORSet rep\r\n- [x] Release\r\n- [ ] Drop LWW-rep support a year after'
+*set	#]wS	@0	!
+	@`)b	>externalId '163'
+	@)v	>provider 'github'
+	@]xE	>source 'ff-notes/ff'
+	@)O	>url 'https://github.com/ff-notes/ff/issues/163'
+.

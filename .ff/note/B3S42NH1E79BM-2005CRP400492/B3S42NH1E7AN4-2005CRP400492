@@ -1,0 +1,13 @@
+*set	#B/7lWgm2tvLr+00gDu8014Y	!
+	@`]Md	>start 2018 9 6
+	@)x	>status >Archived
+	@]NG	>text >B/7lWgm2tvN_+00gDu8014Y
+	@]er	>track >B/7lWgm2tvfA+00gDu8014Y
+*rga	#]N_	@0	!
+	@`)j	%f '[#22] Add contacts\n\nResolves [#22](https://github.com/ff-notes/ff/issues/22)\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/96)\n<!-- Reviewable:end -->\n'
+*set	#]fA	@0	!
+	@`)K	>externalId '96'
+	@)d	>provider 'github'
+	@)n	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/pull/96'
+.

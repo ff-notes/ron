@@ -1,0 +1,13 @@
+*set	#B/7lWgm2tcRh+00gDu8014Y	!
+	@`]Sn	>start 2018 11 7
+	@]TG	>status >Archived
+	@)_	>text >B/7lWgm2tcTt+00gDu8014Y
+	@]jb	>track >B/7lWgm2tck4+00gDu8014Y
+*rga	#]Tt	@0	!
+	@`]U2	%f '[README] Update contact info\n\nInformation about developers chat has been added.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/103)\n<!-- Reviewable:end -->\n'
+*set	#]k4	@0	!
+	@`)E	>externalId '103'
+	@)Y	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@]l	>url 'https://github.com/ff-notes/ff/pull/103'
+.

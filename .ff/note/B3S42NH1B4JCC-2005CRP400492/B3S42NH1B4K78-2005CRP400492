@@ -1,0 +1,13 @@
+*set	#B/7lWgm2h_rC+00gDu8014Y	!
+	@`]sS	>start 2019 10 24
+	@]t4	>status >Active
+	@)Y	>text >B/7lWgm2h_u+00gDu8014Y
+	@}a1l	>track >B/7lWgm2ha24+00gDu8014Y
+*rga	#]u	@0	!
+	@`)K	%f ', listenToChanges\n\n\nhttps://github.com/ff-notes/ff/blob/4617d27ba6e342500bfcf6f28a29f8690731cc76/ff-gtk/Main.hs#L127-L128\n\n* Found on master\n\n'
+*set	#}a24	@0	!
+	@`)O	>externalId '204'
+	@)Y	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]3	>url 'https://github.com/ff-notes/ff/issues/204'
+.

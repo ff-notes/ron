@@ -1,0 +1,13 @@
+*set	#B/7lWgm2iJQC+00gDu8014Y	!
+	@`)z	>start 2019 10 9
+	@]RI	>status >Archived
+	@)b	>text >B/7lWgm2iJRv+00gDu8014Y
+	@]eW	>track >B/7lWgm2iJez+00gDu8014Y
+*rga	#]Rv	@0	!
+	@`]S4	%f 'Rename toNoteView -> viewNote\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/195)\n<!-- Reviewable:end -->\n'
+*set	#]ez	@0	!
+	@`]f8	>externalId '195'
+	@)S	>provider 'github'
+	@)b	>source 'ff-notes/ff'
+	@)v	>url 'https://github.com/ff-notes/ff/pull/195'
+.

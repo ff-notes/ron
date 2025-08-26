@@ -1,0 +1,13 @@
+*set	#B/7lWgm2i4st+00gDu8014Y	!
+	@`]tz	>start 2019 10 17
+	@]uI	>status >Archived
+	@)b	>text >B/7lWgm2i4ul+00gDu8014Y
+	@}5XS	>track >B/7lWgm2i5Xv+00gDu8014Y
+*rga	#]ul	@0	!
+	@`]v4	%f 'ff-qt: Fix GHC RTS stuck on tryReadTChan\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/198)\n<!-- Reviewable:end -->\n'
+*set	#}5Xv	@0	!
+	@`]YE	>externalId '198'
+	@)Y	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@]Z	>url 'https://github.com/ff-notes/ff/pull/198'
+.

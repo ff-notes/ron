@@ -1,0 +1,13 @@
+*set	#B/7lWgm2k2ap+00gDu8014Y	!
+	@`]bb	>start 2019 9 20
+	@)v	>status >Archived
+	@]cE	>text >B/7lWgm2k2cY+00gDu8014Y
+	@]ql	>track >B/7lWgm2k2r4+00gDu8014Y
+*rga	#]cY	@0	!
+	@`)h	%f 'Add ability to create note with tags\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/174)\n<!-- Reviewable:end -->\n'
+*set	#]r4	@0	!
+	@`)O	>externalId '174'
+	@)Y	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]s	>url 'https://github.com/ff-notes/ff/pull/174'
+.

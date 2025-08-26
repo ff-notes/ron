@@ -1,0 +1,13 @@
+*set	#B/7lWgm2wW~d+00gDu8014Y	!
+	@`}X0Q	>start 2018 1 8
+	@)t	>status >Archived
+	@]1C	>text >B/7lWgm2wX1M+00gDu8014Y
+	@]DE	>track >B/7lWgm2wXDY+00gDu8014Y
+*rga	#}X1M	@0	!
+	@`)f	%f 'Version option\n\n- [x] `-V,--version`\r\n- [x] Add changelog line\r\n- [x] Include git revision (`git rev-parse HEAD`, `git rev-parse --symbolic-full-name HEAD`)\r\n- [x] git dirtiness (count lines of `git status --short`).'
+*set	#]DY	@0	!
+	@`)h	>externalId '24'
+	@]E	>provider 'github'
+	@)A	>source 'ff-notes/ff'
+	@)K	>url 'https://github.com/ff-notes/ff/issues/24'
+.

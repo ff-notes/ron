@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xRDQ+00gDu8014Y	!
+	@`]EC	>start 2018 1 8
+	@)f	>status >Archived
+	@)z	>text >B/7lWgm2xRFI+00gDu8014Y
+	@]Ij	>track >B/7lWgm2xRJ2+00gDu8014Y
+*rga	#]FI	@0	!
+	@`)S	%f 'Short commands\n\na = agenda\r\nn = new\r\nd = done\r\n...'
+*set	#]J2	@0	!
+	@`)C	>externalId '17'
+	@)M	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/issues/17'
+.

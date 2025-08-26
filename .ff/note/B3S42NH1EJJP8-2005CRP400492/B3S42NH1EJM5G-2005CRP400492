@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vSxd+00gDu8014Y	!
+	@`]yQ	>start 2018 5 28
+	@)j	>status >Archived
+	@]z2	>text >B/7lWgm2vSzC+00gDu8014Y
+	@}TWt	>track >B/7lWgm2vTXM+00gDu8014Y
+*rga	#]zC	@0	!
+	@`)M	%f 'git dirtiness\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/52)\n<!-- Reviewable:end -->\n'
+*set	#}TXM	@0	!
+	@`)W	>externalId '52'
+	@)p	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]YI	>url 'https://github.com/ff-notes/ff/pull/52'
+.

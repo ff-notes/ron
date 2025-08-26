@@ -1,0 +1,14 @@
+*set	#B/7lWgm2g9hl+00gDu8014Y	!
+	@`]ih	>start 2020 2 20
+	@]jA	>status >Active
+	@)U	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@)x	>text >B/7lWgm2g9k6+00gDu8014Y
+	@]ox	>track >B/7lWgm2g9pG+00gDu8014Y
+*rga	#]k6	@0	!
+	@`)Q	%f 'Add flatpak packaging\n\nhttps://hackage.haskell.org/package/cabal-flatpak'
+*set	#]pG	@0	!
+	@`)_	>externalId '226'
+	@)j	>provider 'github'
+	@]q2	>source 'ff-notes/ff'
+	@)C	>url 'https://github.com/ff-notes/ff/issues/226'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2kL0j+00gDu8014Y	!
+	@`]1p	>start 2019 9 17
+	@]28	>status >Archived
+	@)S	>text >B/7lWgm2kL2l+00gDu8014Y
+	@]~r	>track >B/7lWgm2kM0x+00gDu8014Y
+*rga	#]2l	@0	!
+	@`)v	%f '(1) Add type Tag; (2) listing tags; (3) field Note.tags; (4) filtering by tags on notes output; (5) adding tags to note; (6) removing tags from note\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/170)\n<!-- Reviewable:end -->\n'
+*set	#}M0x	@0	!
+	@`]1G	>externalId '170'
+	@)_	>provider 'github'
+	@)t	>source 'ff-notes/ff'
+	@]22	>url 'https://github.com/ff-notes/ff/pull/170'
+.

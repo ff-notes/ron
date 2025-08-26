@@ -1,0 +1,13 @@
+*set	#B/7lWgm2pTnS+00gDu8014Y	!
+	@`]oO	>start 2019 2 28
+	@)h	>status >Archived
+	@]p	>text >B/7lWgm2pTpK+00gDu8014Y
+	@}UIK	>track >B/7lWgm2pUIn+00gDu8014Y
+*rga	#]pK	@0	!
+	@`)U	%f 'Add GHC 8.6 support\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/132)\n<!-- Reviewable:end -->\n'
+*set	#}UIn	@0	!
+	@`)x	>externalId '132'
+	@]JG	>provider 'github'
+	@)Q	>source 'ff-notes/ff'
+	@)_	>url 'https://github.com/ff-notes/ff/pull/132'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v1yS+00gDu8014Y	!
+	@`]zE	>start 2018 7 25
+	@)Y	>status >Archived
+	@)r	>text >B/7lWgm2v1~A+00gDu8014Y
+	@}2DE	>track >B/7lWgm2v2DY+00gDu8014Y
+*rga	#]~A	@0	!
+	@`)K	%f 'Add blocking to edit tracked notes\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/74)\n<!-- Reviewable:end -->\n'
+*set	#}2DY	@0	!
+	@`)r	>externalId '74'
+	@]EA	>provider 'github'
+	@)K	>source 'ff-notes/ff'
+	@)U	>url 'https://github.com/ff-notes/ff/pull/74'
+.

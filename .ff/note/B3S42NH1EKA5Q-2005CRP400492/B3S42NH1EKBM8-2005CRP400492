@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vYYv+00gDu8014Y	!
+	@`]Zh	>start 2018 5 17
+	@]_	>status >Archived
+	@)K	>text >B/7lWgm2vY_d+00gDu8014Y
+	@]uQ	>track >B/7lWgm2vYuj+00gDu8014Y
+*rga	#]_d	@0	!
+	@`)n	%f 'Version Upgrade\n\nhttps://github.com/ff-notes/ff/issues/24\r\n\r\n1. -V,--version\r\n2. Add changelog line\r\n3. Include git revision and dirtiness.\r\n\r\n<!-- Reviewable:start -->\r\n---\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/47)\r\n<!-- Reviewable:end -->\r\n'
+*set	#]uj	@0	!
+	@`]v2	>externalId '47'
+	@)C	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)W	>url 'https://github.com/ff-notes/ff/pull/47'
+.

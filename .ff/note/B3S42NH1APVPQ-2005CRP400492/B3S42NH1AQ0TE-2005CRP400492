@@ -1,0 +1,13 @@
+*set	#B/7lWgm2gFxv+00gDu8014Y	!
+	@`]yr	>start 2019 12 18
+	@]zA	>status >Archived
+	@)U	>text >B/7lWgm2gFzd+00gDu8014Y
+	@}GD	>track >B/7lWgm2gGDK+00gDu8014Y
+*rga	#]zd	@0	!
+	@`)n	%f 'Update Travis config to use Ubuntu 18\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/221)\n<!-- Reviewable:end -->\n'
+*set	#}GDK	@0	!
+	@`)d	>externalId '221'
+	@)n	>provider 'github'
+	@)x	>source 'ff-notes/ff'
+	@]E6	>url 'https://github.com/ff-notes/ff/pull/221'
+.

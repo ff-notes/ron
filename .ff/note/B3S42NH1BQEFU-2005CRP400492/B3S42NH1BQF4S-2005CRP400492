@@ -1,0 +1,16 @@
+*set	#B/7lWgm2kJcz+00gDu8014Y	!
+	@`]f	>start 2019 9 18
+	@)d	>status >Archived
+	@)x	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@]gG	>tags >B/7euRTbXYMI+00xXYO6tTI
+	@)Q	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)t	>text >B/7lWgm2kJhC+00gDu8014Y
+	@]lQ	>track >B/7lWgm2kJlj+00gDu8014Y
+*rga	#]hC	@0	!
+	@`)M	%f 'Do not use git repo as a database if there is no .ff yet'
+*set	#]lj	@0	!
+	@`)t	>externalId '171'
+	@]mC	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/issues/171'
+.

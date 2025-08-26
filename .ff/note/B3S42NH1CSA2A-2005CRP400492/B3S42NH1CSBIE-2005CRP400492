@@ -1,0 +1,15 @@
+*set	#B/7lWgm2oYXA+00gDu8014Y	!
+	@`]_8	>start 2019 3 19
+	@)v	>status >Active
+	@]aO	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)r	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@]bU	>text >B/7lWgm2oYf4+00gDu8014Y
+	@]rG	>track >B/7lWgm2oYsW+00gDu8014Y
+*rga	#]f4	@0	!
+	@`)h	%f 'Publish ff on Hackage (?)\n\nto install with just\r\n\r\n    cabal install\r\n\r\nor\r\n\r\n    stack install'
+*set	#]sW	@0	!
+	@`)f	>externalId '138'
+	@)z	>provider 'github'
+	@]tI	>source 'ff-notes/ff'
+	@)S	>url 'https://github.com/ff-notes/ff/issues/138'
+.

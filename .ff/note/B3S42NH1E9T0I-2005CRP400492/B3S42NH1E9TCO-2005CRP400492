@@ -1,0 +1,13 @@
+*set	#B/7lWgm2uFGI+00gDu8014Y	!
+	@`]HE	>start 2018 8 22
+	@)Y	>status >Archived
+	@)r	>text >B/7lWgm2uFIA+00gDu8014Y
+	@]KW	>track >B/7lWgm2uFKp+00gDu8014Y
+*rga	#]IA	@0	!
+	@`)K	%f 'Add command to list wiki pages'
+*set	#]Kp	@0	!
+	@`]L8	>externalId '91'
+	@)I	>provider 'github'
+	@)b	>source 'ff-notes/ff'
+	@)l	>url 'https://github.com/ff-notes/ff/issues/91'
+.

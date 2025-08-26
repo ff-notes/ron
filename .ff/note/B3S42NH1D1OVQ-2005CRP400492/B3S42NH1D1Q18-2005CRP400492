@@ -1,0 +1,16 @@
+*set	#B/7lWgm2pEFv+00gDu8014Y	!
+	@`]I6	>start 2019 3 17
+	@)_	>status >Active
+	@)t	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@]JC	>tags >B/7euRTbXYMI+00xXYO6tTI
+	@)M	>tags >B/7lWgm2gSeQ+00gDu8014Y
+	@)f	>text >B/7lWgm2pEJz+00gDu8014Y
+	@]Ub	>track >B/7lWgm2pEUv+00gDu8014Y
+*rga	#]Jz	@0	!
+	@`]KI	%f 'open links in browser\n\nYandex.Browser on macOS doesn\'t open a tab via QDesktopServices::openUrl called from Haskell; another browser, or other OS, or Haskell-less app work well\r\n'
+*set	#]Uv	@0	!
+	@`]VE	>externalId '135'
+	@)Y	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@]W	>url 'https://github.com/ff-notes/ff/issues/135'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lO04ehyQU+00gDu8014Y	!
+	@`]Rj	>start 2020 6 28
+	@]SC	>status >Archived
+	@)W	>text >B/7lO04ehySp+00gDu8014Y
+	@]lf	>track >B/7lO04ehylz+00gDu8014Y
+*rga	#]Sp	@0	!
+	@`)z	%f 'readObject\n\n- Add readObject\r\n\r\n<!-- Reviewable:start -->\r\n---\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ron/157)\r\n<!-- Reviewable:end -->\r\n'
+*set	#]lz	@0	!
+	@`]mI	>externalId '157'
+	@)b	>provider 'github'
+	@)l	>source 'ff-notes/ron'
+	@)v	>url 'https://github.com/ff-notes/ron/pull/157'
+.

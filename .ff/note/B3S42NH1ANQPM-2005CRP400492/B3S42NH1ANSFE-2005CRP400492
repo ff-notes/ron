@@ -1,0 +1,13 @@
+*set	#B/7lWgm2fzhr+00gDu8014Y	!
+	@`]in	>start 2020 3 6
+	@]j6	>status >Archived
+	@)_	>text >B/7lWgm2fzjj+00gDu8014Y
+	@}~5Y	>track >B/7lWgm2f~6K+00gDu8014Y
+*rga	#]jj	@0	!
+	@`]k2	%f 'Add config parameter for external editor\n\nThis is my first Haskell contribution, so please be kind ;-) Please let me know if there is a better way \r\n\r\nFixes #213\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/227)\n<!-- Reviewable:end -->\n'
+*set	#}~6K	@0	!
+	@`)U	>externalId '227'
+	@)n	>provider 'github'
+	@)x	>source 'ff-notes/ff'
+	@]76	>url 'https://github.com/ff-notes/ff/pull/227'
+.

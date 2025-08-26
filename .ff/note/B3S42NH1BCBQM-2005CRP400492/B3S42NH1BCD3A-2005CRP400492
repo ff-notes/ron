@@ -1,0 +1,14 @@
+*set	#B/7lWgm2iYyM+00gDu8014Y	!
+	@`]zv	>start 2019 10 7
+	@]~O	>status >Archived
+	@)h	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@}Z0A	>text >B/7lWgm2iZ0U+00gDu8014Y
+	@]Fd	>track >B/7lWgm2iZG6+00gDu8014Y
+*rga	#}Z0U	@0	!
+	@`)d	%f 'Without specific tags option (#179)\n\nResolves #179\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/193)\n<!-- Reviewable:end -->\n'
+*set	#]G6	@0	!
+	@`)G	>externalId '193'
+	@)_	>provider 'github'
+	@)t	>source 'ff-notes/ff'
+	@]H2	>url 'https://github.com/ff-notes/ff/pull/193'
+.

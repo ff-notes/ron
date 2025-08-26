@@ -1,0 +1,13 @@
+*set	#B/7lWgm2uHrh+00gDu8014Y	!
+	@`]sd	>start 2018 8 22
+	@)x	>status >Archived
+	@]tG	>text >B/7lWgm2uHtQ+00gDu8014Y
+	@}I8W	>track >B/7lWgm2uI8z+00gDu8014Y
+*rga	#]tQ	@0	!
+	@`)j	%f 'Not yet\n\nResolves [#88](https://github.com/ff-notes/ff/issues/88)\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/89)\n<!-- Reviewable:end -->\n'
+*set	#}I8z	@0	!
+	@`]98	>externalId '89'
+	@)S	>provider 'github'
+	@)b	>source 'ff-notes/ff'
+	@)l	>url 'https://github.com/ff-notes/ff/pull/89'
+.

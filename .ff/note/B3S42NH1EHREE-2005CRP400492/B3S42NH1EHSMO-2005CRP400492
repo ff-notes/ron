@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vEsE+00gDu8014Y	!
+	@`]t	>start 2018 6 27
+	@)K	>status >Archived
+	@)d	>text >B/7lWgm2vEtn+00gDu8014Y
+	@}F9f	>track >B/7lWgm2vF9z+00gDu8014Y
+*rga	#]tn	@0	!
+	@`)x	%f 'Add extraction from address\n\nКак рефакторить код, чтобы повторяющиеся строчки убрать в __github.hs__?\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/64)\n<!-- Reviewable:end -->\n'
+*set	#}F9z	@0	!
+	@`]A8	>externalId '64'
+	@)S	>provider 'github'
+	@)b	>source 'ff-notes/ff'
+	@)v	>url 'https://github.com/ff-notes/ff/pull/64'
+.

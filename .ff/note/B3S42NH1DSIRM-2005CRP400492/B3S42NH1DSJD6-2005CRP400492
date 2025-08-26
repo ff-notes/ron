@@ -1,0 +1,15 @@
+*set	#B/7lWgm2s_ir+00gDu8014Y	!
+	@`]l2	>start 2019 1 7
+	@)f	>status >Active
+	@)z	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@]mI	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)b	>text >B/7lWgm2s_mv+00gDu8014Y
+	@]p_	>track >B/7lWgm2s_pt+00gDu8014Y
+*rga	#]mv	@0	!
+	@`]nE	%f 'Pack Ubuntu packages\n\ndeb/snap'
+*set	#]pt	@0	!
+	@`]qC	>externalId '115'
+	@)M	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)z	>url 'https://github.com/ff-notes/ff/issues/115'
+.

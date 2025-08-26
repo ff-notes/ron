@@ -1,0 +1,13 @@
+*set	#B/7lWgm2iaN6+00gDu8014Y	!
+	@`)t	>start 2019 10 4
+	@]OM	>status >Archived
+	@)f	>text >B/7lWgm2iaOp+00gDu8014Y
+	@]b6	>track >B/7lWgm2iabQ+00gDu8014Y
+*rga	#]Op	@0	!
+	@`)z	%f 'Remove ff-qtah\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/191)\n<!-- Reviewable:end -->\n'
+*set	#]bQ	@0	!
+	@`)_	>externalId '191'
+	@)t	>provider 'github'
+	@]c2	>source 'ff-notes/ff'
+	@)C	>url 'https://github.com/ff-notes/ff/pull/191'
+.

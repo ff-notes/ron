@@ -1,0 +1,13 @@
+*set	#B/7lWgm2kf9r+00gDu8014Y	!
+	@`]An	>start 2019 8 13
+	@]B6	>status >Archived
+	@)Q	>text >B/7lWgm2kfBj+00gDu8014Y
+	@]PA	>track >B/7lWgm2kfPU+00gDu8014Y
+*rga	#]Bj	@0	!
+	@`)t	%f 'Upgrade Note to ORSet rep\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/164)\n<!-- Reviewable:end -->\n'
+*set	#]PU	@0	!
+	@`)n	>externalId '164'
+	@)x	>provider 'github'
+	@]Q6	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/pull/164'
+.

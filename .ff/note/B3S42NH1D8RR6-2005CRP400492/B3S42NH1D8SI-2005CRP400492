@@ -1,0 +1,16 @@
+*set	#B/7lWgm2q6yb+00gDu8014Y	!
+	@`]~n	>start 2019 2 25
+	@}70G	>status >Active
+	@)_	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)t	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@]12	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)W	>text >B/7lWgm2q71p+00gDu8014Y
+	@]6z	>track >B/7lWgm2q77I+00gDu8014Y
+*rga	#}71p	@0	!
+	@`)z	%f 'Add index for faster database lookup\n\nLocal for each replica, non-synchronized'
+*set	#]7I	@0	!
+	@`)b	>externalId '129'
+	@)v	>provider 'github'
+	@]84	>source 'ff-notes/ff'
+	@)O	>url 'https://github.com/ff-notes/ff/issues/129'
+.

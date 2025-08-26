@@ -1,0 +1,14 @@
+*set	#B/7lWgm2iG32+00gDu8014Y	!
+	@`]48	>start 2019 10 9
+	@)b	>status >Archived
+	@)v	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@]5O	>text >B/7lWgm2iG5h+00gDu8014Y
+	@]V	>track >B/7lWgm2iGVd+00gDu8014Y
+*rga	#]5h	@0	!
+	@`)r	%f 'ff new --vcs (#171)\n\nResolves #171\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/197)\n<!-- Reviewable:end -->\n'
+*set	#]Vd	@0	!
+	@`)x	>externalId '197'
+	@]WG	>provider 'github'
+	@)j	>source 'ff-notes/ff'
+	@]X2	>url 'https://github.com/ff-notes/ff/pull/197'
+.

@@ -1,0 +1,14 @@
+*set	#B/7lWgm2j32U+00gDu8014Y	!
+	@`]4W	>start 2019 10 4
+	@)z	>status >Active
+	@]5I	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@)l	>text >B/7lWgm2j364+00gDu8014Y
+	@]Hx	>track >B/7lWgm2j3IQ+00gDu8014Y
+*rga	#]64	@0	!
+	@`)E	%f 'Table to check test coverage\n\nTable view:\r\nfeature1 | test1\r\nfeature2 | test1\r\nfeature3 | test2\r\n...\r\n\r\nThis table will serve for show what tests are absent and which ones should be realised.'
+*set	#]IQ	@0	!
+	@`)_	>externalId '188'
+	@)t	>provider 'github'
+	@]JC	>source 'ff-notes/ff'
+	@)M	>url 'https://github.com/ff-notes/ff/issues/188'
+.

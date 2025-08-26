@@ -1,0 +1,13 @@
+*set	#B/7lWgm2w0k_+00gDu8014Y	!
+	@`]lM	>start 2018 1 27
+	@)f	>status >Archived
+	@]m8	>text >B/7lWgm2w0mI+00gDu8014Y
+	@]oA	>track >B/7lWgm2w0oU+00gDu8014Y
+*rga	#]mI	@0	!
+	@`)b	%f 'Search subcommand'
+*set	#]oU	@0	!
+	@`)d	>externalId '31'
+	@)n	>provider 'github'
+	@]p6	>source 'ff-notes/ff'
+	@)G	>url 'https://github.com/ff-notes/ff/pull/31'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lO04ehs4r+00gDu8014Y	!
+	@`]8S	>start 2022 10 5
+	@]9E	>status >Active
+	@)h	>text >B/7lO04ehsAA+00gDu8014Y
+	@]HM	>track >B/7lO04ehsHp+00gDu8014Y
+*rga	#]AA	@0	!
+	@`]CW	%f 'Use Peritext article as a test suite\n\nhttps://www.inkandswitch.com/peritext/'
+*set	#]Hp	@0	!
+	@`]I8	>externalId '160'
+	@)I	>provider 'github'
+	@)b	>source 'ff-notes/ron'
+	@)l	>url 'https://github.com/ff-notes/ron/issues/160'
+.

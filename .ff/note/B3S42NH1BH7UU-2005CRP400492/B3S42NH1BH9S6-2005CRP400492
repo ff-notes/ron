@@ -1,0 +1,13 @@
+*set	#B/7lWgm2j9~U+00gDu8014Y	!
+	@`}A0j	>start 2019 10 1
+	@]12	>status >Archived
+	@)W	>text >B/7lWgm2jA1f+00gDu8014Y
+	@]RS	>track >B/7lWgm2jASO+00gDu8014Y
+*rga	#}A1f	@0	!
+	@`)z	%f 'Use explicit status instead of boolean blindness\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/183)\n<!-- Reviewable:end -->\n'
+*set	#]SO	@0	!
+	@`)h	>externalId '183'
+	@]T	>provider 'github'
+	@)A	>source 'ff-notes/ff'
+	@)U	>url 'https://github.com/ff-notes/ff/pull/183'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2pFVb+00gDu8014Y	!
+	@`]WY	>start 2019 3 9
+	@)r	>status >Archived
+	@]XA	>text >B/7lWgm2pFXU+00gDu8014Y
+	@]mj	>track >B/7lWgm2pFn2+00gDu8014Y
+*rga	#]XU	@0	!
+	@`)d	%f 'Add Qt paths for Arch Linux\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/134)\n<!-- Reviewable:end -->\n'
+*set	#]n2	@0	!
+	@`)C	>externalId '134'
+	@)W	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/pull/134'
+.

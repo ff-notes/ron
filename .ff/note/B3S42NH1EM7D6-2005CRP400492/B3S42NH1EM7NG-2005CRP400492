@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vmrb+00gDu8014Y	!
+	@`]sO	>start 2018 4 28
+	@)h	>status >Archived
+	@]t	>text >B/7lWgm2vmtK+00gDu8014Y
+	@]vC	>track >B/7lWgm2vmvM+00gDu8014Y
+*rga	#]tK	@0	!
+	@`)U	%f 'Remove readFile method'
+*set	#]vM	@0	!
+	@`)f	>externalId '42'
+	@)p	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]wI	>url 'https://github.com/ff-notes/ff/issues/42'
+.

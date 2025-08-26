@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hc8b+00gDu8014Y	!
+	@`]9h	>start 2019 10 21
+	@]A	>status >Archived
+	@)K	>text >B/7lWgm2hcAd+00gDu8014Y
+	@]hY	>track >B/7lWgm2hciU+00gDu8014Y
+*rga	#]Ad	@0	!
+	@`)n	%f 'Change prefix of Haskell procedures to `hs_`\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/202)\n<!-- Reviewable:end -->\n'
+*set	#]iU	@0	!
+	@`)d	>externalId '202'
+	@)x	>provider 'github'
+	@]j6	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/pull/202'
+.

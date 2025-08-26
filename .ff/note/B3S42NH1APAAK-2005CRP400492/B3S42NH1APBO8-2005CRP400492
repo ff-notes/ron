@@ -1,0 +1,13 @@
+*set	#B/7lWgm2gAaK+00gDu8014Y	!
+	@`]bG	>start 2019 12 25
+	@)_	>status >Archived
+	@)t	>text >B/7lWgm2gAcC+00gDu8014Y
+	@]vQ	>track >B/7lWgm2gAvj+00gDu8014Y
+*rga	#]cC	@0	!
+	@`)M	%f 'Update qtah dependency to release version\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/225)\n<!-- Reviewable:end -->\n'
+*set	#]vj	@0	!
+	@`]w2	>externalId '225'
+	@)C	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/pull/225'
+.

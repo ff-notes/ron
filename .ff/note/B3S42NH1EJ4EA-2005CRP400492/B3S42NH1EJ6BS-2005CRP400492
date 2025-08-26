@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vP7A+00gDu8014Y	!
+	@`)x	>start 2018 6 12
+	@]8Q	>status >Archived
+	@)j	>text >B/7lWgm2vP8t+00gDu8014Y
+	@]WA	>track >B/7lWgm2vPWd+00gDu8014Y
+*rga	#]8t	@0	!
+	@`]92	%f 'Github issues to noteview render\n\nLimit игнорируется почему-то, воводится всё сразу.\r\nИ по TaskMode вопрос в коде.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/55)\n<!-- Reviewable:end -->\n'
+*set	#]Wd	@0	!
+	@`)n	>externalId '55'
+	@]X6	>provider 'github'
+	@)G	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/pull/55'
+.

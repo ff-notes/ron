@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hZmS+00gDu8014Y	!
+	@`]nY	>start 2019 10 24
+	@]o	>status >Active
+	@)U	>text >B/7lWgm2hZod+00gDu8014Y
+	@]yn	>track >B/7lWgm2hZzG+00gDu8014Y
+*rga	#]od	@0	!
+	@`)x	%f 'prefHelpLongEquals = True,\n\n\nhttps://github.com/ff-notes/ff/blob/4617d27ba6e342500bfcf6f28a29f8690731cc76/ff-core/lib/FF/Options.hs#L182-L183\n\n* Found on master\n\n'
+*set	#]zG	@0	!
+	@`)_	>externalId '205'
+	@]~2	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/issues/205'
+.

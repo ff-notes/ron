@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vv44+00gDu8014Y	!
+	@`)r	>start 2018 2 25
+	@]5A	>status >Archived
+	@)U	>text >B/7lWgm2vv5d+00gDu8014Y
+	@]_j	>track >B/7lWgm2vva2+00gDu8014Y
+*rga	#]5d	@0	!
+	@`)x	%f 'samplesInSections: Add \"N task(s) omitted\" message\n\nThis patch also makes \"To see more tasks\" message conditional: it\'s only\ndisplayed when there some tasks were hidden due to limit.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/36)\n<!-- Reviewable:end -->\n'
+*set	#]a2	@0	!
+	@`)M	>externalId '36'
+	@)W	>provider 'github'
+	@)p	>source 'ff-notes/ff'
+	@)z	>url 'https://github.com/ff-notes/ff/pull/36'
+.

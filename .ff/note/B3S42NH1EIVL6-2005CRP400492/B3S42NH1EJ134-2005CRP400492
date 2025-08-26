@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vNvb+00gDu8014Y	!
+	@`]wO	>start 2018 6 15
+	@)h	>status >Archived
+	@]x	>text >B/7lWgm2vNxA+00gDu8014Y
+	@}OFr	>track >B/7lWgm2vOGA+00gDu8014Y
+*rga	#]xA	@0	!
+	@`)K	%f 'taskMode to get proper state in ff github llist\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/56)\n<!-- Reviewable:end -->\n'
+*set	#}OGA	@0	!
+	@`)U	>externalId '56'
+	@)d	>provider 'github'
+	@)n	>source 'ff-notes/ff'
+	@]H6	>url 'https://github.com/ff-notes/ff/pull/56'
+.

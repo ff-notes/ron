@@ -1,0 +1,13 @@
+*set	#B/7lWgm2txs_+00gDu8014Y	!
+	@`]wd	>start 2018 9 2
+	@)x	>status >Archived
+	@]xG	>text >B/7lWgm2txxQ+00gDu8014Y
+	@}yNI	>track >B/7lWgm2tyOO+00gDu8014Y
+*rga	#]xQ	@0	!
+	@`)j	%f 'Add id completion\n\nResolves [#6](https://github.com/ff-notes/ff/issues/6)\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/94)\n<!-- Reviewable:end -->\n'
+*set	#}yOO	@0	!
+	@`)h	>externalId '94'
+	@)r	>provider 'github'
+	@]PA	>source 'ff-notes/ff'
+	@)K	>url 'https://github.com/ff-notes/ff/pull/94'
+.

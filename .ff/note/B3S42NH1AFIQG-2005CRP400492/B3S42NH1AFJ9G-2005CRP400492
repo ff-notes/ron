@@ -1,0 +1,13 @@
+*set	#B/7lWgm2exiG+00gDu8014Y	!
+	@`]lE	>start 2025 8 17
+	@)h	>status >Archived
+	@]mA	>text >B/7lWgm2exmU+00gDu8014Y
+	@]nt	>track >B/7lWgm2exoC+00gDu8014Y
+*rga	#]mU	@0	!
+	@`)n	%f 'Jjjj'
+*set	#]oC	@0	!
+	@`)M	>externalId '233'
+	@)f	>provider 'github'
+	@)p	>source 'ff-notes/ff'
+	@)z	>url 'https://github.com/ff-notes/ff/issues/233'
+.

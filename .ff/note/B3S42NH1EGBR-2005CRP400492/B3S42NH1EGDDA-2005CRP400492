@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v2yW+00gDu8014Y	!
+	@`}32C	>start 2018 7 25
+	@)W	>status >Archived
+	@)p	>text >B/7lWgm2v338+00gDu8014Y
+	@]Kx	>track >B/7lWgm2v3LG+00gDu8014Y
+*rga	#}338	@0	!
+	@`)I	%f 'not yet\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/73)\n<!-- Reviewable:end -->\n'
+*set	#]LG	@0	!
+	@`)Q	>externalId '73'
+	@)j	>provider 'github'
+	@)t	>source 'ff-notes/ff'
+	@]M2	>url 'https://github.com/ff-notes/ff/pull/73'
+.

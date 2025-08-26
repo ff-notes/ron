@@ -1,0 +1,13 @@
+*set	#B/7lWgm2k0Qv+00gDu8014Y	!
+	@`]Rr	>start 2019 9 24
+	@]SA	>status >Archived
+	@)U	>text >B/7lWgm2k0Sd+00gDu8014Y
+	@]fr	>track >B/7lWgm2k0gA+00gDu8014Y
+*rga	#]Sd	@0	!
+	@`)x	%f 'Add option to remove tag from note\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/176)\n<!-- Reviewable:end -->\n'
+*set	#]gA	@0	!
+	@`)K	>externalId '176'
+	@)d	>provider 'github'
+	@)n	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/pull/176'
+.

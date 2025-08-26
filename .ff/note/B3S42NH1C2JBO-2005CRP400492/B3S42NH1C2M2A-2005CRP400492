@@ -1,0 +1,13 @@
+*set	#B/7lWgm2lKqt+00gDu8014Y	!
+	@`]sS	>start 2019 6 11
+	@)v	>status >Archived
+	@]tE	>text >B/7lWgm2lKtY+00gDu8014Y
+	@}LNx	>track >B/7lWgm2lLPC+00gDu8014Y
+*rga	#]tY	@0	!
+	@`]vG	%f 'Fix Travis config for GTK\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/160)\n<!-- Reviewable:end -->\n'
+*set	#}LPC	@0	!
+	@`)f	>externalId '160'
+	@]Up	>provider 'github'
+	@]Vv	>source 'ff-notes/ff'
+	@]WE	>url 'https://github.com/ff-notes/ff/pull/160'
+.

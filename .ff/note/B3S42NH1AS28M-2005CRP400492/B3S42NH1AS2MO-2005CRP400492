@@ -1,0 +1,13 @@
+*set	#B/7lWgm2gW_M+00gDu8014Y	!
+	@`]a8	>start 2019 11 28
+	@)b	>status >Active
+	@)v	>text >B/7lWgm2gWb4+00gDu8014Y
+	@]ep	>track >B/7lWgm2gWf8+00gDu8014Y
+*rga	#]b4	@0	!
+	@`)O	%f 'Correct dates if they are in wrong order when reading'
+*set	#]f8	@0	!
+	@`)I	>externalId '217'
+	@)b	>provider 'github'
+	@)l	>source 'ff-notes/ff'
+	@)v	>url 'https://github.com/ff-notes/ff/issues/217'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v18K+00gDu8014Y	!
+	@`]9Q	>start 2018 7 26
+	@)j	>status >Archived
+	@]A2	>text >B/7lWgm2v1AM+00gDu8014Y
+	@]DK	>track >B/7lWgm2v1DU+00gDu8014Y
+*rga	#]AM	@0	!
+	@`)W	%f 'Close issue in ff after closing on github'
+*set	#]DU	@0	!
+	@`)n	>externalId '75'
+	@)x	>provider 'github'
+	@]E6	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/issues/75'
+.

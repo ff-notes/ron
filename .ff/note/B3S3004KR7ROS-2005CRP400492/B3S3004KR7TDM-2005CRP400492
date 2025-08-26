@@ -1,0 +1,13 @@
+*set	#B/7lO04ehzxS+00gDu8014Y	!
+	@`]yO	>start 2020 6 26
+	@)r	>status >Archived
+	@]zA	>text >B/7lO04ehzzK+00gDu8014Y
+	@}~L8	>track >B/7lO04eh~LS+00gDu8014Y
+*rga	#]zK	@0	!
+	@`)d	%f 'Add RON.Store.FS\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ron/156)\n<!-- Reviewable:end -->\n'
+*set	#}~LS	@0	!
+	@`)l	>externalId '156'
+	@)v	>provider 'github'
+	@]ME	>source 'ff-notes/ron'
+	@)O	>url 'https://github.com/ff-notes/ron/pull/156'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v5Wn+00gDu8014Y	!
+	@`]X_	>start 2018 7 21
+	@]Y2	>status >Archived
+	@)M	>text >B/7lWgm2v5YW+00gDu8014Y
+	@]ax	>track >B/7lWgm2v5bG+00gDu8014Y
+*rga	#]YW	@0	!
+	@`)f	%f 'Get note by id\n\nCommand `ff show` to show note by id.'
+*set	#]bG	@0	!
+	@`)Q	>externalId '71'
+	@)j	>provider 'github'
+	@)t	>source 'ff-notes/ff'
+	@]c2	>url 'https://github.com/ff-notes/ff/issues/71'
+.

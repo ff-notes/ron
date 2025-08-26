@@ -1,0 +1,13 @@
+*set	#B/7lWgm2u~qC+00gDu8014Y	!
+	@`)z	>start 2018 7 26
+	@]rI	>status >Archived
+	@)b	>text >B/7lWgm2u~rl+00gDu8014Y
+	@{v008	>track >B/7lWgm2v014+00gDu8014Y
+*rga	#]rl	@0	!
+	@`]s4	%f 'ff serve: daemonize\n\nnot default; with option `-d`'
+*set	#{v014	@0	!
+	@`)O	>externalId '76'
+	@]9M	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/issues/76'
+.

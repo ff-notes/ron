@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vIJE+00gDu8014Y	!
+	@`]KA	>start 2018 6 22
+	@)U	>status >Archived
+	@)n	>text >B/7lWgm2vIKx+00gDu8014Y
+	@]ix	>track >B/7lWgm2vIjQ+00gDu8014Y
+*rga	#]Kx	@0	!
+	@`]LG	%f 'Fix fetch counting \n\nno divide by 30 needed\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/62)\n<!-- Reviewable:end -->\n'
+*set	#]jQ	@0	!
+	@`)_	>externalId '62'
+	@)t	>provider 'github'
+	@]k2	>source 'ff-notes/ff'
+	@)C	>url 'https://github.com/ff-notes/ff/pull/62'
+.

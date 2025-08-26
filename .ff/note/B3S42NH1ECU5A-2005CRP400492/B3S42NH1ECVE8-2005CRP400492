@@ -1,0 +1,13 @@
+*set	#B/7lWgm2ucYf+00gDu8014Y	!
+	@`]ZS	>start 2018 7 30
+	@)l	>status >Archived
+	@]_E	>text >B/7lWgm2uc_O+00gDu8014Y
+	@]qG	>track >B/7lWgm2ucq_+00gDu8014Y
+*rga	#]_O	@0	!
+	@`)Y	%f 'Allow group modification\n\nAllow this\r\n```\r\nff delete ID1 ID2 ID3\r\nff done ID1 ID2 ID3\r\nff edit --start START ID1 ID2 ID3\r\nff postpone ID1 ID2 ID3\r\nff unarchive ID1 ID2 ID3\r\n```\r\n\r\nBut NOT this\r\n```\r\nff edit ID1 ID2 ID3\r\n```\r\nIt is non-sense to set the same text for multiple notes.'
+*set	#]q_	@0	!
+	@`)t	>externalId '84'
+	@]r2	>provider 'github'
+	@)M	>source 'ff-notes/ff'
+	@)W	>url 'https://github.com/ff-notes/ff/issues/84'
+.

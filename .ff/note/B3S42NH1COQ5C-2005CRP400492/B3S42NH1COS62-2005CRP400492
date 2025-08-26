@@ -1,0 +1,16 @@
+*set	#B/7lWgm2o6Yh+00gDu8014Y	!
+	@`]Zx	>start 2019 3 19
+	@]_Q	>status >Active
+	@)j	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@]a2	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)M	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)f	>text >B/7lWgm2o6ap+00gDu8014Y
+	@]nA	>track >B/7lWgm2o6nd+00gDu8014Y
+*rga	#]ap	@0	!
+	@`]b8	%f 'Show history/log of document changes\n\nSketch:\r\n```\r\n$ ff history 1234-ABCD\r\n* 2019-11-11\r\n  Text:\r\n     alfa\r\n    -bravo\r\n    +charlie\r\n* 2019-11-12\r\n  Added tag delta\r\n* 2019-11-13\r\n  Removed tags: echo, foxtrot\r\n```'
+*set	#]nd	@0	!
+	@`]~b	>externalId '140'
+	@}71A	>provider 'github'
+	@)d	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/issues/140'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2srT+00gDu8014Y	!
+	@`)n	>start 2018 12 27
+	@]U6	>status >Archived
+	@)Q	>text >B/7lWgm2srUj+00gDu8014Y
+	@]hA	>track >B/7lWgm2srhU+00gDu8014Y
+*rga	#]Uj	@0	!
+	@`)t	%f 'Add colors\n\nResolve #95 \r\n<!-- Reviewable:start -->\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/113)\r\n<!-- Reviewable:end -->\r\n'
+*set	#]hU	@0	!
+	@`)n	>externalId '113'
+	@)x	>provider 'github'
+	@]iG	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/pull/113'
+.

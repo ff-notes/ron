@@ -1,0 +1,13 @@
+*set	#B/7lWgm2j~0v+00gDu8014Y	!
+	@`]2	>start 2019 9 25
+	@)K	>status >Archived
+	@)d	>text >B/7lWgm2j~2x+00gDu8014Y
+	@]H	>track >B/7lWgm2j~HU+00gDu8014Y
+*rga	#]2x	@0	!
+	@`]36	%f 'Add Link type and Note.links field\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/177)\n<!-- Reviewable:end -->\n'
+*set	#]HU	@0	!
+	@`)d	>externalId '177'
+	@)x	>provider 'github'
+	@]I6	>source 'ff-notes/ff'
+	@)G	>url 'https://github.com/ff-notes/ff/pull/177'
+.

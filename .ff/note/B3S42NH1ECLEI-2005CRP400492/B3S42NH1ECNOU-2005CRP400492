@@ -1,0 +1,17 @@
+*set	#B/7lWgm2uaNI+00gDu8014Y	!
+	@`]PK	>start 2018 8 10
+	@]TE	>status >Archived
+	@)Y	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)r	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@]UA	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)K	>tags >B/7lWgm2nEbY+00gDu8014Y
+	@)d	>text >B/7lWgm2uaUx+00gDu8014Y
+	@]v8	>track >B/7lWgm2uavb+00gDu8014Y
+*rga	#]Ux	@0	!
+	@`]VG	%f 'Add timezone to timestamps\n\n> use a string. Specifically, use the full qualified name in the Olson database, so something like Australia/Adelaide or America/Los_Angeles. These are standardized descriptors of the timezones used in the world, and you can use these in pretty much every programming language ever used in the last few decades.\r\n\r\nhttps://en.wikipedia.org/wiki/List_of_tz_database_time_zones\r\n\r\nhttps://zachholman.com/talk/utc-is-enough-for-everyone-right'
+*set	#]vb	@0	!
+	@`)v	>externalId '85'
+	@]wE	>provider 'github'
+	@)O	>source 'ff-notes/ff'
+	@)h	>url 'https://github.com/ff-notes/ff/issues/85'
+.

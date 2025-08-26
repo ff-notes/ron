@@ -1,0 +1,13 @@
+*set	#B/7lWgm2ljbx+00gDu8014Y	!
+	@`]ct	>start 2019 4 25
+	@]dC	>status >Archived
+	@)W	>text >B/7lWgm2ljdp+00gDu8014Y
+	@}kKt	>track >B/7lWgm2lkLC+00gDu8014Y
+*rga	#]dp	@0	!
+	@`)z	%f '[WIP] Add tags\n\nResolves #20 \r\n\r\nToDo:\r\n- [x] Add tags when `ff new ...`\r\n- [x] Add, edit, remove tags when `ff edit ...`\r\n- [x] Show all tags `ff show-tags`\r\n- [x] Show tag field when `ff`\r\n- [x] List notes by tags\r\n- [x] Update some test\r\n- [x] Fix `prop_smoke` test\r\n- [x] Fix regresson test\r\n- [ ] Fix `ff tags` output when no tags\r\n- [ ] Command to upgrade old notes\r\n- [ ] Function `parseNoteV2` for `fallbackParse` method\r\n\r\n<!-- Reviewable:start -->\r\n---\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/157)\r\n<!-- Reviewable:end -->\r\n'
+*set	#}kLC	@0	!
+	@`)M	>externalId '157'
+	@)f	>provider 'github'
+	@)p	>source 'ff-notes/ff'
+	@)z	>url 'https://github.com/ff-notes/ff/pull/157'
+.

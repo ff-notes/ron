@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hddY+00gDu8014Y	!
+	@`]eK	>start 2019 10 21
+	@)d	>status >Archived
+	@)x	>text >B/7lWgm2hdfG+00gDu8014Y
+	@]hl	>track >B/7lWgm2hdi4+00gDu8014Y
+*rga	#]fG	@0	!
+	@`)Q	%f 'Add option for creating contacts'
+*set	#]i4	@0	!
+	@`)E	>externalId '201'
+	@)Y	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@)r	>url 'https://github.com/ff-notes/ff/issues/201'
+.

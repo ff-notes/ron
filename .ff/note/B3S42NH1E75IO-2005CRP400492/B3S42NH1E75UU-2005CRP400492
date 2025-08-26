@@ -1,0 +1,13 @@
+*set	#B/7lWgm2tuPO+00gDu8014Y	!
+	@`]QA	>start 2018 10 9
+	@)d	>status >Archived
+	@)x	>text >B/7lWgm2tuR6+00gDu8014Y
+	@]Tv	>track >B/7lWgm2tuUE+00gDu8014Y
+*rga	#]R6	@0	!
+	@`)G	%f 'Disallow dates when adding wiki notes'
+*set	#]UE	@0	!
+	@`)O	>externalId '97'
+	@)Y	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]V	>url 'https://github.com/ff-notes/ff/issues/97'
+.

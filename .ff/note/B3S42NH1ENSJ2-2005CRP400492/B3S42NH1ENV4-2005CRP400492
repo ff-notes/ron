@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v~9Y+00gDu8014Y	!
+	@`]Ad	>start 2018 1 28
+	@)x	>status >Archived
+	@]BQ	>text >B/7lWgm2v~B_+00gDu8014Y
+	@]kz	>track >B/7lWgm2v~lb+00gDu8014Y
+*rga	#]B_	@0	!
+	@`)t	%f 'Re-write agenda sections\n\n```haskell\r\n-- | haskellish pseudocode for agenda sections logic\r\nagendaSection start end\r\n    | end == Nothing    = if\r\n        | start <= today -> Actual\r\n        | start >  today -> StartingSoon\r\n    | end <  Just today =   Overdue\r\n    | end == Just today =   DueToday\r\n    | end >  Just today = if\r\n        | start <= today -> EndingSoon\r\n        | start >  today -> StartingSoon\r\n```'
+*set	#]lb	@0	!
+	@`)l	>externalId '32'
+	@]m4	>provider 'github'
+	@)E	>source 'ff-notes/ff'
+	@)Y	>url 'https://github.com/ff-notes/ff/issues/32'
+.

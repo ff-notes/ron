@@ -1,0 +1,17 @@
+*set	#B/7lWgm2r0rS+00gDu8014Y	!
+	@`]td	>start 2019 2 25
+	@]u6	>status >Archived
+	@)_	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)j	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@]v2	>tags >B/7euRTb_HMv+00xXYO6tTI
+	@)C	>tags >B/7lWgm2gSeQ+00gDu8014Y
+	@)W	>text >B/7lWgm2r0vz+00gDu8014Y
+	@}1bQ	>track >B/7lWgm2r1cC+00gDu8014Y
+*rga	#]vz	@0	!
+	@`]w8	%f 'ff-qt: use delegates for tasks\n\nNow `setIndexWidget` is used.\r\n\r\nhttps://doc.qt.io/qt-5/qtwidgets-itemviews-stardelegate-example.html\r\ndelegate::paint\r\nhttps://doc.qt.io/qt-5/qstylepainter.html\r\nhttps://doc.qt.io/qt-5/qstyle.html#ComplexControl-enum'
+*set	#}1cC	@0	!
+	@`)W	>externalId '125'
+	@)f	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]d8	>url 'https://github.com/ff-notes/ff/issues/125'
+.

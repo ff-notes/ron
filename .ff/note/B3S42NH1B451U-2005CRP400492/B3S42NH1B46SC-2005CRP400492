@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hXGz+00gDu8014Y	!
+	@`]Hv	>start 2019 11 5
+	@]IE	>status >Archived
+	@)Y	>text >B/7lWgm2hXIh+00gDu8014Y
+	@]hK	>track >B/7lWgm2hXhn+00gDu8014Y
+*rga	#]Ih	@0	!
+	@`)r	%f 'Add error message when EDITOR is bad\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/207)\n<!-- Reviewable:end -->\n'
+*set	#]hn	@0	!
+	@`]i6	>externalId '207'
+	@)G	>provider 'github'
+	@)_	>source 'ff-notes/ff'
+	@)j	>url 'https://github.com/ff-notes/ff/pull/207'
+.

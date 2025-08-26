@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xTKj+00gDu8014Y	!
+	@`]LW	>start 2018 1 8
+	@)p	>status >Archived
+	@]M8	>text >B/7lWgm2xTMI+00gDu8014Y
+	@]Nr	>track >B/7lWgm2xTO+00gDu8014Y
+*rga	#]MI	@0	!
+	@`)S	%f 'Connect Travis'
+*set	#]O	@0	!
+	@`)A	>externalId '14'
+	@)U	>provider 'github'
+	@)d	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/issues/14'
+.

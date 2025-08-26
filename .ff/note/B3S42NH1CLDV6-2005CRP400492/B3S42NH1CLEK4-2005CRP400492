@@ -1,0 +1,15 @@
+*set	#B/7lWgm2ngVb+00gDu8014Y	!
+	@`]Xn	>start 2019 3 19
+	@]YG	>status >Active
+	@)_	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)t	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@]ZC	>text >B/7lWgm2ngZW+00gDu8014Y
+	@]d2	>track >B/7lWgm2ngdM+00gDu8014Y
+*rga	#]ZW	@0	!
+	@`)p	%f 'Add option to build in an isolated environment\n\nAdd Docker config'
+*set	#]dM	@0	!
+	@`)f	>externalId '142'
+	@)p	>provider 'github'
+	@]e8	>source 'ff-notes/ff'
+	@)I	>url 'https://github.com/ff-notes/ff/issues/142'
+.

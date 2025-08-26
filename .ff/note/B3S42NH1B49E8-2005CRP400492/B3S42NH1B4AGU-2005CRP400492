@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hYN8+00gDu8014Y	!
+	@`)v	>start 2019 11 1
+	@]OE	>status >Active
+	@)Y	>text >B/7lWgm2hYOr+00gDu8014Y
+	@]bl	>track >B/7lWgm2hYc4+00gDu8014Y
+*rga	#]Or	@0	!
+	@`]P	%f 'Pack ff in deb #115\n\nResolve #115\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/206)\n<!-- Reviewable:end -->\n'
+*set	#]c4	@0	!
+	@`)O	>externalId '206'
+	@)Y	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@]d	>url 'https://github.com/ff-notes/ff/pull/206'
+.

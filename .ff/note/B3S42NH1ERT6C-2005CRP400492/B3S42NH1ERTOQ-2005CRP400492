@@ -1,0 +1,13 @@
+*set	#B/7lWgm2wVJC+00gDu8014Y	!
+	@`)z	>start 2018 1 9
+	@]KS	>status >Archived
+	@)l	>text >B/7lWgm2wVL4+00gDu8014Y
+	@]Qr	>track >B/7lWgm2wVRA+00gDu8014Y
+*rga	#]L4	@0	!
+	@`)E	%f 'Subcommand to delete notes\n\nstatus = Deleted\r\nset some empty or nonsense values to other fields  '
+*set	#]RA	@0	!
+	@`)K	>externalId '26'
+	@)U	>provider 'github'
+	@)n	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/issues/26'
+.

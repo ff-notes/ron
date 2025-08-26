@@ -1,0 +1,17 @@
+*set	#B/7lWgm2hP_K+00gDu8014Y	!
+	@`]bM	>start 2019 11 9
+	@)p	>status >Active
+	@]c8	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)S	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)b	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@)l	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@]d4	>text >B/7lWgm2hPdO+00gDu8014Y
+	@]rl	>track >B/7lWgm2hPsr+00gDu8014Y
+*rga	#]dO	@0	!
+	@`)h	%f 'Sync content with external editor\n\nWhen using an external editor for editing a note, sync content back and forward.'
+*set	#]sr	@0	!
+	@`]tA	>externalId '212'
+	@)U	>provider 'github'
+	@)n	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/issues/212'
+.

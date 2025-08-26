@@ -1,0 +1,13 @@
+*set	#B/7lWgm2mH0C+00gDu8014Y	!
+	@`]18	>start 2019 4 2
+	@)S	>status >Archived
+	@)l	>text >B/7lWgm2mH1v+00gDu8014Y
+	@]GI	>track >B/7lWgm2mHKM+00gDu8014Y
+*rga	#]1v	@0	!
+	@`]2E	%f 'Add vscode tasks\n\nResolve #149\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/150)\n<!-- Reviewable:end -->\n'
+*set	#]KM	@0	!
+	@`)W	>externalId '150'
+	@)p	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]L8	>url 'https://github.com/ff-notes/ff/pull/150'
+.

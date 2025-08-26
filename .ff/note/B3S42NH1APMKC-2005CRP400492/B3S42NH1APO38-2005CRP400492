@@ -1,0 +1,13 @@
+*set	#B/7lWgm2gDfC+00gDu8014Y	!
+	@`]g8	>start 2019 12 18
+	@)S	>status >Archived
+	@)v	>text >B/7lWgm2gDh4+00gDu8014Y
+	@]~b	>track >B/7lWgm2gD~v+00gDu8014Y
+*rga	#]h4	@0	!
+	@`)E	%f 'Travis: Use jobs\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/223)\n<!-- Reviewable:end -->\n'
+*set	#]~v	@0	!
+	@`}E04	>externalId '223'
+	@)h	>provider 'github'
+	@]1	>source 'ff-notes/ff'
+	@)A	>url 'https://github.com/ff-notes/ff/pull/223'
+.

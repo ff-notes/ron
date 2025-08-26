@@ -1,0 +1,13 @@
+*set	#B/7lWgm2hTzW+00gDu8014Y	!
+	@`]~b	>start 2019 11 6
+	@)v	>status >Archived
+	@}U0O	>text >B/7lWgm2hU0Y+00gDu8014Y
+	@]Fh	>track >B/7lWgm2hUG+00gDu8014Y
+*rga	#}U0Y	@0	!
+	@`)r	%f 'Add ability to use shell command as editor\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/210)\n<!-- Reviewable:end -->\n'
+*set	#]G	@0	!
+	@`)K	>externalId '210'
+	@)U	>provider 'github'
+	@)d	>source 'ff-notes/ff'
+	@)x	>url 'https://github.com/ff-notes/ff/pull/210'
+.

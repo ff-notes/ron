@@ -1,0 +1,16 @@
+*set	#B/7lO04eiB0U+00gDu8014Y	!
+	@`]3I	>start 2020 6 13
+	@]5x	>status >Active
+	@]7C	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)f	>tags >B/7euRTbZUqA+00xXYO6tTI
+	@]8S	>tags >B/7lO04eiAAQ+00gDu8014Y
+	@)v	>text >B/7lO04eiB9E+00gDu8014Y
+	@]DS	>track >B/7lO04eiBDl+00gDu8014Y
+*rga	#]9E	@0	!
+	@`)Y	%f 'Build demo-text-editor-qt conditionally\n\nuse cabal flag'
+*set	#]Dl	@0	!
+	@`]Er	>externalId '155'
+	@]F	>provider 'github'
+	@)K	>source 'ff-notes/ron'
+	@)U	>url 'https://github.com/ff-notes/ron/issues/155'
+.

@@ -1,0 +1,16 @@
+*set	#B/7lWgm2wp0p+00gDu8014Y	!
+	@`]2r	>start 2018 1 8
+	@]3U	>status >Active
+	@)n	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@]46	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)G	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)j	>text >B/7lWgm2wp52+00gDu8014Y
+	@]I	>track >B/7lWgm2wpIU+00gDu8014Y
+*rga	#]52	@0	!
+	@`)C	%f 'Contexts\n\nImplement type (or types?) for different contexts (as in GTD)\r\n- location:\r\n  - predefined: Moscow, London\r\n  - user-defined: work, home\r\n- time: Monday, weekend, morning\r\n- user state: on the internet, on phone'
+*set	#]IU	@0	!
+	@`)n	>externalId '21'
+	@)x	>provider 'github'
+	@]JG	>source 'ff-notes/ff'
+	@)Q	>url 'https://github.com/ff-notes/ff/issues/21'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2rGV4+00gDu8014Y	!
+	@`]WA	>start 2019 2 14
+	@)U	>status >Archived
+	@)n	>text >B/7lWgm2rGWx+00gDu8014Y
+	@]Zv	>track >B/7lWgm2rG_E+00gDu8014Y
+*rga	#]Wx	@0	!
+	@`]X6	%f 'Try haskell.build\n\nhttp://haskell.build/'
+*set	#]_E	@0	!
+	@`)O	>externalId '123'
+	@)h	>provider 'github'
+	@)r	>source 'ff-notes/ff'
+	@]a	>url 'https://github.com/ff-notes/ff/issues/123'
+.

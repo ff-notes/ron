@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vN38+00gDu8014Y	!
+	@`)v	>start 2018 6 16
+	@]4E	>status >Archived
+	@)Y	>text >B/7lWgm2vN4r+00gDu8014Y
+	@]9Y	>track >B/7lWgm2vN9h+00gDu8014Y
+*rga	#]4r	@0	!
+	@`]5	%f 'Show `fetching...` while fetching issues\n\nDots are adding with an interval.'
+*set	#]9h	@0	!
+	@`]A	>externalId '57'
+	@)A	>provider 'github'
+	@)U	>source 'ff-notes/ff'
+	@)d	>url 'https://github.com/ff-notes/ff/issues/57'
+.

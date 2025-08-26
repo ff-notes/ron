@@ -1,0 +1,16 @@
+*set	#B/7lWgm2rFOv+00gDu8014Y	!
+	@`]Qx	>start 2019 2 19
+	@]RQ	>status >Active
+	@)t	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@]S2	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)M	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)f	>text >B/7lWgm2rFSz+00gDu8014Y
+	@]VU	>track >B/7lWgm2rFVn+00gDu8014Y
+*rga	#]Sz	@0	!
+	@`]T8	%f 'Enable osx testing on Travis'
+*set	#]Vn	@0	!
+	@`)x	>externalId '124'
+	@]WG	>provider 'github'
+	@)Q	>source 'ff-notes/ff'
+	@)j	>url 'https://github.com/ff-notes/ff/issues/124'
+.

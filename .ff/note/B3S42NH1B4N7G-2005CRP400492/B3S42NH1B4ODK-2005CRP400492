@@ -1,0 +1,13 @@
+*set	#B/7lWgm2haol+00gDu8014Y	!
+	@`]ph	>start 2019 10 24
+	@]q	>status >Active
+	@)K	>text >B/7lWgm2haqd+00gDu8014Y
+	@}b56	>track >B/7lWgm2hb5_+00gDu8014Y
+*rga	#]qd	@0	!
+	@`)n	%f '(2018-10-22, https://github.com/ff-notes/ron/issues/116, cblp) index\n\nnotes by track in the database and select specific note by its track\nhttps://github.com/ff-notes/ff/blob/4617d27ba6e342500bfcf6f28a29f8690731cc76/ff-core/lib/FF.hs#L386-L388\n\n* Found on master\n\n'
+*set	#}b5_	@0	!
+	@`)j	>externalId '203'
+	@]62	>provider 'github'
+	@)C	>source 'ff-notes/ff'
+	@)M	>url 'https://github.com/ff-notes/ff/issues/203'
+.

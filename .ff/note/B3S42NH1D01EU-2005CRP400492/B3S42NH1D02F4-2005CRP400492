@@ -1,0 +1,17 @@
+*set	#B/7lWgm2p0NU+00gDu8014Y	!
+	@`]PM	>start 2019 3 19
+	@)p	>status >Archived
+	@]Q8	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)S	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)l	>tags >B/7euRTbZ1YK+00xXYO6tTI
+	@)v	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@]RE	>text >B/7lWgm2p0RY+00gDu8014Y
+	@]aE	>track >B/7lWgm2p0ah+00gDu8014Y
+*rga	#]RY	@0	!
+	@`)h	%f 'sync `ff --help` with README\n\nв ридми есть пример ff --help, он должен совпадать с тем, что выводится в реальности\r\nдописать тест, который это проверяет постоянно'
+*set	#]ah	@0	!
+	@`]b	>externalId '136'
+	@)K	>provider 'github'
+	@)U	>source 'ff-notes/ff'
+	@)n	>url 'https://github.com/ff-notes/ff/issues/136'
+.

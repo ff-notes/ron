@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v476+00gDu8014Y	!
+	@`)t	>start 2018 7 24
+	@]8C	>status >Archived
+	@)W	>text >B/7lWgm2v48f+00gDu8014Y
+	@]Rt	>track >B/7lWgm2v4SM+00gDu8014Y
+*rga	#]8f	@0	!
+	@`)p	%f 'ff serve command: return plain list of actual notes\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/72)\n<!-- Reviewable:end -->\n'
+*set	#]SM	@0	!
+	@`)W	>externalId '72'
+	@)p	>provider 'github'
+	@)z	>source 'ff-notes/ff'
+	@]T8	>url 'https://github.com/ff-notes/ff/pull/72'
+.

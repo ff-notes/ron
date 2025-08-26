@@ -1,0 +1,13 @@
+*set	#B/7lWgm2uFyb+00gDu8014Y	!
+	@`]zO	>start 2018 8 22
+	@)h	>status >Archived
+	@]~	>text >B/7lWgm2uF~A+00gDu8014Y
+	@}GT	>track >B/7lWgm2uGTd+00gDu8014Y
+*rga	#]~A	@0	!
+	@`)U	%f '[#88] Add wiki notes\n\nResolves [#88](https://github.com/ff-notes/ff/issues/88)\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/90)\n<!-- Reviewable:end -->\n'
+*set	#}GTd	@0	!
+	@`)n	>externalId '90'
+	@]U6	>provider 'github'
+	@)Q	>source 'ff-notes/ff'
+	@)_	>url 'https://github.com/ff-notes/ff/pull/90'
+.

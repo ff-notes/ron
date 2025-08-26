@@ -1,0 +1,13 @@
+*set	#B/7lWgm2j7BA+00gDu8014Y	!
+	@`]C6	>start 2019 10 3
+	@)Q	>status >Archived
+	@)j	>text >B/7lWgm2j7D2+00gDu8014Y
+	@]Sp	>track >B/7lWgm2j7TI+00gDu8014Y
+*rga	#]D2	@0	!
+	@`)C	%f 'Bump up githab dependency to 0.23\n\nResolves #182\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/185)\n<!-- Reviewable:end -->\n'
+*set	#]TI	@0	!
+	@`)S	>externalId '185'
+	@)l	>provider 'github'
+	@)v	>source 'ff-notes/ff'
+	@]UE	>url 'https://github.com/ff-notes/ff/pull/185'
+.

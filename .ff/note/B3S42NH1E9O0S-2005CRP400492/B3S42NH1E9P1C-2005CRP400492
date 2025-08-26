@@ -1,0 +1,16 @@
+*set	#B/7lWgm2uE0S+00gDu8014Y	!
+	@`]2d	>start 2018 9 1
+	@]36	>status >Active
+	@)Q	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)j	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)t	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@]4C	>text >B/7lWgm2uE4W+00gDu8014Y
+	@]Ef	>track >B/7lWgm2uEEz+00gDu8014Y
+*rga	#]4W	@0	!
+	@`)p	%f 'Proper error messages\n\nDistinguish these cases in error messages:\r\n- a document doesn\'t exist\r\n- a document is invalid\r\n- a document is tracked\r\n- a document is archived'
+*set	#]Ez	@0	!
+	@`]FI	>externalId '92'
+	@)S	>provider 'github'
+	@)l	>source 'ff-notes/ff'
+	@)v	>url 'https://github.com/ff-notes/ff/issues/92'
+.

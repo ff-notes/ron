@@ -1,0 +1,15 @@
+*set	#B/7lWgm2gTIp+00gDu8014Y	!
+	@`]Jl	>start 2019 12 18
+	@]KE	>status >Archived
+	@)Y	>tags >B/7euRTbZUqA+00xXYO6tTI
+	@)r	>tags >B/7lWgm2gSeQ+00gDu8014Y
+	@]LK	>text >B/7lWgm2gTLd+00gDu8014Y
+	@]YS	>track >B/7lWgm2gTYl+00gDu8014Y
+*rga	#]Ld	@0	!
+	@`)n	%f 'Remove ff-qt\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/220)\n<!-- Reviewable:end -->\n'
+*set	#]Yl	@0	!
+	@`]Z4	>externalId '220'
+	@)O	>provider 'github'
+	@)Y	>source 'ff-notes/ff'
+	@)h	>url 'https://github.com/ff-notes/ff/pull/220'
+.

@@ -1,0 +1,16 @@
+*set	#B/7lWgm2jRR_+00gDu8014Y	!
+	@`]Tb	>start 2019 10 1
+	@]U4	>status >Archived
+	@)O	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)h	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)r	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@]VK	>text >B/7lWgm2jRVU+00gDu8014Y
+	@]YI	>track >B/7lWgm2jRYb+00gDu8014Y
+*rga	#]VU	@0	!
+	@`)n	%f 'Bump up github dependency to 0.23'
+*set	#]Yb	@0	!
+	@`)v	>externalId '182'
+	@]Z4	>provider 'github'
+	@)O	>source 'ff-notes/ff'
+	@)Y	>url 'https://github.com/ff-notes/ff/issues/182'
+.

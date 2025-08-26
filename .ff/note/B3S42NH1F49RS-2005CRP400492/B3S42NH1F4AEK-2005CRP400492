@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xYTx+00gDu8014Y	!
+	@`]Ut	>start 2018 1 8
+	@]VC	>status >Archived
+	@)W	>text >B/7lWgm2xYVp+00gDu8014Y
+	@]Xr	>track >B/7lWgm2xYY+00gDu8014Y
+*rga	#]Vp	@0	!
+	@`)z	%f 'Desktop app: try qtah'
+*set	#]Y	@0	!
+	@`)A	>externalId '9'
+	@]bO	>provider 'github'
+	@)h	>source 'ff-notes/ff'
+	@)r	>url 'https://github.com/ff-notes/ff/issues/9'
+.

@@ -1,0 +1,14 @@
+*set	#B/7lWgm2nFcr+00gDu8014Y	!
+	@`]dx	>start 2019 3 31
+	@]eQ	>status >Archived
+	@)t	>tags >B/7lWgm2nEbY+00gDu8014Y
+	@]fC	>text >B/7lWgm2nFfW+00gDu8014Y
+	@]jQ	>track >B/7lWgm2nFjj+00gDu8014Y
+*rga	#]fW	@0	!
+	@`)p	%f 'ff-qt not buildable under 18.04 Ubuntu and qt-5.9.5'
+*set	#]jj	@0	!
+	@`]k2	>externalId '145'
+	@)C	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/issues/145'
+.

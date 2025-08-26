@@ -1,0 +1,17 @@
+*set	#B/7lWgm2gwnh+00gDu8014Y	!
+	@`]pG	>start 2019 11 9
+	@)j	>status >Active
+	@]qC	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)M	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@)f	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@)p	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@]r8	>text >B/7lWgm2gwrI+00gDu8014Y
+	@]uQ	>track >B/7lWgm2gwut+00gDu8014Y
+*rga	#]rI	@0	!
+	@`)b	%f 'Add config parameter for external editor'
+*set	#]ut	@0	!
+	@`]v2	>externalId '214'
+	@)M	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)f	>url 'https://github.com/ff-notes/ff/issues/214'
+.

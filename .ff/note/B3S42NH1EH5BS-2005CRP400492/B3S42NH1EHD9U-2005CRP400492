@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v9Lx+00gDu8014Y	!
+	@`]Mj	>start 2018 7 7
+	@]N2	>status >Archived
+	@)W	>text >B/7lWgm2v9Nf+00gDu8014Y
+	@}BHr	>track >B/7lWgm2vBJ6+00gDu8014Y
+*rga	#]Nf	@0	!
+	@`)p	%f 'Add tracking\n\nПока частичная реализация. Функция записи в базу не доведена до конца. \r\nСтопор возникает с тем, что _agenda_ ломается. Сначала изменение типов помогло\r\n```haskell\r\n...\r\n    , noteTrack  :: LWW (Maybe Tracked)\r\n    }\r\n    deriving (Eq, Show)\r\n\r\ndata Tracked = Tracked\r\n    { noteExtId  :: Text\r\n    , noteSource :: Text\r\n    }\r\n    deriving (Eq, Show)\r\n```\r\nТак _agenda_ начала работать, но сейчас снова не работает. Уже не помню после каких изменений.\r\nВроде делал _newTrack_ and _cmdTrack_ в _FF.hs_.\r\n\r\n<!-- Reviewable:start -->\r\n---\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/67)\r\n<!-- Reviewable:end -->\r\n'
+*set	#}BJ6	@0	!
+	@`)_	>externalId '67'
+	@)t	>provider 'github'
+	@]K2	>source 'ff-notes/ff'
+	@)M	>url 'https://github.com/ff-notes/ff/pull/67'
+.

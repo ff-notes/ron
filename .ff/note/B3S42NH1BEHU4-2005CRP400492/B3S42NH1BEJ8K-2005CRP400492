@@ -1,0 +1,14 @@
+*set	#B/7lWgm2ipV4+00gDu8014Y	!
+	@`]XG	>start 2019 10 4
+	@)j	>status >Archived
+	@]Y2	>tags >B/7euRTbXQl2+00xXYO6tTI
+	@)W	>text >B/7lWgm2ipYp+00gDu8014Y
+	@]mz	>track >B/7lWgm2ipnS+00gDu8014Y
+*rga	#]Yp	@0	!
+	@`]Z8	%f 'One time load notes (#169)\n\nResolves #169\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/190)\n<!-- Reviewable:end -->\n'
+*set	#]nS	@0	!
+	@`)l	>externalId '190'
+	@]o4	>provider 'github'
+	@)E	>source 'ff-notes/ff'
+	@)Y	>url 'https://github.com/ff-notes/ff/pull/190'
+.

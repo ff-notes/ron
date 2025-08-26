@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vG2E+00gDu8014Y	!
+	@`]3	>start 2018 6 26
+	@)K	>status >Archived
+	@)n	>text >B/7lWgm2vG3x+00gDu8014Y
+	@}H8O	>track >B/7lWgm2vH8h+00gDu8014Y
+*rga	#]3x	@0	!
+	@`]46	%f 'Add test for github list\n\nТест не проходит:\r\n```haskell\r\n> case_repo\r\n*** Exception: HUnitFailure (Just (SrcLoc {srcLocPackage = \"main\", srcLocModule = \"Main\", srcLocFile = \"/media/metaxis/stock/Coding/Haskell/ff/ff-core/test/Main.hs\", srcLocStartLine = 262, srcLocStartCol = 5, srcLocEndLine = 262, srcLocEndCol = 21})) \r\n\r\n\"expected: \r\nfromList [(Starting 365374,Sample {notes = [NoteView {nid = 334520780, status = Active, text = \\\"import issues (GitHub -> ff)\\\\nurl https://github.com/ff-notes/ff/issues/60\\\", start = 2018-06-21, end = Just 2018-06-15}], total = 1})]\\n \r\n\r\nbut got: \r\nfromList [(Overdue 10,Sample {notes = [NoteView {nid = 334520780, status = Active, text = \\\"import issues (GitHub -> ff)\\\\nurl            https://github.com/ff-notes/ff/issues/60\\\", start = 2018-06-21, end = Just 2018-06-15}], total = 1})]\"\r\n```\r\n\r\n<!-- Reviewable:start -->\r\n---\r\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/63)\r\n<!-- Reviewable:end -->\r\n'
+*set	#}H8h	@0	!
+	@`)r	>externalId '63'
+	@]9A	>provider 'github'
+	@)K	>source 'ff-notes/ff'
+	@)d	>url 'https://github.com/ff-notes/ff/pull/63'
+.

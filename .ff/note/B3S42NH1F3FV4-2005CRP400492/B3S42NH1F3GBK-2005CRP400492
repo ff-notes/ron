@@ -1,0 +1,13 @@
+*set	#B/7lWgm2xR~_+00gDu8014Y	!
+	@`}S0M	>start 2018 1 8
+	@)f	>status >Archived
+	@)z	>text >B/7lWgm2xS18+00gDu8014Y
+	@]4G	>track >B/7lWgm2xS4Q+00gDu8014Y
+*rga	#}S18	@0	!
+	@`)S	%f 'Hide pid from note-id when pid is unique'
+*set	#]4Q	@0	!
+	@`)j	>externalId '16'
+	@)t	>provider 'github'
+	@]52	>source 'ff-notes/ff'
+	@)M	>url 'https://github.com/ff-notes/ff/issues/16'
+.

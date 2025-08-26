@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vRvh+00gDu8014Y	!
+	@`]wU	>start 2018 6 3
+	@)x	>status >Archived
+	@]xG	>text >B/7lWgm2vRxQ+00gDu8014Y
+	@}SEE	>track >B/7lWgm2vSEh+00gDu8014Y
+*rga	#]xQ	@0	!
+	@`)_	%f 'Github list issues\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/53)\n<!-- Reviewable:end -->\n'
+*set	#}SEh	@0	!
+	@`)r	>externalId '53'
+	@]FA	>provider 'github'
+	@)K	>source 'ff-notes/ff'
+	@)U	>url 'https://github.com/ff-notes/ff/pull/53'
+.

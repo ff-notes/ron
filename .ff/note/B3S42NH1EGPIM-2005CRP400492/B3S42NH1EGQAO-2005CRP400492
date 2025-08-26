@@ -1,0 +1,13 @@
+*set	#B/7lWgm2v6PM+00gDu8014Y	!
+	@`]Q8	>start 2018 7 18
+	@)S	>status >Archived
+	@)l	>text >B/7lWgm2v6R4+00gDu8014Y
+	@]Uz	>track >B/7lWgm2v6VI+00gDu8014Y
+*rga	#]R4	@0	!
+	@`)E	%f 'Brief view option\n\nShow the note titles without meta data.'
+*set	#]VI	@0	!
+	@`)S	>externalId '70'
+	@)b	>provider 'github'
+	@]_b	>source 'ff-notes/ff'
+	@)l	>url 'https://github.com/ff-notes/ff/issues/70'
+.

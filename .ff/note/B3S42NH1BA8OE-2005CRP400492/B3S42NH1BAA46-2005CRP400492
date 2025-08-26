@@ -1,0 +1,13 @@
+*set	#B/7lWgm2iICE+00gDu8014Y	!
+	@`]DU	>start 2019 10 9
+	@)x	>status >Archived
+	@]EG	>text >B/7lWgm2iIE_+00gDu8014Y
+	@]T_	>track >B/7lWgm2iITt+00gDu8014Y
+*rga	#]E_	@0	!
+	@`)t	%f 'Refactor viewTaskSamplesWith\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/196)\n<!-- Reviewable:end -->\n'
+*set	#]Tt	@0	!
+	@`]UC	>externalId '196'
+	@)M	>provider 'github'
+	@)f	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/pull/196'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2i_Ip+00gDu8014Y	!
+	@`]Jl	>start 2019 10 4
+	@]K4	>status >Archived
+	@)O	>text >B/7lWgm2i_Kh+00gDu8014Y
+	@]bM	>track >B/7lWgm2i_bf+00gDu8014Y
+*rga	#]Kh	@0	!
+	@`)r	%f 'Remove redundant sugar; use idiomatic C++\n\n\n\n<!-- Reviewable:start -->\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/192)\n<!-- Reviewable:end -->\n'
+*set	#]bf	@0	!
+	@`)p	>externalId '192'
+	@]c8	>provider 'github'
+	@)I	>source 'ff-notes/ff'
+	@)S	>url 'https://github.com/ff-notes/ff/pull/192'
+.

@@ -1,0 +1,13 @@
+*set	#B/7lWgm2vDrr+00gDu8014Y	!
+	@`]sd	>start 2018 7 3
+	@)x	>status >Archived
+	@]tG	>text >B/7lWgm2vDt_+00gDu8014Y
+	@}E8M	>track >B/7lWgm2vE8f+00gDu8014Y
+*rga	#]t_	@0	!
+	@`)j	%f 'Add ExceptT\n\nНе сильно код поменялся. Один _case_ сократился.\n\n<!-- Reviewable:start -->\n---\nThis change is [<img src=\"https://reviewable.io/review_button.svg\" height=\"34\" align=\"absmiddle\" alt=\"Reviewable\"/>](https://reviewable.io/reviews/ff-notes/ff/65)\n<!-- Reviewable:end -->\n'
+*set	#}E8f	@0	!
+	@`)p	>externalId '65'
+	@]98	>provider 'github'
+	@)I	>source 'ff-notes/ff'
+	@)S	>url 'https://github.com/ff-notes/ff/pull/65'
+.

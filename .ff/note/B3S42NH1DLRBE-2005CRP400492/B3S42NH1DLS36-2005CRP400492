@@ -1,0 +1,16 @@
+*set	#B/7lWgm2rjqj+00gDu8014Y	!
+	@`]sv	>start 2019 2 7
+	@]tY	>status >Active
+	@)r	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@]uA	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@)K	>tags >B/7lWgm2gkcx+00gDu8014Y
+	@)n	>text >B/7lWgm2rjv6+00gDu8014Y
+	@]~Q	>track >B/7lWgm2rj~t+00gDu8014Y
+*rga	#]v6	@0	!
+	@`)G	%f 'import from org-mode format\n\nApply edits if a note with such UUID exists already'
+*set	#]~t	@0	!
+	@`}k02	>externalId '120'
+	@)M	>provider 'github'
+	@)W	>source 'ff-notes/ff'
+	@)p	>url 'https://github.com/ff-notes/ff/issues/120'
+.

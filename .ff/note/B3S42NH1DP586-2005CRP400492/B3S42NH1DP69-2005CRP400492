@@ -1,0 +1,15 @@
+*set	#B/7lWgm2s9K6+00gDu8014Y	!
+	@`]LW	>start 2019 2 7
+	@)z	>status >Active
+	@]MI	>tags >B/7euRTbXPzW+00xXYO6tTI
+	@)b	>tags >B/7euRTbZUqA+00xXYO6tTI
+	@)v	>text >B/7lWgm2s9NE+00gDu8014Y
+	@]YU	>track >B/7lWgm2s9Yx+00gDu8014Y
+*rga	#]NE	@0	!
+	@`)O	%f 'org-mode-like UI\n\nPossible ways:\r\n1. Clone Emacs and org-mode with vty/brick/reflex-vty.\r\n2. Write an Emacs mode with https://github.com/knupfer/haskell-emacs\r\n\r\nSee also:\r\n- #119\r\n- #120'
+*set	#]Yx	@0	!
+	@`]Z6	>externalId '118'
+	@)Q	>provider 'github'
+	@)_	>source 'ff-notes/ff'
+	@)t	>url 'https://github.com/ff-notes/ff/issues/118'
+.

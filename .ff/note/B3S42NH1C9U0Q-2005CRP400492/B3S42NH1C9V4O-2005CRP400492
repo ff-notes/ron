@@ -1,0 +1,17 @@
+*set	#B/7lWgm2mFWQ+00gDu8014Y	!
+	@`]Yb	>start 2019 4 3
+	@]ZE	>status >Archived
+	@)h	>tags >B/7euRTbXXoI+00xXYO6tTI
+	@]_	>tags >B/7euRTbXYMI+00xXYO6tTI
+	@)A	>tags >B/7euRTb_HMv+00xXYO6tTI
+	@)K	>tags >B/7lWgm2fU9G+00gDu8014Y
+	@)n	>text >B/7lWgm2mFa6+00gDu8014Y
+	@]lC	>track >B/7lWgm2mFlf+00gDu8014Y
+*rga	#]a6	@0	!
+	@`)G	%f 'Track: ParseError \"Error in $: expected Vector a, encountered Object\"\n\n```\r\nff track -r ffnotes/ff -d\r\nfetching...\r\nParseError \"Error in $: expected Vector a, encountered Object\"\r\n```'
+*set	#]lf	@0	!
+	@`)p	>externalId '151'
+	@]m8	>provider 'github'
+	@)I	>source 'ff-notes/ff'
+	@)b	>url 'https://github.com/ff-notes/ff/issues/151'
+.

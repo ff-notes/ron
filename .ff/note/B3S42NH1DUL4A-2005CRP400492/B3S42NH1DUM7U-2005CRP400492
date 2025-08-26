@@ -1,0 +1,15 @@
+*set	#B/7lWgm2sqIA+00gDu8014Y	!
+	@`]KC	>start 2019 1 7
+	@)f	>status >Active
+	@]L8	>tags >B/7euRTbXgY_+00xXYO6tTI
+	@)I	>tags >B/7lWgm2g8uW+00gDu8014Y
+	@)l	>text >B/7lWgm2sqM4+00gDu8014Y
+	@]Xn	>track >B/7lWgm2sqYG+00gDu8014Y
+*rga	#]M4	@0	!
+	@`)O	%f 'VS code extension\n\nWould be great with git integration.\r\n\r\nSome prior art:\r\n* https://marketplace.visualstudio.com/items?itemName=wayou.vscode-todo-highlight\r\n* https://www.npmjs.com/package/vscode-todo-plus\r\n'
+*set	#]YG	@0	!
+	@`)Q	>externalId '114'
+	@)j	>provider 'github'
+	@]Z2	>source 'ff-notes/ff'
+	@)C	>url 'https://github.com/ff-notes/ff/issues/114'
+.
