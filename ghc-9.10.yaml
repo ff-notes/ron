@@ -1,0 +1,41 @@
+resolver: lts-24.0
+
+packages:
+  - ron
+  - ron-rdt
+  - ron-schema
+  - ron-storage
+  - ron-store-sqlite
+  - ron-test
+  - ron-tool
+  - swarm
+  - examples
+  - demo/chat
+  - demo/garden
+
+extra-deps:
+  # for packages:
+    # demo:
+      # - hoppy-generator-0.7.1
+      # - hoppy-runtime-0.7.0
+      # - hoppy-std-0.7.1
+      # - qtah-cpp-qt5-0.7.0
+      # - qtah-generator-0.7.1
+      # - qtah-qt5-0.7.0
+    # ron-test:
+      # - ../haskell-hedgehog/hedgehog # for better diffs
+      # - levenshtein-0.2.1.0 # for hedgehog with better diffs
+
+# for hedgehog with better diffs
+# allow-newer: true
+# allow-newer-deps:
+#   - tasty-hedgehog
+
+extra-lib-dirs:
+  - swarm/_artifacts/lib
+
+flags:
+  brick:
+    demos: false
+  ron-test:
+    style: true
