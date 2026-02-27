@@ -156,7 +156,7 @@ nodeOptions = do
                 readPeer
                 ( long "peer"
                     <> metavar "PORT"
-                    <> help "Connect to localhost peers using specifed ports"
+                    <> help "Connect to peers using specifed ports"
                 )
     listenPorts <-
         many $
