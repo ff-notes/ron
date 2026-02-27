@@ -125,14 +125,14 @@ instance PersistFieldSql Payload where
 share
     [mkPersist sqlSettings, mkMigrate "migrateAll"]
     [persistLowerCase|
-    Op
-      event   UUID -- op own id
-      ref     UUID -- parent op id
-      object  UUID -- enclosing object (itself for root op)
-      payload Payload
+        Op
+            event   UUID -- op own id
+            ref     UUID -- parent op id
+            object  UUID -- enclosing object (itself for root op)
+            payload Payload
 
-      UniqueEvent event
-  |]
+            UniqueEvent event
+    |]
 
 opToDatabase :: UUID -> RON.Op -> Op
 opToDatabase opObject RON.Op{opId, refId, payload} =
@@ -177,17 +177,15 @@ appendPatch :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
 appendPatch Patch{object, log} =
     errorContext "appendPatch @Store" do
         opsInserted <-
-            runDB $
-                catMaybes
-                    . toList
-                    <$> for log \op ->
-                        (op <$) <$> insertUnique (opToDatabase object op)
+            runDB do
+                catMaybes <$> for (toList log) \op ->
+                    (op <$) <$> insertUnique (opToDatabase object op)
         -- if successful, return op
         case opsInserted of
             [] -> pure ()
             op : ops -> do
                 Handle{onNewPatch} <- Store ask
-                atomically $
+                atomically do
                     writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadWholeObjectLog ::
@@ -216,13 +214,14 @@ runDB ::
     StoreT m a
 runDB action = do
     Handle{dbPool} <- Store ask
-    lift $
+    lift do
         withRunInIO \runInIO ->
-            runResourceT $
-                (`runLoggingT` monadLoggerLog' runInIO) $
-                    (`runSqlPool` dbPool) do
-                        runMigration migrateAll
-                        action
+            runResourceT
+                . (`runLoggingT` monadLoggerLog' runInIO)
+                . (`runSqlPool` dbPool)
+                $ do
+                    runMigration migrateAll
+                    action
   where
     monadLoggerLog' runInIO loc src lvl msg =
         runInIO $ monadLoggerLog loc src lvl msg

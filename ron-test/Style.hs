@@ -84,7 +84,7 @@ checkFormatting :: FilePath -> IO Bool
 checkFormatting file = do
     formatted <- runFormatter file
     diffResult <- runColorDiff file formatted
-    pure $ case diffResult of
+    pure case diffResult of
         ExitSuccess -> True
         ExitFailure 1 -> False
         ExitFailure _ -> error "internal error: diff failed"
