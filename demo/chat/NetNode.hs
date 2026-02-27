@@ -24,11 +24,17 @@ import UnliftIO (
     atomically,
     concurrently_,
     forConcurrently_,
+    liftIOOp,
     withRunInIO,
  )
 
 import Fork (forkLinked)
 import Options (NodeOptions (..), Peer (..))
+
+-- Like 'liftIOOp :: MonadUnliftIO m => (IO a -> IO b) -> m a -> m b',
+-- but with an extra argument for the inner function.
+liftIOOp' :: (MonadUnliftIO m) => ((x -> IO a) -> IO b) -> (x -> m a) -> m b
+liftIOOp' f g = withRunInIO \unlift -> f $ unlift . g
 
 workers ::
     (MonadLogger m, MonadUnliftIO m) => Store.Handle -> NodeOptions -> m ()
@@ -38,13 +44,12 @@ workers db NodeOptions{listenHost, listenPorts, peers} =
     runServers =
         forConcurrently_ listenPorts \port -> do
             $logInfo $ "Listening at [" <> show listenHost <> "]:" <> show port
-            withRunInIO \unlift ->
-                WS.runServer (show listenHost) port $ unlift . server
+            liftIOOp' (WS.runServer (show listenHost) port) server
 
     runClients =
         forConcurrently_ peers \peer@Peer{host, port} -> do
             $logInfo $ "Connecting to " <> show peer
-            withRunInIO \unlift -> WS.runClient host port "/" $ unlift . client
+            liftIOOp' (WS.runClient host port "/") client
 
     server pending = do
         conn <- liftIO $ WS.acceptRequest pending
@@ -79,23 +84,20 @@ dialog db conn = do
             liftIO $ WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
 
     -- receive
-    withRunInIO \unlift ->
-        WS.withPingThread conn 30 (pure ())
-            . unlift
-            $ forever do
-                messageData <- liftIO $ WS.receiveData conn
-                case Aeson.eitherDecode messageData of
-                    Left e ->
-                        error
-                            ( "NetNode.dialog: Aeson.eitherDecode: "
-                                <> e
-                                <> ", messageData = "
-                                <> show messageData
-                            )
-                    Right netMessage -> do
-                        $logInfo $ "Received " <> show netMessage
-                        case netMessage of
-                            NetPatch patch -> runStore db $ appendPatch patch
+    liftIOOp (WS.withPingThread conn 30 (pure ()))
+        $ forever do
+            messageData <- liftIO $ WS.receiveData conn
+            case Aeson.eitherDecode messageData of
+                Left e ->
+                    error
+                        $ "NetNode.dialog: Aeson.eitherDecode: "
+                        <> e
+                        <> ", messageData = "
+                        <> show messageData
+                Right netMessage -> do
+                    $logInfo $ "Received " <> show netMessage
+                    case netMessage of
+                        NetPatch patch -> runStore db $ appendPatch patch
 
 newtype NetMessage = NetPatch Patch
     deriving (Show)
