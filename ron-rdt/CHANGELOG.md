@@ -6,8 +6,14 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+
+## [0.12] - 2026-02-27
 ### Changed
 - Use sequential ids on RGA block insertion and deletions (#15).
+
+### Fixed
+- Use strict patch file reading to save on file numbers when reading too many
+  objects.
 
 ## [0.11] - 2021-06-15
 ### Added
@@ -215,7 +221,8 @@ and this project adheres to
   - RON-Schema
   - RON-Schema TemplateHaskell code generator
 
-[Unreleased]: https://github.com/ff-notes/ron/compare/ron-rdt-0.11...HEAD
+[Unreleased]: https://github.com/ff-notes/ron/compare/ron-rdt-0.12...HEAD
+[0.12]: https://github.com/ff-notes/ron/compare/ron-rdt-0.11...ron-rdt-0.12
 [0.11]: https://github.com/ff-notes/ron/compare/ron-rdt-0.10...ron-rdt-0.11
 [0.10]: https://github.com/ff-notes/ron/compare/ron-rdt-0.9...ron-rdt-0.10
 [0.9]: https://github.com/ff-notes/ron/compare/ron-rdt-0.8...ron-rdt-0.9
