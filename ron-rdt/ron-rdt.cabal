@@ -1,9 +1,9 @@
 cabal-version:      2.2
 name:               ron-rdt
-version:            0.11
+version:            0.12
 bug-reports:        https://github.com/ff-notes/ron/issues
 category:           Distributed Systems, Protocol, Database
-copyright:          2018-2019, 2025 Yuriy Syrovetskiy
+copyright:          2018-2019, 2025-2026 Yuriy Syrovetskiy
 homepage:           https://github.com/ff-notes/ron
 license:            BSD-3-Clause
 license-file:       LICENSE
@@ -18,7 +18,7 @@ build-type:         Simple
 extra-source-files: CHANGELOG.md
 
 common language
-  build-depends:      base >=4.10
+  build-depends:      base >=4.10 && <4.21
   default-extensions:
     NoFieldSelectors
     NoImplicitPrelude
