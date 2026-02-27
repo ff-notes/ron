@@ -1,24 +1,24 @@
-cabal-version:      2.2
-name:               ron
-version:            0.13
-bug-reports:        https://github.com/ff-notes/ron/issues
-category:           Distributed Systems, Protocol, Database
-copyright:          2018-2021, 2025 Yuriy Syrovetskiy
-homepage:           https://github.com/ff-notes/ron
-license:            BSD-3-Clause
-license-file:       LICENSE
-maintainer:         Yuriy Syrovetskiy <haskell@cblp.su>
-synopsis:           RON
+cabal-version:   2.2
+name:            ron
+version:         0.13
+bug-reports:     https://github.com/ff-notes/ron/issues
+category:        Distributed Systems, Protocol, Database
+copyright:       2018-2021, 2025 Yuriy Syrovetskiy
+homepage:        https://github.com/ff-notes/ron
+license:         BSD-3-Clause
+license-file:    LICENSE
+maintainer:      Yuriy Syrovetskiy <haskell@cblp.su>
+synopsis:        RON
 description:
   Replicated Object Notation (RON), data types (RDT), and RON-Schema
   .
   Examples: https://github.com/ff-notes/ron/tree/master/examples
 
-build-type:         Simple
-extra-source-files: CHANGELOG.md
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
 
 common language
-  build-depends:      base >=4.10
+  build-depends:      base >=4.10 && <4.21
   default-extensions:
     NoFieldSelectors
     NoImplicitPrelude
