@@ -1,6 +1,7 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NoImplicitPrelude #-}
 
 module Database (
     chatroomUuid,
@@ -11,7 +12,6 @@ module Database (
 ) where
 
 import RON.Prelude
-import Prelude hiding (show)
 
 import Control.Concurrent.STM (TChan, readTChan, writeTChan)
 import Control.Monad (forever)
@@ -47,7 +47,7 @@ newMessage msg = do
 messagePoster ::
     (MonadLogger m, MonadUnliftIO m) => TChan Message -> Store.Handle -> m ()
 messagePoster onMessagePosted db =
-    forever $ do
+    forever do
         message <- atomically $ readTChan onMessagePosted
         $logDebug $ "Saving message " <> show message
         runStore db $ newMessage message
@@ -59,7 +59,7 @@ databaseToUIUpdater ::
     m ()
 databaseToUIUpdater db onMessageListUpdated = do
     onUpdate <- fetchUpdates db
-    forever $ do
+    forever do
         _ <- atomically $ readTChan onUpdate
         messages <- loadAllMessages db
         atomically $ writeTChan onMessageListUpdated messages

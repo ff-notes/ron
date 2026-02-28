@@ -40,7 +40,7 @@ instance ReplicatedObject Message where
         repr = Ref @(ORMap Text Text) objectId []
 
     decodeObject objectId ops =
-        errorContext "view @Message" $ do
+        errorContext "decodeObject @Message" do
             repr :: ORMap Text Text <- ORSet.decode objectId ops
             username <- ORSet.lookupLwwDecodeThrow "username" repr
             text <- ORSet.lookupLwwDecodeThrow "text" repr
