@@ -4,7 +4,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module Database (
-    chatroomUuid,
     databaseToUIUpdater,
     loadAllMessages,
     messagePoster,
@@ -23,7 +22,7 @@ import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, newObject)
 import RON.Store.Sqlite (fetchUpdates, runStore)
 import RON.Store.Sqlite qualified as Store
-import RON.Types (Atom (AUuid), UUID)
+import RON.Types (UUID)
 import RON.Types.Experimental (Ref (..))
 import RON.UUID qualified as UUID
 import UnliftIO (MonadUnliftIO, atomically)
@@ -64,8 +63,8 @@ databaseToUIUpdater db onMessageListUpdated = do
         messages <- loadAllMessages db
         atomically $ writeTChan onMessageListUpdated messages
 
-chatroomUuid :: UUID
-chatroomUuid = $(UUID.liftName "chatroom")
+gMessageSetUuid :: UUID
+gMessageSetUuid = $(UUID.liftName "messages")
 
 gMessageSetRef :: Ref (ORSet (Ref Message))
-gMessageSetRef = Ref chatroomUuid [AUuid $(UUID.liftName "message")]
+gMessageSetRef = Ref gMessageSetUuid

@@ -121,9 +121,9 @@ instance (AsAtom head, AsAtoms tail) => AsAtoms (head, tail) where
         head : tail -> (,) <$> fromAtom head <*> fromAtoms tail
 
 instance AsAtoms (Ref a) where
-    toAtoms Ref{object, path} = AUuid object : path
+    toAtoms Ref{object} = [AUuid object]
 
     fromAtoms = \case
         [] -> throwErrorText "Expected some atoms, got none"
-        AUuid object : path -> pure Ref{object, path}
+        [AUuid object] -> pure Ref{object}
         a : _ -> throwErrorText $ "Expected UUID, got " <> show a

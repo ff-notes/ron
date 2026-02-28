@@ -24,4 +24,4 @@ theTreeId :: UUID
 theTreeId = $(UUID.liftName "theTree")
 
 theTreeRef :: Ref GTree
-theTreeRef = Ref theTreeId []
+theTreeRef = Ref theTreeId

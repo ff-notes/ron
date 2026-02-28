@@ -42,12 +42,12 @@ toForest object children = go object
         ]
 
 loadForest :: (MonadE m, MonadStore m) => Ref GTree -> m (Forest Op)
-loadForest ref@(Ref oid _) =
+loadForest ref@(Ref oid) =
     toForest oid . readFrame oid <$> loadSubObjectLog ref mempty
 
 insert :: (MonadStore m, ReplicaClock m) => Ref GTree -> UUID -> m ()
-insert (Ref object prefix) parent = do
+insert (Ref object) parent = do
     advanceToUuid object
     opId <- getEventUuid
     appendPatch
-        Patch{object, log = Op{opId, refId = parent, payload = prefix} :| []}
+        Patch{object, log = Op{opId, refId = parent, payload = []} :| []}

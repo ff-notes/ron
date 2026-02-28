@@ -10,22 +10,20 @@ import RON.Prelude
 import Data.Typeable (typeRep)
 import Text.Show (showParen, showString, showsPrec)
 
-import RON.Types (Atom, Op, UUID)
+import RON.Types (Op, UUID)
 
 {- | References to a RON object or a subobject
 TODO hide data constructor in Internal module
 -}
-data Ref a = Ref {object :: UUID, path :: [Atom]}
+newtype Ref a = Ref {object :: UUID}
 
 instance (Typeable a) => Show (Ref a) where
-    showsPrec a Ref{object, path} =
+    showsPrec a Ref{object} =
         showParen (a >= 11) $
             showString "Ref @"
                 . showsPrec 11 (typeRep $ Proxy @a)
                 . showString " "
                 . showsPrec 11 object
-                . showString " "
-                . showsPrec 11 path
 
 data Patch = Patch
     { object :: UUID

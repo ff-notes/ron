@@ -37,7 +37,7 @@ instance ReplicatedObject Message where
         ORSet.add_ repr ("username", username)
         ORSet.add_ repr ("text", text)
       where
-        repr = Ref @(ORMap Text Text) objectId []
+        repr = Ref @(ORMap Text Text) objectId
 
     decodeObject objectId ops =
         errorContext "decodeObject @Message" do
@@ -48,7 +48,7 @@ instance ReplicatedObject Message where
 
 getMessageView ::
     (MonadE m, MonadStore m) => Ref Message -> m (Maybe MessageView)
-getMessageView ref@(Ref objectId _) = do
+getMessageView ref@(Ref objectId) = do
     postTime <-
         case timeVariety objectTime of
             Epoch -> pure $ Epoch.decode $ timeValue objectTime

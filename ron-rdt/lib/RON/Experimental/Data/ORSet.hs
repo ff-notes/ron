@@ -4,7 +4,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module RON.Experimental.Data.ORSet (
@@ -28,7 +27,6 @@ import Data.Map.Strict qualified as Map
 import Data.Text.Lazy qualified as TextL
 import Data.Text.Lazy.Encoding qualified as TextL
 
-import Data.List (stripPrefix)
 import RON.Error (MonadE, liftMaybe)
 import RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import RON.Experimental.Data (
@@ -67,14 +65,13 @@ add ::
     Ref (ORSet item) ->
     item ->
     m UUID
-add (Ref object path) value = do
+add (Ref object) value = do
     advanceToUuid object
     opId <- getEventUuid
     appendPatch
         Patch
             { object
-            , log =
-                Op{opId, refId = object, payload = path ++ toAtoms value} :| []
+            , log = Op{opId, refId = object, payload = toAtoms value} :| []
             }
     pure opId
 
@@ -93,7 +90,7 @@ add_ ref = void . add ref
 
 -- | Get items from database and decode
 getDecode :: (AsAtoms a, MonadE m, MonadStore m) => Ref (ORSet a) -> m [a]
-getDecode (Ref object pre) = do
+getDecode (Ref object) = do
     -- TODO loadObjectLog object (PayloadPrefix pre)
     ops <- loadWholeObjectLog object mempty
     let alivePayloads =
@@ -107,9 +104,7 @@ getDecode (Ref object pre) = do
                             , (itemId, payload') <-
                                 case payload of
                                     [] -> pure (refId, payload)
-                                    (stripPrefix pre -> Just suf) ->
-                                        pure (opId, suf)
-                                    _ -> []
+                                    _ -> pure (opId, payload)
                             ]
     traverse fromAtoms alivePayloads
 
