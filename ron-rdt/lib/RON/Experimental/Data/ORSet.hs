@@ -62,9 +62,7 @@ decode objectId ops =
 -- | Add value to the set. Return the reference to the set item.
 add ::
     (AsAtoms item, MonadStore m, ReplicaClock m) =>
-    Ref (ORSet item) ->
-    item ->
-    m UUID
+    Ref (ORSet item) -> item -> m UUID
 add (Ref object) value = do
     advanceToUuid object
     opId <- getEventUuid
@@ -83,9 +81,7 @@ add (Ref object) value = do
 -}
 add_ ::
     (AsAtoms item, MonadStore m, ReplicaClock m) =>
-    Ref (ORSet item) ->
-    item ->
-    m ()
+    Ref (ORSet item) -> item -> m ()
 add_ ref = void . add ref
 
 remove :: (MonadStore m, ReplicaClock m) => Ref (ORSet a) -> Ref a -> m ()
