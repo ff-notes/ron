@@ -1,11 +1,4 @@
-{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module RON.Experimental.Data.ORSet (
     ORSet,
@@ -15,34 +8,21 @@ module RON.Experimental.Data.ORSet (
     decode,
     empty,
     getDecode,
-    lookupLww,
-    lookupLwwThrow,
-    lookupLwwDecode,
-    lookupLwwDecodeThrow,
-    lookupSet,
     remove,
 ) where
 
 import RON.Prelude
 
 import Data.Map.Strict qualified as Map
-import Data.Text.Lazy qualified as TextL
-import Data.Text.Lazy.Encoding qualified as TextL
-
-import RON.Error (MonadE, liftMaybe)
+import RON.Error (MonadE)
 import RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
-import RON.Experimental.Data (
-    AsAtom,
-    AsAtoms,
-    fromAtoms,
-    toAtom,
-    toAtoms,
- )
-import RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
+import RON.Experimental.Data (AsAtoms, fromAtoms, toAtoms)
+import RON.Experimental.Data.ORSet.Type (ORMap, ORSet (ORSet))
 import RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
-import RON.Text.Serialize (serializeAtom)
-import RON.Types (Op (..), OpenFrame, Payload, UUID)
-import RON.Types.Experimental (Patch (..), Ref (..))
+import RON.Types (Op (Op), OpenFrame, UUID)
+import RON.Types qualified
+import RON.Types.Experimental (Patch (Patch), Ref (Ref))
+import RON.Types.Experimental qualified
 
 decode :: UUID -> OpenFrame -> ORSet a
 decode objectId ops =
@@ -99,33 +79,5 @@ getDecode (Ref object) = do
     let alivePayloads = [payload | (_opId, payload@(_ : _)) <- Map.elems items]
     traverse fromAtoms alivePayloads
 
-lookupLww :: (AsAtom k) => k -> ORMap k v -> Maybe Payload
-lookupLww key (ORSet s) =
-    snd
-        <$> maximumMayOn
-            fst
-            [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
-
--- | Like 'lookupLww' but also decode payload.
-lookupLwwDecode ::
-    (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)
-lookupLwwDecode key = traverse fromAtoms . lookupLww key
-
-lookupLwwThrow :: (AsAtom k, MonadE m) => k -> ORMap k v -> m Payload
-lookupLwwThrow key obj =
-    liftMaybe ("key " <> showAtom key <> " must present") $ lookupLww key obj
-  where
-    showAtom = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom
-
--- | Like 'lookupLwwDecode' but assert that key exists.
-lookupLwwDecodeThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m v
-lookupLwwDecodeThrow key = lookupLwwThrow key >=> fromAtoms
-
 empty :: ORSet a
 empty = ORSet Map.empty
-
-lookupSet :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m [v]
-lookupSet key (ORSet s) =
-    traverse
-        fromAtoms
-        [value | (_item, k : value) <- Map.elems s, k == toAtom key]

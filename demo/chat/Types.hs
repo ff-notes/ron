@@ -17,6 +17,7 @@ import RON.Event (
  )
 import RON.Event qualified
 import RON.Experimental.Data (ReplicatedObject, decodeObject, encodeObject)
+import RON.Experimental.Data.ORMap qualified as ORMap
 import RON.Experimental.Data.ORSet (ORMap)
 import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, readObject)
@@ -40,16 +41,16 @@ data Message = Message
 
 instance ReplicatedObject Message where
     encodeObject objectId Message{username, text} = do
-        ORSet.add_ repr ("username", username)
-        ORSet.add_ repr ("text", text)
+        ORMap.add_ repr "username" username
+        ORMap.add_ repr "text" text
       where
         repr = Ref @(ORMap Text Text) objectId
 
     decodeObject objectId ops =
         errorContext "decodeObject @Message" do
             let repr :: ORMap Text Text = ORSet.decode objectId ops
-            username <- ORSet.lookupLwwDecodeThrow "username" repr
-            text <- ORSet.lookupLwwDecodeThrow "text" repr
+            username <- ORMap.lookupLwwDecodeThrow "username" repr
+            text <- ORMap.lookupLwwDecodeThrow "text" repr
             pure Message{username, text}
 
 getMessageView ::

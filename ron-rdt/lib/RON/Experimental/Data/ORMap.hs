@@ -1,14 +1,30 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-module RON.Experimental.Data.ORMap (add_, remove, update) where
+module RON.Experimental.Data.ORMap (
+    add_,
+    lookupLww,
+    lookupLwwThrow,
+    lookupLwwDecode,
+    lookupLwwDecodeThrow,
+    lookupSet,
+    remove,
+    update,
+) where
 
 import RON.Prelude
 
+import Data.Map.Strict qualified as Map
+import Data.Text.Lazy qualified as TextL
+import Data.Text.Lazy.Encoding qualified as TextL
+import RON.Error (MonadE, liftMaybe)
 import RON.Event (ReplicaClock)
-import RON.Experimental.Data (AsAtom, AsAtoms, toAtom)
+import RON.Experimental.Data (AsAtom, AsAtoms, fromAtoms, toAtom)
 import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Experimental.Data.ORSet.Type (ORMap, ORSet (ORSet))
 import RON.Store.Class (MonadStore, loadWholeObjectLog)
+import RON.Text.Serialize (serializeAtom)
+import RON.Types (Payload)
 import RON.Types.Experimental (Ref (Ref))
 
 add_ ::
@@ -32,3 +48,31 @@ update ::
 update objectRef (key :: k) (value :: v) = do
     remove objectRef key
     add_ objectRef key value
+
+lookupLww :: (AsAtom k) => k -> ORMap k v -> Maybe Payload
+lookupLww key (ORSet s) =
+    snd
+        <$> maximumMayOn
+            fst
+            [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
+
+-- | Like 'lookupLww' but also decode payload.
+lookupLwwDecode ::
+    (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m (Maybe v)
+lookupLwwDecode key = traverse fromAtoms . lookupLww key
+
+lookupLwwThrow :: (AsAtom k, MonadE m) => k -> ORMap k v -> m Payload
+lookupLwwThrow key obj =
+    liftMaybe ("key " <> showAtom key <> " must present") $ lookupLww key obj
+  where
+    showAtom = TextL.toStrict . TextL.decodeUtf8 . serializeAtom . toAtom
+
+-- | Like 'lookupLwwDecode' but assert that key exists.
+lookupLwwDecodeThrow :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m v
+lookupLwwDecodeThrow key = lookupLwwThrow key >=> fromAtoms
+
+lookupSet :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m [v]
+lookupSet key (ORSet s) =
+    traverse
+        fromAtoms
+        [value | (_item, k : value) <- Map.elems s, k == toAtom key]
