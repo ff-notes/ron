@@ -78,7 +78,7 @@ dialog db conn = do
     -- send
     forkLinked do
         onUpdate <- fetchUpdates db
-        forever $ do
+        forever do
             patch <- atomically $ readTChan onUpdate
             $logInfo $ "Send new patch " <> show patch
             liftIO $ WS.sendBinaryData conn $ Aeson.encode $ NetPatch patch
