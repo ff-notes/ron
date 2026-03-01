@@ -9,14 +9,15 @@ Implementation: a map from the itemId to the original op.
 Each time a value is added, a new item=op is created.
 Deletion of a value replaces all its known items with tombstone ops.
 Tombstone is an op with empty payload (even without prefix) referencing item.
+
+This structure contains alive items only.
+Tombstones are written to the log only.
 -}
 newtype ORSet a
     = ORSet
         ( Map
-            UUID -- item id (op id for alive; ref id for tombstones)
-            ( UUID -- op id
-            , Payload -- payload encoding the value (empty for tombstone)
-            )
+            UUID -- op id
+            Payload -- payload encoding the value
         )
     deriving (Eq, Show)
 

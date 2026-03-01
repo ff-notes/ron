@@ -37,9 +37,10 @@ remove ::
 remove objectRef@(Ref object :: Ref (ORMap k v)) key = do
     ops <- loadWholeObjectLog object mempty
     let ORSet items = ORSet.decode object ops
-    for_ items \(opId, payload) ->
+    for_ (Map.assocs items) \(itemId, payload) ->
         case payload of
-            k : _ | k == toAtom key -> ORSet.remove objectRef (Ref @(k, v) opId)
+            k : _
+                | k == toAtom key -> ORSet.remove objectRef (Ref @(k, v) itemId)
             _ -> pure ()
 
 update ::
@@ -54,7 +55,7 @@ lookupLww key (ORSet s) =
     snd
         <$> maximumMayOn
             fst
-            [(item, value) | (item, k : value) <- Map.elems s, k == toAtom key]
+            [(item, value) | (item, k : value) <- Map.assocs s, k == toAtom key]
 
 -- | Like 'lookupLww' but also decode payload.
 lookupLwwDecode ::
@@ -73,6 +74,4 @@ lookupLwwDecodeThrow key = lookupLwwThrow key >=> fromAtoms
 
 lookupSet :: (AsAtom k, AsAtoms v, MonadE m) => k -> ORMap k v -> m [v]
 lookupSet key (ORSet s) =
-    traverse
-        fromAtoms
-        [value | (_item, k : value) <- Map.elems s, k == toAtom key]
+    traverse fromAtoms [value | k : value <- Map.elems s, k == toAtom key]

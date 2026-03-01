@@ -1,4 +1,5 @@
 {-# LANGUAGE DisambiguateRecordFields #-}
+{-# LANGUAGE LambdaCase #-}
 
 module RON.Experimental.Data.ORSet (
     ORSet,
@@ -19,24 +20,29 @@ import RON.Event (ReplicaClock, advanceToUuid, getEventUuid)
 import RON.Experimental.Data (AsAtoms, fromAtoms, toAtoms)
 import RON.Experimental.Data.ORSet.Type (ORMap, ORSet (ORSet))
 import RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
-import RON.Types (Op (Op), OpenFrame, UUID)
+import RON.Types (Op (Op), OpenFrame, Payload, UUID)
 import RON.Types qualified
 import RON.Types.Experimental (Patch (Patch), Ref (Ref))
 import RON.Types.Experimental qualified
 
+preferTombstone :: Payload -> Payload -> Payload
+preferTombstone xs = \case [] -> []; _ -> xs
+
+itemId :: Op -> UUID
+itemId Op{opId, refId, payload} =
+    case payload of
+        [] -> refId -- tombstone
+        _ : _ -> opId -- add
+
 decode :: UUID -> OpenFrame -> ORSet a
 decode objectId ops =
-    ORSet $
-        Map.fromListWith
-            (maxOn fst)
-            [ (itemId, (opId, payload))
-            | Op{opId, refId, payload} <- ops
+    ORSet
+        . Map.filter (not . null)
+        $ Map.fromListWith
+            preferTombstone
+            [ (itemId op, payload)
+            | op@Op{opId, payload} <- ops
             , opId /= objectId
-            , let
-                itemId =
-                    case payload of
-                        [] -> refId -- tombstone
-                        _ : _ -> opId -- add
             ]
 
 -- | Add value to the set. Return the reference to the set item.
@@ -76,7 +82,7 @@ getDecode (Ref object) = do
     -- TODO loadObjectLog object (PayloadPrefix pre)
     ops <- loadWholeObjectLog object mempty
     let ORSet items = decode object ops
-    let alivePayloads = [payload | (_opId, payload@(_ : _)) <- Map.elems items]
+    let alivePayloads = Map.elems items
     traverse fromAtoms alivePayloads
 
 empty :: ORSet a
