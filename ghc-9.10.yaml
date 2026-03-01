@@ -15,16 +15,12 @@ packages:
 
 extra-deps:
   # for packages:
-    # demo:
-      # - hoppy-generator-0.7.1
-      # - hoppy-runtime-0.7.0
-      # - hoppy-std-0.7.1
-      # - qtah-cpp-qt5-0.7.0
-      # - qtah-generator-0.7.1
-      # - qtah-qt5-0.7.0
+    # ron-store-sqlite:
+      - selda-0.5.2.1
+      - selda-sqlite-0.1.7.3
     # ron-test:
-      # - ../haskell-hedgehog/hedgehog # for better diffs
-      # - levenshtein-0.2.1.0 # for hedgehog with better diffs
+      # - ../haskell-hedgehog/hedgehog  # for better diffs
+      # - levenshtein-0.2.1.0  # for hedgehog with better diffs
 
 # for hedgehog with better diffs
 # allow-newer: true

@@ -1,24 +1,13 @@
 {-# OPTIONS -Wno-orphans #-}
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE ImportQualifiedPost #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module RON.Store.Sqlite (
@@ -34,44 +23,40 @@ module RON.Store.Sqlite (
 import RON.Prelude
 
 import Control.Concurrent.STM (TChan, dupTChan, writeTChan)
-import Control.Monad.Logger (
-    LoggingT,
-    MonadLogger,
-    monadLoggerLog,
-    runLoggingT,
- )
-import Control.Monad.Trans.Resource (ResourceT, runResourceT)
-import Data.ByteString.Lazy qualified as BSL
+import Control.Monad.Logger (LoggingT, MonadLogger)
 import Data.List.NonEmpty (groupWith)
-import Data.Pool (Pool)
-import Data.Text qualified as Text
-import Database.Persist (
-    Entity (..),
-    PersistValue (PersistByteString),
-    SelectOpt (Asc),
-    insertUnique,
-    selectList,
-    (==.),
+import Database.Selda (
+    Attr ((:-)),
+    MonadMask,
+    SeldaT,
+    SqlRow,
+    SqlType,
+    Table,
+    ascending,
+    distinct,
+    fromSql,
+    insert_,
+    literal,
+    mkLit,
+    order,
+    primary,
+    query,
+    restrict,
+    select,
+    table,
+    transaction,
+    tryCreateTable,
+    (!),
+    (.==),
  )
-import Database.Persist.Sql (
-    PersistField,
-    PersistFieldSql,
-    SqlBackend,
-    rawSql,
-    runMigration,
-    runSqlPool,
-    sqlType,
-    unSingle,
+import Database.Selda qualified
+import Database.Selda.Backend (
+    Lit (LCustom),
+    SeldaConnection,
+    SqlTypeRep (TBlob),
+    runSeldaT,
  )
-import Database.Persist.Sql qualified
-import Database.Persist.Sqlite (createSqlitePool)
-import Database.Persist.TH (
-    mkMigrate,
-    mkPersist,
-    persistLowerCase,
-    share,
-    sqlSettings,
- )
+import Database.Selda.SQLite (SQLite, sqliteOpen)
 import System.Random.TF (newTFGen)
 import System.Random.TF.Instances (random)
 import UnliftIO (
@@ -81,7 +66,6 @@ import UnliftIO (
     newBroadcastTChanIO,
     newIORef,
     throwIO,
-    withRunInIO,
  )
 import UnliftIO.Directory (makeAbsolute)
 
@@ -103,48 +87,41 @@ import RON.Types qualified as RON
 import RON.Types.Experimental (Patch (..))
 import RON.Util.Word (Word60, ls60)
 
-instance PersistField UUID where
-    toPersistValue = PersistByteString . BSL.toStrict . serializeUuid
-    fromPersistValue = \case
-        PersistByteString bs -> fmapL Text.pack $ parseUuid $ BSL.fromStrict bs
-        _ -> Left "expected PersistByteString"
+instance SqlType UUID where
+    sqlType _ = TBlob
+    defaultValue = undefined
+    fromSql = either error id . parseUuid . fromSql @ByteStringL
+    mkLit = LCustom TBlob . mkLit @ByteStringL . serializeUuid
 
-instance PersistFieldSql UUID where
-    sqlType _ = sqlType (Proxy @ByteString)
+instance SqlType Payload where
+    sqlType _ = TBlob
+    defaultValue = undefined
+    fromSql = either error id . parsePayload . fromSql @ByteStringL
+    mkLit = LCustom TBlob . mkLit @ByteStringL . serializePayload
 
-instance PersistField Payload where
-    toPersistValue = PersistByteString . BSL.toStrict . serializePayload
-    fromPersistValue = \case
-        PersistByteString bs ->
-            fmapL Text.pack $ parsePayload $ BSL.fromStrict bs
-        _ -> Left "expected PersistByteString"
+data Op = Op
+    { object :: UUID
+    , event :: UUID
+    , ref :: UUID
+    , payload :: Payload
+    }
+    deriving stock (Generic)
+    deriving anyclass (SqlRow)
 
-instance PersistFieldSql Payload where
-    sqlType _ = sqlType (Proxy @ByteString)
-
-share
-    [mkPersist sqlSettings, mkMigrate "migrateAll"]
-    [persistLowerCase|
-        Op
-            event   UUID -- op own id
-            ref     UUID -- parent op id
-            object  UUID -- enclosing object (itself for root op)
-            payload Payload
-
-            UniqueEvent event
-    |]
+opTable :: Table Op
+opTable = table "Op" [#event :- primary]
 
 opToDatabase :: UUID -> RON.Op -> Op
-opToDatabase opObject RON.Op{opId, refId, payload} =
-    Op{opEvent = opId, opRef = refId, opObject, opPayload = payload}
+opToDatabase object RON.Op{opId, refId, payload} =
+    Op{event = opId, ref = refId, object, payload = payload}
 
 opFromDatabase :: Op -> RON.Op
-opFromDatabase Op{opEvent, opRef, opPayload} =
-    RON.Op{opId = opEvent, refId = opRef, payload = opPayload}
+opFromDatabase Op{event, ref, payload} =
+    RON.Op{opId = event, refId = ref, payload = payload}
 
 data Handle = Handle
     { clock :: IORef Word60
-    , dbPool :: Pool SqlBackend
+    , dbConn :: SeldaConnection SQLite
     , onNewPatch :: TChan Patch
     {- ^ A channel of changes in the database.
     This is a broadcast channel, so you MUST NOT read from it directly,
@@ -154,7 +131,14 @@ data Handle = Handle
     }
 
 newtype StoreT m a = Store (ReaderT Handle (EpochClockT m) a)
-    deriving (Applicative, Functor, Monad, MonadIO, MonadUnliftIO, ReplicaClock)
+    deriving newtype
+        ( Applicative
+        , Functor
+        , Monad
+        , MonadIO
+        , MonadUnliftIO
+        , ReplicaClock
+        )
 
 type Store = StoreT (LoggingT IO)
 
@@ -170,7 +154,7 @@ instance (MonadLogger m, MonadUnliftIO m) => MonadStore (StoreT m) where
 instance MonadTrans StoreT where
     lift = Store . lift @(ReaderT _) . lift @EpochClockT
 
-listObjects :: (MonadLogger m, MonadUnliftIO m) => StoreT m [UUID]
+listObjects :: (MonadUnliftIO m) => StoreT m [UUID]
 listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
 appendPatch :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
@@ -178,9 +162,17 @@ appendPatch Patch{object, log} =
     errorContext "appendPatch @Store" do
         opsInserted <-
             runDB do
-                catMaybes <$> for (toList log) \op ->
-                    (op <$) <$> insertUnique (opToDatabase object op)
-        -- if successful, return op
+                catMaybes <$> for (toList log) \op -> do
+                    transaction do
+                        existing <- query do
+                            row <- select opTable
+                            restrict $ row ! #event .== literal op.opId
+                            pure $ row ! #event
+                        if null existing then do
+                            insert_ opTable [opToDatabase object op]
+                            pure $ Just op
+                        else
+                            pure Nothing
         case opsInserted of
             [] -> pure ()
             op : ops -> do
@@ -189,42 +181,36 @@ appendPatch Patch{object, log} =
                     writeTChan onNewPatch Patch{object, log = op :| ops}
 
 loadWholeObjectLog ::
-    (MonadLogger m, MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
+    (MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
 loadWholeObjectLog object version =
-    errorContext "loadWholeObjectLog @Store" do
-        ops <- runDB $ selectList [OpObject ==. object] [Asc OpEvent]
-        pure
-            [ opFromDatabase op
-            | Entity _ op@Op{opEvent} <- ops
-            , opEvent ·≻ version
-            ]
+    errorContext "loadWholeObjectLog @Store"
+        $ runDB do
+            ops <-
+                query do
+                    op <- select opTable
+                    restrict $ op ! #object .== literal object
+                    order (op ! #event) ascending
+                    pure op
+            pure [opFromDatabase op | op <- ops, op.event ·≻ version]
 
-loadOpLog :: (MonadLogger m, MonadUnliftIO m) => StoreT m [Patch]
+loadOpLog :: (MonadUnliftIO m) => StoreT m [Patch]
 loadOpLog =
-    errorContext "loadOpLog" do
-        oplog <- runDB $ map entityVal <$> selectList [] [Asc OpEvent]
-        pure
-            [ Patch opObject $ opFromDatabase <$> ops
-            | ops@(Op{opObject} :| _) <- groupWith (.opObject) oplog
-            ]
+    errorContext "loadOpLog"
+        $ runDB do
+            oplog <-
+                query do
+                    op <- select opTable
+                    order (op ! #event) ascending
+                    pure op
+            pure
+                [ Patch object $ opFromDatabase <$> ops
+                | ops@(Op{object} :| _) <- groupWith (.object) oplog
+                ]
 
-runDB ::
-    (MonadLogger m, MonadUnliftIO m) =>
-    ReaderT SqlBackend (LoggingT (ResourceT IO)) a ->
-    StoreT m a
+runDB :: (MonadIO m) => SeldaT SQLite IO a -> StoreT m a
 runDB action = do
-    Handle{dbPool} <- Store ask
-    lift do
-        withRunInIO \runInIO ->
-            runResourceT
-                . (`runLoggingT` monadLoggerLog' runInIO)
-                . (`runSqlPool` dbPool)
-                $ do
-                    runMigration migrateAll
-                    action
-  where
-    monadLoggerLog' runInIO loc src lvl msg =
-        runInIO $ monadLoggerLog loc src lvl msg
+    Handle{dbConn} <- Store ask
+    liftIO $ (`runSeldaT` dbConn) action
 
 runStore :: Handle -> StoreT m a -> m a
 runStore h@Handle{replica, clock} (Store action) =
@@ -233,31 +219,30 @@ runStore h@Handle{replica, clock} (Store action) =
 fetchUpdates :: (MonadIO m) => Handle -> m (TChan Patch)
 fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch
 
-selectDistinctObject :: (MonadIO m) => ReaderT SqlBackend m [UUID]
+selectDistinctObject :: (MonadIO m, MonadMask m) => SeldaT b m [UUID]
 selectDistinctObject =
-    map unSingle <$> rawSql "SELECT DISTINCT object FROM Op" []
+    query
+        $ distinct do
+            ops <- select opTable
+            pure $ ops ! #object
 
 {- | Create new Store handle.
 If no replica id found in the DB, generates a random one.
 -}
-newHandle :: (MonadLogger m, MonadUnliftIO m) => FilePath -> m Handle
+newHandle ::
+    (MonadLogger m, MonadMask m, MonadUnliftIO m) => FilePath -> m Handle
 newHandle dbfile' = do
     time <- getCurrentEpochTime -- TODO advance to the last timestamp
     -- in the database
     clock <- newIORef time
     dbfile <- makeAbsolute dbfile'
-    dbPool <- runLoggerIO $ createSqlitePool (Text.pack dbfile) 1
+    dbConn <- sqliteOpen dbfile
+    (`runSeldaT` dbConn) $ tryCreateTable opTable
     onNewPatch <- newBroadcastTChanIO
     replica <- newReplica -- TODO load replica id from the database
-    pure Handle{clock, dbPool, onNewPatch, replica}
+    pure Handle{clock, dbConn, onNewPatch, replica}
 
 newReplica :: (MonadIO m) => m Replica
 newReplica = do
     replicaId <- fst . random <$> liftIO newTFGen
     pure $ mkReplica ApplicationSpecific $ ls60 replicaId
-
-runLoggerIO :: (MonadLogger m, MonadUnliftIO m) => LoggingT IO a -> m a
-runLoggerIO action =
-    withRunInIO \runInIO ->
-        runLoggingT action \loc src lvl msg ->
-            runInIO $ monadLoggerLog loc src lvl msg

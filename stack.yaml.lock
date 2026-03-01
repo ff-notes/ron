@@ -3,7 +3,21 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/topics/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: selda-0.5.2.1@sha256:16479ca2d53fbe41cefaf75aa0ed2b4d70600cdc55d887e693efc22bbd468197,2826
+    pantry-tree:
+      sha256: 56ceadd002a1ff1add4cecfa02fca2138b56084e7362559aa30e8035bc4f4848
+      size: 2414
+  original:
+    hackage: selda-0.5.2.1
+- completed:
+    hackage: selda-sqlite-0.1.7.3@sha256:25533f2d8307cf6e7f46d907f14a01eb31e9da5aec13e0b1b7e16626bd1fad8c,1067
+    pantry-tree:
+      sha256: 2fd7be436d72a5c9c00f44bd877b604d4bbad3f2e4c80336038f1fee93870d5c
+      size: 301
+  original:
+    hackage: selda-sqlite-0.1.7.3
 snapshots:
 - completed:
     sha256: d141b089a21d9873b5febdf7c53296fb799b7fb602b9d3b003c022a81cc1cc01

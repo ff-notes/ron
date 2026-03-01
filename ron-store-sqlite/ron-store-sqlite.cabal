@@ -7,14 +7,10 @@ library
   -- global
   build-depends:
     , base
-    , bytestring
     , monad-logger
-    , persistent
-    , persistent-sqlite
-    , resource-pool
-    , resourcet
+    , selda
+    , selda-sqlite
     , stm
-    , text
     , tf-random
     , unliftio
 
