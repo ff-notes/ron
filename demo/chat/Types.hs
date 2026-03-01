@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedRecordDot #-}
+
 module Types (Env (..), Message (..), MessageView (..), getMessageView) where
 
 import Control.Concurrent.STM (TChan)
@@ -5,7 +7,6 @@ import Data.Functor ((<&>))
 import Data.Generics.Labels ()
 import Data.Text (Text)
 import Data.Time (UTCTime)
-import Lens.Micro ((^.))
 import RON.Epoch qualified as Epoch
 import RON.Error (MonadE, errorContext, throwError)
 import RON.Event (
@@ -14,18 +15,23 @@ import RON.Event (
     timeVariety,
     unsafeDecodeEvent,
  )
+import RON.Event qualified
 import RON.Experimental.Data (ReplicatedObject, decodeObject, encodeObject)
 import RON.Experimental.Data.ORSet (ORMap)
 import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, readObject)
 import RON.Types.Experimental (Ref (Ref))
+import RON.UUID (UUID)
 
+-- | Data for UI rendering
 data MessageView = MessageView
     { postTime :: UTCTime
     , content :: Message
+    , id :: UUID
     }
     deriving (Show)
 
+-- | DTO
 data Message = Message
     { username :: Text
     , text :: Text
@@ -41,7 +47,7 @@ instance ReplicatedObject Message where
 
     decodeObject objectId ops =
         errorContext "decodeObject @Message" do
-            repr :: ORMap Text Text <- ORSet.decode objectId ops
+            let repr :: ORMap Text Text = ORSet.decode objectId ops
             username <- ORSet.lookupLwwDecodeThrow "username" repr
             text <- ORSet.lookupLwwDecodeThrow "text" repr
             pure Message{username, text}
@@ -54,9 +60,9 @@ getMessageView ref@(Ref objectId) = do
             Epoch -> pure $ Epoch.decode $ timeValue objectTime
             _ -> throwError "objectId in not an epoch event"
     mMsg <- readObject ref
-    pure $ mMsg <&> \content -> MessageView{postTime, content}
+    pure $ mMsg <&> \content -> MessageView{postTime, content, id = objectId}
   where
-    objectTime = unsafeDecodeEvent objectId ^. #time
+    objectTime = (unsafeDecodeEvent objectId).time
 
 data Env = Env
     { username :: Text

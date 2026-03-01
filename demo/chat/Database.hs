@@ -8,6 +8,7 @@ module Database (
     loadAllMessages,
     messagePoster,
     newMessage,
+    editMessageText,
 ) where
 
 import RON.Prelude
@@ -17,7 +18,8 @@ import Control.Monad (forever)
 import Control.Monad.Logger (MonadLogger, logDebug)
 import RON.Error (MonadE)
 import RON.Event (ReplicaClock)
-import RON.Experimental.Data.ORSet (ORSet)
+import RON.Experimental.Data.ORMap qualified as ORMap
+import RON.Experimental.Data.ORSet (ORMap, ORSet)
 import RON.Experimental.Data.ORSet qualified as ORSet
 import RON.Store (MonadStore, newObject)
 import RON.Store.Sqlite (fetchUpdates, runStore)
@@ -42,6 +44,12 @@ newMessage msg = do
     msgRef <- newObject msg
     ORSet.add_ gMessageSetRef msgRef
     pure msgRef
+
+editMessageText ::
+    (MonadStore m, ReplicaClock m) =>
+    Ref Message -> Text -> m ()
+editMessageText (Ref object) =
+    ORMap.update (Ref @(ORMap Text Text) object) "text"
 
 messagePoster ::
     (MonadLogger m, MonadUnliftIO m) => TChan Message -> Store.Handle -> m ()

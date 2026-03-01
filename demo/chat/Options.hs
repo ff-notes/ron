@@ -12,6 +12,8 @@ module Options (
 import RON.Prelude
 
 import Control.Applicative ((<**>))
+import Data.Text.Lazy qualified as TextL
+import Data.Text.Lazy.Encoding qualified as TextL
 import Network.URI (
     URI (..),
     URIAuth (..),
@@ -24,6 +26,7 @@ import Options.Applicative (
     ParserInfo,
     ParserPrefs,
     ReadM,
+    argument,
     auto,
     command,
     customExecParser,
@@ -47,6 +50,8 @@ import Options.Applicative (
     subparser,
     value,
  )
+import RON.Text.Parse (parseUuid)
+import RON.UUID (UUID)
 import Text.Read (readEither)
 import Text.Show qualified
 
@@ -73,7 +78,8 @@ data Options = Options
 
 data Command
     = Show
-    | Post Text Text
+    | Post {username :: Text, text :: Text}
+    | Edit {messageId :: UUID, text :: Text}
     | RunNode NodeOptions
     | RunUI UIOptions NodeOptions
 
@@ -115,29 +121,35 @@ parseOptions =
 parser :: Parser Options
 parser = do
     database <-
-        strOption $
-            long "data"
-                <> metavar "FILE"
-                <> help "database (default: ./ron-demo-chat.sqlite)"
-                <> value "./ron-demo-chat.sqlite"
+        strOption
+            $ long "data"
+            <> metavar "FILE"
+            <> help "database (default: ./ron-demo-chat.sqlite)"
+            <> value "./ron-demo-chat.sqlite"
     logFile <-
-        strOption $
-            long "log"
-                <> metavar "FILE"
-                <> help "logfile (default: ./log.txt)"
-                <> value "./log.txt"
+        strOption
+            $ long "log"
+            <> metavar "FILE"
+            <> help "logfile (default: ./log.txt)"
+            <> value "./log.txt"
     cmd <-
-        subparser $
-            command "show" (i pShow "Offline: Show chat messages and exit")
-                <> command "post" (i pPost "Offline: Post messages to chat")
-                <> command "node" (i pNode "Start node without UI")
-                <> command "ui" (i pUI "Start UI with network node")
+        subparser
+            $ command "show" (i pShow "Offline: Show chat messages and exit")
+            <> command "post" (i pPost "Offline: Post messages to chat")
+            <> command "edit" (i pEdit "Offline: Edit message text")
+            <> command "node" (i pNode "Start node without UI")
+            <> command "ui" (i pUI "Start UI with network node")
     pure Options{database, logFile, cmd}
   where
     pShow = pure Show
 
     pPost =
         Post <$> strArgument (metavar "NAME") <*> strArgument (metavar "TEXT")
+
+    pEdit =
+        Edit
+            <$> argument readUuid (metavar "UUID")
+            <*> strArgument (metavar "TEXT")
 
     pNode = RunNode <$> nodeOptions
 
@@ -151,16 +163,16 @@ parser = do
 nodeOptions :: Parser NodeOptions
 nodeOptions = do
     peers <-
-        many $
-            option
+        many
+            $ option
                 readPeer
                 ( long "peer"
                     <> metavar "PORT"
                     <> help "Connect to peers using specifed ports"
                 )
     listenPorts <-
-        many $
-            option
+        many
+            $ option
                 auto
                 ( long "listen"
                     <> metavar "PORT"
@@ -199,3 +211,6 @@ readPeer =
         when (uriPort == "") $ Left "Port must be non-empty"
         port <- readEither $ drop 1 {- port string starts with ':' -} uriPort
         pure Peer{host = uriRegName, port}
+
+readUuid :: ReadM UUID
+readUuid = eitherReader $ parseUuid . TextL.encodeUtf8 . TextL.pack
