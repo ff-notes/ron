@@ -28,6 +28,7 @@ import Data.List.NonEmpty (groupWith)
 import Database.Selda (
     Attr ((:-)),
     MonadMask,
+    MonadSelda,
     SeldaT,
     SqlRow,
     SqlType,
@@ -157,6 +158,15 @@ instance MonadTrans StoreT where
 listObjects :: (MonadUnliftIO m) => StoreT m [UUID]
 listObjects = errorContext "listObjects @Store" $ runDB selectDistinctObject
 
+exists :: (MonadSelda m) => UUID -> m Bool
+exists event = do
+    results <-
+        query do
+            row <- select opTable
+            restrict $ row ! #event .== literal event
+            pure $ row ! #event
+    pure $ not $ null results
+
 appendPatch :: (MonadLogger m, MonadUnliftIO m) => Patch -> StoreT m ()
 appendPatch Patch{object, log} =
     errorContext "appendPatch @Store" do
@@ -164,15 +174,12 @@ appendPatch Patch{object, log} =
             runDB do
                 catMaybes <$> for (toList log) \op -> do
                     transaction do
-                        existing <- query do
-                            row <- select opTable
-                            restrict $ row ! #event .== literal op.opId
-                            pure $ row ! #event
-                        if null existing then do
+                        existsAlready <- exists op.opId
+                        if existsAlready then
+                            pure Nothing
+                        else do
                             insert_ opTable [opToDatabase object op]
                             pure $ Just op
-                        else
-                            pure Nothing
         case opsInserted of
             [] -> pure ()
             op : ops -> do
@@ -219,12 +226,9 @@ runStore h@Handle{replica, clock} (Store action) =
 fetchUpdates :: (MonadIO m) => Handle -> m (TChan Patch)
 fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch
 
-selectDistinctObject :: (MonadIO m, MonadMask m) => SeldaT b m [UUID]
+selectDistinctObject :: (MonadSelda m) => m [UUID]
 selectDistinctObject =
-    query
-        $ distinct do
-            ops <- select opTable
-            pure $ ops ! #object
+    query . distinct $ do ops <- select opTable; pure $ ops ! #object
 
 {- | Create new Store handle.
 If no replica id found in the DB, generates a random one.
