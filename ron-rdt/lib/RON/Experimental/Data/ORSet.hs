@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ImportQualifiedPost #-}
@@ -19,6 +20,7 @@ module RON.Experimental.Data.ORSet (
     lookupLwwDecode,
     lookupLwwDecodeThrow,
     lookupSet,
+    remove,
 ) where
 
 import RON.Prelude
@@ -36,18 +38,16 @@ import RON.Experimental.Data (
     toAtom,
     toAtoms,
  )
+import RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
 import RON.Store.Class (MonadStore, appendPatch, loadWholeObjectLog)
 import RON.Text.Serialize (serializeAtom)
 import RON.Types (Op (..), OpenFrame, Payload, UUID)
 import RON.Types.Experimental (Patch (..), Ref (..))
 
-import RON.Experimental.Data.ORSet.Type (ORMap, ORSet (..))
-
-decode :: (Applicative f) => UUID -> OpenFrame -> f (ORSet a)
+decode :: UUID -> OpenFrame -> ORSet a
 decode objectId ops =
-    pure
-        . ORSet
-        $ Map.fromListWith
+    ORSet $
+        Map.fromListWith
             (maxOn fst)
             [ (itemId, (opId, payload))
             | Op{opId, refId, payload} <- ops
@@ -88,24 +88,19 @@ add_ ::
     m ()
 add_ ref = void . add ref
 
+remove :: (MonadStore m, ReplicaClock m) => Ref (ORSet a) -> Ref a -> m ()
+remove (Ref object) (Ref refId) = do
+    advanceToUuid refId
+    opId <- getEventUuid
+    appendPatch Patch{object, log = Op{opId, refId, payload = []} :| []}
+
 -- | Get items from database and decode
 getDecode :: (AsAtoms a, MonadE m, MonadStore m) => Ref (ORSet a) -> m [a]
 getDecode (Ref object) = do
     -- TODO loadObjectLog object (PayloadPrefix pre)
     ops <- loadWholeObjectLog object mempty
-    let alivePayloads =
-            filter (not . null) $
-                map snd $
-                    toList $
-                        Map.fromListWith
-                            (maxOn fst)
-                            [ (itemId, (opId, payload'))
-                            | Op{opId, refId, payload} <- ops
-                            , (itemId, payload') <-
-                                case payload of
-                                    [] -> pure (refId, payload)
-                                    _ -> pure (opId, payload)
-                            ]
+    let ORSet items = decode object ops
+    let alivePayloads = [payload | (_opId, payload@(_ : _)) <- Map.elems items]
     traverse fromAtoms alivePayloads
 
 lookupLww :: (AsAtom k) => k -> ORMap k v -> Maybe Payload

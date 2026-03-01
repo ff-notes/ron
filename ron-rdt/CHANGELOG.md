@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- Experimental ORMap: `add_`, `remove`, `update`
+- Experimental ORSet: `remove`
 
 ## [0.12] - 2026-02-27
 ### Changed

@@ -60,6 +60,7 @@ library
     RON.Data.Time
     RON.Data.VersionVector
     RON.Experimental.Data
+    RON.Experimental.Data.ORMap
     RON.Experimental.Data.ORSet
     RON.Experimental.Data.ORSet.Type
     RON.Store
