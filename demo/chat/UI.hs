@@ -39,8 +39,10 @@ import Brick.Widgets.Edit (
     renderEditor,
  )
 import Control.Concurrent.STM (atomically, readTChan, writeTChan)
+import Control.Lens ((.=))
 import Control.Monad (forever)
 import Control.Monad.Logger (MonadLogger, logDebug)
+import Control.Monad.State (gets)
 import Data.Char (isSpace, ord)
 import Data.Generics.Labels ()
 import Data.List (sortOn)
@@ -49,7 +51,6 @@ import Data.Text qualified as Text
 import GHC.Generics (Generic)
 import Graphics.Vty (Color (ISOColor), Event (EvKey), Key (KEnter, KEsc))
 import Graphics.Vty qualified as Vty
-import Lens.Micro.Mtl (use, (.=))
 import RON.Store.Sqlite qualified as Store (Handle)
 import UnliftIO (MonadIO, MonadUnliftIO, liftIO)
 
@@ -144,7 +145,7 @@ txtWithContentBasedFg t =
 
 appHandleEvent :: Env -> BrickEvent VP AppEvent -> EventM VP State ()
 appHandleEvent Env{username, onMessagePosted} event = do
-    messageInput <- use #messageInput
+    messageInput <- gets (.messageInput)
     case event of
         VtyEvent ve -> case ve of
             EvKey KEsc [] -> halt

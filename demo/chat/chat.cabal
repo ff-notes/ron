@@ -10,8 +10,9 @@ executable chat
     , base
     , brick
     , generic-lens
-    , microlens-mtl
+    , lens
     , monad-logger
+    , mtl
     , network-uri
     , optparse-applicative
     , pretty-simple
