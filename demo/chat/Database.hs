@@ -45,9 +45,7 @@ newMessage msg = do
     ORSet.add_ gMessageSetRef msgRef
     pure msgRef
 
-editMessageText ::
-    (MonadStore m, ReplicaClock m) =>
-    Ref Message -> Text -> m ()
+editMessageText :: (MonadStore m, ReplicaClock m) => Ref Message -> Text -> m ()
 editMessageText (Ref object) =
     ORMap.update (Ref @(ORMap Text Text) object) "text"
 
@@ -61,9 +59,7 @@ messagePoster onMessagePosted db =
 
 databaseToUIUpdater ::
     (MonadLogger m, MonadUnliftIO m) =>
-    Store.Handle ->
-    TChan [MessageView] ->
-    m ()
+    Store.Handle -> TChan [MessageView] -> m ()
 databaseToUIUpdater db onMessageListUpdated = do
     onUpdate <- fetchUpdates db
     forever do

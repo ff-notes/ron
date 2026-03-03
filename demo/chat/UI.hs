@@ -175,6 +175,6 @@ emptyEditor = editorText VPNewMessageEditor Nothing ""
 
 eventWorker :: Env -> BChan AppEvent -> IO ()
 eventWorker Env{onMessageListUpdated} onEvent =
-    forever $ do
+    forever do
         messages <- atomically $ readTChan onMessageListUpdated
         writeBChan onEvent $ MessageListUpdated messages
