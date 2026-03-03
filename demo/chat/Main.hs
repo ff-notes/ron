@@ -12,13 +12,14 @@ import Fork (forkLinked)
 import NetNode qualified
 import Options (
     Command (Edit, Post, RunNode, RunUI, Show),
-    NodeOptions (..),
-    Options (..),
-    UIOptions (..),
+    NodeOptions (NodeOptions),
+    Options (Options),
+    UIOptions (UIOptions),
     parseOptions,
  )
 import Options qualified
-import Types (Env (..), Message (..))
+import Types (Env (Env), Message (Message))
+import Types qualified
 import UI (initUI, runUI)
 
 main :: IO ()
