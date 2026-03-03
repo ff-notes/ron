@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 
 module RON.Store.Sqlite (
@@ -27,7 +28,6 @@ import Control.Monad.Logger (LoggingT, MonadLogger)
 import Data.List.NonEmpty (groupWith)
 import Database.Selda (
     Attr ((:-)),
-    MonadMask,
     MonadSelda,
     SeldaT,
     SqlRow,
@@ -113,12 +113,12 @@ opTable :: Table Op
 opTable = table "Op" [#event :- primary]
 
 opToDatabase :: UUID -> RON.Op -> Op
-opToDatabase object RON.Op{opId, refId, payload} =
-    Op{event = opId, ref = refId, object, payload = payload}
+opToDatabase object op =
+    Op{event = op.opId, ref = op.refId, object, payload = op.payload}
 
 opFromDatabase :: Op -> RON.Op
-opFromDatabase Op{event, ref, payload} =
-    RON.Op{opId = event, refId = ref, payload = payload}
+opFromDatabase op =
+    RON.Op{opId = op.event, refId = op.ref, payload = op.payload}
 
 data Handle = Handle
     { clock :: IORef Word60
@@ -187,32 +187,31 @@ appendPatch Patch{object, log} =
                 atomically do
                     writeTChan onNewPatch Patch{object, log = op :| ops}
 
-loadWholeObjectLog ::
-    (MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
+loadWholeObjectLog :: (MonadUnliftIO m) => UUID -> VV -> StoreT m [RON.Op]
 loadWholeObjectLog object version =
-    errorContext "loadWholeObjectLog @Store"
-        $ runDB do
-            ops <-
+    errorContext "loadWholeObjectLog @Store" do
+        ops <-
+            runDB do
                 query do
                     op <- select opTable
                     restrict $ op ! #object .== literal object
                     order (op ! #event) ascending
                     pure op
-            pure [opFromDatabase op | op <- ops, op.event ·≻ version]
+        pure [opFromDatabase op | op <- ops, op.event ·≻ version]
 
 loadOpLog :: (MonadUnliftIO m) => StoreT m [Patch]
 loadOpLog =
-    errorContext "loadOpLog"
-        $ runDB do
-            oplog <-
+    errorContext "loadOpLog" do
+        oplog <-
+            runDB do
                 query do
                     op <- select opTable
                     order (op ! #event) ascending
                     pure op
-            pure
-                [ Patch object $ opFromDatabase <$> ops
-                | ops@(Op{object} :| _) <- groupWith (.object) oplog
-                ]
+        pure
+            [ Patch object $ opFromDatabase <$> ops
+            | ops@(Op{object} :| _) <- groupWith (.object) oplog
+            ]
 
 runDB :: (MonadIO m) => SeldaT SQLite IO a -> StoreT m a
 runDB action = do
@@ -228,20 +227,22 @@ fetchUpdates Handle{onNewPatch} = atomically $ dupTChan onNewPatch
 
 selectDistinctObject :: (MonadSelda m) => m [UUID]
 selectDistinctObject =
-    query . distinct $ do ops <- select opTable; pure $ ops ! #object
+    query $ distinct do ops <- select opTable; pure $ ops ! #object
 
 {- | Create new Store handle.
-If no replica id found in the DB, generates a random one.
+If no replica is found in the DB, generates a random one.
 -}
-newHandle ::
-    (MonadLogger m, MonadMask m, MonadUnliftIO m) => FilePath -> m Handle
+newHandle :: (MonadLogger m, MonadUnliftIO m) => FilePath -> m Handle
 newHandle dbfile' = do
-    time <- getCurrentEpochTime -- TODO advance to the last timestamp
-    -- in the database
+    time <- getCurrentEpochTime
+    -- TODO advance to the last timestamp in the database
     clock <- newIORef time
     dbfile <- makeAbsolute dbfile'
-    dbConn <- sqliteOpen dbfile
-    (`runSeldaT` dbConn) $ tryCreateTable opTable
+    dbConn <-
+        liftIO do
+            dbConn <- sqliteOpen dbfile
+            runSeldaT (tryCreateTable opTable) dbConn
+            pure dbConn
     onNewPatch <- newBroadcastTChanIO
     replica <- newReplica -- TODO load replica id from the database
     pure Handle{clock, dbConn, onNewPatch, replica}
