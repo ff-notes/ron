@@ -1,5 +1,6 @@
 {-# OPTIONS -Wwarn=orphans #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -123,7 +124,7 @@ varBangType' name =
         . TH.bangType (TH.bang TH.noSourceUnpackedness TH.sourceStrict)
 
 mkDataTypeLww :: StructLww Equipped -> TH.DecQ
-mkDataTypeLww Struct{name, fields} =
+mkDataTypeLww Struct{name, fields, annotations} =
     TH.dataD
         (TH.cxt [])
         name'
@@ -137,10 +138,10 @@ mkDataTypeLww Struct{name, fields} =
         ]
         []
   where
-    name' = mkNameT name
+    name' = mkNameT $ fromMaybe name annotations.haskellName
 
 mkDataTypeSet :: StructSet Equipped -> TH.DecQ
-mkDataTypeSet Struct{name, fields} =
+mkDataTypeSet Struct{name, fields, annotations} =
     TH.dataD
         (TH.cxt [])
         name'
@@ -155,7 +156,7 @@ mkDataTypeSet Struct{name, fields} =
         ]
         []
   where
-    name' = mkNameT name
+    name' = mkNameT $ fromMaybe name annotations.haskellName
 
 mkInstanceReplicated :: TH.TypeQ -> TH.DecsQ
 mkInstanceReplicated type' =

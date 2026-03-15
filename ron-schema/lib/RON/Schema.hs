@@ -91,6 +91,7 @@ data StructAnnotations
     = StructAnnotations
     { haskellFieldPrefix :: Text
     , haskellFieldCaseTransform :: Maybe CaseTransform
+    , haskellName :: Maybe Text
     }
     deriving (Show)
 
@@ -99,6 +100,7 @@ defaultStructAnnotations =
     StructAnnotations
         { haskellFieldPrefix = Text.empty
         , haskellFieldCaseTransform = Nothing
+        , haskellName = Nothing
         }
 
 data CaseTransform = TitleCase

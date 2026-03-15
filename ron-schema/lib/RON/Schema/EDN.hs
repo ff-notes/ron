@@ -242,6 +242,7 @@ instance FromEDN StructAnnotations where
         go m = do
             haskellFieldPrefix <- mapGetSymbol "field_prefix" m <|> pure ""
             haskellFieldCaseTransform <- optional $ mapGetSymbol "field_case" m
+            haskellName <- optional $ mapGetSymbol "name" m
             pure StructAnnotations{..}
 
 instance FromEDN CaseTransform where
