@@ -6,6 +6,9 @@ and this project adheres to
 [Compatible Versioning](https://github.com/staltz/comver).
 
 ## [Unreleased]
+### Added
+- `HasCallStack` to `runStorage`
+
 ### Fixed
 - `createVersion` doc: reflect deletion of older versions.
 - Adapt to changes in RON.Prelude

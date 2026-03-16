@@ -103,7 +103,7 @@ newtype Storage a = Storage (ExceptT Error (ReaderT Handle EpochClock) a)
     deriving (Applicative, Functor, Monad, MonadError Error, MonadIO)
 
 -- | Run a 'Storage' action
-runStorage :: Handle -> Storage a -> IO a
+runStorage :: (HasCallStack) => Handle -> Storage a -> IO a
 runStorage h@Handle{replica, clock} (Storage action) = do
     res <-
         runEpochClock replica clock $
