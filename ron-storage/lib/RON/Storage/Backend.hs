@@ -145,7 +145,8 @@ createVersion ::
     -- | 'Just', if document exists already; 'Nothing' otherwise.
     Maybe (DocId a, Document a) ->
     ObjectFrame a ->
-    m ()
+    -- | updated document
+    m (Document a)
 createVersion mDoc newObj = case mDoc of
     Nothing -> save (DocId @a $ UUID.encodeBase32 uuid) []
     Just (docid, oldDoc) -> do
@@ -155,12 +156,19 @@ createVersion mDoc newObj = case mDoc of
                 , isTouched = IsTouched isTouched
                 } =
                     oldDoc
-        when (newObj /= oldObj || length versions /= 1 || isTouched) $
-            save docid $
-                toList versions
+        if newObj /= oldObj || length versions /= 1 || isTouched then
+            save docid $ toList versions
+        else
+            pure oldDoc
   where
     ObjectFrame{uuid, frame} = newObj
     save docid oldVersions = do
         newVersion <- UUID.encodeBase32 <$> getEventUuid
         saveVersionContent docid newVersion (serializeStateFrame frame)
         for_ oldVersions $ deleteVersion docid
+        pure
+            Document
+                { objectFrame = newObj
+                , versions = newVersion :| []
+                , isTouched = IsTouched False
+                }

@@ -83,11 +83,12 @@ modify :: (Collection a, MonadStorage m) => DocId a -> ObjectStateT a m b -> m b
 modify docid f = do
     oldDoc <- loadDocument docid
     (b, objectFrame') <- runObjectState oldDoc.objectFrame f
-    createVersion (Just (docid, oldDoc)) objectFrame'
+    _ <- createVersion (Just (docid, oldDoc)) objectFrame'
     pure b
 
 -- | Create document assuming it doesn't exist yet.
-createDocument :: (Collection a, MonadStorage m) => ObjectFrame a -> m ()
+createDocument ::
+    (Collection a, MonadStorage m) => ObjectFrame a -> m (Document a)
 createDocument = createVersion Nothing
 
 docIdFromUuid :: UUID -> DocId a

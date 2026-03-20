@@ -8,6 +8,7 @@ and this project adheres to
 ## [Unreleased]
 ### Added
 - `HasCallStack` to `runStorage`
+- `createDocument` now returns document
 
 ### Fixed
 - `createVersion` doc: reflect deletion of older versions.

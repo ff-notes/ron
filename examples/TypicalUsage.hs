@@ -4,6 +4,7 @@
 
 module Main where
 
+import Control.Monad
 import RON.Data
 import RON.Data.RGA
 import RON.Schema.TH
@@ -29,4 +30,4 @@ main = do
                     { active = Just True
                     , text = Just $ RGA "Write a task manager"
                     }
-        createDocument obj
+        void $ createDocument obj
