@@ -295,7 +295,8 @@ getObjectStateChunk = do
     ObjectRef uuid <- ask
     frame <- get
     WireStateChunk{stateType, stateBody} <-
-        liftMaybe "no such object in chunk" $ Map.lookup uuid frame
+        liftMaybe ("no object " <> show uuid <> " in chunk") $
+            Map.lookup uuid frame
     unless (stateType == reducibleOpType @(Rep a)) $
         throwError $
             Error
