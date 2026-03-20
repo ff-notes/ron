@@ -125,7 +125,7 @@ readVersion docid version = do
 It it was fixed during loading it must be saved to the storage.
 -}
 newtype IsTouched = IsTouched Bool
-    deriving (Show)
+    deriving (Eq, Show)
 
 -- | Result of DB reading, loaded document with information about its versions
 data Document a
@@ -134,7 +134,7 @@ data Document a
     , versions :: NonEmpty DocVersion
     , isTouched :: IsTouched
     }
-    deriving (Show)
+    deriving (Eq, Show)
 
 {- | Create new version of an object/document and delete older versions.
 If the document doesn't exist yet, it will be created.
