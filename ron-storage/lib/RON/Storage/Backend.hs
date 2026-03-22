@@ -102,12 +102,9 @@ readVersion ::
     m (ObjectFrame a, IsTouched)
 readVersion docid version = do
     (isObjectIdValid, uuid) <-
-        liftMaybe ("Bad Base32 UUID " <> show docid) $
-            decodeDocId docid
+        liftMaybe ("Bad Base32 UUID " <> show docid) $ decodeDocId docid
     unless isObjectIdValid $
-        throwErrorString $
-            "Not a Base32 UUID "
-                ++ show docid
+        throwErrorString ("Not a Base32 UUID " <> show docid)
     contents <- loadVersionContent docid version
     case parseStateFrame contents of
         Right frame ->
